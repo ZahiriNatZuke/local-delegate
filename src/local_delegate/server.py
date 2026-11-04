@@ -6499,6 +6499,38 @@ def _focus_clause(focus: str | None) -> str:
     )
 
 
+def _focus_note(text: str, terms: list[str]) -> str:
+    """#558: the sections of `text` that treat the focus, named in the user message ("" if none).
+
+    The clause in the system prompt was not enough: the list of sections and the word allocation
+    weighed more, and the model summarized the big sections and left out the one of the focus.
+    It is computed on the text of each call, so a chunk names only the sections it holds.
+    """
+    found = sections.focus_sections(text, terms)
+    if not found:
+        return ""
+    named = ", ".join(f"«{heading}»" for heading in found)
+    return (
+        f"Secciones que tratan el aspecto prioritario: {named}. Resúmelas sin omitirlas y "
+        "conserva sus datos concretos.\n\n"
+    )
+
+
+def _focus_missing(summary: str, content: str, terms: list[str]) -> list[str]:
+    """#558: the focus terms the input holds when the summary mentions none of them, else []."""
+    in_input = sections.focus_terms_in(content, terms)
+    if not in_input or sections.focus_terms_in(summary, in_input):
+        return []
+    return in_input
+
+
+def _with_focus_warning(text: str, missing: list[str]) -> str:
+    if not missing:
+        return text
+    notice = i18n.t("mcp.warning.focus_not_in_summary", terms=", ".join(missing))
+    return f"{text.rstrip()}\n\n{WARNING_MARKER}{notice}]"
+
+
 def _structured_system(max_words: int, extra: str) -> str:
     return _guard(_STRUCTURED_FORMAT, max_words) + _STRUCTURED_NOTE + extra
 
@@ -6521,7 +6553,11 @@ def _section_list(sections_, max_words: int) -> str:
 
 
 def _structured_user(
-    sections_, max_words: int, content: str, continues_from: str | None = None
+    sections_,
+    max_words: int,
+    content: str,
+    continues_from: str | None = None,
+    focus_note: str = "",
 ) -> str:
     parts = []
     if continues_from:
@@ -6530,6 +6566,8 @@ def _structured_user(
             "principio en 1 o 2 frases, sin línea de título; después, las secciones de la lista."
         )
     parts.append(f"Secciones, en orden:\n{_section_list(sections_, max_words)}")
+    if focus_note:
+        parts.append(focus_note.rstrip())
     parts.append(f"Resume el siguiente contenido:\n\n{content}")
     return "\n\n".join(parts)
 
@@ -6563,23 +6601,29 @@ def _structured_summary(
     raw_len: int | None,
     path: str | None,
     after: Callable[[str, bool], str] | None = None,
+    focus_terms: list[str] | None = None,
 ) -> str:
     plan = sections.sections_for_summary(content, structure)
     headings = [s.heading for s in plan]
     empty_in_document = frozenset(i for i, s in enumerate(plan) if s.empty)
+    terms = focus_terms or []
 
     def _complete(text: str, truncated: bool) -> str:
+        # #558: judged on what the model wrote, before `complete` puts back a missing heading
+        # (with the focus term in it) as «(sin resumir)».
+        missing = _focus_missing(text, content, terms)
         text = sections.complete(
             text, headings, truncated=truncated, empty_in_document=empty_in_document
         ).text
-        return after(text, truncated) if after is not None else text
+        text = after(text, truncated) if after is not None else text
+        return _with_focus_warning(text, missing)
 
     max_chars = config.max_chars_for_role(role)
     if len(content) <= max_chars:
         return _chat(
             model,
             _structured_system(max_words, extra),
-            _structured_user(plan, max_words, content),
+            _structured_user(plan, max_words, content, focus_note=_focus_note(content, terms)),
             max_tokens=_structured_max_tokens(max_words, plan),
             tool="local_summarize",
             role=role,
@@ -6608,14 +6652,17 @@ def _structured_summary(
 
     def _chunk_user(chunk) -> str:
         text = chunk.text.strip()
+        note = _focus_note(text, terms)
         if chunk.sections:
-            return _structured_user(chunk.sections, chunk.words, text, chunk.continues_from)
+            return _structured_user(
+                chunk.sections, chunk.words, text, chunk.continues_from, focus_note=note
+            )
         if chunk.continues_from:
-            return (
+            return note + (
                 f"Este fragmento continúa la sección «{chunk.continues_from}». Resume solo este "
                 f"fragmento en 1 a 3 frases, sin línea de título:\n\n{text}"
             )
-        return f"Resume el siguiente contenido:\n\n{text}"
+        return note + f"Resume el siguiente contenido:\n\n{text}"
 
     return _chat_map_reduce(
         model,
@@ -6704,6 +6751,9 @@ def local_summarize(
     role, model = _role_for_size(probe_len)
     content, truncated_in, raw_len = _read_input(text, path, _NO_TRUNCATE)
     clean_focus = sections.sanitize_focus(focus)
+    # #558: the significant words of the focus, to name the sections that treat it and to warn when
+    # the summary mentions none of them. Empty without focus: nothing below changes then.
+    terms = sections.focus_terms(clean_focus)
     # La orden de idioma (REQ-028) va con el enfoque: así llega al map, al reduce y a cada trozo
     # del resumen estructurado, que la reciben por `extra`/`reduce_extra`.
     extra = _focus_clause(clean_focus) + _written_language_clause()
@@ -6729,6 +6779,7 @@ def local_summarize(
             raw_len=raw_len,
             path=path,
             after=literal_notice,
+            focus_terms=terms,
         )
 
     # Sin estructura (o con el interruptor apagado): el camino de siempre. Desde la 0.36.0 lleva
@@ -6738,8 +6789,15 @@ def local_summarize(
     diff_note = _DIFF_NOTE if sections.is_unified_diff(content) else ""
     system = _guard("un resumen en prosa clara", max_words) + diff_note + extra
 
+    # #558: not on a code file, whose `## ` lines are data (#539), not sections to name.
+    note_terms = terms if kind != "code" else []
+
     def _build(piece: str) -> str:
-        return f"Resume el siguiente contenido:\n\n{piece}"
+        return _focus_note(piece, note_terms) + f"Resume el siguiente contenido:\n\n{piece}"
+
+    def _notices(text: str, truncated: bool) -> str:
+        missing = _focus_missing(text, content, terms)
+        return _with_focus_warning(literal_notice(text, truncated), missing)
 
     if len(content) > config.max_chars_for_role(role):
         # No cabe: se resume por partes y luego se resumen los resúmenes. Antes esto se
@@ -6758,7 +6816,7 @@ def local_summarize(
             path=path,
             reduce_extra=extra,
             focus=clean_focus is not None,
-            postprocess=literal_notice,
+            postprocess=_notices,
         )
 
     user = _build(content)
@@ -6775,7 +6833,7 @@ def local_summarize(
         raw_len=raw_len,
         path=path,
         focus=clean_focus is not None,
-        postprocess=literal_notice,
+        postprocess=_notices,
     )
     return _truncation_prefix(content, truncated_in, raw_len) + result
 

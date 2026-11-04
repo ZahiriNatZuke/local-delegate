@@ -6,6 +6,16 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Corregido
+
+- **`local_summarize` con `focus` ya no deja fuera en silencio la sección que trata el enfoque**
+  (#558). El enfoque llegaba al modelo, pero solo como una cláusula general, y en un informe de
+  ~16 KB el resumen se quedó con la introducción y la lista final sin nada de la sección cuyo
+  título tenía la palabra pedida. Ahora el mensaje al modelo nombra las secciones Markdown cuyo
+  título o cuerpo contiene alguna palabra significativa del enfoque (en cada trozo, solo las
+  suyas), y si el resumen no menciona ninguna de esas palabras aunque la entrada sí las tiene, la
+  salida lleva un aviso `[local-delegate warning: …]` que las nombra. Sin `focus` nada cambia.
+
 ## [0.48.0] - 2026-11-03
 
 Más avisos donde antes había silencio. `local_extract` devuelve exactamente las claves pedidas
