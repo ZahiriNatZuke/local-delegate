@@ -72,7 +72,7 @@ def _timeout_after(seconds: float):
     return effect
 
 
-def _starting_for_the_watchs_first_sample():
+def _starting_for_the_first_watch_sample():
     """`/running` that answers `starting` only to the first query of the send's watch thread and
     `ready` to everything else (the deadline's probe, the log's sample): by thread, not by clock,
     so a loaded machine cannot turn that first sample into `ready` (review of #572, judge 2)."""
@@ -102,7 +102,7 @@ def test_a_model_that_loaded_during_the_send_is_not_called_loaded(monkeypatch):
     `read_timeout_load_ms` does not exist.
     """
     monkeypatch.setattr(server, "_probe_delay", lambda: 0.2)  # the deadline's sample: ready
-    running = backend_mock.get(RUNNING).mock(side_effect=_starting_for_the_watchs_first_sample())
+    running = backend_mock.get(RUNNING).mock(side_effect=_starting_for_the_first_watch_sample())
     backend_mock.post(CHAT).mock(side_effect=_timeout_after(0.7))
 
     result = _send_in_slot()
@@ -147,7 +147,7 @@ def test_the_load_reaches_the_usage_event(monkeypatch, tmp_path):
     monkeypatch.setattr(config, "LOG_DIR", tmp_path)
     monkeypatch.setattr(config, "USAGE_LOG", tmp_path / "usage.jsonl")
     monkeypatch.setattr(server, "_probe_delay", lambda: 0.2)
-    backend_mock.get(RUNNING).mock(side_effect=_starting_for_the_watchs_first_sample())
+    backend_mock.get(RUNNING).mock(side_effect=_starting_for_the_first_watch_sample())
     backend_mock.post(CHAT).mock(side_effect=_timeout_after(0.7))
 
     out = server.local_commit_msg(diff=_diff(1, 40))
@@ -159,7 +159,7 @@ def test_the_load_reaches_the_usage_event(monkeypatch, tmp_path):
 
 
 @backend_mock.mock
-def test_a_model_ready_only_in_the_deadlines_probe_is_ready_at_the_end(monkeypatch):
+def test_a_model_ready_only_in_the_deadline_probe_is_ready_at_the_end(monkeypatch):
     """The watch samples every 10 s: a model ready after its last sample is seen ready only by
     the deadline's probe. Still not «it was loaded» (review of #572, judge 1).
 
@@ -167,7 +167,7 @@ def test_a_model_ready_only_in_the_deadlines_probe_is_ready_at_the_end(monkeypat
     """
     monkeypatch.setattr(concurrency, "BACKEND_WAIT_RESAMPLE_S", 30.0)  # one watch sample only
     monkeypatch.setattr(server, "_probe_delay", lambda: 0.3)
-    running = backend_mock.get(RUNNING).mock(side_effect=_starting_for_the_watchs_first_sample())
+    running = backend_mock.get(RUNNING).mock(side_effect=_starting_for_the_first_watch_sample())
     backend_mock.post(CHAT).mock(side_effect=_timeout_after(0.6))
 
     result = _send_in_slot()
