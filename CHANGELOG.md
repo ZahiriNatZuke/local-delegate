@@ -6,6 +6,18 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Corregido
+
+- **En Windows, los hooks instalados por `settings.json` leían la entrada en cp1252.** Claude Code
+  manda UTF-8, pero el `python` del PATH abre sus tuberías con la página de códigos del sistema:
+  una ruta con `ñ` o tildes llegaba deformada y el hook de lectura se callaba (sin bloquear y sin
+  telemetría); «Resume el diseño del panel» recibía el aviso de delegar que no le tocaba; y una
+  `Á` hacía fallar la lectura de la entrada. Ahora los hooks de lectura, shell, prompt y subagente
+  leen y escriben UTF-8 por sí mismos (`hook_common.utf8_stdio`), así que basta con
+  `local-delegate update`: el comando registrado no cambia. Además, cuando el hook de lectura no
+  puede medir el fichero deja su línea con `reason: "no_file"`, como el de shell. La entrega por
+  plugin ya estaba bien.
+
 ## [0.48.0] - 2026-11-03
 
 Más avisos donde antes había silencio. `local_extract` devuelve exactamente las claves pedidas

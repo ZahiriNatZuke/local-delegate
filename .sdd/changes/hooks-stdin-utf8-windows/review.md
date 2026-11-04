@@ -1,0 +1,31 @@
+# Result review: Hooks de la entrega por settings leen y escriben UTF-8 en Windows
+
+## Review level
+
+- Level: standard
+- Judges: result-reviewer-1 (subagente autor, revisión contra spec), result-reviewer-2 (CI del PR y revisión de la sesión principal antes de mezclar)
+- Security reviewer: n/a (sin superficie nueva: solo codificación de stdio del propio proceso del hook)
+- Verdict: TBD
+
+## Specification comparison
+
+| Requirement | Implemented | Verified | Notes |
+| --- | --- | --- | --- |
+| REQ-001 | sí | test + prueba instalada | casos `ñandú` y `Ácido` |
+| REQ-002 | sí | test + prueba instalada | sin aviso, línea con `suggested: false` |
+| REQ-003 | sí | test + prueba instalada | |
+| REQ-004 | sí | review: `install.py` sin cambios | `update` recopia los scripts |
+| REQ-005 | sí | test + prueba instalada | también en la rama de imágenes/documentos |
+| REQ-006 | sí | test + prueba instalada | ruta con `ñ` íntegra en el `deny` |
+| REQ-007 | sí | before.txt / after.txt | |
+| REQ-008 | sí | review | `utf8_stdio` no se llama al importar |
+
+## Findings
+
+| ID | Finding | Judge A | Judge B | Status | Resolution |
+| --- | --- | --- | --- | --- | --- |
+| F1 | El test de `StringIO` es una guarda de no regresión: pasa también con `utf8_stdio` vacía | confirmed | TBD | suspected | Aceptado: no puede discriminar el arreglo; protege que el arreglo no rompa los tests que inyectan `StringIO` |
+
+## Required follow-up
+
+- Puerta `memory` la cierra la sesión principal tras mezclar.

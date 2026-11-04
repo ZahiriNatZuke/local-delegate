@@ -43,6 +43,7 @@ from hook_common import (
     record,
     record_block,
     summary_model,
+    utf8_stdio,
 )
 from suggest_delegate_read import (
     PROSE_EXTENSIONS,
@@ -54,6 +55,7 @@ from suggest_delegate_read import (
 
 
 def main() -> None:
+    utf8_stdio()
     if not is_enabled():
         return
 

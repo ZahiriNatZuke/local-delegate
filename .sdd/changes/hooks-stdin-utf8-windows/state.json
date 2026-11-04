@@ -1,0 +1,102 @@
+{
+  "schemaVersion": 1,
+  "slug": "hooks-stdin-utf8-windows",
+  "title": "Hooks de la entrega por settings leen y escriben UTF-8 en Windows",
+  "mode": "lite",
+  "traceability": "strict",
+  "status": "verifying",
+  "createdAt": "2026-11-04T10:44:39.415Z",
+  "updatedAt": "2026-11-04T11:08:08.922Z",
+  "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-11-04T10:45:19.557Z",
+      "evidence": "lite: spec.md 8 REQ traced to the 2026-10-23 review finding; plan.md 5 tasks. Deviation: the repro and the fix were written before the gates (recorded in brief Log)",
+      "actor": "user"
+    },
+    "plan": {
+      "status": "approved",
+      "updatedAt": "2026-11-04T10:45:19.557Z",
+      "evidence": "lite: spec.md 8 REQ traced to the 2026-10-23 review finding; plan.md 5 tasks. Deviation: the repro and the fix were written before the gates (recorded in brief Log)",
+      "actor": "user"
+    },
+    "quality": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "conformance": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "memory": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-11-04T10:44:39.415Z",
+      "reason": "SDD change created"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "specifying",
+      "at": "2026-11-04T10:45:19.298Z",
+      "reason": "spec written from the brief and the inspected hook code"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-11-04T10:45:19.557Z",
+      "evidence": "lite: spec.md 8 REQ traced to the 2026-10-23 review finding; plan.md 5 tasks. Deviation: the repro and the fix were written before the gates (recorded in brief Log)",
+      "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-11-04T10:45:19.557Z",
+      "evidence": "lite: spec.md 8 REQ traced to the 2026-10-23 review finding; plan.md 5 tasks. Deviation: the repro and the fix were written before the gates (recorded in brief Log)",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-11-04T11:08:04.877Z",
+      "reason": "spec and plan approved together (lite)"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "plan-review",
+      "at": "2026-11-04T11:08:06.222Z",
+      "reason": "plan checklist reviewed against the spec"
+    },
+    {
+      "type": "transition",
+      "from": "plan-review",
+      "to": "implementing",
+      "at": "2026-11-04T11:08:07.571Z",
+      "reason": "fix in hook scripts"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-11-04T11:08:08.922Z",
+      "reason": "tests, installed probe and full suite"
+    }
+  ]
+}
