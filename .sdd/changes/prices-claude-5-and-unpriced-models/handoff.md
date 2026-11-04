@@ -2,9 +2,9 @@
 
 ## Current state
 
-- SDD status: verifying (conformance approved; `memory` left to the main session)
-- Last completed gate: conformance
-- Current revision: branch `fix/prices-claude-5-and-unpriced-models`
+- SDD status: closed (closing PR `chore/close-sdd-2026-11-04`)
+- Last completed gate: memory
+- Current revision: merged in `main` as `f0ecb390` (PR #565)
 
 ## What changed
 
@@ -27,5 +27,5 @@
 
 ## Memory
 
-- Canonical note: TBD (main session)
-- Indexes updated: TBD (main session)
+- Canonical note: vault `projects/local-delegate/jornada-2026-11-04-seis-arreglos-y-el-vigilante-de-precios.md`
+- Indexes updated: `projects/local-delegate` journey index (main session)

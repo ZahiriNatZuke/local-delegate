@@ -26,8 +26,8 @@
 
 | ID | Finding | Judge A | Judge B | Status | Resolution |
 | --- | --- | --- | --- | --- | --- |
-| F1 | El test de `StringIO` es una guarda de no regresión: pasa también con `utf8_stdio` vacía | confirmed | pendiente (sesión principal) | suspected | Aceptado: no puede discriminar el arreglo; protege que el arreglo no rompa los tests que inyectan `StringIO` |
+| F1 | El test de `StringIO` es una guarda de no regresión: pasa también con `utf8_stdio` vacía | confirmed | confirmed (revisión independiente) | confirmed | Aceptado: no puede discriminar el arreglo; protege que el arreglo no rompa los tests que inyectan `StringIO` |
 
 ## Required follow-up
 
-- Puerta `memory` la cierra la sesión principal tras mezclar.
+- Ninguno. Revisión independiente antes de mezclar: «mezclar» con dos ajustes, aplicados en la rama: la medición deja fuera del recuento de lecturas los eventos `no_file`, y tests de shell y subagente que discriminan el arreglo UTF-8. Mezclado en `main` como `1ae287be` (PR #560), 22 checks del PR en verde y CI de `main` en verde.

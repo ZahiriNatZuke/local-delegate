@@ -38,4 +38,4 @@ decides and the decision goes in Resolution). -->
 
 ## Required follow-up
 
-- None before closure. Memory gate is closed by the main session after merge.
+- None. Independent review before merge: «mezclar» with three low notes (F5–F7, accepted). Merged in `main` as `3e826b56` (PR #559), 22 PR checks green and `main` CI green.
