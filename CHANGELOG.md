@@ -21,6 +21,13 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   un aviso. Sin un campo así, o con `text=`, nada cambia. La skill y el bloque de memoria dicen
   ahora que el nombre del campo tiene que pedir líneas.
 
+- **Los tests de precios de Claude Haiku 5.5 ya no tumban el PR del vigilante (#567).** Fijaban a
+  mano las cifras de la tabla, así que cualquier cambio legítimo de precio que propusiera el
+  vigilante dejaba su CI en rojo. Ahora la lógica se prueba contra una copia congelada de los
+  precios que cobraron las filas reales, y a la tabla del paquete solo se le exigen invariantes
+  (cinco precios positivos por entrada, tramos con umbral y de un modelo con precio). Cambio
+  interno de la suite; el producto no cambia.
+
 - **`local_commit_msg` toma el idioma del historial del repo, no del reflog (#548).** Desde un
   worktree de agente anidado en la copia principal, con el diff en su raíz o en una subcarpeta, el
   mensaje salía en el idioma del producto con el aviso «los commits recientes del repo no dejan claro

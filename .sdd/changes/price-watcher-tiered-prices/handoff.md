@@ -2,9 +2,9 @@
 
 ## Current state
 
-- SDD status: verifying (conformance approved; `memory` left to the main session)
-- Last completed gate: conformance
-- Current revision: branch `fix/price-watcher-tiered-prices`, stacked on #565
+- SDD status: closed (closing PR `chore/close-sdd-2026-11-04`)
+- Last completed gate: memory
+- Current revision: merged in `main` as `2ef5cf44` (PR #566)
 
 ## What changed
 
@@ -20,5 +20,5 @@
 
 ## Memory
 
-- Canonical note: TBD (main session)
-- Indexes updated: TBD (main session)
+- Canonical note: vault `projects/local-delegate/jornada-2026-11-04-seis-arreglos-y-el-vigilante-de-precios.md`
+- Indexes updated: `projects/local-delegate` journey index (main session)
