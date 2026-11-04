@@ -7061,6 +7061,85 @@ def _strip_extract_prefixes(value: Any, total_lines: int) -> Any:
     return value
 
 
+def _partial_objects(partials: list[str], strict: bool) -> list[dict] | None:
+    """The map partials that are JSON objects, in chunk order; `strict`: None if one is not."""
+    objects: list[dict] = []
+    for partial in partials:
+        try:
+            parsed = json.loads(_strip_fences(partial))
+        except json.JSONDecodeError:
+            parsed = None
+        if isinstance(parsed, dict):
+            objects.append(parsed)
+        elif strict:
+            return None
+    return objects
+
+
+def _merge_location_values(values: list[Any]) -> Any:
+    """#568: the values one location field took in several chunks, joined in chunk order.
+
+    Each chunk saw different lines, so they add up instead of competing: lists are concatenated
+    (an element repeated by two chunks once), objects merged (the first chunk's key wins),
+    strings joined by line; mixed shapes become one list.
+    """
+    if len(values) == 1:
+        return values[0]
+    if all(isinstance(v, dict) for v in values):
+        merged: dict = {}
+        for value in values:
+            for key, item in value.items():
+                merged.setdefault(key, item)
+        return merged
+    if all(isinstance(v, str) for v in values):
+        return "\n".join(dict.fromkeys(values))
+    out: list = []
+    seen: set[str] = set()
+    for value in values:
+        for item in value if isinstance(value, list) else [value]:
+            key = json.dumps(item, sort_keys=True, ensure_ascii=False)
+            if key not in seen:
+                seen.add(key)
+                out.append(item)
+    return out
+
+
+def _merged_from_partials(
+    objects: list[dict], fields: list[str], location_fields: list[str]
+) -> dict:
+    """The extraction built by program from the partials: location fields joined, others first."""
+    data: dict = {}
+    for name in dict.fromkeys(fields):
+        values = [o[name] for o in objects if o.get(name) is not None]
+        if name in location_fields:
+            data[name] = _merge_location_values(values) if values else None
+        else:
+            data[name] = values[0] if values else None
+    return data
+
+
+def _extract_location_shortcut(
+    fields: list[str], location_fields: list[str]
+) -> Callable[[list[str]], str | None]:
+    """#568: the reduce of a numbered extraction, by program when no other field needs judgment.
+
+    The location fields add up across chunks (`_merge_location_values`); only when two chunks
+    give values for the same OTHER field does the model decide, as in `_extract_shortcut`.
+    """
+
+    def shortcut(partials: list[str]) -> str | None:
+        objects = _partial_objects(partials, strict=True)
+        if not objects:
+            return None
+        others = [f for f in fields if f not in location_fields]
+        if any(sum(o.get(f) is not None for o in objects) > 1 for f in others):
+            return None
+        merged = _merged_from_partials(objects, fields, location_fields)
+        return json.dumps(merged, ensure_ascii=False)
+
+    return shortcut
+
+
 @mcp.tool(annotations=_annotations(TOOL_TITLES["local_extract"]))
 def local_extract(
     fields: list[str],
@@ -7132,9 +7211,10 @@ def local_extract(
         "difieren, el más completo y específico; null si ninguno lo trae."
     )
     if numbered:
+        # #568: the location fields are joined by program from the partials (they can be long:
+        # ~60 sections cut a reduce capped at 512 tokens), so the model leaves them null.
         reduce_system += (
-            " En las claves de ubicación, une los valores de todos los objetos, en orden, y "
-            "conserva sus números de línea."
+            " Deja a null las claves de ubicación: el programa une las de todos los objetos."
         )
 
     # Chunking is decided on the bare text, as in #460: the prefix travels, the threshold stays.
@@ -7158,7 +7238,11 @@ def local_extract(
                 "Estos son objetos JSON parciales y EN ORDEN extraídos de los fragmentos de un "
                 f"mismo documento. Devuelve un único objeto con las claves pedidas:\n\n{joined}"
             ),
-            reduce_shortcut=_extract_shortcut,
+            reduce_shortcut=(
+                _extract_location_shortcut(fields, location_fields)
+                if numbered
+                else _extract_shortcut
+            ),
             raw_len=raw_len,
             path=path,
             # #568: each piece numbered with its absolute lines; the outline leaves room for itself.
@@ -7231,18 +7315,34 @@ def local_extract(
         previous = truncation.get("warning")
         truncation["warning"] = f"{previous}; {stopped}" if previous else stopped
 
+    # #568: with numbering, the partials the map gave (as objects) back the location fields.
+    location_partials = (
+        _partial_objects(report.get("partials") or [], strict=False)
+        if numbered and pieces > 1
+        else []
+    )
     try:
         data = json.loads(result)
     except json.JSONDecodeError:
-        # El modelo devolvió algo que no es JSON, o el backend falló y `result` trae el aviso de
-        # error. Degradar con la carga cruda es mejor que lanzar: quien llama ve qué pasó en vez
-        # de recibir una excepción de protocolo.
-        error = {"error": i18n.t("mcp.extract.not_json"), "raw": result}
-        return {"_local_delegate": {**error, **truncation}}
+        if location_partials:
+            # A reduce cut (or not JSON) does not lose what the chunks found: built by program.
+            data = _merged_from_partials(location_partials, fields, location_fields)
+        else:
+            # El modelo devolvió algo que no es JSON, o el backend falló y `result` trae el aviso
+            # de error. Degradar con la carga cruda es mejor que lanzar: quien llama ve qué pasó
+            # en vez de recibir una excepción de protocolo.
+            error = {"error": i18n.t("mcp.extract.not_json"), "raw": result}
+            return {"_local_delegate": {**error, **truncation}}
     if not isinstance(data, dict):
         error = {"error": i18n.t("mcp.extract.not_object"), "raw": result}
         return {"_local_delegate": {**error, **truncation}}
 
+    if location_partials:
+        # The location values are joined by program, never left to the reduce (#568).
+        merged = _merged_from_partials(location_partials, fields, location_fields)
+        for name in location_fields:
+            if merged.get(name) is not None:
+                data[name] = merged[name]
     if pieces > 1:
         _fill_nulls_from_partials(data, fields, report.get("partials") or [])
     # The contract is "exactly the requested keys": in free mode (`LOCAL_DELEGATE_JSON_SCHEMA=off`,
@@ -7295,9 +7395,10 @@ def local_extract(
         meta.setdefault("warning", "; ".join(notices))
     if unverified:
         meta["lines_unverified"] = unverified
-        meta.setdefault(
-            "warning", i18n.t("mcp.warning.extract_lines_unverified", lines=", ".join(unverified))
-        )
+        # Appended, as #497 does: an earlier warning keeps its exact text and this one still shows.
+        lines_notice = i18n.t("mcp.warning.extract_lines_unverified", lines=", ".join(unverified))
+        previous = meta.get("warning")
+        meta["warning"] = f"{previous}; {lines_notice}" if previous else lines_notice
     if path and config.FEEDBACK_ENABLED:
         # Tokens de Claude de la fila en curso (REQ-035), no del modelo local.
         event = cost.in_flight_row(tool="local_extract", source="path", path=path)

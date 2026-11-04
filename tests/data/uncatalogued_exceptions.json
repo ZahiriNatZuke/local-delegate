@@ -780,7 +780,7 @@
     },
     {
       "file": "src/local_delegate/server.py",
-      "text": " En las claves de ubicación, une los valores de todos los objetos, en orden, y conserva sus números de línea.",
+      "text": " Deja a null las claves de ubicación: el programa une las de todos los objetos.",
       "kind": "verbatim",
       "reason": "prompt del modelo local (#568, el reduce de `local_extract` troceado con un campo que pide líneas): no es texto de interfaz y su idioma lo decide REQ-028 (los prompts no se traducen)"
     },

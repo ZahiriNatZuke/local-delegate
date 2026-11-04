@@ -31,6 +31,16 @@
 | F7 | Llamada única puede pasar de `max_chars` y `max_tokens=512` corto para listas largas | sí | sí | confirmed | aceptado: mismo criterio que #460; anotado como riesgo residual |
 | F8 | Hook y aviso del mod siguen sin la aclaración | sí | no | suspected | fuera de alcance (el mod exige reconstrucción); queda anotado |
 
+### Segunda revisión (independiente, coordinador, PR #573)
+
+| ID | Finding | Judge A | Judge B | Status | Resolution |
+| --- | --- | --- | --- | --- | --- |
+| G1 | Campos de cantidad (`lines_added`, `total_lines`, `num_lines`) activan la numeración | sí | sí | confirmed | palabras de cantidad descartan; plural junto a num/code descarta; tests negativos |
+| G2 | Rango suelto junto a una cita explícita da una cita falsa; palabras de todo el elemento | sí | sí | confirmed | con cita explícita no se buscan formas sueltas; palabras de justo antes de cada cita; tests |
+| G3 | Reduce con tope de ~512 tokens corta ~60 secciones y sale `not_json` | sí | sí | confirmed | ubicación unida por programa desde los parciales; atajo sin modelo; reduce cortado no pierde datos; tests |
+| G4 | El aviso de líneas no se ve si ya había otro | sí | sí | confirmed | se añade con «; »; test |
+| G5 | `heading_line`, `section_line`, `linea_del_titulo` no activan | sí | sí | confirmed | calificadores heading/section/título/sección; tests |
+
 ## Required follow-up
 
 - Ninguno bloqueante. F7 y F8 quedan como riesgo residual anotado en la entrega.

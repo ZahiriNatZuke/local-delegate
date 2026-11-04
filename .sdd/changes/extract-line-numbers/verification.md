@@ -21,6 +21,7 @@
 | Command | Run | Result | Evidence |
 | --- | --- | --- | --- |
 | pytest (suite completa, `-n 2`) | sí | pass | 6504 passed, 30 skipped; el único fallo (léxico: `outline`, `qualifiers`) se arregló y su test pasa (86 passed en detector + tests nuevos) |
+| control positivo (2.ª revisión) | sí | pass | con el commit anterior del PR fallan los 18 tests nuevos (criterio, citas sueltas, palabras cercanas, aviso añadido, 60 secciones con y sin reduce cortado) |
 | control positivo | sí | pass | con el `server.py` de main fallan 7 tests nuevos; mutante sin descuento del esquema → falla `assert 38963 <= 38444` |
 | ruff check / ruff format --check | sí | pass | sin hallazgos |
 

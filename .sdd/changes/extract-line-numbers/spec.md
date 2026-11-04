@@ -14,9 +14,11 @@ una llamada o troceado, sin ensuciar los demás campos, y avisa de las líneas c
   - Verify: test tests/test_extract_line_numbers.py
 - **REQ-002** — Campo de ubicación: criterio determinista y estrecho por el nombre del campo,
   separado en palabras (camelCase, `_`, `-`, espacios) sin acentos ni mayúsculas: una palabra
-  lines/lineas/lineno/linenos, o line/linea junto a number/numero/num/no/start/end/inicio/fin/
-  range/rango. `location`, `position`, `offset`, `price_range`, `line_items` no cuentan (revisión:
-  falsos positivos en datos corrientes). Sin campo de ubicación, o con `text=`, los prompts quedan
+  lines/lineas/lineno/linenos (salvo junto a num/number/numero/code), o line/linea junto a
+  number/numero/num/no/start/end/inicio/fin/range/rango/heading/section/title/titulo/seccion/
+  encabezado. Una palabra de cantidad (count, total, added, removed, changed, loc, cantidad,
+  modificadas…) lo descarta. `location`, `position`, `offset`, `price_range`, `line_items`,
+  `lines_added` no cuentan (revisión: falsos positivos en datos corrientes). Sin campo de ubicación, o con `text=`, los prompts quedan
   byte a byte como antes.
   - Request: "numera solo cuando algún campo pida líneas/secciones/ubicación (decide un criterio determinista y documéntalo)"
   - Verify: test tests/test_extract_line_numbers.py
@@ -31,7 +33,10 @@ una llamada o troceado, sin ensuciar los demás campos, y avisa de las líneas c
   - Verify: test tests/test_extract_line_numbers.py
 - **REQ-005** — Las líneas citadas en los campos de ubicación se comprueban contra el fichero: una
   fuera del fichero, o cuyo entorno (±1 línea) no contiene ninguna palabra del elemento que la
-  cita, va en `_local_delegate.lines_unverified` con un aviso.
+  cita (las de justo antes de la cita), va en `_local_delegate.lines_unverified` con un aviso
+  añadido a los anteriores. Con una cita explícita (`líneas N`, `LN`, `N|`) no se buscan rangos
+  ni `: N` sueltos. Al trocear, los campos de ubicación los une el programa desde los parciales
+  (el reduce los deja a null), y un reduce cortado no los pierde.
   - Request: "Si el modelo cita líneas, compruébalas en el servidor como en #464 (aviso si no casan)"
   - Verify: test tests/test_extract_line_numbers.py
 - **REQ-006** — La skill (es/en) dice que con `local_extract` el nombre del campo debe pedir líneas.

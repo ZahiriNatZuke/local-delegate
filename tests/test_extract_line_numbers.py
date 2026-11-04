@@ -87,7 +87,8 @@ def _content_of(user: str) -> str:
     "name",
     [
         LOCATION, "secciones_con_lineas", "lines", "líneas", "lineRange", "line_number",
-        "start_line", "lineno", "endLine", "sectionLineNumbers",
+        "start_line", "lineno", "endLine", "sectionLineNumbers", "heading_line", "section_line",
+        "linea_del_titulo", "seccion_y_linea",
     ],
 )  # fmt: skip
 def test_location_fields(name):
@@ -100,6 +101,9 @@ def test_location_fields(name):
         "name", "components", "allocation", "pipeline", "deadline", "outline", "inline",
         "line_items", "address_line", "lineItems", "price_range", "age_range", "location",
         "locality", "position", "timezone_offset", "headline",
+        # A quantity of lines is not a place in the file.
+        "lines_of_code", "total_lines", "num_lines", "lines_added", "lines_removed",
+        "lines_count", "lineas_modificadas", "number_of_lines", "changed_lines",
     ],
 )  # fmt: skip
 def test_not_location_fields(name):
@@ -277,3 +281,75 @@ def test_a_file_that_is_not_markdown_gets_no_outline(backend, tmp_path):
     server.local_extract(fields=["lines"], path=_write(tmp_path, text, "a.py"))
     (call,) = calls
     assert call["user"] == INSTRUCTION + "1| # comment\n2| x = 1\n"
+
+
+def test_a_loose_number_next_to_an_explicit_citation_is_not_a_line():
+    text = _catalog(sections=3)
+    good = _line_of(text, f"### {_name(2)}")
+    # `3-4` is part of the name; `L{good}` is the citation.
+    assert line_check.check_values(f"{_name(2)} 3-4 del manual: L{good}", text) == []
+
+
+def test_each_citation_is_checked_against_its_own_name():
+    text = _catalog(sections=3)
+    good = _line_of(text, f"### {_name(2)}")
+    value = f"{_name(2)}: línea {good}; {_name(1)}: línea {good}"
+    bad = line_check.check_values(value, text)
+    assert [(c.label(), c.words) for c in bad] == [(str(good), (_name(1),))]
+
+
+def test_the_lines_warning_is_appended_to_an_earlier_one(backend, tmp_path):
+    _calls, state = backend
+    text = "# Ficha\n\nNombre: Ana\n"
+    state["answer"] = lambda call: _ok(json.dumps({"name_lines": "Zzzz: línea 2"}))
+    data = server.local_extract(fields=["name", "name_lines"], path=_write(tmp_path, text, "w.md"))
+    meta = data["_local_delegate"]
+    assert meta["missing_keys"] == ["name"]
+    missing = i18n.t("mcp.warning.extract_missing_keys", fields="name")
+    lines = i18n.t("mcp.warning.extract_lines_unverified", lines="name_lines: 2")
+    assert meta["warning"] == f"{missing}; {lines}"
+
+
+def _sections_answer(call, components):
+    """The map of a model that reads the prefix: every heading of its piece with its line."""
+    if call["user"].startswith("Estos son objetos JSON parciales"):
+        # A reduce cut by `max_tokens`, as with ~60 sections and a 512-token cap.
+        return server.ChatResult(
+            text='{"components": "X", "sections_with_lines": [{"heading": "',
+            ok=True,
+            finish_reason="length",
+        )
+    found = []
+    for piece_line in _content_of(call["user"]).split("\n"):
+        m = NUMBERED.match(piece_line)
+        if m and (m.group(2) or "").startswith("### "):
+            found.append({"heading": m.group(2), "line": int(m.group(1))})
+    return _ok(json.dumps({"components": components, LOCATION: found or None}))
+
+
+def _expected_sections(text: str) -> list[dict]:
+    return [{"heading": h, "line": n} for n, h in line_check.markdown_outline(text) if "###" in h]
+
+
+def test_sixty_sections_are_joined_by_program_without_a_reduce(backend, tmp_path):
+    calls, state = backend
+    text = _catalog()
+    state["answer"] = lambda call: _sections_answer(call, None)
+    data = server.local_extract(fields=["components", LOCATION], path=_write(tmp_path, text))
+    assert not any(c["user"].startswith("Estos son objetos") for c in calls)
+    assert data[LOCATION] == _expected_sections(text)
+    assert len(data[LOCATION]) == 60
+    assert "lines_unverified" not in data["_local_delegate"]
+
+
+def test_sixty_sections_survive_a_cut_reduce(backend, tmp_path):
+    """The other field needs the model's judgment; its cut reply does not lose the sections."""
+    calls, state = backend
+    text = _catalog()
+    state["answer"] = lambda call: _sections_answer(call, "X")
+    data = server.local_extract(fields=["components", LOCATION], path=_write(tmp_path, text))
+    assert any(c["user"].startswith("Estos son objetos") for c in calls), "guard: reduce ran"
+    assert "error" not in data["_local_delegate"]
+    assert data["components"] == "X"
+    assert data[LOCATION] == _expected_sections(text)
+    assert "Deja a null las claves de ubicación" in calls[-1]["system"]
