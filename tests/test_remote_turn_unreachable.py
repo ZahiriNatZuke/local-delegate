@@ -195,7 +195,7 @@ def test_a_cancelled_wait_for_the_blind_place_leaves_and_frees_nothing(mac, monk
         try:
             second.ensure(MODEL)
             outcome.append("got it")
-        except BaseException as error:  # the test looks at it
+        except Exception as error:  # the test looks at it
             outcome.append(error)
 
     waiting = threading.Thread(target=run, daemon=True)
@@ -470,7 +470,7 @@ def _hold(op: server._OperationTurn) -> threading.Thread:
     def run() -> None:
         try:
             op.ensure(MODEL)
-        except BaseException as error:  # the test looks at it
+        except Exception as error:  # the test looks at it
             op.error = error  # type: ignore[attr-defined]
 
     thread = threading.Thread(target=run, daemon=True)

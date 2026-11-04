@@ -18,6 +18,15 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   esas fases no salen en `concurrency.phases` (sin fase `turn` con el daemon inutilizable, como
   antes), y `turn_wait_ms` cuenta lo mismo.
 
+- **La comprobación del corpus de afinidad ya no falla porque `main` crezca.** La ventana de 400
+  commits de la regla de selección se contaba desde la punta de `main`: cada commit posterior a la
+  fecha límite (2026-10-06) sacaba un candidato de la ventana y, desde `fea54181`, el constructor
+  salía por el paso 1 en vez del 0 guardado, así que
+  `test_affinity_check_is_ok_with_any_environment_language` fallaba en un checkout completo (en el
+  CI se omite). Ahora la ventana empieza en el primer commit anterior a la fecha límite, como ya
+  decía la regla escrita; el corpus versionado no cambia (los mismos 38 commits, paso 0, en `main`
+  y en `v0.48.0`).
+
 - **`local_summarize` ya no corta el resumen a mitad de palabra con el `max_words` por defecto
   (#580).** La llamada única pedía `max_tokens = 2 × max_words + 64` (364 con 150) y, medido contra
   el backend real, el modelo gasta 1,5–1,7 tokens por palabra en español y escribe hasta 1,5 veces
