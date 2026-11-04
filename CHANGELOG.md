@@ -8,6 +8,16 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ### Corregido
 
+- **El error de plazo agotado dice también la espera sin turno (#575 + #579).** La nota «esperó N s
+  el turno o una plaza» de #575 salía de las fases `turn` y `slot` de la traza, pero la espera de la
+  plaza ciega de #579 (sin turno porque su daemon no responde, de una en una) solo sumaba a
+  `turn_wait_ms`, y el intento de turno contra un daemon inutilizable no quedaba en ninguna parte
+  de la traza: justo en el caso del #577 (~55 s de espera) el error no la mencionaba. Ahora las dos
+  quedan en la traza como fases internas (`turn_unusable` y `blind`) que la explicación suma; un
+  daemon que tarda en fallar sale en la nota aunque no en `turn_wait_ms`. El log de uso no cambia:
+  esas fases no salen en `concurrency.phases` (sin fase `turn` con el daemon inutilizable, como
+  antes), y `turn_wait_ms` cuenta lo mismo.
+
 - **La comprobación del corpus de afinidad ya no falla porque `main` crezca.** La ventana de 400
   commits de la regla de selección se contaba desde la punta de `main`: cada commit posterior a la
   fecha límite (2026-10-06) sacaba un candidato de la ventana y, desde `fea54181`, el constructor

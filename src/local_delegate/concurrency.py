@@ -42,6 +42,15 @@ from . import clients, config
 
 PHASES = ("turn", "slot", "backend")
 
+#: Waits before a send that the usage log does not publish as phases (they stay in the trace):
+#: a remote turn attempt that ended with its daemon unusable (REQ-026 keeps `turn` out of that
+#: event) and the wait for the blind place without a turn (#577).
+TURN_UNUSABLE_PHASE = "turn_unusable"
+BLIND_PHASE = "blind"
+
+#: Every wait before a send that its read deadline does not count (#572, and #579's blind wait).
+QUEUE_PHASES = ("turn", "slot", TURN_UNUSABLE_PHASE, BLIND_PHASE)
+
 #: How long one `/running` answer is reused, and the cap of each query (connection included).
 RUNNING_CACHE_S = 2.0
 RUNNING_QUERY_CAP_S = 0.5
