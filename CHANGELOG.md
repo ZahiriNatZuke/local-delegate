@@ -6,6 +6,22 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Corregido
+
+- **`local_commit_msg` toma el idioma del historial del repo, no del reflog (#548).** Desde un
+  worktree de agente anidado en la copia principal, con el diff en su raíz o en una subcarpeta, el
+  mensaje salía en el idioma del producto con el aviso «los commits recientes del repo no dejan claro
+  su idioma», aunque los últimos commits de `main` estaban en inglés. La causa no era el worktree:
+  el reflog de la copia principal recibe `main` con `git pull` (líneas `pull: Fast-forward`, sin
+  asunto) y sus pocas líneas `commit:` eran antiguas, de cuando el repo escribía en español. Ahora
+  se leen los asuntos de los 20 últimos commits de HEAD directamente del almacén de objetos de git
+  (sueltos o en packs, también como deltas), sin lanzar `git` y con topes de tamaño; el reflog
+  completa los votos cuando el historial no se puede leer o da muy pocos. De un merge cuenta el
+  título del PR (primera línea del cuerpo), no «Merge pull request #N from…». Cambio de criterio: el
+  idioma sale de los commits de la rama actual, no de los que se teclearon en esa copia, así que un
+  clon completo recién hecho, un submódulo o una rama de un fork toman el idioma de su historial. El
+  aviso de «muy pocos commits» ahora habla del historial leído (repo nuevo o clon con `--depth`).
+
 ## [0.48.0] - 2026-11-03
 
 Más avisos donde antes había silencio. `local_extract` devuelve exactamente las claves pedidas

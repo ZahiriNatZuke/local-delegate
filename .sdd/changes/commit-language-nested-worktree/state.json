@@ -1,0 +1,74 @@
+{
+  "schemaVersion": 1,
+  "slug": "commit-language-nested-worktree",
+  "title": "local_commit_msg: repo language from the commit history, not the reflog (#548)",
+  "mode": "lite",
+  "traceability": "strict",
+  "status": "specifying",
+  "createdAt": "2026-11-04T11:29:19.022Z",
+  "updatedAt": "2026-11-04T11:30:02.661Z",
+  "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-11-04T11:30:02.661Z",
+      "evidence": "Cause verified by probe on this worktree: stale reflog (pull entries carry no subject); spec REQ-001..004 and plan T1..T3 written",
+      "actor": "agent"
+    },
+    "plan": {
+      "status": "approved",
+      "updatedAt": "2026-11-04T11:30:02.661Z",
+      "evidence": "Cause verified by probe on this worktree: stale reflog (pull entries carry no subject); spec REQ-001..004 and plan T1..T3 written",
+      "actor": "agent"
+    },
+    "quality": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "conformance": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "memory": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-11-04T11:29:19.022Z",
+      "reason": "SDD change created"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "specifying",
+      "at": "2026-11-04T11:30:02.456Z",
+      "reason": "cause verified"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-11-04T11:30:02.661Z",
+      "evidence": "Cause verified by probe on this worktree: stale reflog (pull entries carry no subject); spec REQ-001..004 and plan T1..T3 written",
+      "actor": "agent"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-11-04T11:30:02.661Z",
+      "evidence": "Cause verified by probe on this worktree: stale reflog (pull entries carry no subject); spec REQ-001..004 and plan T1..T3 written",
+      "actor": "agent"
+    }
+  ]
+}

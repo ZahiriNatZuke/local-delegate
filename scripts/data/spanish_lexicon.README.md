@@ -135,6 +135,11 @@ de diccionario.
     detector informó de 4 palabras más sin clasificar. `applicable` (del test
     `test_fields_omitted_when_not_applicable`, nombre fijado por el plan) va, a mano, a inglés;
     las otras tres (`posted`, `thought`, `multi`) eran nombres propios del lote y se renombraron.
+22. Con el lector de commits de `git_history.py` (#548 reabierto, 2026-11-04) el detector informó
+    de 18 palabras sin clasificar, a mano, todas a inglés: los términos del formato de git y de
+    zlib (`fanout`, `idx`, `ofs`, `varint`, `packs`, `deltas`, `inflate`, `inflated`, `inflater`,
+    `indexes`, `bit`, `shift`, `clone`, `orig`) y los de sus tests (`bomb`, `zip`, `pulled`,
+    `rebuilt`).
 
 ## Heurísticas (no usan datos ajenos)
 
