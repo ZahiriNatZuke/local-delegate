@@ -8,6 +8,16 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ### Corregido
 
+- **El error de plazo agotado dice también la espera sin turno (#575 + #579).** La nota «esperó N s
+  el turno o una plaza» de #575 salía de las fases `turn` y `slot` de la traza, pero la espera de la
+  plaza ciega de #579 (sin turno porque su daemon no responde, de una en una) solo sumaba a
+  `turn_wait_ms`, y el intento de turno contra un daemon inutilizable no quedaba en ninguna parte
+  de la traza: justo en el caso del #577 (~55 s de espera) el error no la mencionaba. Ahora las dos
+  quedan en la traza como fases internas (`turn_unusable` y `blind`) que la explicación suma; un
+  daemon que tarda en fallar sale en la nota aunque no en `turn_wait_ms`. El log de uso no cambia:
+  esas fases no salen en `concurrency.phases` (sin fase `turn` con el daemon inutilizable, como
+  antes), y `turn_wait_ms` cuenta lo mismo.
+
 - **`local_summarize` ya no corta el resumen a mitad de palabra con el `max_words` por defecto
   (#580).** La llamada única pedía `max_tokens = 2 × max_words + 64` (364 con 150) y, medido contra
   el backend real, el modelo gasta 1,5–1,7 tokens por palabra en español y escribe hasta 1,5 veces
