@@ -4,9 +4,9 @@
   "title": "Hooks de la entrega por settings leen y escriben UTF-8 en Windows",
   "mode": "lite",
   "traceability": "strict",
-  "status": "verifying",
+  "status": "result-review",
   "createdAt": "2026-11-04T10:44:39.415Z",
-  "updatedAt": "2026-11-04T11:08:08.922Z",
+  "updatedAt": "2026-11-04T11:19:26.941Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -21,10 +21,10 @@
       "actor": "user"
     },
     "quality": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-11-04T11:19:20.214Z",
+      "evidence": "PR #560: all CI checks pass (tests ubuntu/macos/windows, lang-es, CodeQL, GitGuardian, Socket); local full suite 6312 passed with the worktree venv, 1 worktree-only sdist artifact that passes in CI; ruff clean",
+      "actor": "user"
     },
     "conformance": {
       "status": "pending",
@@ -97,6 +97,21 @@
       "to": "verifying",
       "at": "2026-11-04T11:08:08.922Z",
       "reason": "tests, installed probe and full suite"
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-11-04T11:19:20.214Z",
+      "evidence": "PR #560: all CI checks pass (tests ubuntu/macos/windows, lang-es, CodeQL, GitGuardian, Socket); local full suite 6312 passed with the worktree venv, 1 worktree-only sdist artifact that passes in CI; ruff clean",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "verifying",
+      "to": "result-review",
+      "at": "2026-11-04T11:19:26.941Z",
+      "reason": "quality approved; conformance pending the main session review"
     }
   ]
 }

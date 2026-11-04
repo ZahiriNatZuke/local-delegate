@@ -4,8 +4,8 @@
 
 - Level: standard
 - Judges: result-reviewer-1 (subagente autor, revisión contra spec), result-reviewer-2 (CI del PR y revisión de la sesión principal antes de mezclar)
-- Security reviewer: n/a (sin superficie nueva: solo codificación de stdio del propio proceso del hook)
-- Verdict: TBD
+- Security reviewer: no — sin superficie nueva: solo la codificación del stdio del propio proceso del hook
+- Verdict: conforms-with-notes
 
 ## Specification comparison
 
@@ -24,7 +24,7 @@
 
 | ID | Finding | Judge A | Judge B | Status | Resolution |
 | --- | --- | --- | --- | --- | --- |
-| F1 | El test de `StringIO` es una guarda de no regresión: pasa también con `utf8_stdio` vacía | confirmed | TBD | suspected | Aceptado: no puede discriminar el arreglo; protege que el arreglo no rompa los tests que inyectan `StringIO` |
+| F1 | El test de `StringIO` es una guarda de no regresión: pasa también con `utf8_stdio` vacía | confirmed | pendiente (sesión principal) | suspected | Aceptado: no puede discriminar el arreglo; protege que el arreglo no rompa los tests que inyectan `StringIO` |
 
 ## Required follow-up
 
