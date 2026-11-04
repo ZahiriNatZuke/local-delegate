@@ -139,7 +139,7 @@ def test_focus_terms_in_ignores_case_accents_and_plural():
     assert sections.focus_terms_in(GOOD_SUMMARY, ["cp1252", "stdin"]) == ["cp1252"]
 
 
-def test_english_plurals_in_ies_match_their_singular():
+def test_english_plurals_of_words_in_y_match_their_singular():
     terms = sections.focus_terms("dependencies policies")
     assert sections.focus_terms_in("Each dependency and the retry policy.", terms) == terms
     assert sections.focus_terms_in(

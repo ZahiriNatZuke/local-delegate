@@ -930,12 +930,12 @@ def _stem(term: str) -> str:
     return term[: max(4, len(term) - 2)]
 
 
-@functools.lru_cache(maxsize=64)
+@functools.lru_cache(64)
 def _stems_pattern(stems: tuple[str, ...]) -> re.Pattern[str]:
-    # One pass over the text: a word that starts with any stem. Escaped literals in a flat
-    # alternation, longest first; `\w*` after it is a single greedy run, with no backtracking.
-    alternation = "|".join(re.escape(s) for s in sorted(set(stems), key=len, reverse=True))
-    return re.compile(rf"(?<!\w)(?:{alternation})\w*")
+    # One pass over the text: a word that starts with any stem. Escaped literals as flat
+    # choices, longest first; `\w*` after it is a single greedy run, with no backtracking.
+    choices = "|".join(re.escape(s) for s in sorted(set(stems), key=len, reverse=True))
+    return re.compile(rf"(?<!\w)(?:{choices})\w*")
 
 
 def focus_terms_in(text: str, terms: list[str]) -> list[str]:
