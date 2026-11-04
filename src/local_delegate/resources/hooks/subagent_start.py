@@ -14,10 +14,11 @@ from __future__ import annotations
 import json
 import sys
 
-from hook_common import backend_down, enabled, hook_text
+from hook_common import backend_down, enabled, hook_text, utf8_stdio
 
 
 def main() -> None:
+    utf8_stdio()
     if not enabled() or backend_down():
         # Con el corte por backend inalcanzable abierto (issue #436) las local_* responderian que
         # el backend no esta: recordarle al subagente que las cargue solo le haria perder turnos.

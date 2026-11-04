@@ -317,3 +317,40 @@ def test_the_new_block_id_counts_the_same_as_the_old_bloqueo_id(scenario):
     )
 
     assert measure_adoption.measure("2026-09-10") == before
+
+
+# --- `no_file` is not a read (#560) -----------------------------------------------------------
+
+
+def test_a_file_the_hook_could_not_size_is_not_a_read(scenario):
+    """`no_file` (the read hook since #560, the shell hook always) stays out of the denominator,
+    in the totals and on each side, and is shown apart."""
+    boundaries = measure_adoption.measurement_boundaries.load()
+    hashes = measure_adoption.measurement_boundaries.hook_hashes_after(
+        boundaries, root=measure_adoption.measurement_boundaries.ROOT
+    )
+    read_after = min(hashes["suggest_delegate_read.py"])
+    shell_after = min(hashes["suggest_delegate_shell.py"])
+    before = measure_adoption.measure("2026-09-10")
+    rows = [json.loads(x) for x in scenario.read_text(encoding="utf-8").splitlines() if x]
+    common = {"suggested": False, "session_id": "s1"}
+    missing_files = [
+        {"ts": "2026-09-12T11:00:00Z", "category": "read", "reason": "no_file",
+         "version": read_after, "path_sha": "f5", **common},
+        {"ts": "2026-09-12T11:01:00Z", "category": "shell", "route": "shell",
+         "reason": "no_file", "version": shell_after, **common},
+        {"ts": "2026-09-12T11:02:00Z", "category": "shell", "route": "shell",
+         "reason": "no_file", "version": "def67890", **common},
+    ]  # fmt: skip
+    assert measure_adoption.hook_side(missing_files[0], hashes) == "after", (
+        "guard: on the after side"
+    )
+    _write(scenario, rows + missing_files)
+
+    after = measure_adoption.measure("2026-09-10")
+
+    assert after["not_reads"] == {"no_file": 3}, "guard: the three lines reached the measure"
+    assert before["not_reads"] == {}
+    assert {k: v for k, v in after.items() if k != "not_reads"} == {
+        k: v for k, v in before.items() if k != "not_reads"
+    }
