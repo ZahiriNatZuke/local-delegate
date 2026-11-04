@@ -41,3 +41,10 @@
 - Primera corrida de la suite con el `.venv` del checkout principal: 4 fallos de equivalencia plugin/settings porque `python -I -m local_delegate.hook` importaba `main` (trampa conocida del worktree); con el `.venv` del worktree pasan.
 - El test de `StringIO` es una guarda de no regresión: no puede fallar sin el arreglo.
 - La telemetría del hook de lectura gana líneas `no_file` que antes no existían: el total de eventos de lectura del panel sube en esa medida (son lecturas reales que antes se perdían).
+
+## Final result
+
+- Merged in `main` as `1ae287be` (PR #560).
+- PR checks: 22 of 22 green (`gh pr checks 560`: tests on ubuntu/windows/macos, Python 3.11–3.15 matrix, lint, secrets, ci-gate, CodeQL, Socket, GitGuardian).
+- `main` CI after the merge: green (`gh run list --branch main`).
+- Closed on 2026-11-04 by the closing PR `chore/close-sdd-2026-11-04`.

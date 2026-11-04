@@ -4,9 +4,9 @@
   "title": "local_commit_msg: repo language from the commit history, not the reflog (#548)",
   "mode": "lite",
   "traceability": "strict",
-  "status": "specifying",
+  "status": "closed",
   "createdAt": "2026-11-04T11:29:19.022Z",
-  "updatedAt": "2026-11-04T11:30:02.661Z",
+  "updatedAt": "2026-11-04T13:32:14.025Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -21,22 +21,22 @@
       "actor": "agent"
     },
     "quality": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-11-04T13:32:12.687Z",
+      "evidence": "PR #562: suite 6389 passed on first full run (4 fixed failures explained in verification.md), mutant positive controls; review fixes verified by PR CI: 22/22 checks green incl. CodeQL after empty-except fix; main CI green on 5b305b5d",
+      "actor": "user"
     },
     "conformance": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-11-04T13:32:13.201Z",
+      "evidence": "review.md: REQ-001..004 implemented and verified; branch judges plus independent review: merge with changes, 5 points fixed (call budget, delta base cache, packed-refs cap, directory test, single vote) and CodeQL empty-except alert fixed; PR #562 merged as 5b305b5d",
+      "actor": "user"
     },
     "memory": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-11-04T13:32:13.757Z",
+      "evidence": "vault projects/local-delegate/jornada-2026-11-04-seis-arreglos-y-el-vigilante-de-precios.md",
+      "actor": "user"
     }
   },
   "history": [
@@ -69,6 +69,79 @@
       "at": "2026-11-04T11:30:02.661Z",
       "evidence": "Cause verified by probe on this worktree: stale reflog (pull entries carry no subject); spec REQ-001..004 and plan T1..T3 written",
       "actor": "agent"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-11-04T13:32:11.718Z",
+      "reason": "spec approved; state lagged behind the work, advanced at closure"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "plan-review",
+      "at": "2026-11-04T13:32:11.964Z",
+      "reason": "plan.md written; plan gate approved"
+    },
+    {
+      "type": "transition",
+      "from": "plan-review",
+      "to": "implementing",
+      "at": "2026-11-04T13:32:12.208Z",
+      "reason": "plan approved; implemented in PR #562"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-11-04T13:32:12.448Z",
+      "reason": "implementation in PR #562 complete"
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-11-04T13:32:12.687Z",
+      "evidence": "PR #562: suite 6389 passed on first full run (4 fixed failures explained in verification.md), mutant positive controls; review fixes verified by PR CI: 22/22 checks green incl. CodeQL after empty-except fix; main CI green on 5b305b5d",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "verifying",
+      "to": "result-review",
+      "at": "2026-11-04T13:32:12.908Z",
+      "reason": "quality approved on PR #562 evidence"
+    },
+    {
+      "type": "gate",
+      "gate": "conformance",
+      "status": "approved",
+      "at": "2026-11-04T13:32:13.201Z",
+      "evidence": "review.md: REQ-001..004 implemented and verified; branch judges plus independent review: merge with changes, 5 points fixed (call budget, delta base cache, packed-refs cap, directory test, single vote) and CodeQL empty-except alert fixed; PR #562 merged as 5b305b5d",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "result-review",
+      "to": "closing",
+      "at": "2026-11-04T13:32:13.488Z",
+      "reason": "conformance approved; PR #562 merged in main as 5b305b5d"
+    },
+    {
+      "type": "gate",
+      "gate": "memory",
+      "status": "approved",
+      "at": "2026-11-04T13:32:13.757Z",
+      "evidence": "vault projects/local-delegate/jornada-2026-11-04-seis-arreglos-y-el-vigilante-de-precios.md",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "closing",
+      "to": "closed",
+      "at": "2026-11-04T13:32:14.025Z",
+      "reason": "PR #562 merged (5b305b5d), main CI green, memory note written; closing PR chore/close-sdd-2026-11-04"
     }
   ]
 }
