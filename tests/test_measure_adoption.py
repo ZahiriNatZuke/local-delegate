@@ -334,7 +334,7 @@ def test_a_file_the_hook_could_not_size_is_not_a_read(scenario):
     before = measure_adoption.measure("2026-09-10")
     rows = [json.loads(x) for x in scenario.read_text(encoding="utf-8").splitlines() if x]
     common = {"suggested": False, "session_id": "s1"}
-    unsized = [
+    missing_files = [
         {"ts": "2026-09-12T11:00:00Z", "category": "read", "reason": "no_file",
          "version": read_after, "path_sha": "f5", **common},
         {"ts": "2026-09-12T11:01:00Z", "category": "shell", "route": "shell",
@@ -342,8 +342,10 @@ def test_a_file_the_hook_could_not_size_is_not_a_read(scenario):
         {"ts": "2026-09-12T11:02:00Z", "category": "shell", "route": "shell",
          "reason": "no_file", "version": "def67890", **common},
     ]  # fmt: skip
-    assert measure_adoption.hook_side(unsized[0], hashes) == "after", "guard: on the after side"
-    _write(scenario, rows + unsized)
+    assert measure_adoption.hook_side(missing_files[0], hashes) == "after", (
+        "guard: on the after side"
+    )
+    _write(scenario, rows + missing_files)
 
     after = measure_adoption.measure("2026-09-10")
 
