@@ -8,6 +8,16 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ### Corregido
 
+- **`local_extract` ya no pasa por dato un «N/A» ni inventa la cuenta de una lista vacía (#586).**
+  Un valor que es entero un marcador de «sin dato» (`N/A`, `unknown`, `desconocido`, `no consta`,
+  `-`, cadena vacía…) se devuelve como `null`, entra en `missing_keys`, su texto original queda en
+  `_local_delegate.placeholder_keys` y hay aviso; `none`, `NA`, `0`, `--`, `...` o un texto que
+  solo contiene un marcador no se tocan. Si la entrada es un objeto JSON, se pide la cuenta de una
+  de sus listas de primer nivel (`number_of_comments` con `"comments": []`) y el modelo no da nada
+  o da una cifra mayor que la lista, la cifra la pone el programa (`recounted_keys`, con aviso),
+  salvo que el JSON ya traiga un total de esa lista (`total_comments`, `meta.file_count`,
+  `total_count`).
+
 - **El error de plazo agotado dice también la espera sin turno (#575 + #579).** La nota «esperó N s
   el turno o una plaza» de #575 salía de las fases `turn` y `slot` de la traza, pero la espera de la
   plaza ciega de #579 (sin turno porque su daemon no responde, de una en una) solo sumaba a

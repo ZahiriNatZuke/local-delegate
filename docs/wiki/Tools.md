@@ -132,6 +132,18 @@ Dos cosas que conviene saber y solo estaban en el código:
   (`Name` ~ `name`, `endDate` ~ `end_date`) y el emparejamiento es único, se renombra
   (`renamed_keys`); la que sobra sale de los datos y su valor queda en `_local_delegate.dropped`
   (`dropped_keys`). `fields` vacío o solo con blancos da un error sin llamar al backend.
+- **Un marcador de «sin dato» no pasa por valor** (#586). Si el modelo responde entero `N/A`,
+  `unknown`, `desconocido`, `no consta`, `-`, `?` o una cadena vacía, la clave vuelve como `null`,
+  entra en `missing_keys` y su texto original queda en `_local_delegate.placeholder_keys`, con
+  aviso. También las cadenas `"null"` y `"undefined"` (su texto queda en `placeholder_keys`).
+  `none`, `NA`, `0`, `"."`, `"--"`, `"..."` o un texto que solo contiene un marcador no se tocan.
+- **La cuenta inflada de una lista la corrige el programa** (#586). Si la entrada es un objeto JSON
+  y se pide la cuenta de una lista de primer nivel (`number_of_comments`, `num_comments`,
+  `commentCount` con `"comments": [...]`), y el modelo no dio nada o dio una cifra MAYOR que la
+  lista, el valor es su longitud y la cifra del modelo queda en `_local_delegate.recounted_keys`,
+  con aviso. Una cifra menor se respeta. No se recuenta si el JSON ya trae un número cuyo nombre
+  nombra la lista (`total_comments`, `meta.file_count`) o un total genérico (`total_count`,
+  `total`, `count`), si la lista está anidada o si dos claves encajan.
 
 ## `local_boilerplate`
 
