@@ -14,7 +14,10 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   título tenía la palabra pedida. Ahora el mensaje al modelo nombra las secciones Markdown cuyo
   título o cuerpo contiene alguna palabra significativa del enfoque (en cada trozo, solo las
   suyas), y si el resumen no menciona ninguna de esas palabras aunque la entrada sí las tiene, la
-  salida lleva un aviso `[local-delegate warning: …]` que las nombra. Sin `focus` nada cambia.
+  salida lleva un aviso `[local-delegate warning: …]` que las nombra. Una palabra que el modelo
+  traduciría solo cuenta si la entrada está en el idioma del resumen; las que se copian tal cual
+  (`cp1252`, `utf8`, `config.json`, `readFile`, `API`) cuentan siempre. Un título copiado no
+  cuenta como mención. Sin `focus` nada cambia.
 
 ## [0.48.0] - 2026-11-03
 

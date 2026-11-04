@@ -6516,10 +6516,42 @@ def _focus_note(text: str, terms: list[str]) -> str:
     )
 
 
-def _focus_missing(summary: str, content: str, terms: list[str]) -> list[str]:
-    """#558: the focus terms the input holds when the summary mentions none of them, else []."""
+#: #558: lines of the input whose words vote its language (enough to tell, cheap on a big file).
+_FOCUS_LANGUAGE_LINES = 400
+#: A heading line of the summary: copying a title is not summarizing its section.
+_SUMMARY_HEADING_LINE = re.compile(r"^ {0,3}#{1,6}[ \t].*$", re.MULTILINE)
+
+
+def _summary_language() -> str:
+    """The language the summary is written in (REQ-028); a seam for the tests."""
+    return i18n.response_language().value
+
+
+def _input_language(content: str) -> str | None:
+    """`"es"`, `"en"` or `None`: the vote of the commit-language markers over the input's lines."""
+    lines = [line for line in content.splitlines() if line.strip()][:_FOCUS_LANGUAGE_LINES]
+    return _guess_language(lines)
+
+
+def _focus_missing(
+    summary: str, content: str, terms: list[str], literal: set[str] | frozenset[str] = frozenset()
+) -> list[str]:
+    """#558: the focus terms the input holds when the summary mentions none of them, else [].
+
+    A word of the focus is judged only when the summary can carry it as it is: a literal token
+    (`literal`: `cp1252`, `utf8`, `config.json`, which the model copies), or any word when the input
+    is in the language the summary is written in. Otherwise an English input summarized in Spanish
+    says «riesgos de seguridad» for the focus «security risks», and that is no miss.
+    """
     in_input = sections.focus_terms_in(content, terms)
-    if not in_input or sections.focus_terms_in(summary, in_input):
+    if any(term not in literal for term in in_input) and (
+        _input_language(content) != _summary_language()
+    ):
+        in_input = [term for term in in_input if term in literal]
+    if not in_input:
+        return []
+    # Copying a title is not summarizing its section: the heading lines do not count as mentions.
+    if sections.focus_terms_in(_SUMMARY_HEADING_LINE.sub("", summary), in_input):
         return []
     return in_input
 
@@ -6602,16 +6634,18 @@ def _structured_summary(
     path: str | None,
     after: Callable[[str, bool], str] | None = None,
     focus_terms: list[str] | None = None,
+    focus_literal: set[str] | None = None,
 ) -> str:
     plan = sections.sections_for_summary(content, structure)
     headings = [s.heading for s in plan]
     empty_in_document = frozenset(i for i, s in enumerate(plan) if s.empty)
     terms = focus_terms or []
+    literal = focus_literal or set()
 
     def _complete(text: str, truncated: bool) -> str:
         # #558: judged on what the model wrote, before `complete` puts back a missing heading
         # (with the focus term in it) as «(sin resumir)».
-        missing = _focus_missing(text, content, terms)
+        missing = _focus_missing(text, content, terms, literal)
         text = sections.complete(
             text, headings, truncated=truncated, empty_in_document=empty_in_document
         ).text
@@ -6754,6 +6788,7 @@ def local_summarize(
     # #558: the significant words of the focus, to name the sections that treat it and to warn when
     # the summary mentions none of them. Empty without focus: nothing below changes then.
     terms = sections.focus_terms(clean_focus)
+    literal = sections.literal_focus_terms(clean_focus)
     # La orden de idioma (REQ-028) va con el enfoque: así llega al map, al reduce y a cada trozo
     # del resumen estructurado, que la reciben por `extra`/`reduce_extra`.
     extra = _focus_clause(clean_focus) + _written_language_clause()
@@ -6780,6 +6815,7 @@ def local_summarize(
             path=path,
             after=literal_notice,
             focus_terms=terms,
+            focus_literal=literal,
         )
 
     # Sin estructura (o con el interruptor apagado): el camino de siempre. Desde la 0.36.0 lleva
@@ -6793,10 +6829,13 @@ def local_summarize(
     note_terms = terms if kind != "code" else []
 
     def _build(piece: str) -> str:
-        return _focus_note(piece, note_terms) + f"Resume el siguiente contenido:\n\n{piece}"
+        return f"Resume el siguiente contenido:\n\n{piece}"
+
+    def _build_with_note(piece: str) -> str:
+        return _focus_note(piece, note_terms) + _build(piece)
 
     def _notices(text: str, truncated: bool) -> str:
-        missing = _focus_missing(text, content, terms)
+        missing = _focus_missing(text, content, terms, literal)
         return _with_focus_warning(literal_notice(text, truncated), missing)
 
     if len(content) > config.max_chars_for_role(role):
@@ -6817,9 +6856,12 @@ def local_summarize(
             reduce_extra=extra,
             focus=clean_focus is not None,
             postprocess=_notices,
+            # #558: the note goes only to the map, on the input's own sections; the regroup works
+            # on partial summaries (with `_build`), where the sections are no longer the input's.
+            user_for=lambda piece: _build_with_note(piece.strip()),
         )
 
-    user = _build(content)
+    user = _build_with_note(content)
     result = _chat(
         model,
         system,

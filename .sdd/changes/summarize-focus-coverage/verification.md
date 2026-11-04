@@ -46,6 +46,19 @@
 - [ ] Secret scanning passes. (lo hace el CI: GitGuardian)
 - [x] No unrelated changes are present.
 
+## Revisión del PR #561
+
+| Hallazgo | Arreglo | Control positivo (mutante → assert que falla) |
+| --- | --- | --- |
+| Falso aviso con idioma cruzado (entrada en inglés, resumen en español) | términos literales (`literal_focus_terms`) o idioma de la entrada (votos de `_guess_language` sobre 400 líneas) igual al del resumen | sin el filtro → `test_an_english_input_summarized_in_spanish_is_not_warned` en `FOCUS_WARNING not in output` |
+| Plurales en «-ies» | `_stem` pasa «-ies» a «-y» antes de recortar | sin eso → `test_english_plurals_in_ies_match_their_singular` en el primer assert |
+| Título copiado cuenta como mención | se quitan las líneas `#…` del resumen antes de buscar | sin quitarlas → `test_a_copied_heading_is_no_mention` en `== ["cp1252"]` |
+| Coste términos × palabras (24 s en 9 MB) | una pasada con regex de alternancia escapada y caché del patrón; atajo ASCII en `_fold` | algoritmo viejo → `test_one_pass_over_a_big_input_with_many_terms` en `< 5` s (0,13 s con el arreglo) |
+| La nota entraba en el reagrupado | `user_for` solo para el map; el reagrupado usa `_build` sin nota | nota en `build_user` → `test_the_note_goes_to_the_map_and_not_to_the_regroup` en `all(u.startswith("Resume…"))` |
+
+Un test propio de este PR cambió de expectativa: con 3 líneas no se puede saber el idioma de la
+entrada, así que en `test_a_heading_put_back_…` solo se juzga `cp1252` (literal).
+
 ## Deviations and residual risk
 
 - La primera corrida de la suite completa dio 4 rojos que se arreglaron sin tocar tests existentes:

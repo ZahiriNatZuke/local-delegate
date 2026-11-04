@@ -25,6 +25,11 @@ cuando el resumen no lo menciona aunque la entrada sí.
   ninguno aparece en el resumen del modelo (antes de reponer títulos que faltan), la salida lleva un
   aviso `[local-delegate warning: …]` (es/en) que nombra esos términos. Si el resumen menciona
   alguno, o ningún término está en la entrada, no hay aviso. Un error del backend no lleva aviso.
+  Revisión del PR #561: un término solo se juzga si es literal (dígito, `_`, `.`, `/`, camelCase
+  o mayúsculas en el foco) o si el idioma detectado de la entrada coincide con el del resumen; las
+  líneas de título del resumen no cuentan como mención; los plurales ingleses en «-ies» casan con
+  su singular; la búsqueda es una sola pasada sobre la entrada; la nota va solo al map, nunca al
+  reagrupado de resúmenes parciales.
   - Request: "si ninguna palabra significativa del focus aparece en el resumen pero sí en la entrada, añadir un aviso"
   - Verify: test tests/test_summarize_focus_coverage.py
 - **REQ-003** — Sin `focus` (o con un foco vacío o sin términos significativos) los prompts y la

@@ -16,6 +16,7 @@ Todo es puro (sin red ni disco): lo prueban `tests/test_structured_summary.py` y
 
 from __future__ import annotations
 
+import functools
 import re
 import unicodedata
 from collections.abc import Callable
@@ -891,7 +892,10 @@ FOCUS_MAX_SECTIONS = 8
 
 def _fold(text: str) -> str:
     """Lower case and without accents, so «configuración» and «Configuracion» are one word."""
-    decomposed = unicodedata.normalize("NFKD", text.casefold())
+    folded = text.casefold()
+    if folded.isascii():
+        return folded
+    decomposed = unicodedata.normalize("NFKD", folded)
     return "".join(c for c in decomposed if not unicodedata.combining(c))
 
 
@@ -904,17 +908,51 @@ def focus_terms(focus: str | None) -> list[str]:
     return terms
 
 
+#: A focus token the model copies as it is instead of translating it: a digit, `_`, `.` or `/`
+#: inside (`cp1252`, `utf8`, `config.json`), camelCase (`readFile`) or all capitals (`UTF`, `API`).
+_LITERAL_TOKEN = re.compile(r"\d|\w[_./]\w|[a-z][A-Z]|^[^a-z]*[A-Z][^a-z]*[A-Z][^a-z]*$")
+
+
+def literal_focus_terms(focus: str | None) -> set[str]:
+    """The terms of `focus` (as `focus_terms` folds them) that come from a literal token."""
+    literal: set[str] = set()
+    for token in (focus or "").split():
+        if _LITERAL_TOKEN.search(token):
+            literal.update(_FOCUS_WORD.findall(_fold(token)))
+    return literal
+
+
 def _stem(term: str) -> str:
-    # A prefix, so «riesgos» matches «riesgo»; never under 4 characters (all of a short term).
+    # A prefix, so «riesgos» matches «riesgo»; never under 4 characters (all of a short term). An
+    # English plural in «-ies» goes back to «-y» first, so «policies» and «policy» share «poli».
+    if term.endswith("ies") and len(term) > 4:
+        term = term[:-3] + "y"
     return term[: max(4, len(term) - 2)]
+
+
+@functools.lru_cache(maxsize=64)
+def _stems_pattern(stems: tuple[str, ...]) -> re.Pattern[str]:
+    # One pass over the text: a word that starts with any stem. Escaped literals in a flat
+    # alternation, longest first; `\w*` after it is a single greedy run, with no backtracking.
+    alternation = "|".join(re.escape(s) for s in sorted(set(stems), key=len, reverse=True))
+    return re.compile(rf"(?<!\w)(?:{alternation})\w*")
 
 
 def focus_terms_in(text: str, terms: list[str]) -> list[str]:
     """The `terms` that start a word of `text` (folded, by their stem), in the order given."""
     if not terms:
         return []
-    words = set(_FOCUS_WORD.findall(_fold(text)))
-    return [t for t in terms if any(w.startswith(_stem(t)) for w in words)]
+    stems = {term: _stem(term) for term in terms}
+    pending = set(stems.values())
+    found_stems: set[str] = set()
+    for match in _stems_pattern(tuple(stems.values())).finditer(_fold(text)):
+        word = match.group()
+        hits = {s for s in pending if word.startswith(s)}
+        found_stems |= hits
+        pending -= hits
+        if not pending:
+            break
+    return [term for term in terms if stems[term] in found_stems]
 
 
 def focus_sections(text: str, terms: list[str]) -> list[str]:

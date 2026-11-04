@@ -10,6 +10,7 @@ of the issue.
 from __future__ import annotations
 
 import json
+import time
 
 import backend_mock
 import httpx2
@@ -64,7 +65,11 @@ GOOD_SUMMARY = (
 
 
 @backend_mock.mock
-def _summarize(monkeypatch, tmp_path, answer: str, *, structured: bool = False, status=200, **kw):
+def _summarize(
+    monkeypatch, tmp_path, answer: str, *, structured=False, status=200, language="es", **kw
+):
+    # The summary language is pinned: the CI runs the suite in English and in Spanish.
+    monkeypatch.setattr(server, "_summary_language", lambda: language)
     monkeypatch.setattr(config, "STRUCTURED_SUMMARY", structured)
     monkeypatch.setattr(config, "LOG_DIR", tmp_path)
     monkeypatch.setattr(config, "USAGE_LOG", tmp_path / "usage.jsonl")
@@ -132,6 +137,35 @@ def test_focus_terms_in_ignores_case_accents_and_plural():
     assert sections.focus_terms_in(DOC, sections.focus_terms(FOCUS)) == ["cp1252", "stdin"]
     assert sections.focus_terms_in(MISSING_SUMMARY, ["cp1252", "stdin"]) == []
     assert sections.focus_terms_in(GOOD_SUMMARY, ["cp1252", "stdin"]) == ["cp1252"]
+
+
+def test_english_plurals_in_ies_match_their_singular():
+    terms = sections.focus_terms("dependencies policies")
+    assert sections.focus_terms_in("Each dependency and the retry policy.", terms) == terms
+    assert sections.focus_terms_in(
+        "All dependencies and policies.", sections.focus_terms("dependency policy")
+    ) == ["dependency", "policy"]
+
+
+def test_literal_focus_terms_are_the_ones_the_model_copies():
+    assert sections.literal_focus_terms(FOCUS) == {"cp1252", "utf8"}
+    assert sections.literal_focus_terms("readFile en config.json y la API de my_mod") == {
+        "readfile",
+        "config",
+        "json",
+        "api",
+        "my_mod",
+    }
+    assert sections.literal_focus_terms("security risks") == set()
+
+
+def test_one_pass_over_a_big_input_with_many_terms():
+    # Review of #561: terms x distinct words took 24 s on 9 MB with 80 terms.
+    text = "\n".join(" ".join(f"w{i}_{j}" for j in range(200)) for i in range(5000))
+    terms = sections.focus_terms(" ".join(f"term{k}x" for k in range(80)))
+    started = time.perf_counter()
+    assert sections.focus_terms_in(text, terms) == []
+    assert time.perf_counter() - started < 5
 
 
 def test_focus_sections_names_the_section_that_treats_the_focus():
@@ -246,4 +280,88 @@ def test_a_heading_put_back_not_summarized_does_not_count_for_the_focus(monkeypa
         monkeypatch, tmp_path, answer, structured=True, path=_write(tmp_path, doc), focus=FOCUS
     )
     assert "## Lectura de stdin en cp1252" in output
-    assert _warning("cp1252, stdin") in output
+    # Three lines are too few to tell the language of the input: only the literal term is judged.
+    assert _warning("cp1252") in output
+
+
+# --- Review of #561 --------------------------------------------------------------------------------
+
+ENGLISH_DOC = (
+    "## Overview\n\nThe deploy has three stages and runs every night.\n\n"
+    "## Security risks\n\nThe token is passed on the command line and the logs keep it. "
+    "The panel listens on every interface.\n\n"
+    "## Closing\n\nNothing else was found and no process was left running.\n"
+)
+SPANISH_SUMMARY_OF_ENGLISH_DOC = (
+    "El despliegue tiene tres etapas; los riesgos de seguridad son el token y el panel."
+)
+
+
+def test_an_english_input_summarized_in_spanish_is_not_warned(monkeypatch, tmp_path):
+    output, _seen = _summarize(
+        monkeypatch,
+        tmp_path,
+        SPANISH_SUMMARY_OF_ENGLISH_DOC,
+        language="es",
+        text=ENGLISH_DOC * 3,
+        focus="security risks",
+    )
+    assert FOCUS_WARNING not in output
+
+
+def test_same_language_words_are_still_judged(monkeypatch, tmp_path):
+    output, _seen = _summarize(
+        monkeypatch,
+        tmp_path,
+        "The deploy has three stages and nothing was left running.",
+        language="en",
+        text=ENGLISH_DOC * 3,
+        focus="security risks",
+    )
+    assert _warning("security, risks") in output
+
+
+def test_the_issue_still_warns_when_the_summary_is_in_another_language(monkeypatch, tmp_path):
+    # A Spanish input summarized in English: `stdin` could be translated, `cp1252` is copied.
+    output, _seen = _summarize(
+        monkeypatch,
+        tmp_path,
+        "The review found four medium findings and six low ones.",
+        language="en",
+        path=_write(tmp_path),
+        focus=FOCUS,
+    )
+    assert _warning("cp1252") in output
+
+
+def test_a_copied_heading_is_no_mention():
+    summary = "## La entrada en cp1252\n\n(sin datos)\n\n## Cierre\n\nNo quedan procesos.\n"
+    assert server._focus_missing(summary, DOC, ["cp1252"], {"cp1252"}) == ["cp1252"]
+    covered = "## Hallazgos\n\nLos hooks leen la entrada en cp1252.\n"
+    assert server._focus_missing(covered, DOC, ["cp1252"], {"cp1252"}) == []
+
+
+def test_the_note_goes_to_the_map_and_not_to_the_regroup(monkeypatch, tmp_path):
+    # Partial summaries too long to reduce in one go: a regroup step runs on them.
+    monkeypatch.setattr(server, "_summary_language", lambda: "es")
+    monkeypatch.setitem(config.MAX_CHARS_BY_ROLE, "long", 6500)
+    monkeypatch.setattr(config, "STRUCTURED_SUMMARY", False)
+    monkeypatch.setattr(config, "FEEDBACK_ENABLED", False)
+    monkeypatch.setattr(config, "LOG_DIR", tmp_path)
+    monkeypatch.setattr(config, "USAGE_LOG", tmp_path / "usage.jsonl")
+    users: list[str] = []
+    partial = "### Parcial sobre cp1252\n\n" + "PARCIAL la entrada cp1252 se resume. " * 90
+
+    def run_chat(model, system, user, max_tokens, temperature, **_):
+        users.append(user)
+        result = server.ChatResult(text=partial, ok=True, finish_reason="stop")
+        return result, 0, None, [server.Attempt(model, True, None, None, 0)]
+
+    monkeypatch.setattr(server, "_run_chat", run_chat)
+    server.local_summarize(path=_write(tmp_path), focus=FOCUS, max_words=200)
+    on_partials = [u for u in users if "PARCIAL" in u]
+    regroups = [u for u in on_partials if not u.startswith("Estos son resúmenes parciales")]
+    assert regroups  # guard: the regroup ran
+    assert all(u.startswith("Resume el siguiente contenido:") for u in regroups)
+    maps = [u for u in users if "PARCIAL" not in u]
+    assert any(u.startswith("Secciones que tratan") for u in maps)
