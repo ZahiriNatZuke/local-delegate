@@ -1047,7 +1047,13 @@ def wait_until_up(
 
 
 def _terminate(opts: Options, pid: int | None, out) -> None:
-    """Señal al pid **confirmado por /api/daemon**. Nunca a un pid leído de un fichero."""
+    """Señal al pid **confirmado por /api/daemon**. Nunca a un pid leído de un fichero.
+
+    La única excepción del paquete es el relevo de `daemon.serve` (#576), que sí señala al pid de
+    `daemon.json` porque ese daemon ya no contesta en `/api/daemon`. Lo hace solo con guardas: pid
+    vivo, creado antes de su `started_at` (no reutilizado), más de un minuto de vida, puerto que
+    rechaza la conexión y `daemon.json` estable (`daemon.stale_registration`).
+    """
     if not pid:
         return
     try:

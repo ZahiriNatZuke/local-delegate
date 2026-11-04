@@ -183,6 +183,13 @@ def _default_daemon_status(host: str, port: int) -> dict | None:
     return daemon.query_daemon(host, port, timeout=1.0)
 
 
+def _default_daemon_registration() -> dict | None:
+    """The daemon in ``daemon.json`` if its process lives. See ``daemon.registered_process``."""
+    from . import daemon
+
+    return daemon.registered_process()
+
+
 def _default_daemon_needs_token(host: str, port: int) -> bool | None:
     """¿El puerto lo sirve un daemon nuestro protegido? Ver ``daemon.daemon_requires_token``."""
     from . import daemon
@@ -507,6 +514,11 @@ class Context:
     # `remote_turn.probe`. It asks this machine's daemon (with the port the suite points at its
     # rejecting server) or, with a backend on another machine, that machine's daemon.
     turn_probe: Callable[[str, bool], str] = field(default_factory=lambda f=_default_turn_probe: f)
+    # Issue #576: only asked when nothing listens on the daemon's port. It reads `daemon.json` from
+    # `config.LOG_DIR` (isolated by the suite) and checks the pid; it does not go to the network.
+    daemon_registration: Callable[[], dict | None] = field(
+        default_factory=lambda f=_default_daemon_registration: f
+    )
 
     @property
     def claude_dir(self) -> Path:
@@ -1739,6 +1751,17 @@ def _probe_daemon(ctx: Context) -> Result:
                 i18n.t("doctor.probe.daemon.export_token", variable=TOKEN_VAR),
             )
         return Result(WARN, i18n.t("doctor.probe.daemon.foreign", host=host, port=port))
+    # #576: nobody listens, but the daemon registered for this port is alive. That is a daemon that
+    # lost its listener, not a missing one, and «start it» alone would not have fixed it before.
+    registered = ctx.daemon_registration()
+    if registered and registered.get("port") == port:
+        return Result(
+            WARN,
+            i18n.t(
+                "doctor.probe.daemon.dead_listener", host=host, port=port, pid=registered["pid"]
+            ),
+            serve_hint(),
+        )
     return Result(MISSING, i18n.t("doctor.probe.daemon.nobody", host=host, port=port), serve_hint())
 
 

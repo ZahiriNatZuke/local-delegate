@@ -16,8 +16,28 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   en cada paso del map/reduce. Y si aun así el modelo se queda sin tokens, la respuesta acaba en su
   última frase completa (o en su última línea completa), sin dejar un título, una etiqueta
   `**…:**`, una lista sin elementos ni un bloque de código abierto, y el aviso dice «salida
-  truncada por max_tokens; se recortó hasta la última frase completa». Las llamadas que acaban bien
-  devuelven lo mismo que antes.
+  truncada por max_tokens; se recortó hasta la última frase completa». El recorte es de la
+  llamada única: el reduce del map/reduce no se recorta y sigue con el aviso de siempre. Las
+  llamadas que acaban bien devuelven lo mismo que antes.
+
+- **El daemon ya no se queda vivo sin escuchar ni bloquea al siguiente (#576).** En Windows, un
+  `accept` que falla hace que asyncio cierre el socket de escucha para siempre y solo lo cuente a su
+  manejador de errores. Basta un cliente que resetea su conexión antes de que se acepte, y eso es lo
+  que hacen los clientes del turno remoto que se cansan de esperar por la red (#577): en una prueba,
+  40 de ellos tumbaron el puerto de un daemon de prueba en un segundo. El proceso seguía vivo, con el
+  lock y `daemon.json`, y `Start-ScheduledTask` no podía arrancar otro. Ahora ese `accept` se vuelve
+  a lanzar en vez de cerrar el socket (el mismo daemon aguantó 60 s y unas 44 000 peticiones
+  cortadas). Como red de seguridad, el daemon vigila su socket cada segundo y, si aun así lo
+  pierde, sale con código 75 (`EX_TEMPFAIL`) y suelta el lock; su apagado tiene un plazo de 10 s
+  (antes esperaba sin límite a que cerraran los streams MCP abiertos). Un `serve` que encuentra el
+  lock retenido por un daemon registrado con más de un minuto de vida y cuyo puerto **rechaza** las
+  conexiones lo detiene y arranca en su lugar; uno que acepta la conexión aunque tarde no se toca.
+  Es la única vez que el paquete señala a un pid leído de un fichero (la regla de `update` es no
+  hacerlo nunca), y por eso solo con guardas: además, el proceso tiene que haberse creado antes de
+  registrarse, para no tocar uno que reutilizó el pid; donde no se puede saber (macOS), no hay
+  relevo. Los avisos y errores del daemon, y el motivo de cada salida o relevo, quedan en `daemon-errors.log` (como
+  máximo dos ficheros de 256 KB), y `doctor` distingue «proceso vivo sin escuchar» de «no hay
+  daemon».
 
 - **`local_extract` puede dar números de línea con `path` (#568).** Un campo de localización
   (`secciones_con_lineas`) sobre un Markdown grande volvía `null` en los 8 trozos: el modelo nunca
