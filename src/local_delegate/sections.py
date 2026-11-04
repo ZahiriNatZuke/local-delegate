@@ -16,6 +16,7 @@ Todo es puro (sin red ni disco): lo prueban `tests/test_structured_summary.py` y
 
 from __future__ import annotations
 
+import functools
 import re
 import unicodedata
 from collections.abc import Callable
@@ -869,3 +870,103 @@ def sanitize_focus(focus: str | None) -> str | None:
         return None
     clean = " ".join(_CONTROL.sub(" ", focus).replace("«", '"').replace("»", '"').split())
     return clean[:FOCUS_MAX].rstrip() or None
+
+
+# #558: the focus reached the system prompt of every call and the model still left out the section
+# that treats it. What can be computed is computed: the significant words of the focus, the
+# sections of the input that hold them (named to the model) and whether the summary mentions any.
+
+#: Words that say nothing about what the caller wants (es/en), folded (no accents); with them every
+#: section would match.
+_FOCUS_EMPTY_WORDS_TEXT = (
+    "los las del que con por para una uno unos unas sus este esta estos estas ese esa eso esto "
+    "todo toda todos todas como cual sobre entre sin hay mas muy pero sino "
+    "the and for with from about into what how which that this these those its are was were "
+    "not but all any"
+)
+_FOCUS_EMPTY_WORDS = frozenset(_FOCUS_EMPTY_WORDS_TEXT.split())
+_FOCUS_WORD = re.compile(r"\w+")
+#: Sections named to the model at most: a focus that matches more does not single any out.
+FOCUS_MAX_SECTIONS = 8
+
+
+def _fold(text: str) -> str:
+    """Lower case and without accents, so «configuración» and «Configuracion» are one word."""
+    folded = text.casefold()
+    if folded.isascii():
+        return folded
+    decomposed = unicodedata.normalize("NFKD", folded)
+    return "".join(c for c in decomposed if not unicodedata.combining(c))
+
+
+def focus_terms(focus: str | None) -> list[str]:
+    """The significant words of `focus`, folded, in order and once: 3+ characters, no empty word."""
+    terms: list[str] = []
+    for word in _FOCUS_WORD.findall(_fold(focus or "")):
+        if len(word) >= 3 and word not in _FOCUS_EMPTY_WORDS and word not in terms:
+            terms.append(word)
+    return terms
+
+
+#: A focus token the model copies as it is instead of translating it: a digit, `_`, `.` or `/`
+#: inside (`cp1252`, `utf8`, `config.json`), camelCase (`readFile`) or all capitals (`UTF`, `API`).
+_LITERAL_TOKEN = re.compile(r"\d|\w[_./]\w|[a-z][A-Z]|^[^a-z]*[A-Z][^a-z]*[A-Z][^a-z]*$")
+
+
+def literal_focus_terms(focus: str | None) -> set[str]:
+    """The terms of `focus` (as `focus_terms` folds them) that come from a literal token."""
+    literal: set[str] = set()
+    for token in (focus or "").split():
+        if _LITERAL_TOKEN.search(token):
+            literal.update(_FOCUS_WORD.findall(_fold(token)))
+    return literal
+
+
+def _stem(term: str) -> str:
+    # A prefix, so «riesgos» matches «riesgo»; never under 4 characters (all of a short term). An
+    # English plural in «-ies» goes back to «-y» first, so «policies» and «policy» share «poli».
+    if term.endswith("ies") and len(term) > 4:
+        term = term[:-3] + "y"
+    return term[: max(4, len(term) - 2)]
+
+
+@functools.lru_cache(64)
+def _stems_pattern(stems: tuple[str, ...]) -> re.Pattern[str]:
+    # One pass over the text: a word that starts with any stem. Escaped literals as flat
+    # choices, longest first; `\w*` after it is a single greedy run, with no backtracking.
+    choices = "|".join(re.escape(s) for s in sorted(set(stems), key=len, reverse=True))
+    return re.compile(rf"(?<!\w)(?:{choices})\w*")
+
+
+def focus_terms_in(text: str, terms: list[str]) -> list[str]:
+    """The `terms` that start a word of `text` (folded, by their stem), in the order given."""
+    if not terms:
+        return []
+    stems = {term: _stem(term) for term in terms}
+    pending = set(stems.values())
+    found_stems: set[str] = set()
+    for match in _stems_pattern(tuple(stems.values())).finditer(_fold(text)):
+        word = match.group()
+        hits = {s for s in pending if word.startswith(s)}
+        found_stems |= hits
+        pending -= hits
+        if not pending:
+            break
+    return [term for term in terms if stems[term] in found_stems]
+
+
+def focus_sections(text: str, terms: list[str]) -> list[str]:
+    """Headings of `text` whose title or body holds a term; none if more than `FOCUS_MAX_SECTIONS`.
+
+    The body of a heading runs to the next heading of any level, so a nested section is named by
+    its own title and not by its parent's.
+    """
+    if not terms:
+        return []
+    headings = markdown_headings(text)
+    found: list[str] = []
+    for i, heading in enumerate(headings):
+        end = headings[i + 1].start if i + 1 < len(headings) else len(text)
+        if focus_terms_in(text[heading.start : end], terms):
+            found.append(heading.text)
+    return found if len(found) <= FOCUS_MAX_SECTIONS else []

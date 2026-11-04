@@ -15,12 +15,24 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   el reflog de la copia principal recibe `main` con `git pull` (líneas `pull: Fast-forward`, sin
   asunto) y sus pocas líneas `commit:` eran antiguas, de cuando el repo escribía en español. Ahora
   se leen los asuntos de los 20 últimos commits de HEAD directamente del almacén de objetos de git
-  (sueltos o en packs, también como deltas), sin lanzar `git` y con topes de tamaño; el reflog
+  (sueltos o en packs, también como deltas), sin lanzar `git` y con topes de tamaño y un
+  presupuesto por llamada (32 MiB y 1,5 s, para que un pack manipulado no la alargue); el reflog
   completa los votos cuando el historial no se puede leer o da muy pocos. De un merge cuenta el
   título del PR (primera línea del cuerpo), no «Merge pull request #N from…». Cambio de criterio: el
   idioma sale de los commits de la rama actual, no de los que se teclearon en esa copia, así que un
   clon completo recién hecho, un submódulo o una rama de un fork toman el idioma de su historial. El
   aviso de «muy pocos commits» ahora habla del historial leído (repo nuevo o clon con `--depth`).
+
+- **`local_summarize` con `focus` ya no deja fuera en silencio la sección que trata el enfoque**
+  (#558). El enfoque llegaba al modelo, pero solo como una cláusula general, y en un informe de
+  ~16 KB el resumen se quedó con la introducción y la lista final sin nada de la sección cuyo
+  título tenía la palabra pedida. Ahora el mensaje al modelo nombra las secciones Markdown cuyo
+  título o cuerpo contiene alguna palabra significativa del enfoque (en cada trozo, solo las
+  suyas), y si el resumen no menciona ninguna de esas palabras aunque la entrada sí las tiene, la
+  salida lleva un aviso `[local-delegate warning: …]` que las nombra. Una palabra que el modelo
+  traduciría solo cuenta si la entrada está en el idioma del resumen; las que se copian tal cual
+  (`cp1252`, `utf8`, `config.json`, `readFile`, `API`) cuentan siempre. Un título copiado no
+  cuenta como mención. Sin `focus` nada cambia.
 
 - **En Windows, los hooks instalados por `settings.json` leían la entrada en cp1252.** Claude Code
   manda UTF-8, pero el `python` del PATH abre sus tuberías con la página de códigos del sistema:

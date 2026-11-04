@@ -1,0 +1,109 @@
+{
+  "schemaVersion": 1,
+  "slug": "summarize-focus-coverage",
+  "title": "local_summarize: el enfoque llega a la sección que lo trata, o avisa",
+  "mode": "lite",
+  "traceability": "strict",
+  "status": "verifying",
+  "createdAt": "2026-11-04T10:51:17.067Z",
+  "updatedAt": "2026-11-04T11:01:12.360Z",
+  "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-11-04T10:52:34.152Z",
+      "evidence": "spec.md 4 REQ con causa medida",
+      "actor": "user"
+    },
+    "plan": {
+      "status": "approved",
+      "updatedAt": "2026-11-04T10:52:37.449Z",
+      "evidence": "plan.md 3 tareas; cada REQ con tarea y verificacion",
+      "actor": "user"
+    },
+    "quality": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "conformance": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "memory": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-11-04T10:51:17.067Z",
+      "reason": "SDD change created"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "researching",
+      "at": "2026-11-04T10:52:23.253Z",
+      "reason": "issue 558 leido; causa por instrumentar"
+    },
+    {
+      "type": "transition",
+      "from": "researching",
+      "to": "specifying",
+      "at": "2026-11-04T10:52:25.225Z",
+      "reason": "causa medida: foco en el system de todas las pasadas; el modelo lo ignora"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-11-04T10:52:34.152Z",
+      "evidence": "spec.md 4 REQ con causa medida",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-11-04T10:52:36.013Z",
+      "reason": "spec aprobada"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-11-04T10:52:37.449Z",
+      "evidence": "plan.md 3 tareas; cada REQ con tarea y verificacion",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "plan-review",
+      "at": "2026-11-04T10:52:38.813Z",
+      "reason": "plan aprobado"
+    },
+    {
+      "type": "transition",
+      "from": "plan-review",
+      "to": "implementing",
+      "at": "2026-11-04T10:52:40.198Z",
+      "reason": "revision del plan lite sin hallazgos"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-11-04T11:01:12.360Z",
+      "reason": "implementado; tests nuevos verdes"
+    }
+  ]
+}
