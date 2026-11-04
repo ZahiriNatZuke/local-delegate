@@ -1035,6 +1035,36 @@
       "text": "`{}` en las líneas {}",
       "kind": "verbatim",
       "reason": "prompt del modelo local (#527): pista por programa de las líneas donde aparecen los identificadores de la pregunta en cada trozo y en la reducción de `local_explain_code`; no es texto de interfaz y su idioma lo decide REQ-028, como el resto de cláusulas del prompt"
+    },
+    {
+      "file": "src/local_delegate/daemon.py",
+      "text": "listening socket closed under a running daemon; stopping with exit code %d",
+      "kind": "verbatim",
+      "reason": "línea del log de diagnóstico `daemon-errors.log` (#576), que va junto a las de asyncio y uvicorn en inglés; los tests y quien depura la buscan tal cual, y no es salida para la consola"
+    },
+    {
+      "file": "src/local_delegate/daemon.py",
+      "text": "relieving daemon pid=%d: alive but nothing listens on %s:%d",
+      "kind": "verbatim",
+      "reason": "línea del log de diagnóstico `daemon-errors.log` (#576), que va junto a las de asyncio y uvicorn en inglés; los tests y quien depura la buscan tal cual, y no es salida para la consola"
+    },
+    {
+      "file": "src/local_delegate/daemon.py",
+      "text": "could not stop daemon pid=%d: %s",
+      "kind": "verbatim",
+      "reason": "línea del log de diagnóstico `daemon-errors.log` (#576), que va junto a las de asyncio y uvicorn en inglés; los tests y quien depura la buscan tal cual, y no es salida para la consola"
+    },
+    {
+      "file": "src/local_delegate/daemon.py",
+      "text": "daemon pid=%d still holds the lock after being stopped",
+      "kind": "verbatim",
+      "reason": "línea del log de diagnóstico `daemon-errors.log` (#576), que va junto a las de asyncio y uvicorn en inglés; los tests y quien depura la buscan tal cual, y no es salida para la consola"
+    },
+    {
+      "file": "src/local_delegate/daemon.py",
+      "text": "never retrieved",
+      "kind": "verbatim",
+      "reason": "fragmento del mensaje que escribe asyncio («Task exception was never retrieved») y que el filtro del log del daemon compara tal cual (#576); traducirlo haría que no lo encontrara"
     }
   ]
 }

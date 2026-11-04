@@ -8,6 +8,22 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ### Corregido
 
+- **El daemon ya no se queda vivo sin escuchar ni bloquea al siguiente (#576).** En Windows, un
+  `accept` que falla hace que asyncio cierre el socket de escucha para siempre y solo lo cuente a su
+  manejador de errores. Basta un cliente que resetea su conexión antes de que se acepte, y eso es lo
+  que hacen los clientes del turno remoto que se cansan de esperar por la red (#577): en una prueba,
+  40 de ellos tumbaron el puerto de un daemon de prueba en un segundo. El proceso seguía vivo, con el
+  lock y `daemon.json`, y `Start-ScheduledTask` no podía arrancar otro. Ahora ese `accept` se vuelve
+  a lanzar en vez de cerrar el socket (el mismo daemon aguantó 60 s y unas 44 000 peticiones
+  cortadas). Como red de seguridad, el daemon vigila su socket cada segundo y, si aun así lo
+  pierde, sale con código 3 y suelta el lock; su apagado tiene un plazo de 10 s (antes esperaba
+  sin límite a que cerraran los streams MCP abiertos). Un `serve` que encuentra el lock retenido
+  por un daemon registrado con más de un minuto de vida y cuyo puerto **rechaza** las conexiones lo
+  detiene y arranca en su lugar; uno que acepta la conexión aunque tarde no se toca. Los avisos y
+  errores del daemon, y el motivo de cada salida o relevo, quedan en `daemon-errors.log` (como
+  máximo dos ficheros de 256 KB), y `doctor` distingue «proceso vivo sin escuchar» de «no hay
+  daemon».
+
 - **Los tests de precios de Claude Haiku 5.5 ya no tumban el PR del vigilante (#567).** Fijaban a
   mano las cifras de la tabla, así que cualquier cambio legítimo de precio que propusiera el
   vigilante dejaba su CI en rojo. Ahora la lógica se prueba contra una copia congelada de los

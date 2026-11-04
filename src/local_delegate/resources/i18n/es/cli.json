@@ -58,6 +58,7 @@
   "cli.daemon.no_answer": "el daemon no responde",
   "cli.daemon.other_daemon": "local-delegate: ya hay un daemon de este usuario en {host}:{port} (pid={pid}), y el lock es uno por usuario. No se puede levantar otro en el puerto {wanted}.",
   "cli.daemon.port_busy": "local-delegate: {host}:{port} está ocupado por otro proceso",
+  "cli.daemon.relieved": "local-delegate: el daemon pid={pid} seguía vivo pero nadie escuchaba en {host}:{port}; se detuvo y arranca uno nuevo",
   "cli.daemon.status_code": "el daemon respondió {code}",
   "cli.daemon.timeout": "el daemon no contestó a tiempo",
   "cli.deprecations.deprecated": "{old} está obsoleto: usa {new} ({when})",

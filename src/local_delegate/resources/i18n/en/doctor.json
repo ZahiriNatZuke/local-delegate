@@ -129,6 +129,7 @@
   "doctor.probe.credential.via_daemon": "the backend requires a credential and the MCP entries go through the daemon (http)",
   "doctor.probe.daemon.cannot_compare": "{detail} — the installed one is {installed} and they could not be compared",
   "doctor.probe.daemon.daemon_behind": "{detail} — but the installed version is {installed}: the daemon serves the old one",
+  "doctor.probe.daemon.dead_listener": "nothing listens on {host}:{port}, but daemon pid={pid} is still alive: it lost its listening socket",
   "doctor.probe.daemon.export_token": "export {variable} with the same value the daemon started with",
   "doctor.probe.daemon.foreign": "something listens on {host}:{port} but it is not our daemon",
   "doctor.probe.daemon.install_behind": "{detail} — but the installed version is {installed}: the installation is behind",

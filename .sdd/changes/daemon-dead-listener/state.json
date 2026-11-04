@@ -1,0 +1,103 @@
+{
+  "schemaVersion": 1,
+  "slug": "daemon-dead-listener",
+  "title": "El daemon sale (y se puede relevar) cuando su listener HTTP muere",
+  "mode": "lite",
+  "traceability": "strict",
+  "status": "verifying",
+  "createdAt": "2026-11-04T14:57:45.127Z",
+  "updatedAt": "2026-11-04T15:35:35.768Z",
+  "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-11-04T14:58:47.489Z",
+      "evidence": "Causa reproducida en scratchpad/i576/repro_accept.py: OSError 64 en accept del ProactorEventLoop de CPython 3.11 cierra el socket de escucha (proactor_events.py:861-868) con el loop vivo; uvicorn 0.54 shutdown espera sin plazo (server.py:281-311). Spec con 5 requisitos y plan de 5 tareas; el relevo exige rechazo TCP repetido, pid vivo, started_at>60s y daemon.json estable.",
+      "actor": "agent"
+    },
+    "plan": {
+      "status": "approved",
+      "updatedAt": "2026-11-04T14:58:47.490Z",
+      "evidence": "Causa reproducida en scratchpad/i576/repro_accept.py: OSError 64 en accept del ProactorEventLoop de CPython 3.11 cierra el socket de escucha (proactor_events.py:861-868) con el loop vivo; uvicorn 0.54 shutdown espera sin plazo (server.py:281-311). Spec con 5 requisitos y plan de 5 tareas; el relevo exige rechazo TCP repetido, pid vivo, started_at>60s y daemon.json estable.",
+      "actor": "agent"
+    },
+    "quality": {
+      "status": "approved",
+      "updatedAt": "2026-11-04T15:35:35.768Z",
+      "evidence": "Suite completa pytest -n 2 --dist loadgroup: 6480 passed, 30 skipped (corrida final con REQ-006); ruff check y format en verde; 10 mutantes, cada uno falla en su assert (verification.md); prueba de carga turn_stress.py: sin arreglo el puerto muere en 1 s, con arreglo 60 s y 43842 peticiones.",
+      "actor": "agent"
+    },
+    "conformance": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "memory": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-11-04T14:57:45.127Z",
+      "reason": "SDD change created"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "specifying",
+      "at": "2026-11-04T14:58:41.232Z",
+      "reason": "causa reproducida (WinError 64 en accept del Proactor cierra el listener)"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-11-04T14:58:47.489Z",
+      "evidence": "Causa reproducida en scratchpad/i576/repro_accept.py: OSError 64 en accept del ProactorEventLoop de CPython 3.11 cierra el socket de escucha (proactor_events.py:861-868) con el loop vivo; uvicorn 0.54 shutdown espera sin plazo (server.py:281-311). Spec con 5 requisitos y plan de 5 tareas; el relevo exige rechazo TCP repetido, pid vivo, started_at>60s y daemon.json estable.",
+      "actor": "agent"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-11-04T14:58:47.490Z",
+      "evidence": "Causa reproducida en scratchpad/i576/repro_accept.py: OSError 64 en accept del ProactorEventLoop de CPython 3.11 cierra el socket de escucha (proactor_events.py:861-868) con el loop vivo; uvicorn 0.54 shutdown espera sin plazo (server.py:281-311). Spec con 5 requisitos y plan de 5 tareas; el relevo exige rechazo TCP repetido, pid vivo, started_at>60s y daemon.json estable.",
+      "actor": "agent"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-11-04T15:10:51.910Z",
+      "reason": "plan escrito"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "implementing",
+      "at": "2026-11-04T15:10:52.132Z",
+      "reason": "spec y plan aprobados"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-11-04T15:10:52.359Z",
+      "reason": "tests y mutantes hechos"
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-11-04T15:35:35.768Z",
+      "evidence": "Suite completa pytest -n 2 --dist loadgroup: 6480 passed, 30 skipped (corrida final con REQ-006); ruff check y format en verde; 10 mutantes, cada uno falla en su assert (verification.md); prueba de carga turn_stress.py: sin arreglo el puerto muere en 1 s, con arreglo 60 s y 43842 peticiones.",
+      "actor": "agent"
+    }
+  ]
+}
