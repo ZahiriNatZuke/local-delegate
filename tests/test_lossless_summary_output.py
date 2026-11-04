@@ -102,7 +102,7 @@ def test_the_other_tools_keep_the_shared_chunk_cap(monkeypatch, captured):
     monkeypatch.setattr(config, "STRUCTURED_SUMMARY", False)
     server.local_summarize(text="Un párrafo de prueba que se repite. " * 120)
     assert len(captured) > 2
-    assert {c["max_tokens"] for c in captured} == {150 * 2 + 64}
+    assert {c["max_tokens"] for c in captured} == {150 * 3 + 64}  # #580: summarize's own cap
 
 
 # --- 2. A section empty in the document ---------------------------------------------------------

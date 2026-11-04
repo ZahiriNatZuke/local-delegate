@@ -10,15 +10,15 @@ variante «recortado» cuando de verdad recorta. Sin `trim_cut` (todas las demá
 
 ## Ordered tasks
 
-- [ ] T1 — `_summary_max_tokens` y uso en la llamada única y el map/reduce (REQ-001, REQ-002)
+- [x] T1 — `_summary_max_tokens` y uso en la llamada única y el map/reduce (REQ-001, REQ-002)
   - Files or modules: src/local_delegate/server.py
   - Verification: tests nuevos que miran el `max_tokens` enviado
   - Depends on: none
-- [ ] T2 — `trim_to_last_sentence` y `trim_cut` en `_chat`, aviso es/en (REQ-003, REQ-004)
+- [x] T2 — `trim_to_last_sentence` y `trim_cut` en `_chat`, aviso es/en (REQ-003, REQ-004)
   - Files or modules: src/local_delegate/sections.py, server.py, resources/i18n/{es,en}/mcp.json
   - Verification: tests de recorte (frase, lista, título colgando, código, sin frontera)
   - Depends on: T1
-- [ ] T3 — Tests, control positivo, suite completa y CHANGELOG (REQ-005)
+- [x] T3 — Tests, control positivo, suite completa y CHANGELOG (REQ-005)
   - Files or modules: tests/test_summarize_word_budget.py, CHANGELOG.md
   - Verification: pytest completo, ruff
   - Depends on: T2
