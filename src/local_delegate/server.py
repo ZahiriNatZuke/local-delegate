@@ -5810,7 +5810,10 @@ def _repo_commit_language_lookup(path: str | None) -> tuple[str | None, str]:
         # own reflog does not give enough votes, and its subjects go before the worktree's.
         if common is not None and sum(_language_votes(reflog).values()) < _REPO_LANGUAGE_MIN_VOTES:
             reflog = (_recent_commit_subjects(common) + reflog)[-20:]
-        subjects = reflog[len(history) - 20 :] + history if len(history) < 20 else history
+        # A commit read from the history is often also a `commit:` line of the reflog: it votes once.
+        seen = set(history)
+        extra = [s for s in reflog if s not in seen]
+        subjects = extra[len(history) - 20 :] + history if len(history) < 20 else history
     language = _guess_language(subjects)
     if language:
         return language, COMMIT_LANGUAGE_FROM_REPO

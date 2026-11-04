@@ -11,9 +11,12 @@ Each test says which mutant makes it fail and with which assert.
 
 from __future__ import annotations
 
+import hashlib
 import os
 import shutil
+import struct
 import subprocess
+import time
 import zlib
 from pathlib import Path
 
@@ -273,13 +276,109 @@ def test_the_delta_depth_cap_stops_the_walk(tmp_path, monkeypatch):
 
 
 def test_a_huge_packed_refs_is_not_read(tmp_path, monkeypatch):
-    """`packed-refs` is disk input: over the cap it is not read, and a line is read in bounded
-    pieces. Mutant «no size check» (both, the file size and the bytes read): the branch is found
-    and the subjects come back."""
+    """`packed-refs` is disk input: past the cap on the bytes read it stops, and a line is read in
+    bounded pieces. Mutant «no size check»: the branch is found and the subjects come back."""
     repo = _repo(tmp_path / "repo", ENGLISH)
     _git(repo, "pack-refs", "--all", "--prune")
     monkeypatch.setattr(git_history, "_PACKED_REFS_MAX_BYTES", 10)
     assert git_history.head_commit_subjects(repo / ".git") == []
+
+
+def _hostile_pack(git_dir: Path, commits: int) -> None:
+    """A 52 KB pack in the shape of the #562 review: a 49-level delta chain of half a million
+    one-byte copies each, shared by `commits` merges without a body that point to each other."""
+
+    def varint(n: int) -> bytes:
+        out = bytearray()
+        while True:
+            c, n = n & 0x7F, n >> 7
+            out.append(c | 0x80 if n else c)
+            if not n:
+                return bytes(out)
+
+    def ofs(back: int) -> bytes:
+        out = [back & 0x7F]
+        back >>= 7
+        while back:
+            back -= 1
+            out.insert(0, 0x80 | (back & 0x7F))
+            back >>= 7
+        return bytes(out)
+
+    (git_dir / "objects" / "pack").mkdir(parents=True)
+    size = (2**20 - 8) // 2
+    pack = bytearray(b"PACK\0\0\0\2\0\0\0\0")
+    prev = len(pack)
+    pack += bytes([1 << 4]) + zlib.compress(b"x" * size)
+    chain = zlib.compress(varint(size) + varint(size) + b"\x90\x01" * size)
+    for _ in range(49):
+        here = len(pack)
+        pack += bytes([6 << 4]) + ofs(here - prev) + chain
+        prev = here
+    names = [hashlib.sha1(f"c{i}".encode()).hexdigest() for i in range(commits)]
+    offsets = {}
+    for i, sha in enumerate(names):
+        parent = names[i + 1] if i + 1 < commits else "0" * 40
+        text = f"tree {'1' * 40}\nparent {parent}\nparent {'2' * 40}\n\nMerge\n".encode()
+        delta = varint(size) + varint(len(text)) + bytes([len(text)]) + text
+        here = len(pack)
+        pack += bytes([6 << 4]) + ofs(here - prev) + zlib.compress(delta)
+        offsets[sha] = here
+    (git_dir / "objects" / "pack" / "pack-a.pack").write_bytes(bytes(pack))
+    entries = sorted(offsets.items())
+    fanout = [sum(1 for s, _ in entries if int(s[:2], 16) <= b) for b in range(256)]
+    idx = (
+        b"\xfftOc\0\0\0\2"
+        + b"".join(struct.pack(">I", f) for f in fanout)
+        + b"".join(bytes.fromhex(s) for s, _ in entries)
+        + b"\0" * 4 * len(entries)
+        + b"".join(struct.pack(">I", o) for _, o in entries)
+        + b"\0" * 40
+    )
+    (git_dir / "objects" / "pack" / "pack-a.idx").write_bytes(idx)
+    (git_dir / "HEAD").write_text(names[0] + "\n", encoding="utf-8")
+
+
+def test_a_hostile_delta_chain_is_cut_by_the_call_budget(tmp_path):
+    """Review of #562: before the call budget, three such commits took 13.5 s and the 200 of
+    `MAX_WALK` about 15 min. Now the call stops at `MAX_CALL_SECONDS` with what it read. Mutant
+    «no call budget» (`_Budget.spend` does nothing): the elapsed-time assert fails."""
+    git_dir = tmp_path / "hostile"
+    _hostile_pack(git_dir, commits=3)
+    start = time.monotonic()
+    assert git_history.head_commit_subjects(git_dir) == []
+    assert time.monotonic() - start < git_history.MAX_CALL_SECONDS + 3
+
+
+def test_the_call_budget_counts_bytes(tmp_path, monkeypatch):
+    """The byte half of the budget: with room for less than one commit object nothing is read.
+    Mutant «spend ignores the bytes»: the subjects come back."""
+    repo = _repo(tmp_path / "repo", ENGLISH)
+    monkeypatch.setattr(git_history, "MAX_CALL_BYTES", 50)
+    assert git_history.head_commit_subjects(repo / ".git") == []
+
+
+def test_a_directory_in_place_of_a_loose_object_is_skipped(tmp_path):
+    """Only regular files are opened. A directory where a loose object would be is skipped and
+    the object is read from the pack. Mutant «open anything» (`_regular_file` is always True):
+    opening the directory fails and the walk reads nothing."""
+    repo = _repo(tmp_path / "repo", ENGLISH)
+    _git(repo, "gc", "-q", "--prune=now")
+    head = _git(repo, "rev-parse", "HEAD").strip()
+    (repo / ".git" / "objects" / head[:2] / head[2:]).mkdir(parents=True)
+    assert git_history.head_commit_subjects(repo / ".git") == ENGLISH
+
+
+def test_a_subject_in_both_the_history_and_the_reflog_votes_once(tmp_path):
+    """A short history (3 commits) is filled from the reflog, whose `commit:` lines repeat those
+    3 and add 2 in Spanish: 3 en / 2 es is not a clear language. Mutant «no dedupe»: 6 en / 2 es
+    and `("en", "repo")`."""
+    repo = _repo(tmp_path / "repo", ENGLISH[:3])
+    who = "Ana <ana@example.org> 1760000000 +0000"
+    lines = [f"{'1' * 40} {'2' * 40} {who}\tcommit: {s}" for s in OLD_SPANISH[:2] + ENGLISH[:3]]
+    (repo / ".git" / "logs" / "HEAD").write_text("\n".join(lines) + "\n", encoding="utf-8")
+    assert git_history.head_commit_subjects(repo / ".git") == ENGLISH[:3]
+    assert server._commit_language_choice(_diff(repo / "src")) == ("es", "mixed_repo")
 
 
 def test_a_packed_ref_is_resolved(tmp_path):

@@ -16,10 +16,14 @@ reflog it used before.
 from __future__ import annotations
 
 import re
+import time
 import zlib
 from pathlib import Path
 from typing import Self
 
+MAX_CALL_BYTES = 32 << 20  # inflated plus delta bytes, for the whole walk
+MAX_CALL_SECONDS = 1.5
+MAX_CACHED_BYTES = 8 << 20  # resolved delta bases kept within one call
 MAX_COMMITS = 20
 MAX_WALK = 200  # commits read at most, merges without a body included
 MAX_OBJECT_BYTES = 1 << 20
@@ -53,7 +57,27 @@ def _read_small(path: Path) -> str:
         return handle.read(_SMALL_FILE).decode("utf-8", errors="strict").strip()
 
 
-def _inflate(read_chunk, limit: int) -> bytes:
+class _Budget:
+    """The work one call may do, shared by every object it reads (#562 review).
+
+    The per-object caps do not bound a crafted pack: a long delta chain of one-byte copies under
+    every commit made a single call run for minutes. Every inflated byte and every byte a delta
+    reads or writes is charged here, and the clock is checked as the work goes; once either runs
+    out, the walk stops with what it has (and the caller fills the rest from the reflog).
+    """
+
+    def __init__(self, max_bytes: int | None = None, max_seconds: float | None = None) -> None:
+        self.left = MAX_CALL_BYTES if max_bytes is None else max_bytes
+        seconds = MAX_CALL_SECONDS if max_seconds is None else max_seconds
+        self.deadline = time.monotonic() + seconds
+
+    def spend(self, amount: int) -> None:
+        self.left -= amount
+        if self.left < 0 or time.monotonic() > self.deadline:
+            raise _Unreadable  # call budget spent
+
+
+def _inflate(read_chunk, limit: int, budget: _Budget | None = None) -> bytes:
     """Inflate a zlib stream fed by `read_chunk()`; more than `limit` bytes is refused."""
     inflater = zlib.decompressobj()
     out = bytearray()
@@ -61,9 +85,12 @@ def _inflate(read_chunk, limit: int) -> bytes:
         chunk = inflater.unconsumed_tail or read_chunk()
         if not chunk:
             raise _Unreadable  # truncated zlib stream
+        before = len(out)
         out += inflater.decompress(chunk, limit + 1 - len(out))
         if len(out) > limit:
             raise _Unreadable  # object too large
+        if budget is not None:
+            budget.spend(len(out) - before)
     return bytes(out)
 
 
@@ -81,13 +108,19 @@ def _varint(data: bytes, pos: int) -> tuple[int, int]:
             return value, pos
 
 
-def _apply_delta(base: bytes, delta: bytes) -> bytes:
+def _apply_delta(base: bytes, delta: bytes, budget: _Budget | None = None) -> bytes:
     src_size, pos = _varint(delta, 0)
     dst_size, pos = _varint(delta, pos)
     if src_size != len(base) or dst_size > MAX_OBJECT_BYTES:
         raise _Unreadable  # delta does not fit its base
+    if budget is not None:
+        budget.spend(len(delta) + dst_size)
     out = bytearray()
+    ops = 0
     while pos < len(delta):
+        ops += 1
+        if budget is not None and not ops % 4096:
+            budget.spend(0)  # the clock: a delta of one-byte copies is slow per byte
         cmd = delta[pos]
         pos += 1
         if cmd & 0x80:
@@ -173,7 +206,9 @@ class _Pack:
             offset = int.from_bytes(raw, "big")
         return offset
 
-    def entry(self, offset: int) -> tuple[int, bytes, int | bytes | None]:
+    def entry(
+        self, offset: int, budget: _Budget | None = None
+    ) -> tuple[int, bytes, int | bytes | None]:
         """`(type, inflated data, delta base)`: base is an offset, a SHA or `None`."""
         self.pack.seek(offset)
         head = self.pack.read(32)
@@ -209,13 +244,18 @@ class _Pack:
         elif kind not in _OBJ_TYPES:
             raise _Unreadable  # unknown pack entry type
         self.pack.seek(offset + pos)
-        return kind, _inflate(lambda: self.pack.read(_READ_CHUNK), MAX_OBJECT_BYTES), base
+        data = _inflate(lambda: self.pack.read(_READ_CHUNK), MAX_OBJECT_BYTES, budget)
+        return kind, data, base
 
 
 class _ObjectStore:
-    def __init__(self, objects: Path) -> None:
+    def __init__(self, objects: Path, budget: _Budget | None = None) -> None:
         self.objects = objects
         self.packs: list[_Pack] | None = None
+        self.budget = budget or _Budget()
+        # Delta bases resolved in this call, by (pack, offset): commits of one chain share them.
+        self.cache: dict[tuple[int, int], tuple[bytes, bytes]] = {}
+        self.cached_bytes = 0
 
     def __enter__(self) -> Self:
         return self
@@ -247,7 +287,7 @@ class _ObjectStore:
             if not _regular_file(loose):
                 raise FileNotFoundError(loose)
             with loose.open("rb") as handle:
-                raw = _inflate(lambda: handle.read(_READ_CHUNK), MAX_OBJECT_BYTES + 64)
+                raw = _inflate(lambda: handle.read(_READ_CHUNK), MAX_OBJECT_BYTES + 64, self.budget)
         except FileNotFoundError:
             pass
         except OSError as exc:
@@ -268,14 +308,23 @@ class _ObjectStore:
     def _from_pack(self, pack: _Pack, offset: int, depth: int) -> tuple[bytes, bytes]:
         if depth > MAX_DELTA_DEPTH:
             raise _Unreadable  # delta chain too long
-        kind, data, base = pack.entry(offset)
+        key = (id(pack), offset)
+        if key in self.cache:
+            return self.cache[key]
+        kind, data, base = pack.entry(offset, self.budget)
         if kind == _OBJ_OFS_DELTA:
             base_kind, base_body = self._from_pack(pack, base, depth + 1)
         elif kind == _OBJ_REF_DELTA:
             base_kind, base_body = self.read(base.hex(), depth + 1)
         else:
-            return _OBJ_TYPES[kind], data
-        return base_kind, _apply_delta(base_body, data)
+            return self._keep(key, (_OBJ_TYPES[kind], data))
+        return self._keep(key, (base_kind, _apply_delta(base_body, data, self.budget)))
+
+    def _keep(self, key: tuple[int, int], value: tuple[bytes, bytes]) -> tuple[bytes, bytes]:
+        if self.cached_bytes + len(value[1]) <= MAX_CACHED_BYTES:
+            self.cache[key] = value
+            self.cached_bytes += len(value[1])
+        return value
 
 
 def _resolve_ref(refs_home: Path, name: str) -> str | None:
@@ -290,8 +339,9 @@ def _resolve_ref(refs_home: Path, name: str) -> str | None:
         return None
     packed = refs_home / "packed-refs"
     try:
-        if not _regular_file(packed) or packed.stat().st_size > _PACKED_REFS_MAX_BYTES:
+        if not _regular_file(packed):
             return None
+        # One cap, on the bytes read, in pieces of at most `_SMALL_FILE` per line.
         with packed.open("rb") as handle:
             read = 0
             while line := handle.readline(_SMALL_FILE):
