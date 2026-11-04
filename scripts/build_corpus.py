@@ -1515,9 +1515,14 @@ def select_commits(
     """
     sizes: dict[str, int | None] = {}
     last: list[Commit] = []
+    # The window counts from the newest commit dated before `before`, not from the tip of `ref`:
+    # otherwise every commit merged after the deadline pushes old candidates out of the window and
+    # the frozen corpus stops matching its own builder (it moved from step 0 to step 1).
+    history = _commits_of(root, ref, None)
+    start = next((i for i, c in enumerate(history) if c.date < before), len(history))
     for index, (window, minimum, maximum) in enumerate(steps):
         candidates: list[Commit] = []
-        for c in _commits_of(root, ref, window):
+        for c in history[start : start + window] if window else history:
             if not _is_candidate(c, before) or any(c.hash.startswith(x) for x in exclude):
                 continue
             if c.hash not in sizes:

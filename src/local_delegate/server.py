@@ -2116,7 +2116,9 @@ def _read_timeout_explained(model: str, text: str, cause: str | None) -> tuple[s
       at the end, and the load is the probe's moment (an upper bound). With cause `model_swap`
       nothing is added (the model was not ready at the deadline, whatever the watch saw).
       Returns that load in ms for the usage event.
-    * the operation waited 1 s or more in all for the daemon's turn or a slot before its sends.
+    * the operation waited 1 s or more in all for the daemon's turn or a slot before its sends
+      (`concurrency.QUEUE_PHASES`: also a remote turn attempt with its daemon unusable and the
+      wait for the blind place without a turn, #579).
     """
     load_ms: int | None = None
     with suppress(Exception):
@@ -2136,7 +2138,7 @@ def _read_timeout_explained(model: str, text: str, cause: str | None) -> tuple[s
                 load_ms = int(_probe_delay() * 1000)
     with suppress(Exception):
         trace = concurrency.current()
-        queued_ms = trace.phase_ms("turn", "slot") if trace is not None else 0
+        queued_ms = trace.phase_ms(*concurrency.QUEUE_PHASES) if trace is not None else 0
         if queued_ms >= 1000:
             text += " " + i18n.t("mcp.error.read_timeout_queued", queued=round(queued_ms / 1000))
     return text, load_ms
@@ -2960,20 +2962,21 @@ class _OperationTurn:
         """A remote turn wait, timed as the `turn` phase (REQ-026) unless the daemon is unusable.
 
         An unusable daemon means no turn, as before this lot: its event keeps the phases it had
-        (no `turn`), and only `remote_turn` says why.
+        (no `turn`), and only `remote_turn` says why. That attempt stays in the trace as the
+        unpublished `turn_unusable` phase, so a read deadline's text still counts it.
         """
         trace = concurrency.current()
         ts0, t0 = time.time(), time.monotonic()
-        usable = True
+        name = "turn"
         try:
             return wait(on_wait, stop)
         except remote_turn.Unusable:
-            usable = False
+            name = concurrency.TURN_UNUSABLE_PHASE
             raise
         finally:
-            if usable and trace is not None:
+            if trace is not None:
                 with suppress(Exception):  # observing never breaks the call it observes
-                    trace.record("turn", ts0, time.time(), int((time.monotonic() - t0) * 1000))
+                    trace.record(name, ts0, time.time(), int((time.monotonic() - t0) * 1000))
 
     def _reset(self) -> None:
         self.release_slot()
@@ -3143,8 +3146,9 @@ class _OperationTurn:
     def _go_blind(self, url: str) -> None:
         """Without a turn because its daemon is unreachable (#577): one operation at a time.
 
-        Waits for the blind place of `url` (cancellable, counted as a turn wait). With the remote
-        turn's cut open, before or while waiting, the call is not sent: `RemoteTurnDown`.
+        Waits for the blind place of `url` (cancellable, counted as a turn wait and as the trace's
+        `blind` phase). With the remote turn's cut open, before or while waiting, the call is not
+        sent: `RemoteTurnDown`.
         """
         cut = cooldown.remote_turn_cut()
         key = cooldown.backend_key()
@@ -3176,13 +3180,15 @@ class _OperationTurn:
             return False
 
         try:
-            remote_turn.hold_blind(
-                url,
-                self.op_id,
-                should_stop=stop,
-                cut_open=cut_open,
-                on_wait=on_wait,
-            )
+            # Timed in the trace too (unpublished `blind` phase): a read deadline's text counts it.
+            with concurrency.phase(concurrency.BLIND_PHASE):
+                remote_turn.hold_blind(
+                    url,
+                    self.op_id,
+                    should_stop=stop,
+                    cut_open=cut_open,
+                    on_wait=on_wait,
+                )
         except turn.AbandonedWait:
             cancellation.checkpoint()
             if saturated:

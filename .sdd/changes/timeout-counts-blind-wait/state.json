@@ -1,0 +1,118 @@
+{
+  "schemaVersion": 1,
+  "slug": "timeout-counts-blind-wait",
+  "title": "La espera ciega sin turno cuenta en la explicación del plazo agotado (#575 + #579)",
+  "mode": "lite",
+  "traceability": "strict",
+  "status": "result-review",
+  "createdAt": "2026-11-04T21:48:37.193Z",
+  "updatedAt": "2026-11-04T22:08:48.499Z",
+  "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-11-04T21:49:35.702Z",
+      "evidence": "spec.md 2 REQ; encargo del orquestador (revisión de integración #575+#579)",
+      "actor": "user"
+    },
+    "plan": {
+      "status": "approved",
+      "updatedAt": "2026-11-04T21:49:37.043Z",
+      "evidence": "plan.md T1-T2 cubren REQ-001..002; log de uso sin cambios",
+      "actor": "user"
+    },
+    "quality": {
+      "status": "approved",
+      "updatedAt": "2026-11-04T22:08:48.024Z",
+      "evidence": "verification.md: suite completa 6619 passed (2 fallos previos de test_corpus, ajenos); ruff limpio; control positivo con 4 mutantes",
+      "actor": "user"
+    },
+    "conformance": {
+      "status": "approved",
+      "updatedAt": "2026-11-04T22:08:48.499Z",
+      "evidence": "review.md: 2 jueces conforms-with-notes; F1-F6 arreglados con mutante comprobado; F7 aceptado",
+      "actor": "user"
+    },
+    "memory": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-11-04T21:48:37.193Z",
+      "reason": "SDD change created"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-11-04T21:49:35.702Z",
+      "evidence": "spec.md 2 REQ; encargo del orquestador (revisión de integración #575+#579)",
+      "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-11-04T21:49:37.043Z",
+      "evidence": "plan.md T1-T2 cubren REQ-001..002; log de uso sin cambios",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "specifying",
+      "at": "2026-11-04T22:08:40.961Z",
+      "reason": "revisión de integración #575+#579"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-11-04T22:08:41.175Z",
+      "reason": "spec aprobada"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "implementing",
+      "at": "2026-11-04T22:08:41.393Z",
+      "reason": "plan aprobado"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-11-04T22:08:41.619Z",
+      "reason": "T1-T2 hechos"
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-11-04T22:08:48.024Z",
+      "evidence": "verification.md: suite completa 6619 passed (2 fallos previos de test_corpus, ajenos); ruff limpio; control positivo con 4 mutantes",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "verifying",
+      "to": "result-review",
+      "at": "2026-11-04T22:08:48.243Z",
+      "reason": "dos jueces conforms-with-notes; F1-F6 aplicados"
+    },
+    {
+      "type": "gate",
+      "gate": "conformance",
+      "status": "approved",
+      "at": "2026-11-04T22:08:48.499Z",
+      "evidence": "review.md: 2 jueces conforms-with-notes; F1-F6 arreglados con mutante comprobado; F7 aceptado",
+      "actor": "user"
+    }
+  ]
+}
