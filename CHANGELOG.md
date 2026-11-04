@@ -11,10 +11,12 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 - **`local_extract` ya no pasa por dato un «N/A» ni inventa la cuenta de una lista vacía (#586).**
   Un valor que es entero un marcador de «sin dato» (`N/A`, `unknown`, `desconocido`, `no consta`,
   `-`, cadena vacía…) se devuelve como `null`, entra en `missing_keys`, su texto original queda en
-  `_local_delegate.placeholder_keys` y hay aviso; `none`, `NA`, `0` o un texto que solo contiene un
-  marcador no se tocan. Si la entrada es un objeto JSON y se pide la cuenta de una de sus listas de
-  primer nivel (`number_of_comments` con `"comments": []`), la cifra la pone el programa
-  (`recounted_keys`, con aviso), salvo que el JSON ya traiga esa cuenta.
+  `_local_delegate.placeholder_keys` y hay aviso; `none`, `NA`, `0`, `--`, `...` o un texto que
+  solo contiene un marcador no se tocan. Si la entrada es un objeto JSON, se pide la cuenta de una
+  de sus listas de primer nivel (`number_of_comments` con `"comments": []`) y el modelo no da nada
+  o da una cifra mayor que la lista, la cifra la pone el programa (`recounted_keys`, con aviso),
+  salvo que el JSON ya traiga un total de esa lista (`total_comments`, `meta.file_count`,
+  `total_count`).
 - **`local_summarize` ya no corta el resumen a mitad de palabra con el `max_words` por defecto
   (#580).** La llamada única pedía `max_tokens = 2 × max_words + 64` (364 con 150) y, medido contra
   el backend real, el modelo gasta 1,5–1,7 tokens por palabra en español y escribe hasta 1,5 veces

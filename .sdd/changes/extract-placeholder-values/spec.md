@@ -16,9 +16,10 @@ la lista y corrige la cifra del modelo, con aviso.
   (`n/a`, `n.a.`, `n/d`, `s/d`, `null`, `undefined`, `unknown`, `desconocido`, `no disponible`,
   `not available`, `no consta`, `no especificado`, `not specified`, `unspecified`, `no mencionado`,
   `not mentioned`, `not found`, `no encontrado`, `no aplica`, `not applicable`, `sin datos`,
-  `no data`, `sin información`, `no information`, `-`, `--`, `—`, `?`, `...`, `…`, cadena vacía o
-  solo espacios, y las variantes femeninas o sin tilde de los anteriores, `sin dato`, `---`, `–`)
-  se devuelve como `null`. Riesgo asumido: `unknown`, `undefined`, `-`, `?` o `""` pueden ser un
+  `no data`, `sin información`, `no information`, `-`, `—`, `?`, `…`, cadena vacía o solo
+  espacios, y las variantes femeninas o sin tilde de los anteriores, `sin dato`, `---`, `–`) se
+  devuelve como `null`; con la entrada numerada (#568), tras quitar un prefijo `N| ` copiado
+  (`"3| N/A"`). `--` y `...` NO son marcadores (valores reales en CLI y pydantic). Riesgo asumido: `unknown`, `undefined`, `-`, `?` o `""` pueden ser un
   valor real en algún contexto (tipos de TypeScript); su texto no se pierde (`placeholder_keys`).
   - Request: "normaliza en servidor los marcadores de «sin dato» (N/A, n/a, none, null, unknown, -, cadena vacía, «no disponible», «no consta», etc.) a null"
   - Verify: test tests/test_extract_placeholder_values.py
@@ -51,8 +52,10 @@ la lista y corrige la cifra del modelo, con aviso.
 - **REQ-006** — Si la entrada entera es un objeto JSON y una clave pedida tiene forma de cuenta
   (`number_of_X`, `num_X`, `count_of_X`, `count_X`, `X_count`, también camelCase) y exactamente una
   clave de primer nivel del JSON coincide con `X` (o `X` + `s`, con la forma de `_key_shape`) y su
-  valor es una lista, y el JSON no trae ya en primer nivel una clave con la forma de la pedida
-  (página de una lista más larga), el valor devuelto es `len(lista)` (un BOM inicial se ignora; un
+  valor es una lista, y (a) el JSON no trae un número (en primer nivel o en un objeto de primer
+  nivel, como `meta`) cuya clave contiene la forma del nombre de la lista o es un total genérico
+  (`total_count`, `total`, `count`), y (b) el modelo no dio nada, dio un marcador o dio una cifra
+  MAYOR que la longitud (una cifra menor o igual se deja), el valor devuelto es `len(lista)` (un BOM inicial se ignora; un
   JSON que no se puede leer, incluido un entero de más de 4300 dígitos, no se recuenta); si el modelo dio otra cosa, queda en
   `_local_delegate.recounted_keys` (`{clave: {"model": v, "count": n, "source": X}}`) con aviso
   es/en, y la clave sale de `missing_keys`. Si no se cumple todo, no se toca nada.

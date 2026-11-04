@@ -35,6 +35,12 @@
 
 - (El mutante de la cláusula del prompt ya no aplica: la cláusula se retiró.)
 
+- Segunda revisión (guardas del recuento y prefijo numerado): sin la guarda (a) fallan los 7
+  casos de total legítimo de `test_no_recount` (`'_local_delegate' not in …`, p. ej. `comment_count`
+  57 → 2); sin la guarda (b) fallan 5 (`number_of_reviews: 2` con 2 reviews pasa a recontarse en
+  el caso del issue, y las cifras iguales o menores); sin quitar el prefijo, falla
+  `test_a_numbered_marker_is_null` (`KeyError: '_local_delegate'`: el `"N/A"` pasaba por valor).
+
 ## Revisión independiente
 
 - Agente revisor de resultado: «no aprobado» por los textos fuera del catálogo (ya resuelto al
@@ -44,6 +50,12 @@
   docstring y wiki sin los campos nuevos (añadidos), pruebas de extremo a extremo del aviso tras
   truncado y del relleno troceado (añadidas), BOM y float `2.0` (arreglados). Todos con test.
 
+- Segunda revisión de la sesión principal: CodeQL `py/side-effect-in-assert` en dos tests
+  (arreglado sacando la llamada a una variable); el recuento pisaba totales legítimos con otro
+  nombre (guardas (a) y (b)); `--` y `...` fuera de los marcadores; prefijo `N| ` quitado antes de
+  buscar el marcador en modo numerado. El refuerzo del prompt queda fuera de la 0.49.0 (decisión
+  del usuario; el PR pasa a `Refs #586`).
+
 ## Suite
 
 - `pesado.sh pytest -n 2` (Windows, local): 6680 passed, 30 skipped, 2 failed. Los 2 fallos son
@@ -52,3 +64,8 @@
   (`select_commits`), no del árbol de trabajo: fallan igual sin este cambio en este clon (ya
   fallaban en la primera corrida, junto a los del prompt). El CI decide.
 - `ruff check` y `ruff format --check`: limpios.
+- Tras la segunda revisión: 6686 passed, 4 failed. Los dos de afinidad de arriba (entorno); uno del
+  léxico por el nombre `unprefix` (renombrado a `strip_prefix`, ya pasa); y
+  `test_build_hook.py::test_sdist_carries_what_regenerates_the_mod`, por un `register.js` generado
+  e ignorado que dejó la propia suite en el worktree (el sdist de un worktree no lee `.gitignore`):
+  borrado, el test pasa.

@@ -7338,7 +7338,9 @@ def _normalize_extract_keys(
 # The model answered "N/A" for a field the text does not hold: not null, so not in `missing_keys`
 # and no warning, and the caller took it for a value. A closed list of markers (compared whole,
 # casefolded, without a final period) becomes null. Left out on purpose: "none"/"ninguno" (a real
-# answer: zero items), "NA" (a code), "0"/"false", and any text that only contains a marker.
+# answer: zero items), "NA" (a code), "0"/"false", "--" and "..." (real values in a CLI or in
+# pydantic), and any text that only contains a marker. "null" and "undefined" ARE markers: the
+# string is normalized, and the model's text stays in `placeholder_keys`.
 
 #: The "no data" markers, casefolded. Only a whole top-level string value matches.
 _NO_DATA_MARKERS = frozenset(
@@ -7375,12 +7377,10 @@ _NO_DATA_MARKERS = frozenset(
         "sin informacion",
         "no information",
         "-",
-        "--",
         "---",
         "—",
         "–",
         "?",
-        "...",
         "…",
     }
 )
@@ -7391,21 +7391,26 @@ def _is_no_data_marker(value: Any) -> bool:
     if not isinstance(value, str):
         return False
     text = value.strip().casefold()
-    if text not in {"...", "…"}:
-        # A bare "." (`"rootDir": "."`) is a value: the period goes only if something is left.
-        text = text.removesuffix(".").rstrip() or text
+    # A bare "." (`"rootDir": "."`) is a value: the period goes only if something is left.
+    text = text.removesuffix(".").rstrip() or text
     return text in _NO_DATA_MARKERS
 
 
-def _null_placeholders(data: dict, fields: list[str]) -> dict[str, str]:
+def _null_placeholders(
+    data: dict, fields: list[str], strip_prefix: Callable[[Any], Any] | None = None
+) -> dict[str, str]:
     """Set to null, in place, each requested key whose value is a "no data" marker.
 
+    `strip_prefix` (numbered input, #568) drops a copied `12| ` before looking (`"12| N/A"`).
     Returns {key: original value}, in request order. `_local_delegate` is left alone, as in
     `_normalize_extract_keys`.
     """
     found: dict[str, str] = {}
     for name in dict.fromkeys(fields):
-        if name != _EXTRACT_META_KEY and _is_no_data_marker(data.get(name)):
+        value = data.get(name)
+        if strip_prefix is not None:
+            value = strip_prefix(value)
+        if name != _EXTRACT_META_KEY and _is_no_data_marker(value):
             found[name] = data[name]
             data[name] = None
     return found
@@ -7430,18 +7435,21 @@ def _recount_lists(data: dict, fields: list[str], content: str) -> dict[str, dic
     """#586: a count key of a JSON input's top-level list gets the list's length, in place.
 
     Only when the whole input is a JSON object and exactly one top-level key matches the counted
-    name (itself or with an `s`, `_key_shape`) and holds a list, and the JSON has no top-level key
-    of the requested key's own shape (`"comment_count": 57` next to a page of 10 comments: the
-    document already says the count). The model counted the comments of `"comments": []` as the
-    2 reviews; the program can count. Returns {key: {"model": v, "count": n, "source": list key}}
-    for the values it changed.
+    name (itself or with an `s`, `_key_shape`) and holds a list. Two guards keep a legitimate
+    total: (a) no recount if the JSON already holds a number under a key that names that list
+    (`total_comments`, `commentCount`, `meta.file_count`) or a generic total (`total_count`,
+    `total`, `count`), at the top level or in a top-level object: the list may be one page of a
+    longer one; (b) only when the model gave nothing (or a marker) or a figure GREATER than the
+    list's length, as in the issue (the comments of `"comments": []` counted as the 2 reviews);
+    a smaller figure is kept. Returns {key: {"model": v, "count": n, "source": list key}} for the
+    values it changed.
     """
     targets = {
         name: target
         for name in dict.fromkeys(fields)
         if isinstance(name, str) and name != _EXTRACT_META_KEY and (target := _count_target(name))
     }
-    body = content.lstrip("﻿ \t\r\n")
+    body = content.lstrip(chr(0xFEFF) + " \t\r\n")  # a leading BOM too
     if not targets or not body.startswith("{"):
         return {}
     try:
@@ -7450,24 +7458,53 @@ def _recount_lists(data: dict, fields: list[str], content: str) -> dict[str, dic
         return {}
     if not isinstance(document, dict):
         return {}
-    shapes_in_document = {_key_shape(key) for key in document}
+    numeric_shapes = _numeric_key_shapes(document)
     changed: dict[str, dict[str, Any]] = {}
     for name, target in targets.items():
-        if _key_shape(name) in shapes_in_document:
-            continue
         shapes = {_key_shape(target), _key_shape(target) + "s"}
         sources = [key for key in document if _key_shape(key) in shapes]
         if len(sources) != 1 or not isinstance(document[sources[0]], list):
             continue
+        stem = _key_shape(target).removesuffix("s") or _key_shape(target)
+        if any(stem in shape or shape in _GENERIC_TOTALS for shape in numeric_shapes):
+            continue  # (a) the document already says how many
         count = len(document[sources[0]])
         value = data.get(name)
-        same = (
-            isinstance(value, (int, float)) and not isinstance(value, bool) and value == count
-        ) or (isinstance(value, str) and value.strip() == str(count))
-        if not same:
-            changed[name] = {"model": value, "count": count, "source": sources[0]}
-            data[name] = count
+        figure = _as_figure(value)
+        if value is not None and (figure is None or figure <= count):
+            continue  # (b) only an absent value or an inflated figure is corrected
+        changed[name] = {"model": value, "count": count, "source": sources[0]}
+        data[name] = count
     return changed
+
+
+#: Key shapes (`_key_shape`) of a generic total next to a list: `total_count`, `total`, `count`.
+_GENERIC_TOTALS = frozenset({"totalcount", "total", "count"})
+
+
+def _numeric_key_shapes(document: dict) -> set[str]:
+    """The `_key_shape` of each numeric key at the top level or in a top-level object."""
+
+    def number(value: Any) -> bool:
+        return isinstance(value, (int, float)) and not isinstance(value, bool)
+
+    shapes: set[str] = set()
+    for key, value in document.items():
+        if isinstance(value, dict):
+            shapes |= {_key_shape(k) for k, v in value.items() if number(v)}
+        elif number(value):
+            shapes.add(_key_shape(key))
+    return shapes
+
+
+def _as_figure(value: Any) -> float | None:
+    """A number, or a string that is one (`"2"`), as a float; None for anything else."""
+    if isinstance(value, bool) or not isinstance(value, (int, float, str)):
+        return None
+    try:
+        return float(value.strip() if isinstance(value, str) else value)
+    except (ValueError, OverflowError):
+        return None
 
 
 # --- #568: line numbers in `local_extract` --------------------------------------------------------
@@ -7630,10 +7667,11 @@ def local_extract(
     `line_number`, `start_line`, `lineRange`; also in Spanish) makes the model see line numbers
     (and a Markdown file's headings with their lines), so it can answer for `Read` offset/limit;
     cited lines that do not hold in the file are listed in `lines_unverified`.
-    A value that is a "no data" marker ("N/A", "unknown", "-", "") comes back as null, listed in
-    `missing_keys`, with the model's text in `placeholder_keys`. With a JSON object as input, a
-    field that counts one of its top-level lists (`number_of_comments`) is counted by the program;
-    a figure of the model it corrected is in `recounted_keys`.
+    A value that is a "no data" marker ("N/A", "unknown", "-", "", also the strings "null" and
+    "undefined") comes back as null, listed in `missing_keys`, with the model's text in
+    `placeholder_keys`. With a JSON object as input, a field that counts one of its top-level
+    lists (`number_of_comments`) left empty or ABOVE the list's length is counted by the program,
+    unless the JSON already holds a total for it; the model's figure is in `recounted_keys`.
 
     Args:
         fields: Names of the fields to extract (JSON keys).
@@ -7816,7 +7854,10 @@ def local_extract(
     missing_keys, renamed_keys, dropped = _normalize_extract_keys(data, fields)
     # #586: a "no data" marker is null (and counts as missing); a count of a JSON input's list is
     # the program's, not the model's.
-    placeholders = _null_placeholders(data, fields)
+    total_lines = len(content.split("\n")) - (1 if content.endswith("\n") else 0)
+    placeholders = _null_placeholders(
+        data, fields, (lambda v: _strip_extract_prefixes(v, total_lines)) if numbered else None
+    )
     recounted = _recount_lists(data, fields, content)
     for name in recounted:
         if name in placeholders:
@@ -7830,7 +7871,6 @@ def local_extract(
     if numbered:
         # #568: the prefix is the input's format, not data: it leaves the other fields; the lines
         # cited in the location fields are checked against the whole file.
-        total_lines = len(content.split("\n")) - (1 if content.endswith("\n") else 0)
         for name in dict.fromkeys(fields):
             if name == _EXTRACT_META_KEY or data.get(name) is None:
                 continue

@@ -66,7 +66,6 @@ _PR_JSON = json.dumps(
         "-",
         "—",
         "?",
-        "...",
         "…",
         "",
         "   ",
@@ -97,6 +96,8 @@ def test_markers(value):
         1.5,
         ".",
         " . ",
+        "--",
+        "...",
     ],
 )
 def test_legitimate_values_are_not_markers(value):
@@ -275,6 +276,30 @@ def test_an_omitted_count_is_filled_and_not_missing(backend, monkeypatch):
             ["count_items"],
             {"count_items": 125},
         ),
+        # (a) A legitimate total under another name, at the top level or in a top-level object.
+        (
+            '{"comments": [1, 2], "total_comments": 57}',
+            ["comment_count"],
+            {"comment_count": 57},
+        ),
+        (
+            '{"comments": [1, 2], "commentCount": 57}',
+            ["number_of_comments"],
+            {"number_of_comments": 57},
+        ),
+        (
+            '{"comments": [1, 2], "comments_total": 57}',
+            ["num_comments"],
+            {"num_comments": 57},
+        ),
+        ('{"files": ["a"], "meta": {"file_count": 9}}', ["file_count"], {"file_count": 9}),
+        (
+            '{"total_count": 125, "items": [' + ", ".join(["1"] * 30) + "]}",
+            ["item_count"],
+            {"item_count": 125},
+        ),
+        # (b) A figure smaller than the list's length is the model's, not corrected.
+        ('{"comments": [1, 2, 3]}', ["number_of_comments"], {"number_of_comments": 2}),
         # An integer longer than Python's 4300-digit limit: no count, and no exception.
         (
             '{"comments": [], "n": ' + "9" * 5000 + "}",
@@ -294,8 +319,10 @@ def test_no_recount(backend, text, fields, answer):
 def test_a_json_with_bom_is_recounted(backend):
     _calls, state = backend
     state["answer"] = lambda call: _ok('{"number_of_comments": 2}')
-    data = server.local_extract(fields=["number_of_comments"], text="﻿" + _PR_JSON)
-    assert data.pop("_local_delegate")["recounted_keys"]["number_of_comments"]["count"] == 0
+    bom = chr(0xFEFF)
+    data = server.local_extract(fields=["number_of_comments"], text=bom + _PR_JSON)
+    meta = data.pop("_local_delegate")
+    assert meta["recounted_keys"]["number_of_comments"]["count"] == 0
     assert data == {"number_of_comments": 0}
 
 
@@ -330,5 +357,20 @@ def test_chunked_reduce_marker_is_replaced_by_a_chunk_value(backend):
     data = server.local_extract(fields=["a"], text=text)
     # Guard: chunked, and the reduce was really asked.
     assert any("Combina los objetos parciales" in c["system"] for c in calls)
-    assert "placeholder_keys" not in data.pop("_local_delegate", {})
+    meta = data.pop("_local_delegate", {})
+    assert "placeholder_keys" not in meta
     assert data == {"a": "ZZZ"}
+
+
+def test_a_numbered_marker_is_null(backend, tmp_path):
+    """#568 numbering: the model copied the line prefix too (`"3| N/A"`); still a marker."""
+    calls, state = backend
+    source = tmp_path / "notes.txt"
+    source.write_text("uno\ndos\ntres\n", encoding="utf-8")
+    state["answer"] = lambda call: _ok('{"owner": "3| N/A", "start_line": 2}')
+    data = server.local_extract(fields=["owner", "start_line"], path=str(source))
+    assert "3| tres" in calls[0]["user"]  # guard: the input really was numbered
+    meta = data.pop("_local_delegate")
+    assert data == {"owner": None, "start_line": 2}
+    assert meta["placeholder_keys"] == {"owner": "3| N/A"}
+    assert meta["missing_keys"] == ["owner"]
