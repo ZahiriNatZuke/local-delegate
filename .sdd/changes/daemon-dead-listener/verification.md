@@ -37,12 +37,19 @@ Without a declaration, list what was run. Never invent a command. -->
 
 ## Deviations and residual risk
 
+- Revisión independiente del PR #578 («mezclar con cambios»), atendida en la misma rama:
+  1. `registered_process` (doctor) usa la misma guarda de pid reutilizado que el relevo; tests `test_doctor_does_not_blame_a_process_that_reused_the_pid` (mutante sin la guarda → falla) y `…_when_it_is_still_that_process`.
+  2. Los errores de `accept` que no son corte de cliente se reintentan con espera creciente 0,01 s → 1 s (`_ACCEPT_BACKOFF_S`); tests `…with_a_growing_wait` (mutante `call_soon` → `[] == [0.01, 0.02, 0.04]`) y `…retried_at_once`.
+  3. Riesgo residual anotado en `_refuses_connections`: en Windows una cola de `listen` llena también rechaza; un daemon vivo con el bucle bloqueado durante todo el sondeo podría ser relevado.
+  4. La excepción a «nunca señal a un pid leído de un fichero» queda escrita en `update._terminate` y en el CHANGELOG.
+  5. Código de salida 75 (`EX_TEMPFAIL`) en vez de 3, que en Windows se confunde con `abort()`.
+
 - En macOS no hay relevo: la hora de creación del proceso solo se lee en Windows y Linux; el fallo de #576 es del `ProactorEventLoop` de Windows.
 - El handler del logger `asyncio` hace que esos errores vayan al fichero y ya no a stderr por `lastResort` cuando el daemon corre en primer plano.
 - Un daemon en su apagado ordenado (≤ 10 s, socket ya cerrado) cumple las condiciones de relevo; se pierde su limpieza, y el nuevo sobrescribe `daemon.json`.
 - La rotación del log (2 × 256 KB) no tiene test propio: es la configuración de `RotatingFileHandler`.
 
-- Nadie relanza solo el daemon tras salir con código 3: la tarea programada de Windows (la crea el
+- Nadie relanza solo el daemon tras salir con código 75: la tarea programada de Windows (la crea el
   usuario, `docs/wiki/Daemon.md`) no tiene reinicio por fallo; ahora el `Start-ScheduledTask` o un
   `serve` manual sí funcionan. launchd (`KeepAlive`) y systemd (`Restart=on-failure`) sí lo reponen.
 - La causa exacta del 2026-11-04 no se pudo observar (sin logs); la reproducida (WinError 64 en

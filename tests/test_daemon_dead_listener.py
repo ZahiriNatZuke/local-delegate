@@ -227,9 +227,10 @@ class _FakeListener:
         return 7
 
 
-def _tolerant_accept(script: list):
+def _tolerant_accept(script: list, delays: list | None = None):
     """A proactor whose `accept` plays ``script``: an exception raised now, one in the future, or a
-    result. Returns the tolerant `accept` installed on it, the loop and the attempts made."""
+    result. Returns the tolerant `accept` installed on it, the loop and the attempts made. The waits
+    asked of `call_later` go to ``delays`` and are not waited for real."""
     import asyncio
     import types
 
@@ -249,9 +250,17 @@ def _tolerant_accept(script: list):
             future.set_result(value)
         return future
 
+    def call_later(delay, callback):
+        if delays is not None:
+            delays.append(delay)
+        return loop.call_soon(callback)
+
     proactor = types.SimpleNamespace(accept=accept)
     fake_loop = types.SimpleNamespace(
-        _proactor=proactor, create_future=loop.create_future, call_soon=loop.call_soon
+        _proactor=proactor,
+        create_future=loop.create_future,
+        call_soon=loop.call_soon,
+        call_later=call_later,
     )
     assert daemon._tolerate_accept_resets(fake_loop) is True
     assert daemon._tolerate_accept_resets(fake_loop) is False  # idempotent
@@ -283,10 +292,33 @@ def test_client_resets_are_retried_without_a_cap():
 
 def test_other_errors_give_the_listener_up_after_the_cap():
     """A listener that fails for its own reasons must not spin forever: asyncio gets the error."""
-    accept, loop, attempts = _tolerant_accept([("fail", _WinError(10022))])
+    delays = []
+    accept, loop, attempts = _tolerant_accept([("fail", _WinError(10022))], delays)
     with pytest.raises(OSError):
         _settle(loop, accept(_FakeListener()))
     assert len(attempts) == daemon._ACCEPT_RETRIES + 1
+
+
+def test_other_errors_are_retried_with_a_growing_wait():
+    """Fifty retries in microseconds are not retries: the wait doubles up to one second."""
+    delays = []
+    accept, loop, _attempts = _tolerant_accept([("fail", _WinError(10022))], delays)
+    with pytest.raises(OSError):
+        _settle(loop, accept(_FakeListener()))
+    first, top = daemon._ACCEPT_BACKOFF_S
+    assert delays[:3] == [first, first * 2, first * 4]
+    assert max(delays) == top and delays == sorted(delays)
+    assert sum(delays) > 30, "the cap must stand for tens of seconds, not microseconds"
+
+
+def test_client_resets_are_retried_at_once():
+    """A reset needs a real client to happen again: no reason to make the next client wait."""
+    delays = []
+    accept, loop, _attempts = _tolerant_accept(
+        [("fail", _WinError(64))] * 5 + [("ok", "c")], delays
+    )
+    assert _settle(loop, accept(_FakeListener())) == "c"
+    assert delays == []
 
 
 # A process that holds the singleton and is registered on a port nobody listens on: what the
@@ -504,6 +536,22 @@ def _probe(tmp_path, monkeypatch, registration):
         daemon_registration=lambda: registration,
     )
     return checks._probe_daemon(ctx)
+
+
+def test_doctor_does_not_blame_a_process_that_reused_the_pid(tmp_path, monkeypatch):
+    """A daemon killed without its cleanup leaves `daemon.json`; Windows gives its pid to another."""
+    _register(tmp_path, monkeypatch)
+    monkeypatch.setattr(server, "_pid_alive", lambda pid: True)
+    monkeypatch.setattr(daemon, "_process_started_at", lambda _pid: time.time())
+    assert daemon.registered_process() is None
+    monkeypatch.setattr(daemon, "_process_started_at", lambda _pid: None)  # cannot tell (macOS)
+    assert daemon.registered_process() is None
+
+
+def test_doctor_sees_the_registered_daemon_when_it_is_still_that_process(tmp_path, monkeypatch):
+    _register(tmp_path, monkeypatch)
+    monkeypatch.setattr(server, "_pid_alive", lambda pid: True)
+    assert daemon.registered_process()["pid"] == 4242
 
 
 def test_doctor_tells_an_alive_daemon_without_listener_from_no_daemon(tmp_path, monkeypatch):

@@ -42,8 +42,9 @@ _DEVNULL_STREAMS: list[object] = []
 ERROR_LOG_NAME = "daemon-errors.log"
 _ERROR_LOG_BYTES = 256 * 1024
 #: Exit code of a daemon whose listening socket died under it (#576). Not 0, so whoever launched it
-#: (the scheduled task, a client) can tell it apart from a clean stop and start a new one.
-EXIT_LISTENER_DIED = 3
+#: (the scheduled task, a client) can tell it apart from a clean stop and start a new one. 75 is
+#: `EX_TEMPFAIL` («try again later»); 3 would read as an `abort()` on Windows.
+EXIT_LISTENER_DIED = 75
 #: How often uvicorn calls the listener watch (`timeout_notify`); uvicorn checks it every second.
 _LISTENER_CHECK_SECONDS = 1
 #: Bound on the graceful shutdown. Without it uvicorn closes the listener first and then waits
@@ -199,6 +200,9 @@ def _listener_closed(uvicorn_server: object) -> bool:
 _ACCEPT_RESET_WINERRORS = frozenset({64, 1236, 10053, 10054})
 #: Failed accepts in a row, other than client resets, before the listener is taken for broken.
 _ACCEPT_RETRIES = 50
+#: Wait before retrying such an error: it doubles from the first value up to the second, so the
+#: 50 retries take about 45 s instead of spinning through them in microseconds.
+_ACCEPT_BACKOFF_S = (0.01, 1.0)
 
 
 def _tolerate_accept_resets(loop: asyncio.AbstractEventLoop) -> bool:
@@ -240,10 +244,15 @@ def _tolerate_accept_resets(loop: asyncio.AbstractEventLoop) -> bool:
         def failed(exc: OSError) -> None:
             # A client reset is always retried: each one takes a real client, so it cannot spin.
             # Any other error counts towards the cap.
-            if getattr(exc, "winerror", None) not in _ACCEPT_RESET_WINERRORS:
+            reset = getattr(exc, "winerror", None) in _ACCEPT_RESET_WINERRORS
+            if not reset:
                 failures[0] += 1
             if listener.fileno() != -1 and failures[0] <= _ACCEPT_RETRIES:
-                loop.call_soon(attempt)
+                if reset:
+                    loop.call_soon(attempt)
+                else:
+                    first, top = _ACCEPT_BACKOFF_S
+                    loop.call_later(min(top, first * 2 ** (failures[0] - 1)), attempt)
             else:
                 # A listener that fails this many times in a row is broken for real: let asyncio
                 # close it, and the listener watch stop the daemon.
@@ -329,6 +338,12 @@ def _refuses_connections(host: str, port: int, attempts: int = 3, pause: float =
     accepts the TCP connection into the backlog even if the process never gets to it. A timeout or
     any other error means «cannot tell», and «cannot tell» never relieves anybody. Windows retries
     a refused SYN for about two seconds, hence the timeout.
+
+    Known limit: on Windows a **full** `listen` backlog also answers with a refusal. A daemon alive
+    but with its event loop blocked for the whole probe (three attempts, several seconds) and its
+    backlog full could be taken for dead and relieved. It needs a loop blocked for that long, which
+    is itself a daemon that does not serve; the other conditions (age, creation time, stable
+    `daemon.json`) still apply.
     """
     for attempt in range(attempts):
         try:
@@ -392,14 +407,29 @@ def _process_started_at(pid: int) -> float | None:
     return None
 
 
+def _is_the_registered_process(data: dict) -> bool:
+    """True if the pid of ``data`` is still the process that registered, not one that reused it.
+
+    A daemon stopped without its `finally` (`schtasks /End`, `TerminateProcess`, a shutdown) leaves
+    `daemon.json` behind, and Windows hands its pid out again. The daemon was created before it
+    wrote `started_at`; a process that reused the pid, only after. Unknown (macOS) is «no».
+    """
+    created = _process_started_at(data["pid"])
+    return created is not None and created <= data["started_at"] + 1
+
+
 def registered_process() -> dict | None:
     """The registration in ``daemon.json`` if its process is still alive, without asking its port.
 
     For `doctor`: when nothing listens on the daemon's port, an alive registered process is the
-    state of #576 (a daemon that lost its listener) and not «no daemon at all».
+    state of #576 (a daemon that lost its listener) and not «no daemon at all». Only if that pid is
+    still the daemon (see :func:`_is_the_registered_process`): otherwise `doctor` would blame some
+    other process that got the pid.
     """
     data = _read_registration()
     if data is None or not server._pid_alive(data["pid"]):
+        return None
+    if not _is_the_registered_process(data):
         return None
     return data
 
@@ -419,8 +449,7 @@ def stale_registration(now: float | None = None) -> dict | None:
         return None
     # The pid must still be the daemon that wrote the file, not a process that reused the pid after
     # it died: the daemon was created before it wrote `started_at`, a reused pid only after.
-    created = _process_started_at(first["pid"])
-    if created is None or created > first["started_at"] + 1:
+    if not _is_the_registered_process(first):
         return None
     if not _refuses_connections(first["host"], first["port"]):
         return None
@@ -451,10 +480,9 @@ def _relieve(stale: dict, lock: FileLock) -> bool:
     # SIGTERM is a request outside Windows (there `os.kill` is `TerminateProcess`), and an older
     # daemon could wait without a bound for its connections to close: the request becomes an order.
     sigkill = getattr(signal, "SIGKILL", None)
-    created = _process_started_at(pid)
     # Fifteen seconds later the pid may belong to someone else: kill it only if it is still
     # the process that registered.
-    if sigkill is not None and created is not None and created <= stale["started_at"] + 1:
+    if sigkill is not None and _is_the_registered_process(stale):
         with contextlib.suppress(OSError):
             os.kill(pid, sigkill)
         try:

@@ -33,7 +33,7 @@ Defaults:
 
 En Windows, un cliente que resetea su conexión antes de que se acepte ya no tumba el socket de
 escucha: el daemon vuelve a lanzar ese `accept`. Si aun así el socket se cierra con el proceso vivo,
-el daemon **sale con código 3** en vez de quedarse sin atender: la tarea programada queda libre para
+el daemon **sale con código 75** (`EX_TEMPFAIL`) en vez de quedarse sin atender: la tarea programada queda libre para
 volver a arrancarlo. Y si un `serve` encuentra el lock retenido por un daemon registrado que lleva
 más de un minuto vivo y cuyo puerto **rechaza** las conexiones, lo detiene y arranca en su lugar;
 un daemon lento, que acepta la conexión aunque tarde en contestar, no se toca nunca.
