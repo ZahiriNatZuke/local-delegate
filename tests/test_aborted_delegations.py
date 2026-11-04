@@ -78,7 +78,7 @@ class _DeadlineAfterCalls:
 
     def __init__(self, calls: int) -> None:
         self._calls = calls
-        self.armed = False
+        self.timer_started = False
         self.opened = False
         self.held_s = 0.0
 
@@ -88,7 +88,7 @@ class _DeadlineAfterCalls:
     async def sleep(self, seconds: float) -> None:
         token = cancellation.current()
         if token is not None and token.deadline_s > 0 and seconds == token.deadline_s:
-            self.armed = True
+            self.timer_started = True
             started = time.monotonic()
             cap = started + self._GATE_CAP_S
             while len(token.attempts) < self._calls and time.monotonic() < cap:
@@ -130,7 +130,7 @@ def test_deadline_cancels_the_call_and_logs_it_once(monkeypatch, slow_backend, t
     monkeypatch.setattr(cancellation, "anyio", gate)
     with real_daemon(monkeypatch, TOKEN) as url:
         answer, elapsed = _call(url, SUMMARIZE)
-    assert gate.armed, "the call had no deadline timer"
+    assert gate.timer_started, "the call had no deadline timer"
     assert gate.opened, "the call never recorded two backend calls on its token"
     text = _error_text(answer)
     assert "LOCAL_DELEGATE_CALL_MAX_S" in text, text
