@@ -258,9 +258,10 @@ SHORT_ES = "tiene muy pocos commits para saber su idioma"
 
 @pytest.mark.skipif(shutil.which("git") is None, reason="needs git")
 def test_a_fresh_copy_says_short_history_not_mixed(monkeypatch, tmp_path):
-    """A real `git clone`: its reflog has one `clone:` line and no commit, so «the commits do not
+    """A real shallow `git clone` (the CI checkout): one commit to read, so «the commits do not
     make their language clear» would be false. Mutant «few votes count as mixed»: the
-    `short_history` assert gets `mixed_repo` and the `SHORT_ES` one fails."""
+    `short_history` assert gets `mixed_repo` and the `SHORT_ES` one fails. (#548 reopened: a full
+    clone now reads its history from the objects; see test_commit_language_history.py.)"""
     origin = tmp_path / "origin"
     origin.mkdir()
     _git(origin, "init", "-q", "-b", "main")
@@ -269,7 +270,7 @@ def test_a_fresh_copy_says_short_history_not_mixed(monkeypatch, tmp_path):
         _git(origin, "add", "-A")
         _git(origin, "commit", "-q", "-m", subject)
     copy = tmp_path / "copy"
-    _git(tmp_path, "clone", "-q", str(origin), str(copy))
+    _git(tmp_path, "clone", "-q", "--depth", "1", origin.as_uri(), str(copy))
     path = _diff_file(copy / "sub")
 
     assert server._commit_language_choice(path) == ("es", "short_history")

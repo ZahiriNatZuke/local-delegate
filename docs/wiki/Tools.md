@@ -236,13 +236,19 @@ pide el idioma vigente del producto (desde la 0.36.0; con `diff`, el idioma pred
 del diff, la regla de antes, que en repos bilingües elegía uno u otro). Antes no pedía ninguno y el modelo elegía:
 medido sobre 30 commits de un repo documentado en español, uno de los modelos escribió 17 en inglés.
 Desde la 0.44.0 la precedencia es: `LOCAL_DELEGATE_COMMIT_LANGUAGE` → el idioma de los últimos commits
-del repo que contiene el `path` (se leen los 20 últimos asuntos del reflog, sin lanzar `git`, y cuenta
+del repo que contiene el `path` (se leen los 20 últimos asuntos, sin lanzar `git`, y cuenta
 solo si al menos 5 se pueden clasificar y el 70 % coincide en español o inglés) → el idioma del
 producto. Un diff pasado como `diff=` o volcado en una carpeta temporal no tiene repo del que inferir.
 Desde la 0.48.0, con `path`, si el idioma salió del producto porque no había repo o sus commits no
 lo dejaban claro, el mensaje lleva detrás un `[local-delegate warning: …]` que dice qué idioma se
 usó y cómo cambiarlo (#546). En un worktree recién creado, cuyo reflog aún no tiene commits, se lee
-también el del git dir común (#548). El comando `/local-commit` del mod guarda el diff dentro del
+también el del git dir común (#548). Desde la versión siguiente a la 0.48.0, los asuntos salen de los
+20 últimos commits de HEAD (siguiendo el primer padre), leídos del almacén de objetos de git (sueltos o
+en packs, también como deltas) sin lanzar `git`; el reflog completa los votos si los objetos no se
+pueden leer o dan muy pocos. De un commit de merge cuenta la primera línea del cuerpo (donde GitHub
+pone el título del PR), no el asunto que escribe la herramienta («Merge pull request #N from…»). El reflog solo guarda lo que se tecleó en esa copia: una copia que recibe `main` con
+`git pull` tiene líneas `pull: Fast-forward` sin asunto y unos pocos `commit:` antiguos, y votaba
+«idioma no claro» en un repo con el historial en inglés (#548, reabierto). El comando `/local-commit` del mod guarda el diff dentro del
 git dir del repo (se borra al terminar), así que toma el idioma del repo.
 
 **Anclado al diff.** Desde la 0.44.0, en el map-reduce el paso final recibe, calculados sin modelo,

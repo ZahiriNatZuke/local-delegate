@@ -51,6 +51,7 @@ from . import (
     cooldown,
     cost,
     failures,
+    git_history,
     i18n,
     json_state,
     legacy_names,
@@ -5565,7 +5566,8 @@ COMMIT_REDUCE_MAX_WORDS = 250
 # --- Commit language from the repository's own history (#461) ---------------------------------
 # A commit message follows the repo's convention, not the user's. The daemon's cwd is not the
 # user's repo, so the only anchor is the diff's `path`: if that file lives inside a work tree, the
-# subjects of its recent commits are read from the reflog (`logs/HEAD`, plain text) — no `git`
+# subjects of its recent commits are read from the commits on HEAD (`git_history`, #548) or, when
+# the object store cannot be read, from the reflog (`logs/HEAD`, plain text) — no `git`
 # subprocess, so nothing in the repo's config or hooks can run. A diff dumped to a temp folder has
 # no repo above it and keeps the rule of before.
 _REFLOG_COMMIT = re.compile(r"^commit(?: \([^)]*\))?: (.+)$")
@@ -5665,7 +5667,7 @@ def _git_dir_above(start: Path) -> Path | None:
     """The git dir of the work tree that contains `start`, following a worktree's `.git` file.
 
     A diff file saved inside a git dir (the `/local-commit` command of the mod does that) gets
-    that git dir itself, so a submodule or a linked worktree reads its own reflog.
+    that git dir itself, so a submodule or a linked worktree reads its own HEAD (and reflog).
     """
     if _is_git_dir(start):
         return start
@@ -5759,8 +5761,8 @@ def _guess_language(subjects: Sequence[str]) -> str | None:
 
 
 #: Where the language of `local_commit_msg` came from (#546). The last four are the product
-#: language reached by default: with a `path` and no repo above it, with a repo whose reflog has
-#: too few commits to tell (a fresh clone or submodule), with a repo whose commits are split
+#: language reached by default: with a `path` and no repo above it, with a repo whose readable
+#: history has too few commits to tell (a new repo, a shallow clone), with a repo whose commits are split
 #: between languages, or with an inline diff (no `path`, so no repo to look at).
 COMMIT_LANGUAGE_FROM_VARIABLE = "variable"
 COMMIT_LANGUAGE_FROM_DIFF = "diff"
@@ -5779,7 +5781,7 @@ def _repo_commit_language(path: str | None) -> str | None:
 def _repo_commit_language_lookup(path: str | None) -> tuple[str | None, str]:
     """`(language, source)`: the repo's commit language, if clear, and why or why not.
 
-    #546: the source tells «no repo above the diff file» (`no_repo`) from «a reflog with too few
+    #546: the source tells «no repo above the diff file» (`no_repo`) from «a history with too few
     commits» (`short_history`) and «commits split between languages» (`mixed_repo`), so the tool
     can say truthfully why it fell back to the product language.
     """
@@ -5792,14 +5794,26 @@ def _repo_commit_language_lookup(path: str | None) -> tuple[str | None, str]:
     git_dir = _git_dir_above(start)
     if git_dir is None:
         return None, COMMIT_LANGUAGE_FROM_NO_REPO
-    subjects = _recent_commit_subjects(git_dir)
-    # #548: a freshly made linked worktree has only `reset:`/`checkout:` lines in its own reflog;
-    # the history lives in the shared git dir's. It is read only when the worktree's own reflog
-    # does not give enough votes, and its subjects go before the worktree's (older first).
-    if sum(_language_votes(subjects).values()) < _REPO_LANGUAGE_MIN_VOTES:
-        common = _common_git_dir(git_dir)
-        if common is not None:
-            subjects = (_recent_commit_subjects(common) + subjects)[-20:]
+    common = _common_git_dir(git_dir)
+    # #548 (reopened): the reflog records what was typed in one clone, not the repo's history. A
+    # checkout that gets `main` through `git pull` has `pull: Fast-forward` lines with no subject
+    # and a few old `commit:` lines, so it voted «mixed» on an English repo. The subjects of the
+    # commits on HEAD, read from the object store without running `git`, come first. When they
+    # give too few votes (the store could not be read, or was read only in part: a shallow clone,
+    # alternates, a damaged object), the reflog fills the rest, as before.
+    history = git_history.head_commit_subjects(git_dir, common)
+    subjects = history
+    if sum(_language_votes(history).values()) < _REPO_LANGUAGE_MIN_VOTES:
+        reflog = _recent_commit_subjects(git_dir)
+        # #548: a freshly made linked worktree has only `reset:`/`checkout:` lines in its own
+        # reflog; the history lives in the shared git dir's. It is read only when the worktree's
+        # own reflog does not give enough votes, and its subjects go before the worktree's.
+        if common is not None and sum(_language_votes(reflog).values()) < _REPO_LANGUAGE_MIN_VOTES:
+            reflog = (_recent_commit_subjects(common) + reflog)[-20:]
+        # A commit read from the history is often also a `commit:` line of the reflog: it votes once.
+        seen = set(history)
+        extra = [s for s in reflog if s not in seen]
+        subjects = extra[len(history) - 20 :] + history if len(history) < 20 else history
     language = _guess_language(subjects)
     if language:
         return language, COMMIT_LANGUAGE_FROM_REPO
@@ -5867,7 +5881,7 @@ def _commit_language_instruction(path: str | None = None) -> str:
     de antes, «el idioma predominante del diff», queda solo como el valor explícito `diff`: en repos
     bilingües el modelo elegía uno u otro. `LOCAL_DELEGATE_OUTPUT_LANGUAGE` no entra aquí.
     #461: between the variable and the product language goes the language of the recent commits
-    of the repo that holds `path`, when the reflog says it clearly (`_repo_commit_language`).
+    of the repo that holds `path`, when its history says it clearly (`_repo_commit_language`).
     """
     code, source = _commit_language_choice(path)
     if source == COMMIT_LANGUAGE_FROM_DIFF:
