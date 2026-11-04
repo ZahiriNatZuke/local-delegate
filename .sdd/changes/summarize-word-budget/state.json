@@ -1,0 +1,102 @@
+{
+  "schemaVersion": 1,
+  "slug": "summarize-word-budget",
+  "title": "local_summarize corta el resumen a mitad de frase con el max_words por defecto (#580)",
+  "mode": "lite",
+  "traceability": "strict",
+  "status": "verifying",
+  "createdAt": "2026-11-04T17:47:23.841Z",
+  "updatedAt": "2026-11-04T18:00:01.557Z",
+  "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-11-04T17:48:03.711Z",
+      "evidence": "Causa reproducida contra el backend real (ventana w-20261104T174214Z): max_tokens=2w+64=364; medidos 1,46-1,67 tok/palabra y exceso hasta 1,49x; log del mes: todos los cortes planos en 2w+64. Cinco requisitos observables.",
+      "actor": "user"
+    },
+    "plan": {
+      "status": "approved",
+      "updatedAt": "2026-11-04T17:48:19.417Z",
+      "evidence": "Plan de 3 tareas trazadas a REQ-001..005; el corpus versionado ya declara max_tokens de local_summarize en PROMPT_BOUNDARIES 0.36.0; _chat_map_reduce sin max_tokens_for queda igual; reintento descartado por coste.",
+      "actor": "user"
+    },
+    "quality": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "conformance": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "memory": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-11-04T17:47:23.841Z",
+      "reason": "SDD change created"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-11-04T17:48:03.711Z",
+      "evidence": "Causa reproducida contra el backend real (ventana w-20261104T174214Z): max_tokens=2w+64=364; medidos 1,46-1,67 tok/palabra y exceso hasta 1,49x; log del mes: todos los cortes planos en 2w+64. Cinco requisitos observables.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "researching",
+      "at": "2026-11-04T17:48:15.040Z",
+      "reason": "flujo lite 580"
+    },
+    {
+      "type": "transition",
+      "from": "researching",
+      "to": "specifying",
+      "at": "2026-11-04T17:48:15.243Z",
+      "reason": "flujo lite 580"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-11-04T17:48:15.448Z",
+      "reason": "flujo lite 580"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-11-04T17:48:19.417Z",
+      "evidence": "Plan de 3 tareas trazadas a REQ-001..005; el corpus versionado ya declara max_tokens de local_summarize en PROMPT_BOUNDARIES 0.36.0; _chat_map_reduce sin max_tokens_for queda igual; reintento descartado por coste.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "implementing",
+      "at": "2026-11-04T17:48:19.621Z",
+      "reason": "plan aprobado"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-11-04T18:00:01.557Z",
+      "reason": "tests en verde"
+    }
+  ]
+}
