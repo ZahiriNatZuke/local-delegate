@@ -54,6 +54,32 @@ def run_with_environ(environ: Mapping[str, str], function, *args):
     return contextvars.copy_context().run(_call_with_environ, environ, function, args)
 
 
+def utf8_stdio() -> None:
+    """stdin and stdout in UTF-8, whatever the system code page says.
+
+    Claude Code writes the hook input in UTF-8 and reads the output as UTF-8. With the settings
+    delivery the hook runs as `python "<script>"`, and on Windows that `python` opens its pipes in
+    the ANSI code page (cp1252): a path with `ñ` arrived as `Ã±`, `getsize` failed and the read
+    hook went quiet; `diseño` no longer matched the prompt rules; a byte with no cp1252 character
+    (`Á` = C3 81) broke `json.load`. Fixing it here, not in the registered command, covers the
+    installs that already exist: `update` recopies the scripts and leaves settings alone.
+
+    Each hook calls it first thing in `main()`, before reading anything: an encoding can only be
+    changed before the first read. Never at import time, because the server imports this module
+    and its stdio is the MCP transport. Streams without `reconfigure` (tests swap in a `StringIO`)
+    are left as they are.
+    """
+    for stream in (sys.stdin, sys.stdout):
+        encoding = str(getattr(stream, "encoding", "") or "").lower().replace("_", "-")
+        if encoding in {"utf-8", "utf8"}:
+            continue
+        reconfigure = getattr(stream, "reconfigure", None)
+        if reconfigure is None:
+            continue
+        with contextlib.suppress(Exception):
+            reconfigure(encoding="utf-8", errors="replace")
+
+
 def enabled() -> bool:
     """Interruptor del EXPERIMENTO, no el de encendido de un hook. La diferencia importa.
 
@@ -132,6 +158,26 @@ def context_of(payload: dict, script: str) -> dict:
     return {"version": version_de(script), "session_id": str(payload.get("session_id") or "")}
 
 
+#: Set only inside `record_or_raise`: `record` then re-raises a write error instead of swallowing it.
+_RECORD_STRICT: contextvars.ContextVar[bool] = contextvars.ContextVar(
+    "local_delegate_record_strict", default=False
+)
+
+
+def record_or_raise(function, *args):
+    """`function(*args)` with `record` raising its `OSError` instead of swallowing it.
+
+    Only the mod's `record-read` road uses it: there the caller (the daemon endpoint or the
+    `record-read` CLI) must know the decision line was not written, so the mod retries it or logs
+    `ModRecordLost`. A normal hook never runs here and keeps its best-effort telemetry.
+    """
+    token = _RECORD_STRICT.set(True)
+    try:
+        return function(*args)
+    finally:
+        _RECORD_STRICT.reset(token)
+
+
 def record(event: str, step_aside: str | None = None, **metadata: object) -> None:
     """Una linea de telemetria. Con ``step_aside`` (por que se aparto el hook, p. ej.
     ``STEP_ASIDE_READ_MOD``) la linea dice que el hook NO actuo y por que: ``reason`` pasa a
@@ -158,7 +204,9 @@ def record(event: str, step_aside: str | None = None, **metadata: object) -> Non
         # La telemetría es best-effort y corre dentro de un hook del agente: si el destino no se
         # puede crear o escribir (permisos, disco lleno, ruta inválida en LD_HOOK_TELEMETRY_LOG),
         # perder una línea de log es preferible a romperle la operación al usuario.
-        pass
+        # On the mod's `record-read` road (`record_or_raise`) the caller must know instead.
+        if _RECORD_STRICT.get():
+            raise
 
 
 # --- Decisiones del mod de lectura (`hook record-read`, plan Ola 5) ------------------------------
