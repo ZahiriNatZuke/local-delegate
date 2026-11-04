@@ -6,6 +6,18 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Corregido
+
+- **Una decisión del mod de lectura que no se pudo escribir ya no se da por escrita.** Si el destino
+  de la telemetría (`LD_HOOK_TELEMETRY_LOG`) no se podía abrir (una carpeta con ese nombre,
+  permisos, disco lleno, antivirus), `hook record-read` se comía el error: el daemon contestaba 204,
+  el proceso salía con 0 y el mod no reintentaba ni dejaba `ModRecordLost`, así que la decisión
+  (`summarized`, `read_whole`…) se perdía sin rastro. Ahora, solo en esa vía, el daemon contesta 500
+  y `python -m local_delegate.hook record-read` sale con 1 (también con una entrada rota), y el mod
+  sigue su camino de reintento. `hook classify` sale con 1 si falla. La línea de
+  `hook-failures.jsonl` dice además la decisión y la vía (nombres cortos; nunca la ruta). Los hooks
+  normales de `hooks.json` no cambian: siguen saliendo con 0 aunque no puedan escribir telemetría.
+
 ## [0.48.0] - 2026-11-03
 
 Más avisos donde antes había silencio. `local_extract` devuelve exactamente las claves pedidas

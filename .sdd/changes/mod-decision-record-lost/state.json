@@ -1,0 +1,103 @@
+{
+  "schemaVersion": 1,
+  "slug": "mod-decision-record-lost",
+  "title": "A mod decision record is reported as written even when it is not",
+  "mode": "lite",
+  "traceability": "strict",
+  "status": "verifying",
+  "createdAt": "2026-11-04T10:37:18.812Z",
+  "updatedAt": "2026-11-04T10:59:01.848Z",
+  "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-11-04T10:37:56.185Z",
+      "evidence": "Spec with 4 REQs traced to plan tasks T1-T4; defect verified on 0.48.0 code (record swallows OSError, CLI always exits 0; endpoint/mod already handle failure)",
+      "actor": "user"
+    },
+    "plan": {
+      "status": "approved",
+      "updatedAt": "2026-11-04T10:37:56.186Z",
+      "evidence": "Spec with 4 REQs traced to plan tasks T1-T4; defect verified on 0.48.0 code (record swallows OSError, CLI always exits 0; endpoint/mod already handle failure)",
+      "actor": "user"
+    },
+    "quality": {
+      "status": "approved",
+      "updatedAt": "2026-11-04T10:59:01.848Z",
+      "evidence": "Full suite -n 2: 6313 passed, 1 failed (test_build_hook sdist sees ignored register.js in the worktree; unrelated, CI-clean); new tests 8/8 with positive control; ruff clean; installed check via temp uv tool dir",
+      "actor": "user"
+    },
+    "conformance": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "memory": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-11-04T10:37:18.812Z",
+      "reason": "SDD change created"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "specifying",
+      "at": "2026-11-04T10:37:55.962Z",
+      "reason": "brief written"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-11-04T10:37:56.185Z",
+      "evidence": "Spec with 4 REQs traced to plan tasks T1-T4; defect verified on 0.48.0 code (record swallows OSError, CLI always exits 0; endpoint/mod already handle failure)",
+      "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-11-04T10:37:56.186Z",
+      "evidence": "Spec with 4 REQs traced to plan tasks T1-T4; defect verified on 0.48.0 code (record swallows OSError, CLI always exits 0; endpoint/mod already handle failure)",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-11-04T10:58:55.238Z",
+      "reason": "spec approved"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "implementing",
+      "at": "2026-11-04T10:58:55.461Z",
+      "reason": "plan approved"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-11-04T10:58:55.695Z",
+      "reason": "T1-T4 done, tests and installed check green"
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-11-04T10:59:01.848Z",
+      "evidence": "Full suite -n 2: 6313 passed, 1 failed (test_build_hook sdist sees ignored register.js in the worktree; unrelated, CI-clean); new tests 8/8 with positive control; ruff clean; installed check via temp uv tool dir",
+      "actor": "user"
+    }
+  ]
+}

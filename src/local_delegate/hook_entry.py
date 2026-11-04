@@ -10,7 +10,11 @@ Tres reglas, y las tres existen porque Claude Code bloquea el prompt o la tool c
 
 - un nombre desconocido sale con 0 y sin texto (un plugin más nuevo que el paquete);
 - cualquier fallo sale con 0 y deja una línea en `LOG_DIR/hook-failures.jsonl`, solo con el tipo;
-- `local_delegate.hook` envuelve todo esto y sale siempre con 0.
+- `local_delegate.hook` envuelve todo esto y sale con 0 en todo hook de `hooks.json`.
+
+The two mod subcommands below are not hooks of `hooks.json`: a failed `classify` or `record-read`
+exits with 1 (never 2), so the mod knows the answer or the line did not come (`record-read`: it then
+retries the decision or logs `ModRecordLost`).
 
 Con la capa «activo» del hook de lectura apagada, `read`, `mcp-read` y `shell` salen después de
 importar solo `read_switch`: en la entrega por plugin esas entradas van siempre declaradas.
@@ -43,6 +47,7 @@ entorno que manda el mod (`CLASSIFY_ENV`); el proceso queda de respaldo (F4-clas
 from __future__ import annotations
 
 import os
+import re
 import sys
 from pathlib import Path
 
@@ -57,7 +62,7 @@ HOOKS: dict[str, tuple[str, bool]] = {
     "subagent-start": ("subagent_start.py", False),
 }
 
-#: Subcomandos del mod de lectura (no son hooks de `hooks.json`). Salen con 0 pase lo que pase.
+#: Subcomandos del mod de lectura (no son hooks de `hooks.json`). Salen con 0, o con 1 si fallan.
 COMMANDS = ("classify", "record-read")
 
 #: Opción de `classify` que lista las tools en vez de clasificar.
@@ -211,17 +216,33 @@ def record_read(entry: object, environ) -> None:
     script = "suggest_delegate_shell" if via.startswith("shell_") else "suggest_delegate_read"
     module = _load_hook_module(script)
     # El `hook_common` que importó el script (módulo suelto), no el del paquete: es el que lee.
-    _load_hook_module("hook_common").run_with_environ(environ, module.record_decision, entry)
+    common = _load_hook_module("hook_common")
+    # `record_or_raise`: a line that cannot be written raises here instead of passing for written,
+    # so the endpoint answers 500 and the CLI exits 1 (the mod then retries or logs the loss).
+    common.run_with_environ(environ, common.record_or_raise, module.record_decision, entry)
 
 
-def _record_read() -> None:
+def _record_read(state: dict) -> None:
     import json
 
-    record_read(json.load(sys.stdin), os.environ)
+    state["entry"] = json.load(sys.stdin)
+    record_read(state["entry"], os.environ)
 
 
-def _log_failure(name: str, exc: BaseException) -> None:
-    """Best-effort: ni rutas ni mensajes, que pueden llevar contenido del usuario; solo el tipo."""
+#: What a decision or via name may look like in `hook-failures.jsonl`; anything else is `other`.
+_FAILURE_NAME = re.compile(r"^[a-z0-9_]{1,40}$")
+
+
+def _failure_name(value: object) -> str:
+    return value if isinstance(value, str) and _FAILURE_NAME.match(value) else "other"
+
+
+def _log_failure(name: str, exc: BaseException, entry: object = None) -> None:
+    """Best-effort: ni rutas ni mensajes, que pueden llevar contenido del usuario; solo el tipo.
+
+    With the `record-read` entry, also its `decision` and `via` (short names, checked against
+    `_FAILURE_NAME`), so the lost decision can be told apart.
+    """
     try:
         import json
         from datetime import UTC, datetime
@@ -233,6 +254,9 @@ def _log_failure(name: str, exc: BaseException) -> None:
         if target.exists() and target.stat().st_size > FAILURE_LOG_MAX_BYTES:
             return
         line = {"ts": datetime.now(UTC).isoformat(), "hook": name, "error": type(exc).__name__}
+        if isinstance(entry, dict):
+            line["decision"] = _failure_name(entry.get("decision"))
+            line["via"] = _failure_name(entry.get("via"))
         with target.open("a", encoding="utf-8") as stream:
             stream.write(json.dumps(line) + "\n")
     except Exception:
@@ -241,17 +265,20 @@ def _log_failure(name: str, exc: BaseException) -> None:
 
 
 def main(argv: list[str]) -> int:
-    """Despacha un hook. Devuelve siempre 0 y no lanza (salvo `KeyboardInterrupt` del todo)."""
+    """Despacha un hook. Devuelve 0 y no lanza (salvo `KeyboardInterrupt` del todo); 1 solo para
+    un `classify` o `record-read` que falló (no son hooks de `hooks.json`)."""
     name = argv[0] if argv else ""
     if name in COMMANDS:
+        state: dict = {}
         try:
             _utf8_streams()
             if name == "classify":
                 _classify(argv[1:])
             else:
-                _record_read()
+                _record_read(state)
         except (Exception, SystemExit) as exc:
-            _log_failure(name, exc)
+            _log_failure(name, exc, state.get("entry"))
+            return 1
         return 0
     entry = HOOKS.get(name)
     if entry is None:
