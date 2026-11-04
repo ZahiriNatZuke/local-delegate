@@ -492,3 +492,224 @@ def check(answer: str, question: str, content: str, truncated: bool = False) -> 
             result.mismatched.append(citation)
     result.found = [(name, occurrences(lines, name)) for name in question_names[:MAX_IDENTIFIERS]]
     return result
+
+
+# --- #568: line numbers in `local_extract` -----------------------------------------------------
+# `local_extract` had no way to answer "which lines": the model never saw a line number. With
+# `path` and a field that asks for lines, it now sees `N| line` like `local_explain_code` (#460);
+# these helpers decide when (by the field names), give a Markdown outline the model can filter,
+# and check the lines the model cites in those fields.
+
+#: Words of a field name that ask for file lines by themselves (plural, or the `lineno` of code).
+_LINES_WORDS = frozenset({"lines", "lineas", "lineno", "linenos"})
+#: The singular asks for file lines only next to one of `_LINE_QUALIFIERS` (`line_number`,
+#: `start_line`, `lineRange`): alone it is ordinary data (`line_items`, `address_line`).
+_LINE_WORDS = frozenset({"line", "linea"})
+_LINE_QUALIFIERS = frozenset(
+    {
+        "number", "numbers", "numero", "numeros", "num", "no", "nr",
+        "start", "end", "inicio", "fin", "range", "ranges", "rango", "rangos",
+        "heading", "headings", "section", "sections", "title", "titles",
+        "titulo", "titulos", "seccion", "secciones", "encabezado", "encabezados",
+    }
+)  # fmt: skip
+#: Words that make a field a COUNT of lines, not a place in the file: `lines_added`,
+#: `total_lines`, `lines_count`, `lineas_modificadas`.
+_COUNT_WORDS = frozenset(
+    {
+        "count", "counts", "total", "totals", "added", "removed", "changed", "deleted",
+        "inserted", "modified", "loc", "sloc", "cantidad", "cantidades", "modificadas",
+        "cambiadas", "anadidas", "agregadas", "eliminadas", "borradas", "insertadas",
+    }
+)  # fmt: skip
+#: Next to the plural, these count lines too: `num_lines`, `number_of_lines`, `lines_of_code`.
+#: Next to the singular they place one (`line_number`).
+_PLURAL_COUNT_WORDS = frozenset({"num", "number", "numero", "code", "codigo"})
+_CAMEL_BOUNDARY = re.compile(r"(?<=[a-z0-9])(?=[A-Z])")
+_FIELD_WORD = re.compile(r"[a-z0-9]+")
+
+
+def is_location_field(name: str) -> bool:
+    """Whether the field `name` asks for file lines: `sections_with_lines`, `heading_line`.
+
+    Deterministic, on the name only: it is split into words (camelCase, `_`, `-`, spaces and any
+    other non-alphanumeric) and folded (lower case, no accents, so `líneas` is `lineas`). A word of
+    `_COUNT_WORDS` makes it a count, never a place (`lines_added`, `total_lines`). Otherwise it
+    asks for lines if a word is in `_LINES_WORDS` (unless it is counted: `num_lines`,
+    `lines_of_code`), or if `line`/`linea` comes with a word of `_LINE_QUALIFIERS`
+    (`line_number`, `section_line`). Narrow on purpose: `location`, `position`, `offset`,
+    `price_range`, `line_items` or `pipeline` are ordinary data fields, and a false positive
+    changes their prompt.
+    """
+    words = set(_FIELD_WORD.findall(_fold(_CAMEL_BOUNDARY.sub(" ", name))))
+    if words & _COUNT_WORDS:
+        return False
+    if words & _LINES_WORDS and not words & _PLURAL_COUNT_WORDS:
+        return True
+    return bool(words & _LINE_WORDS and words & _LINE_QUALIFIERS)
+
+
+#: An ATX heading: up to 3 spaces, 1 to 6 `#`, then a blank and some text. No trailing group: the
+#: heading is the stripped line, so nothing can backtrack on a long line.
+_ATX_HEADING = re.compile(r"^ {0,3}#{1,6}[ \t]+\S")
+
+
+def markdown_outline(content: str) -> list[tuple[int, str]]:
+    """(line, heading) of each ATX heading of `content` outside fenced code blocks.
+
+    Lines counted from 1 and split only on `\\n`, like `_number_lines` and `Read`; the heading is
+    the stripped line, `#` included, so its level shows.
+    """
+    out: list[tuple[int, str]] = []
+    in_fence = False
+    for number, line in enumerate(content.split("\n"), 1):
+        if _FENCE.match(line):
+            in_fence = not in_fence
+        elif not in_fence and _ATX_HEADING.match(line):
+            out.append((number, line.strip()))
+    return out
+
+
+#: Keys of an extracted object whose number is a line bound: `{"heading": ..., "start": 12}`.
+_BOUND_KEYS = frozenset(
+    {
+        "start", "end", "from", "to", "first", "last", "begin", "inicio", "fin", "desde", "hasta",
+        "line", "linea", "lines", "lineas",
+    }
+)  # fmt: skip
+#: A bare range in a value: `120-160`, `120 – 160`. The lookarounds leave out the parts of a
+#: longer dashed form (a date `2026-11-04`).
+_VALUE_RANGE = re.compile(r"(?<![\w.\-–])(\d{1,6})\s*[-–]\s*(\d{1,6})(?![\w.\-–])")
+#: `Name: 120` in a value, the "name: line" form.
+_VALUE_COLON = re.compile(r":\s*(\d{1,6})(?![\w.:\-–])")
+
+_Span = tuple[int, int]
+
+
+#: (span, where its citation starts and ends in the text).
+_Cite = tuple[_Span, int, int]
+
+
+def _text_cites(text: str) -> list[_Cite]:
+    """The line citations of `text`, in order of appearance.
+
+    The explicit forms (`líneas 120-160`, `L120`, `120| …`) first; only without any of them, the
+    loose ones (`120-160`, `name: 120`), which in a text that already cites lines are more often
+    part of a name (`Sección 3-4 del manual: L50`); and only without those, a bare number.
+    """
+    cites: list[_Cite] = []
+    for m in _KEYWORD.finditer(text):
+        cites.extend((span, m.start(), m.end()) for span in _ranges(m.group(1)))
+    for m in _L_FORM.finditer(text):
+        start = int(m.group(1))
+        end = int(m.group(2)) if m.group(2) else start
+        cites.append(((min(start, end), max(start, end)), m.start(), m.end()))
+    cites.extend(((int(m.group(1)),) * 2, m.start(), m.end()) for m in _PREFIX_FORM.finditer(text))
+    if not cites:
+        for m in _VALUE_RANGE.finditer(text):
+            start, end = int(m.group(1)), int(m.group(2))
+            cites.append(((min(start, end), max(start, end)), m.start(), m.end()))
+        cites.extend(
+            ((int(m.group(1)),) * 2, m.start(), m.end()) for m in _VALUE_COLON.finditer(text)
+        )
+    bare = text.strip()
+    if not cites and bare.isascii() and bare.isdecimal() and len(bare) <= 6:  # not `²`
+        cites.append(((int(bare),) * 2, 0, len(text)))
+    return sorted(cites, key=lambda c: c[1])
+
+
+def _text_items(text: str, context: str) -> list[tuple[str, list[_Span]]]:
+    """One item per citation of `text`, named by the words just before it.
+
+    In `A: línea 12; B: línea 40` each line is checked against its own name, not against every
+    word of the text: the words between the previous citation and this one, or the whole text
+    when that stretch names nothing (`línea 12: A`).
+    """
+    out: list[tuple[str, list[_Span]]] = []
+    previous_end = 0
+    for span, start, end in _text_cites(text):
+        near = text[previous_end:start]
+        previous_end = end
+        out.append((f"{context} {near if _words(near) else text}", [span]))
+    return out
+
+
+def _words(text: str) -> tuple[str, ...]:
+    """What an item names: its plain words of 4+ letters and its code-like identifiers."""
+    found = [*_PLAIN_WORD.findall(text), *identifiers(text)]
+    return tuple(
+        w
+        for w in dict.fromkeys(found)
+        if w.lower() not in _COMMON
+        and not _CITATION_WORD.fullmatch(w)
+        and _fold(w) not in _BOUND_KEYS  # "desde 120 hasta 160" names nothing
+    )
+
+
+def _is_number(value: object) -> bool:
+    return isinstance(value, int) and not isinstance(value, bool)
+
+
+def _items(value: object, context: str = "") -> list[tuple[str, list[_Span]]]:
+    """(what the item names, the line spans it cites) of each item of an extracted value."""
+    if _is_number(value):
+        return [(context, [(value, value)])]  # type: ignore[list-item]
+    if isinstance(value, str):
+        return [item for line in value.split("\n") for item in _text_items(line, context)]
+    if isinstance(value, list):
+        if len(value) == 2 and all(_is_number(v) for v in value):  # `[start, end]`
+            return [(context, [(min(value), max(value))])]  # type: ignore[type-var]
+        return [item for element in value for item in _items(element, context)]
+    if not isinstance(value, dict):
+        return []
+    bounds = {k: v for k, v in value.items() if isinstance(k, str) and _is_bound_key(k)}
+    if not bounds:
+        # A map name -> lines (`{"Button": "120-160"}`): each pair is an item named by its key.
+        return [item for k, v in value.items() for item in _items(v, f"{context} {k}")]
+    # An object with line keys is one item; its other scalar values say what it names.
+    names = " ".join(str(v) for k, v in value.items() if k not in bounds and isinstance(v, str))
+    numbers = [v for v in bounds.values() if _is_number(v)]
+    numbers += [n for v in bounds.values() if isinstance(v, list) for n in v if _is_number(n)]
+    spans = [cite[0] for v in bounds.values() if isinstance(v, str) for cite in _text_cites(v)]
+    if numbers:
+        spans.append((min(numbers), max(numbers)))
+    return [(f"{context} {names}", spans)]
+
+
+def _is_bound_key(key: str) -> bool:
+    return _fold(key) in _BOUND_KEYS or is_location_field(key)
+
+
+def check_values(value: object, content: str) -> list[Citation]:
+    """#568: the line citations of an extracted location value that do not hold in `content`.
+
+    Each item of the value (a line of a string, an element of a list, an object with line keys,
+    a pair of a name -> lines map) cites spans (`líneas 120-160`, `L120`, `120| …`, `name: 120`,
+    `120-160`, `{"start": 120, "end": 160}`). A span outside the file never holds; one inside
+    holds if its lines, or one around them (`TOLERANCE`), contain, ignoring case and accents, a
+    word the item names. An item that names nothing is checked only against the file length.
+    """
+    lines = content.split("\n")
+    if lines and lines[-1] == "":
+        lines.pop()
+    total = len(lines)
+    mismatched: list[Citation] = []
+    seen: set[tuple[_Span, tuple[str, ...]]] = set()
+    for text, spans in _items(value):
+        words = _words(text)
+        folded_words = [_fold(w) for w in words]
+        for start, end in spans:
+            if ((start, end), words) in seen:
+                continue
+            seen.add(((start, end), words))
+            citation = Citation(start, end, (), words)
+            if start < 1 or end > total:
+                mismatched.append(citation)
+                continue
+            if not folded_words:
+                continue
+            low = max(start - TOLERANCE, 1)
+            window = _fold("\n".join(lines[low - 1 : min(end + TOLERANCE, total)]))
+            if not any(w in window for w in folded_words):
+                mismatched.append(citation)
+    return mismatched

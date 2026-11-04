@@ -213,6 +213,11 @@ operación ──▶ turno (¿choca con lo que está en uso?) ──▶ plaza (M
   modelo pedido no estaba y había otro `ready`/`starting`, lo nombra (y la máquina que lo usaba, si
   la foto `inflight` de llama-swap la traía); si estaba `ready`, dice «backend ocupado»; sin foto,
   el texto de siempre. `error` y `error_class` no cambian; el evento lleva `read_timeout_cause`.
+  Desde el #572 dice además, solo cuando lo sabe, dónde se fue el plazo (que es por envío: empieza
+  con el POST, así que no cuenta el turno ni la plaza del daemon, pero sí la carga en llama-swap):
+  si la vigilancia `waiting_backend` del envío (`SendWatch`) vio el modelo cargándose y luego
+  listo, a los cuántos segundos y cuánto plazo quedaba (con `busy` sustituye a «estaba cargado»);
+  si la operación esperó turno o plaza 1 s o más; y en una operación troceada, el trozo que falló.
 - **Turno remoto (concurrencia PC+Mac, lotes 3 y 4).** Tres piezas, una cola:
   - **Endpoint** (`web/turn_api.py`, solo en el daemon: `daemon.build_app` lo habilita y
     `LOCAL_DELEGATE_TURN_SERVER=off` lo deja en 404). Tres `POST` síncronos, que corren en el

@@ -20,6 +20,22 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   y varias esperas de turno a la vez dejan de sondear en cuanto una decide que el daemon no
   responde. Con el daemon parado y el backend sano (#512) todo sigue funcionando, en serie.
 
+- **`local_extract` puede dar números de línea con `path` (#568).** Un campo de localización
+  (`secciones_con_lineas`) sobre un Markdown grande volvía `null` en los 8 trozos: el modelo nunca
+  veía un número de línea. Ahora, con `path` y un campo cuyo nombre pide líneas (una palabra
+  `lines`, `lineas`, `lineno`, o `line`/`linea` junto a `number`, `start`, `end`, `range`,
+  `heading`, `section`, `título` o `sección`: `sections_with_lines`, `start_line`, `heading_line`;
+  no `location`, `price_range`, `line_items` ni una cantidad como `lines_added`, `total_lines` o
+  `lines_of_code`), el modelo ve cada línea como `N| línea` con su número absoluto del fichero, también
+  en cada trozo (las piezas de #460); en un Markdown (`.md`, `.markdown`, `.mdx`) recibe además el
+  esquema de encabezados con su línea, calculado por programa, si cabe en el 15 % del trozo. El
+  prefijo que el modelo copie en los demás campos se quita, y las líneas citadas en los campos de localización
+  se comprueban contra el fichero: las que no casan van en `_local_delegate.lines_unverified` con
+  un aviso (añadido a los anteriores). Al trocear, los campos de localización los une el programa
+  a partir de los trozos, en orden, así que un reduce cortado por el tope de salida no pierde las
+  secciones. Sin un campo así, o con `text=`, nada cambia. La skill y el bloque de memoria dicen
+  ahora que el nombre del campo tiene que pedir líneas.
+
 - **Los tests de precios de Claude Haiku 5.5 ya no tumban el PR del vigilante (#567).** Fijaban a
   mano las cifras de la tabla, así que cualquier cambio legítimo de precio que propusiera el
   vigilante dejaba su CI en rojo. Ahora la lógica se prueba contra una copia congelada de los
@@ -36,6 +52,14 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   sea cual sea la velocidad del runner. La cota superior de tiempo (4 s) pasa a ser una guarda
   contra cuelgues (20 s): que el plazo cortó lo dicen el evento (`cancel_reason`, `pieces >
   chunks`) y el error, no el reloj. Solo cambia el test.
+- **Un `read_timeout` dice dónde se fue el plazo y en qué trozo (#572).** Un `local_commit_msg` de
+  ~58 KB falló con «estaba cargado pero no respondió en 180 s», y el log mostraba otra cosa: sin
+  cola en el daemon, el modelo cargándose a los 3 s y el primero de varios trozos agotando él solo
+  el plazo. El plazo de 180 s es por envío (no cuenta el turno del daemon, sí la carga del modelo
+  en llama-swap) y no se cambia. Ahora el mensaje, en español e inglés, dice si el modelo se estaba
+  cargando y a los cuántos segundos quedó listo (en vez de «estaba cargado»), si hubo espera de
+  turno antes del envío y, si la entrada iba troceada, qué trozo de cuántos falló. El evento de uso
+  lleva `read_timeout_load_ms`, `read_timeout_piece` y `pieces`.
 - **`local_commit_msg` toma el idioma del historial del repo, no del reflog (#548).** Desde un
   worktree de agente anidado en la copia principal, con el diff en su raíz o en una subcarpeta, el
   mensaje salía en el idioma del producto con el aviso «los commits recientes del repo no dejan claro

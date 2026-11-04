@@ -1340,6 +1340,8 @@ def _log_event(
     focus: bool = False,
     connection_failure: str | None = None,
     read_timeout_cause: str | None = None,
+    read_timeout_load_ms: int | None = None,
+    read_timeout_piece: int | None = None,
     turn_wait_ms: int | None = None,
     turn: str | None = None,
     turn_yields: int | None = None,
@@ -1530,6 +1532,14 @@ def _log_event(
         # Concurrency PC+Mac, lot 1 (REQ-005): why a `read_timeout` happened, only when known.
         if read_timeout_cause is not None:
             rec["read_timeout_cause"] = read_timeout_cause
+        # Issue #572: where a `read_timeout`'s deadline went, only when known: the model load seen
+        # inside it, and the piece of a chunked operation that ran out (0: the reduce), with the
+        # pieces announced, which `chunks` leaves out when the first call already failed.
+        if read_timeout_load_ms is not None:
+            rec["read_timeout_load_ms"] = int(read_timeout_load_ms)
+        if read_timeout_piece is not None and pieces is not None and pieces > 1:
+            rec["read_timeout_piece"] = int(read_timeout_piece)
+            rec.setdefault("pieces", int(pieces))
         # Resumen estructurado (SDD resumen-por-secciones): cuántas secciones del nivel
         # estructural tenía el documento, y si se pidió un enfoque. Nunca el texto del enfoque
         # ni los títulos: el log no guarda contenido.
@@ -1774,6 +1784,9 @@ class ChatResult:
     #: `/running`: `model_swap` (another model was loaded and it never switched) or `busy` (the
     #: requested one was loaded). `None` otherwise or when unknown. Goes to the log as is.
     read_timeout_cause: str | None = None
+    #: Issue #572: on a `read_timeout`, ms from the send to the moment its watch saw the
+    #: requested model `ready` after seeing it load; `None` when no load was seen.
+    read_timeout_load_ms: int | None = None
 
 
 @dataclass(frozen=True)
@@ -2088,6 +2101,53 @@ def _read_timeout_text(model: str, probe: _LoadProbe) -> tuple[str, str | None]:
     return i18n.t("mcp.error.read_timeout", model=model, seconds=seconds), None
 
 
+def _read_timeout_explained(model: str, text: str, cause: str | None) -> tuple[str, int | None]:
+    """Issue #572: what the server already knows of where the read deadline went.
+
+    The deadline (`HTTP_TIMEOUT`) is per send: it starts with the POST, so the daemon's turn and
+    slot waits are outside it, but llama-swap loading the model is inside. Two facts, each added
+    only when known, so without them the text is exactly `_read_timeout_text`'s:
+
+    * the send's `waiting_backend` watch saw the requested model loading and then `ready`: the
+      text says when, and how much of the deadline was left. With cause `busy` it REPLACES the
+      busy text, whose «it was loaded» is false for this send (#572: `starting` at 3 s, `ready`
+      at the deadline). The watch samples every 10 s, so a model that got ready after its last
+      sample is seen `ready` only by the deadline's probe: then the text says it was ready only
+      at the end, and the load is the probe's moment (an upper bound). With cause `model_swap`
+      nothing is added (the model was not ready at the deadline, whatever the watch saw).
+      Returns that load in ms for the usage event.
+    * the operation waited 1 s or more in all for the daemon's turn or a slot before its sends.
+    """
+    load_ms: int | None = None
+    with suppress(Exception):
+        watch = _SEND_WATCH.get()
+        if watch is not None and watch.loading_seen and cause != "model_swap":
+            values: dict[str, Any] = {"model": model, "seconds": _machine(config.HTTP_TIMEOUT)}
+            if watch.ready_after_s is not None:
+                load_s = float(watch.ready_after_s)
+                values["load"] = round(load_s)
+                values["left"] = max(0, round(config.HTTP_TIMEOUT - load_s))
+                key = "loaded_late" if cause == "busy" else "loaded_note"
+                text = _with_load_text(text, key, cause, values)
+                load_ms = int(load_s * 1000)
+            elif cause == "busy":
+                # Ready only in the deadline's probe (#572's likely case): ready at the very end.
+                text = i18n.t("mcp.error.read_timeout_loaded_at_end", **values)
+                load_ms = int(_probe_delay() * 1000)
+    with suppress(Exception):
+        trace = concurrency.current()
+        queued_ms = trace.phase_ms("turn", "slot") if trace is not None else 0
+        if queued_ms >= 1000:
+            text += " " + i18n.t("mcp.error.read_timeout_queued", queued=round(queued_ms / 1000))
+    return text, load_ms
+
+
+def _with_load_text(text: str, key: str, cause: str | None, values: dict[str, Any]) -> str:
+    """The `busy` text replaced by the load one, or the load note after any other text."""
+    said = i18n.t(f"mcp.error.read_timeout_{key}", **values)
+    return said if cause == "busy" else f"{text} {said}"
+
+
 def _backend_on_loopback() -> bool:
     """¿El host REAL de BASE_URL es de loopback? Lo que pide la regla 7 del clasificador.
 
@@ -2312,12 +2372,15 @@ def _post_chat(model: str, payload: dict) -> ChatResult:
                 # Concurrency PC+Mac, lot 1 (REQ-005): the text names what llama-swap had
                 # loaded, from the same sample that decided `error_class` above.
                 text, cause = _read_timeout_text(model, probe)
+                # Issue #572: and where the deadline went (load, earlier wait), when known.
+                text, load_ms = _read_timeout_explained(model, text, cause)
                 return ChatResult(
                     text=ERROR_PREFIX + text,
                     ok=False,
                     error="read_timeout",
                     error_class=error_class,
                     read_timeout_cause=cause,
+                    read_timeout_load_ms=load_ms,
                 )
             return ChatResult(
                 text=ERROR_PREFIX + i18n.t("mcp.error.endpoint", url=config.BASE_URL, error=e),
@@ -3351,11 +3414,21 @@ def _backend_wait_watch(model: str) -> Generator[None, None, None]:
         watches.append(watch)
 
     with concurrency.send_watch(model, _resolved_model_name, on_wait, register=register) as watch:
+        # Issue #572: `_post_chat` reads what this watch saw when its read deadline runs out.
+        current_watch = _SEND_WATCH.set(watch)
         try:
             yield
         finally:
             with suppress(ValueError):
+                _SEND_WATCH.reset(current_watch)
+            with suppress(ValueError):
                 watches.remove(watch)
+
+
+#: Issue #572: the `waiting_backend` watch of the send in progress in this context, if any.
+_SEND_WATCH: contextvars.ContextVar[concurrency.SendWatch | None] = contextvars.ContextVar(
+    "local_delegate_send_watch", default=None
+)
 
 
 def _send(model: str, body: dict) -> ChatResult:
@@ -3767,6 +3840,7 @@ def _with_fallback(
             error_class=base.error_class,
             connection_failure=base.connection_failure,
             read_timeout_cause=base.read_timeout_cause,
+            read_timeout_load_ms=base.read_timeout_load_ms,
         ),
         schema,
         attempts,
@@ -4007,6 +4081,18 @@ class _CurrentModel:
         self.hop: dict | None = None
         #: El estado del schema JSON de la primera llamada que lo pidió (`local_extract` troceado).
         self.json_schema: str | None = None
+        #: Issue #572: the piece of the last `read_timeout` (0: the reduce), `None` without one.
+        self.timeout_piece: int | None = None
+
+    def timeout_note(self, failed: ChatResult | None, pieces: int) -> str:
+        """Issue #572: « It failed on piece X of N.» for a chunked `read_timeout`, else ""."""
+        if failed is None or failed.error != "read_timeout" or pieces <= 1:
+            return ""
+        if self.timeout_piece is None:
+            return ""
+        if self.timeout_piece == 0:
+            return " " + i18n.t("mcp.error.read_timeout_reduce", pieces=pieces)
+        return " " + i18n.t("mcp.error.read_timeout_piece", piece=self.timeout_piece, pieces=pieces)
 
     def call(
         self,
@@ -4036,6 +4122,9 @@ class _CurrentModel:
         )
         if self.json_schema is None:
             self.json_schema = schema
+        if not result.ok and result.error == "read_timeout":
+            # Issue #572: the piece whose send ran out of time; 0 outside the pieces (the reduce).
+            self.timeout_piece = self.chunk or 0
         info = _fallback_info(self.model, result, attempts, self.affinity_tried)
         if info is not None:
             if self.hop is None:
@@ -4067,6 +4156,12 @@ class _CurrentModel:
             # REQ-017: la causa de un `connect_error` también en las delegaciones troceadas.
             "connection_failure": failed.connection_failure if failed else None,
             "read_timeout_cause": failed.read_timeout_cause if failed else None,
+            "read_timeout_load_ms": failed.read_timeout_load_ms if failed else None,
+            "read_timeout_piece": (
+                self.timeout_piece
+                if failed is not None and failed.error == "read_timeout"
+                else None
+            ),
         }
         if self.hop is not None:
             fields["model_requested"] = self.requested
@@ -4266,6 +4361,7 @@ def _chat(
         focus=focus,
         connection_failure=None if result.ok else result.connection_failure,
         read_timeout_cause=None if result.ok else result.read_timeout_cause,
+        read_timeout_load_ms=None if result.ok else result.read_timeout_load_ms,
         attempts=attempts,
         **op.log_fields(),
         **_backend_params_log_fields(role_params),
@@ -4909,7 +5005,7 @@ def _chat_chunked(
         _inflight_end(entry_id)
 
     if failed is not None:
-        text = failed.text
+        text = failed.text + current.timeout_note(failed, len(chunks))  # issue #572
         ok = False
         error = failed.error
         finish_reason = failed.finish_reason
@@ -5520,6 +5616,7 @@ def _chat_map_reduce(
     ok = failed is None
     if not ok:
         text, error, finish_reason = failed.text, failed.error, failed.finish_reason
+        text += current.timeout_note(failed, len(pieces))  # issue #572: which piece ran out
         if _is_context_overflow(failed):
             # Aquí el reintento adaptativo ya partió el trozo y siguió sin caber. El error crudo
             # del backend no dice ni que el problema es el tamaño ni qué se puede tocar, así que
@@ -7109,6 +7206,137 @@ def _normalize_extract_keys(
     return missing, renamed, dropped
 
 
+# --- #568: line numbers in `local_extract` --------------------------------------------------------
+# A field that asks for lines (`line_check.is_location_field`) had no possible answer: the model saw
+# the text bare, and each chunk started without knowing where it fell. With `path` and such a field,
+# the model sees `N| line` with the file's absolute line (the pieces of #460), Markdown headings
+# with their lines (by program, so it only has to filter), and the program checks the lines cited.
+# Without such a field, or with `text=`, nothing changes: a name extracted from a numbered line
+# would come back as `12| name`, so numbering is not the default.
+
+#: The share of a map piece's budget the Markdown outline may take; a longer outline is left out.
+_EXTRACT_OUTLINE_SHARE = 0.15
+#: The files whose `#` lines are headings, so the outline is computed for them only.
+_MARKDOWN_SUFFIXES = frozenset({".md", ".markdown", ".mdx"})
+
+_EXTRACT_LINES_CLAUSE = (
+    " Cada línea del contenido empieza por su número de línea en el fichero seguido de «| »; ese "
+    "prefijo no es parte del texto: no lo copies en los valores. En las claves de ubicación "
+    "({fields}) da esos números de línea, con lo que ubican (por ejemplo «Título: líneas "
+    "120-160»)."
+)
+#: The `N| ` of `_number_lines` at a line start (or `N|` ending the line, a blank file line);
+#: `12|34`, a table row, is data and stays.
+_EXTRACT_PREFIX = re.compile(r"(?m)^([ \t]*)(\d{1,7})\|(?: |$)")
+
+
+def _extract_outline_block(content: str, budget: int) -> str:
+    """The Markdown outline of `content` for the prompt, or "" if it has none or it is too long."""
+    outline = line_check.markdown_outline(content)
+    if not outline:
+        return ""
+    block = (
+        "Esquema de encabezados del documento completo (línea: encabezado; calculado por "
+        "programa, fiable):\n" + "\n".join(f"{n}: {heading}" for n, heading in outline) + "\n\n"
+    )
+    return block if len(block) <= budget * _EXTRACT_OUTLINE_SHARE else ""
+
+
+def _strip_extract_prefixes(value: Any, total_lines: int) -> Any:
+    """`value` without the `N| ` the model copied at the start of a line from its numbered input.
+
+    Only a prefix whose N is a line of the file is dropped; strings inside lists and objects too.
+    """
+    if isinstance(value, str):
+        return _EXTRACT_PREFIX.sub(
+            lambda m: m.group(1) if 1 <= int(m.group(2)) <= total_lines else m.group(0), value
+        )
+    if isinstance(value, list):
+        return [_strip_extract_prefixes(v, total_lines) for v in value]
+    if isinstance(value, dict):
+        return {k: _strip_extract_prefixes(v, total_lines) for k, v in value.items()}
+    return value
+
+
+def _partial_objects(partials: list[str], strict: bool) -> list[dict] | None:
+    """The map partials that are JSON objects, in chunk order; `strict`: None if one is not."""
+    objects: list[dict] = []
+    for partial in partials:
+        try:
+            parsed = json.loads(_strip_fences(partial))
+        except json.JSONDecodeError:
+            parsed = None
+        if isinstance(parsed, dict):
+            objects.append(parsed)
+        elif strict:
+            return None
+    return objects
+
+
+def _merge_location_values(values: list[Any]) -> Any:
+    """#568: the values one location field took in several chunks, joined in chunk order.
+
+    Each chunk saw different lines, so they add up instead of competing: lists are concatenated
+    (an element repeated by two chunks once), objects merged (the first chunk's key wins),
+    strings joined by line; mixed shapes become one list.
+    """
+    if len(values) == 1:
+        return values[0]
+    if all(isinstance(v, dict) for v in values):
+        merged: dict = {}
+        for value in values:
+            for key, item in value.items():
+                merged.setdefault(key, item)
+        return merged
+    if all(isinstance(v, str) for v in values):
+        return "\n".join(dict.fromkeys(values))
+    out: list = []
+    seen: set[str] = set()
+    for value in values:
+        for item in value if isinstance(value, list) else [value]:
+            key = json.dumps(item, sort_keys=True, ensure_ascii=False)
+            if key not in seen:
+                seen.add(key)
+                out.append(item)
+    return out
+
+
+def _merged_from_partials(
+    objects: list[dict], fields: list[str], location_fields: list[str]
+) -> dict:
+    """The extraction built by program from the partials: location fields joined, others first."""
+    data: dict = {}
+    for name in dict.fromkeys(fields):
+        values = [o[name] for o in objects if o.get(name) is not None]
+        if name in location_fields:
+            data[name] = _merge_location_values(values) if values else None
+        else:
+            data[name] = values[0] if values else None
+    return data
+
+
+def _extract_location_shortcut(
+    fields: list[str], location_fields: list[str]
+) -> Callable[[list[str]], str | None]:
+    """#568: the reduce of a numbered extraction, by program when no other field needs judgment.
+
+    The location fields add up across chunks (`_merge_location_values`); only when two chunks
+    give values for the same OTHER field does the model decide, as in `_extract_shortcut`.
+    """
+
+    def shortcut(partials: list[str]) -> str | None:
+        objects = _partial_objects(partials, strict=True)
+        if not objects:
+            return None
+        others = [f for f in fields if f not in location_fields]
+        if any(sum(o.get(f) is not None for o in objects) > 1 for f in others):
+            return None
+        merged = _merged_from_partials(objects, fields, location_fields)
+        return json.dumps(merged, ensure_ascii=False)
+
+    return shortcut
+
+
 @mcp.tool(annotations=_annotations(TOOL_TITLES["local_extract"]))
 def local_extract(
     fields: list[str],
@@ -7134,6 +7362,10 @@ def local_extract(
     difference in UTF-8, acceptable).
     By default it asks the backend for schema-constrained JSON (`LOCAL_DELEGATE_JSON_SCHEMA=auto`);
     if the backend does not support it, it retries in free mode.
+    To locate: with 'path', a field whose name asks for lines (`sections_with_lines`,
+    `line_number`, `start_line`, `lineRange`; also in Spanish) makes the model see line numbers
+    (and a Markdown file's headings with their lines), so it can answer for `Read` offset/limit;
+    cited lines that do not hold in the file are listed in `lines_unverified`.
 
     Args:
         fields: Names of the fields to extract (JSON keys).
@@ -7151,6 +7383,15 @@ def local_extract(
     max_chars = config.max_chars_for_role(role)
     key_list = ", ".join(f'"{f}"' for f in fields)
     system = _guard(f"un objeto JSON válido con exactamente estas claves: {{{key_list}}}")
+    # #568: with `path` and a field that asks for lines, the model sees them (see above).
+    location_fields = [f for f in fields if isinstance(f, str) and line_check.is_location_field(f)]
+    numbered = bool(path) and bool(location_fields)
+    outline_block = ""
+    if numbered:
+        system += _EXTRACT_LINES_CLAUSE.format(fields=", ".join(f'"{f}"' for f in location_fields))
+        # Only a Markdown file: in Python, YAML or shell a `# comment` would pass for a heading.
+        if Path(path).suffix.lower() in _MARKDOWN_SUFFIXES:
+            outline_block = _extract_outline_block(content, _map_budget(max_chars))
     use_schema = config.JSON_SCHEMA_MODE != "off"
     response_format = _json_schema_payload(fields) if use_schema else None
     json_schema_fallback = config.JSON_SCHEMA_MODE == "auto"
@@ -7159,8 +7400,21 @@ def local_extract(
     source = "path" if path else "inline"
 
     def _build(piece: str) -> str:
-        return f"Extrae los campos del siguiente contenido:\n\n{piece}"
+        # The outline goes before the frozen instruction, which stays the same literal (corpus).
+        return outline_block + f"Extrae los campos del siguiente contenido:\n\n{piece}"
 
+    reduce_system = (
+        system + " Combina los objetos parciales: para cada clave, el valor que traigan; si "
+        "difieren, el más completo y específico; null si ninguno lo trae."
+    )
+    if numbered:
+        # #568: the location fields are joined by program from the partials (they can be long:
+        # ~60 sections cut a reduce capped at 512 tokens), so the model leaves them null.
+        reduce_system += (
+            " Deja a null las claves de ubicación: el programa une las de todos los objetos."
+        )
+
+    # Chunking is decided on the bare text, as in #460: the prefix travels, the threshold stays.
     if len(content) > max_chars:
         # SIN nada pegado al texto (`report`): esta tool parsea el resultado. El aviso de truncado,
         # el respaldo y el ahorro bajan a `_local_delegate`.
@@ -7176,16 +7430,24 @@ def local_extract(
             max_words=_EXTRACT_WORDS,
             partial_max_words=_EXTRACT_WORDS,
             temperature=0.0,
-            reduce_system=system
-            + " Combina los objetos parciales: para cada clave, el valor que traigan; si "
-            "difieren, el más completo y específico; null si ninguno lo trae.",
+            reduce_system=reduce_system,
             build_reduce=lambda joined: (
                 "Estos son objetos JSON parciales y EN ORDEN extraídos de los fragmentos de un "
                 f"mismo documento. Devuelve un único objeto con las claves pedidas:\n\n{joined}"
             ),
-            reduce_shortcut=_extract_shortcut,
+            reduce_shortcut=(
+                _extract_location_shortcut(fields, location_fields)
+                if numbered
+                else _extract_shortcut
+            ),
             raw_len=raw_len,
             path=path,
+            # #568: each piece numbered with its absolute lines; the outline leaves room for itself.
+            pieces=(
+                _numbered_code_pieces(content, _map_budget(max_chars) - len(outline_block))
+                if numbered
+                else None
+            ),
             response_format=response_format,
             json_schema_fallback=json_schema_fallback,
             report=report,
@@ -7202,7 +7464,7 @@ def local_extract(
         raw = _chat(
             model,
             system,
-            _build(content),
+            _build(_number_lines(content) if numbered else content),
             max_tokens=512,
             temperature=0.0,
             tool="local_extract",
@@ -7250,24 +7512,53 @@ def local_extract(
         previous = truncation.get("warning")
         truncation["warning"] = f"{previous}; {stopped}" if previous else stopped
 
+    # #568: with numbering, the partials the map gave (as objects) back the location fields.
+    location_partials = (
+        _partial_objects(report.get("partials") or [], strict=False)
+        if numbered and pieces > 1
+        else []
+    )
     try:
         data = json.loads(result)
     except json.JSONDecodeError:
-        # El modelo devolvió algo que no es JSON, o el backend falló y `result` trae el aviso de
-        # error. Degradar con la carga cruda es mejor que lanzar: quien llama ve qué pasó en vez
-        # de recibir una excepción de protocolo.
-        error = {"error": i18n.t("mcp.extract.not_json"), "raw": result}
-        return {"_local_delegate": {**error, **truncation}}
+        if location_partials:
+            # A reduce cut (or not JSON) does not lose what the chunks found: built by program.
+            data = _merged_from_partials(location_partials, fields, location_fields)
+        else:
+            # El modelo devolvió algo que no es JSON, o el backend falló y `result` trae el aviso
+            # de error. Degradar con la carga cruda es mejor que lanzar: quien llama ve qué pasó
+            # en vez de recibir una excepción de protocolo.
+            error = {"error": i18n.t("mcp.extract.not_json"), "raw": result}
+            return {"_local_delegate": {**error, **truncation}}
     if not isinstance(data, dict):
         error = {"error": i18n.t("mcp.extract.not_object"), "raw": result}
         return {"_local_delegate": {**error, **truncation}}
 
+    if location_partials:
+        # The location values are joined by program, never left to the reduce (#568).
+        merged = _merged_from_partials(location_partials, fields, location_fields)
+        for name in location_fields:
+            if merged.get(name) is not None:
+                data[name] = merged[name]
     if pieces > 1:
         _fill_nulls_from_partials(data, fields, report.get("partials") or [])
     # The contract is "exactly the requested keys": in free mode (`LOCAL_DELEGATE_JSON_SCHEMA=off`,
     # or `auto` after the backend refused the schema) nothing forces the model to it. Normalize
     # always, here, before `_local_delegate` is added (so it is never counted as an extra key).
     missing_keys, renamed_keys, dropped = _normalize_extract_keys(data, fields)
+    unverified: list[str] = []
+    if numbered:
+        # #568: the prefix is the input's format, not data: it leaves the other fields; the lines
+        # cited in the location fields are checked against the whole file.
+        total_lines = len(content.split("\n")) - (1 if content.endswith("\n") else 0)
+        for name in dict.fromkeys(fields):
+            if name == _EXTRACT_META_KEY or data.get(name) is None:
+                continue
+            if name in location_fields:
+                for citation in line_check.check_values(data[name], content):
+                    unverified.append(f"{name}: {citation.label()}")
+            else:
+                data[name] = _strip_extract_prefixes(data[name], total_lines)
     meta: dict = dict(truncation)
     # #473: a chunked document where some field stayed null in every chunk. No chunk saw the
     # whole document, so that null may mean "not seen", not "absent": say so, with the count
@@ -7299,6 +7590,12 @@ def local_extract(
             notices.append(i18n.t("mcp.warning.extract_dropped_keys", fields=", ".join(dropped)))
         # An earlier warning (truncation, chunked nulls) keeps its exact text (#455 contract).
         meta.setdefault("warning", "; ".join(notices))
+    if unverified:
+        meta["lines_unverified"] = unverified
+        # Appended, as #497 does: an earlier warning keeps its exact text and this one still shows.
+        lines_notice = i18n.t("mcp.warning.extract_lines_unverified", lines=", ".join(unverified))
+        previous = meta.get("warning")
+        meta["warning"] = f"{previous}; {lines_notice}" if previous else lines_notice
     if path and config.FEEDBACK_ENABLED:
         # Tokens de Claude de la fila en curso (REQ-035), no del modelo local.
         event = cost.in_flight_row(tool="local_extract", source="path", path=path)
