@@ -85,11 +85,28 @@ def _ok(_number: int) -> server.ChatResult:
     return server.ChatResult(text="a", ok=True, finish_reason="stop")
 
 
+def _read_timeout_text() -> str:
+    return server.ERROR_PREFIX + i18n.t("mcp.error.read_timeout", model=MODEL, seconds="180")
+
+
 def _timed_out(_number: int) -> server.ChatResult:
+    """What `_post_chat` returns for a read deadline with the model not loaded (the Mac's case in
+    the issue): `error: "read_timeout"`, class `capacity_or_load`, no cause known."""
     return server.ChatResult(
-        text=server.ERROR_PREFIX + "read timeout",
+        text=_read_timeout_text(),
         ok=False,
         error="read_timeout",
+        error_class="capacity_or_load",
+        read_timeout_cause=None,
+    )
+
+
+def _loading_503(_number: int) -> server.ChatResult:
+    """A 5xx at once that the classifier calls `capacity_or_load` (a 503 "loading")."""
+    return server.ChatResult(
+        text=server.ERROR_PREFIX + "HTTP 503: loading model",
+        ok=False,
+        error="http_503",
         error_class="capacity_or_load",
     )
 
@@ -356,7 +373,7 @@ def test_a_granted_or_local_call_has_no_note(monkeypatch):
         )
     finally:
         op.release_slot()
-    assert result.text == server.ERROR_PREFIX + "read timeout"
+    assert result.text == _read_timeout_text()
 
 
 # --- REQ-005: concurrent waits do not each pay the probing -----------------------------------
@@ -389,3 +406,121 @@ def test_the_event_of_a_cut_call_says_why(tmp_path):
     event = events[0]
     assert event["ok"] is False and event["error"] == "remote_turn_unreachable", event
     assert event["remote_turn"] == "unreachable", event
+
+
+# --- review of #579 ---------------------------------------------------------------------------
+
+
+def _without_turn_attempt(answer) -> server.ChatResult:
+    op = server._OperationTurn(None, MODEL, "local_classify")
+    try:
+        result, _schema, _attempts = server._with_fallback(
+            MODEL,
+            {"messages": []},
+            role=None,
+            explicit=False,
+            size=10,
+            json_schema_fallback=False,
+            op=op,
+        )
+    finally:
+        op.release_slot()
+    return result
+
+
+def test_a_5xx_at_once_neither_opens_the_cut_nor_says_no_turn(mac, monkeypatch):
+    """A 503 "loading" is `capacity_or_load` but says nothing of a busy backend."""
+    _refusing(monkeypatch)
+    monkeypatch.setattr(server, "_post_chat", _Backend(_loading_503))
+    result = _without_turn_attempt(_loading_503)
+    assert cooldown.remote_turn_cut().lookup(cooldown.backend_key()) is None, (
+        "a 5xx at once opened the remote turn's cut"
+    )
+    assert result.text == server.ERROR_PREFIX + "HTTP 503: loading model", result.text
+    monkeypatch.setattr(server, "_post_chat", _Backend(_ok))
+    server.local_classify(text="hola", labels=["a", "b"])  # the next call is not cut
+
+
+def test_a_429_wait_is_not_cut_short_by_another(mac, monkeypatch):
+    """A `429` means the daemon is alive: the wait goes on even if another gave up on it."""
+    monkeypatch.setattr(remote_turn, "DEFAULT_HEARTBEAT_S", 0.05)
+    answers = []
+
+    class Busy:
+        def stream(self, method, url, *, json, headers, timeout=None):
+            answers.append(url)
+            if len(answers) == 1:
+                remote_turn.remember(_URL, remote_turn.UNREACHABLE)  # another one decided
+                return _Held(httpx2.Response(429, content=b"{}"))
+            return _Granting().stream(method, url, json=json, headers=headers)
+
+        def close(self) -> None:
+            pass
+
+    remote_turn.set_client_factory(Busy)
+    lease = remote_turn.RemoteLease(_URL, op="op1", host="mac", tool="local_classify", model=MODEL)
+    try:
+        grant = lease.acquire(lambda *_: None)
+        assert grant is not None and lease.granted
+    finally:
+        lease.release()
+
+
+def _hold(op: server._OperationTurn) -> threading.Thread:
+    def run() -> None:
+        try:
+            op.ensure(MODEL)
+        except BaseException as error:  # the test looks at it
+            op.error = error  # type: ignore[attr-defined]
+
+    thread = threading.Thread(target=run, daemon=True)
+    thread.start()
+    return thread
+
+
+def _until(condition: Callable[[], object], cap: float = 3.0) -> bool:
+    end = time.monotonic() + cap
+    while time.monotonic() < end:
+        if condition():
+            return True
+        time.sleep(0.01)
+    return False
+
+
+def test_a_chunked_operation_gives_the_blind_place_between_chunks(mac, monkeypatch):
+    _refusing(monkeypatch)
+    first = server._OperationTurn(1, MODEL, "local_summarize")
+    first.ensure(MODEL)  # the first chunk
+    assert first._blind == _URL
+    second = server._OperationTurn(2, MODEL, "local_classify")
+    waiting = _hold(second)
+    assert _until(lambda: remote_turn.blind_contended(_URL)), "the second never queued"
+    next_chunk = _hold(first)  # the first one's next chunk
+    assert _until(lambda: second._blind == _URL), "the place was never given between chunks"
+    assert next_chunk.is_alive(), "the first one went on without the place"
+    second.release_slot()
+    next_chunk.join(CAP_S)
+    waiting.join(CAP_S)
+    assert not next_chunk.is_alive() and first._blind == _URL
+    first.release_slot()
+
+
+def test_a_wait_for_the_blind_place_that_does_not_move_is_saturated(mac, monkeypatch):
+    monkeypatch.setattr(config, "QUEUE_MAX_WAIT_S", 0.3)
+    _refusing(monkeypatch)
+    first = server._OperationTurn(1, MODEL, "local_summarize")
+    first.ensure(MODEL)
+    second = server._OperationTurn(2, MODEL, "local_classify")
+    t0 = time.monotonic()
+    waiting = _hold(second)
+    waiting.join(3.0)
+    try:
+        assert not waiting.is_alive(), "the wait never said the queue was saturated"
+        error = getattr(second, "error", None)
+        assert isinstance(error, server.QueueSaturated), repr(error)
+        assert "127.0.0.1" in str(error)
+        assert time.monotonic() - t0 < 2.0
+        assert not remote_turn.blind_contended(_URL), "the saturated wait stayed in the queue"
+    finally:
+        first.release_slot()
+        waiting.join(CAP_S)

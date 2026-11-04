@@ -15,6 +15,7 @@
 | REQ-004 | `test_the_error_of_a_call_without_turn_says_so`, `test_a_granted_or_local_call_has_no_note` | pass | mutante «sin nota» lo tumba |
 | REQ-005 | `test_a_wait_leaves_when_another_already_found_the_daemon_unreachable` | pass | mutante lo tumba («it probed again…») |
 | REQ-006 | `test_the_event_of_a_cut_call_says_why` | pass | mutante «sin evento propio» lo tumba |
+| REQ-008 | `test_a_chunked_operation_gives_the_blind_place_between_chunks`, `test_a_wait_for_the_blind_place_that_does_not_move_is_saturated`; revisión: `test_a_5xx_at_once_neither_opens_the_cut_nor_says_no_turn`, `test_a_429_wait_is_not_cut_short_by_another` | pass | 5 mutantes de la revisión, cada uno tumba su test |
 | REQ-007 | suite completa | pass | 6400 passed, 30 skipped; los 2 rojos se explican abajo y pasan tras arreglarlos |
 
 ## Commands

@@ -360,8 +360,9 @@ def remote_turn_cut() -> CooldownState:
     """The remote turn's cut with the current configuration (issue #577).
 
     Keyed by `backend_key()`. Only an attempt made WITHOUT a turn because the turn's daemon was
-    unreachable feeds it (the caller decides): a `read_timeout` or `capacity_or_load` counts, a
-    success clears it, and so does a remote turn granted again.
+    unreachable feeds it, and only with a read deadline (`error: "read_timeout"`, whatever its
+    class): the caller passes it as `FailureClass.READ_TIMEOUT`. A success clears it, and so does
+    a remote turn granted again.
     """
     return CooldownState(
         config.LOG_DIR / REMOTE_TURN_CUT_STATE_FILE,
@@ -369,7 +370,7 @@ def remote_turn_cut() -> CooldownState:
         wait_s=config.REMOTE_TURN_CUT_S,
         max_wait_s=config.REMOTE_TURN_CUT_MAX_S,
         enabled=config.REMOTE_TURN_CUT,
-        counting=frozenset({FailureClass.READ_TIMEOUT, FailureClass.CAPACITY}),
+        counting=frozenset({FailureClass.READ_TIMEOUT}),
         events_file=REMOTE_TURN_CUT_EVENTS_FILE,
         legacy_file=None,
     )

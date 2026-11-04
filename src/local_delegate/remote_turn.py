@@ -396,6 +396,8 @@ def reset() -> None:
         _Memory.reached.clear()
     with _Blind.cond:
         _Blind.holders.clear()
+        _Blind.queue.clear()
+        _Blind.moved.clear()
         _Blind.cond.notify_all()
     _Transport.close()
 
@@ -408,11 +410,15 @@ class _Blind:
 
     An unreachable turn daemon (#577) does not mean a free backend: the other machine may be using
     it. Operations that go on without a turn for that reason go one at a time, so they do not
-    compete blindly among themselves for a backend that may already be busy.
+    compete blindly among themselves for a backend that may already be busy. Those waiting form a
+    queue in arrival order (`queue`), and `moved` is when the place last changed hands: what a
+    saturated wait is measured with (`QUEUE_MAX_WAIT_S`, as the turn's own queue, #476).
     """
 
     cond = threading.Condition()
     holders: ClassVar[dict[str, str]] = {}
+    queue: ClassVar[dict[str, list[str]]] = {}
+    moved: ClassVar[dict[str, float]] = {}
 
 
 #: How often a wait for the blind place looks at `should_stop` and at the cut.
@@ -423,6 +429,15 @@ class BlindCut(Exception):
     """The wait for the blind place ended because the remote turn's cut opened (#577)."""
 
 
+def _leave_queue(url: str, op: str) -> None:
+    waiting = _Blind.queue.get(url)
+    if waiting and op in waiting:
+        waiting.remove(op)
+        if not waiting:
+            del _Blind.queue[url]
+        _Blind.cond.notify_all()
+
+
 def hold_blind(
     url: str,
     op: str,
@@ -431,7 +446,7 @@ def hold_blind(
     cut_open: Callable[[], bool],
     on_wait: Callable[[], None] = lambda: None,
 ) -> None:
-    """Take the blind place of `url` for `op`; wait while another operation holds it.
+    """Take the blind place of `url` for `op`; wait in arrival order while another one holds it.
 
     Raises `turn.AbandonedWait` when `should_stop` says so and `BlindCut` when `cut_open` does:
     both are looked at before taking the place and every `BLIND_POLL_S` while waiting, so the
@@ -439,22 +454,35 @@ def hold_blind(
     `on_wait` is called once, when the wait starts. Re-entrant for the same `op`.
     """
     waiting = False
-    while True:
-        if should_stop():
-            raise turn.AbandonedWait
-        if cut_open():
-            raise BlindCut
-        with _Blind.cond:
-            holder = _Blind.holders.get(url)
-            if holder is None or holder == op:
-                _Blind.holders[url] = op
-                return
-        if not waiting:
-            waiting = True
-            on_wait()
-        with _Blind.cond:
-            if _Blind.holders.get(url) is not None:
+    try:
+        while True:
+            if should_stop():
+                raise turn.AbandonedWait
+            if cut_open():
+                raise BlindCut
+            with _Blind.cond:
+                holder = _Blind.holders.get(url)
+                if holder == op:
+                    return
+                queue = _Blind.queue.setdefault(url, [])
+                if op not in queue:
+                    queue.append(op)
+                if holder is None and queue[0] == op:
+                    queue.pop(0)
+                    if not queue:
+                        del _Blind.queue[url]
+                    _Blind.holders[url] = op
+                    _Blind.moved[url] = time.monotonic()
+                    return
+            if not waiting:
+                waiting = True
+                on_wait()
+            with _Blind.cond:
                 _Blind.cond.wait(BLIND_POLL_S)
+    except BaseException:
+        with _Blind.cond:
+            _leave_queue(url, op)
+        raise
 
 
 def release_blind(url: str, op: str) -> None:
@@ -462,7 +490,29 @@ def release_blind(url: str, op: str) -> None:
     with _Blind.cond:
         if _Blind.holders.get(url) == op:
             del _Blind.holders[url]
+            _Blind.moved[url] = time.monotonic()
             _Blind.cond.notify_all()
+
+
+def blind_contended(url: str) -> bool:
+    """Whether another operation waits for the blind place of `url`: the holder of a long,
+    chunked operation gives it back between two chunks and queues again (as REQ-030 does)."""
+    with _Blind.cond:
+        return bool(_Blind.queue.get(url))
+
+
+def blind_position(url: str, op: str) -> int:
+    """`op`'s place in the queue for the blind place of `url` (1 = next), or 1 if not queued."""
+    with _Blind.cond:
+        queue = _Blind.queue.get(url) or []
+        return queue.index(op) + 1 if op in queue else 1
+
+
+def blind_stalled_s(url: str, since: float) -> float:
+    """Seconds since the blind place of `url` last changed hands, or since `since` if later."""
+    with _Blind.cond:
+        moved = _Blind.moved.get(url, since)
+    return time.monotonic() - max(moved, since)
 
 
 # --- transport -------------------------------------------------------------------------------
@@ -778,7 +828,6 @@ class RemoteLease:
                 self.busy = True
                 on_wait(0, ())
                 self._pause(self.heartbeat_s)
-                self._left_by_another()
                 continue
             except _Lost:
                 # No answer: a lease in hand may be gone. Ask again ONCE (the contract allows it
@@ -841,9 +890,9 @@ class RemoteLease:
     def _left_by_another(self) -> None:
         """Leave now if another operation already found this daemon unusable (#577).
 
-        Looked at only while this wait is not making progress (a lost answer, a `429`): several
-        operations that asked at once used to pay each its own probing (two read timeouts) after
-        the first one had already decided. A wait that gets answers is never cut short here.
+        Looked at only after a lost answer: several operations that asked at once used to pay
+        each its own probing (two read timeouts) after the first one had already decided. A wait
+        that gets answers (a `429` too: the daemon is alive) is never cut short here.
         """
         reason = remembered(self.url)
         if reason is not None:

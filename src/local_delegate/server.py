@@ -2225,6 +2225,12 @@ class QueueSaturated(ToolError):
     """
 
 
+def _cuts_remote_turn(error: str | None) -> bool:
+    """Issue #577: the failures of an attempt without a turn that the remote turn's cut counts
+    and whose error says there was no turn: a read deadline, nothing else."""
+    return error == "read_timeout"
+
+
 class RemoteTurnDown(ToolError):
     """Issue #577: no remote turn and the remote turn's cut is open, so the call was not sent.
 
@@ -3005,6 +3011,11 @@ class _OperationTurn:
                 self.yields += 1
             elif self._remote.lost.is_set():
                 self._reset()
+        if not hop and self._blind is not None and remote_turn.blind_contended(self._blind):
+            # Issue #577: a long chunked operation without a turn does not keep the blind place
+            # for all its chunks while others wait: it gives it back between two chunks and
+            # queues again behind them, as a local turn yields (REQ-030).
+            self._reset()
         if not hop and self.affinity is not None and model == self.role:
             return  # los trozos siguientes siguen en el alternativo que eligió la afinidad
         if hop:
@@ -3151,16 +3162,41 @@ class _OperationTurn:
             waiting[0] = True
             _inflight_local_wait(self.entry_id, "turn")
 
+        limit = _queue_limit_s()
+        saturated: list[tuple[float, int]] = []
+
+        def stop() -> bool:
+            if token is not None and token.is_cancelled():
+                return True
+            stalled = remote_turn.blind_stalled_s(url, t0)
+            if limit > 0 and stalled > limit:
+                # Issue #476 for this queue too: a place that does not change hands is said now.
+                saturated.append((stalled, remote_turn.blind_position(url, self.op_id)))
+                return True
+            return False
+
         try:
             remote_turn.hold_blind(
                 url,
                 self.op_id,
-                should_stop=lambda: token is not None and token.is_cancelled(),
+                should_stop=stop,
                 cut_open=cut_open,
                 on_wait=on_wait,
             )
         except turn.AbandonedWait:
             cancellation.checkpoint()
+            if saturated:
+                stalled, position = saturated[0]
+                raise QueueSaturated(
+                    i18n.t(
+                        "mcp.error.queue_saturated_remote_turn",
+                        host=remote_turn.daemon_host(url),
+                        stalled=round(stalled),
+                        waited=round(time.monotonic() - t0),
+                        position=position,
+                        models="-",
+                    )
+                ) from None
             raise
         except remote_turn.BlindCut:
             raise RemoteTurnDown(self._remote_turn_down_text(url, cut, key)) from None
@@ -3256,13 +3292,17 @@ class _OperationTurn:
             self._dropped_class = _class_value(attempt.error_class)
         if self._blind is not None:
             # Issue #577: an attempt made without a turn because its daemon is unreachable feeds
-            # the remote turn's cut; a success clears it.
+            # the remote turn's cut; a success clears it. Only a read deadline counts, whatever
+            # its class (`capacity_or_load` with the model not loaded): a 5xx at once (a model
+            # that failed to load, an OOM, a 503 "loading") says nothing of a busy backend.
+            # Its cause (`busy`/`model_swap`) is not looked at: this process sends one attempt
+            # at a time here, and without the turn daemon nobody can say whose the load was.
             with suppress(Exception):  # the cut never breaks a call
                 cut, key = cooldown.remote_turn_cut(), cooldown.backend_key()
                 if attempt.ok:
                     cut.record_success(key)
-                elif attempt.error_class is not None:
-                    cut.record_failure(key, attempt.error_class)
+                elif _cuts_remote_turn(attempt.error):
+                    cut.record_failure(key, failures.FailureClass.READ_TIMEOUT)
         if self._first_wait_ms is None and attempt.model == self.affinity:
             timings = attempt.timings or {}
             inference = sum(v for v in (timings.get("prompt_ms"), timings.get("predicted_ms")) if v)
@@ -3747,7 +3787,7 @@ def _with_fallback(
                     )
                     if op is not None:
                         op.note_attempt(attempts[-1])
-                        note = op.blind_note() if not result.ok else None
+                        note = op.blind_note() if _cuts_remote_turn(result.error) else None
                         if note is not None:
                             # Issue #577: the error says there was no turn; `error` and its
                             # class stay as they were.

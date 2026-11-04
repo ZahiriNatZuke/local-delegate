@@ -397,7 +397,7 @@ BACKEND_BREAKER_MAX_S = max(
 
 # --- Remote turn cut (issue #577) ---------------------------------------------
 # With the remote turn unreachable, operations go to the other machine's backend without a turn,
-# one at a time. If one of them runs out of time there (`read_timeout` or `capacity_or_load`), the
+# one at a time. If one of them runs out of time there (a `read_timeout`, nothing else), the
 # backend is busy with something this machine cannot see: for this long, the operations that would
 # go without a turn fail at once ("retrying now does not help") instead of paying the deadline
 # each. A success without a turn, or a turn granted again, closes it.

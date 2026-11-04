@@ -33,6 +33,11 @@
   - Verification: pytest completo, ruff
   - Depends on: T3
 
+- [x] T5 — Revisión del #579: corte solo con `read_timeout`, nota igual, fila en orden con relevo entre trozos y saturación, `429` no corta, docs por proceso (REQ-002, REQ-004, REQ-005, REQ-008)
+  - Files or modules: src/local_delegate/{server,remote_turn,cooldown,config}.py, docs
+  - Verification: 4 tests nuevos y 5 mutantes
+  - Depends on: T4
+
 ## Test strategy
 
 - Unit: sitio a ciegas (serie, cancelación, corte), corte (abre/cierra), recomprobación.

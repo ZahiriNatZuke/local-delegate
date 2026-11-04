@@ -191,14 +191,20 @@ libre: la otra máquina puede estar usándolo. Desde el #577, en ese caso:
 
 - Las operaciones siguen sin turno, como antes, pero **de una en una** en cada proceso: ya no van
   dos a la vez a un backend que puede estar ocupado. Con el daemon parado y el backend sano todo
-  sigue funcionando, solo que en serie.
-- Si una de ellas agota su plazo en el backend (`read_timeout` o `capacity_or_load`), se abre el
+  sigue funcionando, solo que en serie. Esperan en orden de llegada; una operación troceada larga
+  suelta el sitio entre dos trozos si hay otra esperando y vuelve a la cola, y una espera en la que
+  el sitio no cambia de manos durante `LOCAL_DELEGATE_QUEUE_MAX_WAIT_S` falla con «cola saturada».
+- **La serie es por proceso, no por máquina**: Claude Code (por stdio) y el daemon que usa Claude
+  Desktop son procesos distintos y cada uno lleva su propia fila, así que entre los dos pueden ir
+  dos operaciones a la vez sin turno. El corte, en cambio, sí es de la máquina: lo comparten todos.
+- Si una de ellas agota su plazo en el backend (un `read_timeout`, sea cual sea su clase; un 5xx al
+  momento, como un 503 «cargando» o un modelo que no arranca, no cuenta), se abre el
   **corte de turno remoto**: durante la espera, las operaciones que irían sin turno (también las
   que ya esperaban su sitio) fallan al momento, sin llamar al backend, con un aviso de que el
   turno remoto no responde, de que el backend puede estar ocupado por otra máquina y de que
   reintentar ahora no sirve. Esas llamadas quedan en el log de uso con `ok: false`,
   `error: "remote_turn_unreachable"` y `remote_turn: "unreachable"`.
-- El error de una llamada que fue sin turno y falló lleva una nota que lo dice.
+- El error de una llamada que fue sin turno y agotó su plazo lleva una nota que lo dice.
 - Una llamada sin turno que sale bien, o un turno remoto concedido otra vez, cierra el corte. El
   estado vive en `remote-turn-cut.json` (y sus transiciones en `remote-turn-cut-events.jsonl`), en
   la carpeta de datos, y lo comparten todos los procesos de la máquina.

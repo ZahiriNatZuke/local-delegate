@@ -20,8 +20,8 @@ abre cuando hay prueba de que el backend no da abasto (un plazo agotado sin turn
   sigue diciendo `remote_turn: "unreachable"`.
   - Request: "seguir sin turno pero serializado en local (concurrencia 1)"
   - Verify: test tests/test_remote_turn_unreachable.py
-- **REQ-002** — Un intento al backend sin turno (`unreachable`) que falla con clase `read_timeout`
-  o `capacity_or_load` abre el corte de turno remoto (fichero compartido como el corte por backend,
+- **REQ-002** — Un intento al backend sin turno (`unreachable`) que falla con
+  `error: "read_timeout"` (sea cual sea su clase; un 5xx al momento no cuenta, revisión del #579) abre el corte de turno remoto (fichero compartido como el corte por backend,
   `remote-turn-cut.json`) durante `LOCAL_DELEGATE_REMOTE_TURN_CUT_S` (120 s; dobla hasta `_MAX_S`,
   600 s). Lo cierra un intento sin turno que sale bien o un turno remoto concedido.
   - Request: "un «corte» de turno análogo al de backend inalcanzable (N fallos → durante X s fallar rápido o ir en serie)"
@@ -32,7 +32,7 @@ abre cuando hay prueba de que el backend no da abasto (un plazo agotado sin turn
   esperaban su sitio salen igual en cuanto se abre (no se lanza la siguiente tras el plazo agotado).
   - Request: "Que las llamadas que ya esperan en cola vean el enfriamiento/corte cuando las primeras fallan por plazo"
   - Verify: test tests/test_remote_turn_unreachable.py
-- **REQ-004** — El error de un intento que fue al backend sin turno (`unreachable`) y falló lleva una
+- **REQ-004** — El error de un intento que fue al backend sin turno (`unreachable`) y agotó su plazo lleva una
   nota es+en: no había turno remoto y reintentar ahora no sirve. `error` y `error_class` no cambian.
   - Request: "Que el error diga que no había turno."
   - Verify: test tests/test_remote_turn_unreachable.py
@@ -48,6 +48,12 @@ abre cuando hay prueba de que el backend no da abasto (un plazo agotado sin turn
   `bad_response`, `self`, `no_turn`, `unauthorized`…), operaciones locales y suite existente igual.
   - Request: "tests existentes intactos"
   - Verify: cmd pytest completo
+
+- **REQ-008** — La fila sin turno va en orden de llegada; una operación troceada suelta el sitio
+  entre dos trozos si hay otra esperando, y una espera en la que el sitio no cambia de manos durante
+  `LOCAL_DELEGATE_QUEUE_MAX_WAIT_S` falla con `QueueSaturated` (revisión del #579).
+  - Request: derived: revisión independiente del PR #579, punto 2
+  - Verify: test tests/test_remote_turn_unreachable.py
 
 ## Acceptance scenarios
 

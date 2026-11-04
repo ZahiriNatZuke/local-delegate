@@ -12,7 +12,10 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   (#577).** Desde la Mac, con el turno de la PC caído y su backend ocupado, cinco
   `local_describe_image` esperaron ~55 s el turno, fueron igualmente al backend dos a la vez y
   cada una agotó sus 180 s (dos de ellas tras 180 s más en cola: ~415 s). Ahora, sin turno porque
-  su daemon no responde, las operaciones van de una en una; si una agota su plazo en el backend se
+  su daemon no responde, las operaciones van de una en una en cada proceso (en orden de llegada;
+  una troceada larga suelta el sitio entre trozos si hay otra esperando, y una espera que no avanza
+  falla con «cola saturada»); si una agota su plazo de lectura en el backend (un 5xx al momento no
+  cuenta) se
   abre el **corte de turno remoto** (`LOCAL_DELEGATE_REMOTE_TURN_CUT`, 120 s doblando hasta 600 s)
   y las que esperaban, y las nuevas, fallan al momento con un aviso claro («el turno remoto no
   responde; el backend puede estar ocupado por otra máquina; reintentar ahora no sirve») y
