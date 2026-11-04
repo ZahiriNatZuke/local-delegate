@@ -2111,31 +2111,41 @@ def _read_timeout_explained(model: str, text: str, cause: str | None) -> tuple[s
     * the send's `waiting_backend` watch saw the requested model loading and then `ready`: the
       text says when, and how much of the deadline was left. With cause `busy` it REPLACES the
       busy text, whose «it was loaded» is false for this send (#572: `starting` at 3 s, `ready`
-      at the deadline). Returns that load in ms for the usage event.
-    * the operation waited 1 s or more for the daemon's turn or a slot before sending.
+      at the deadline). The watch samples every 10 s, so a model that got ready after its last
+      sample is seen `ready` only by the deadline's probe: then the text says it was ready only
+      at the end, and the load is the probe's moment (an upper bound). With cause `model_swap`
+      nothing is added (the model was not ready at the deadline, whatever the watch saw).
+      Returns that load in ms for the usage event.
+    * the operation waited 1 s or more in all for the daemon's turn or a slot before its sends.
     """
     load_ms: int | None = None
     with suppress(Exception):
         watch = _SEND_WATCH.get()
-        if watch is not None and watch.loading_seen and watch.ready_after_s is not None:
-            load_s = float(watch.ready_after_s)
-            load_ms = int(load_s * 1000)
-            values = {
-                "model": model,
-                "seconds": _machine(config.HTTP_TIMEOUT),
-                "load": round(load_s),
-                "left": max(0, round(config.HTTP_TIMEOUT - load_s)),
-            }
-            if cause == "busy":
-                text = i18n.t("mcp.error.read_timeout_loaded_late", **values)
-            else:
-                text += " " + i18n.t("mcp.error.read_timeout_loaded_note", **values)
+        if watch is not None and watch.loading_seen and cause != "model_swap":
+            values: dict[str, Any] = {"model": model, "seconds": _machine(config.HTTP_TIMEOUT)}
+            if watch.ready_after_s is not None:
+                load_s = float(watch.ready_after_s)
+                values["load"] = round(load_s)
+                values["left"] = max(0, round(config.HTTP_TIMEOUT - load_s))
+                key = "loaded_late" if cause == "busy" else "loaded_note"
+                text = _with_load_text(text, key, cause, values)
+                load_ms = int(load_s * 1000)
+            elif cause == "busy":
+                # Ready only in the deadline's probe (#572's likely case): ready at the very end.
+                text = i18n.t("mcp.error.read_timeout_loaded_at_end", **values)
+                load_ms = int(_probe_delay() * 1000)
     with suppress(Exception):
         trace = concurrency.current()
         queued_ms = trace.phase_ms("turn", "slot") if trace is not None else 0
         if queued_ms >= 1000:
             text += " " + i18n.t("mcp.error.read_timeout_queued", queued=round(queued_ms / 1000))
     return text, load_ms
+
+
+def _with_load_text(text: str, key: str, cause: str | None, values: dict[str, Any]) -> str:
+    """The `busy` text replaced by the load one, or the load note after any other text."""
+    said = i18n.t(f"mcp.error.read_timeout_{key}", **values)
+    return said if cause == "busy" else f"{text} {said}"
 
 
 def _backend_on_loopback() -> bool:

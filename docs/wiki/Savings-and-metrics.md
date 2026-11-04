@@ -91,8 +91,10 @@ con saltos pudo contaminarla un swap.
   cuando se sabe) o `busy` si el modelo pedido estaba cargado pero no contestó a tiempo. `error`
   sigue siendo `read_timeout` y `error_class` no cambia. Las líneas anteriores no lo traen.
 - `read_timeout_load_ms` y `read_timeout_piece` (solo en un `read_timeout`, desde el #572):
-  milisegundos desde el envío hasta que la vigilancia lo vio listo tras verlo cargándose
-  (resolución de unos 10 s; la carga cuenta dentro del plazo de 180 s, la espera de turno no), y el
+  milisegundos desde el envío hasta que la vigilancia lo vio listo tras verlo sin estar listo
+  (resolución de unos 10 s; si solo la sonda del plazo lo vio listo, el momento de esa sonda, como
+  cota superior; la carga cuenta dentro del plazo `LOCAL_DELEGATE_TIMEOUT`, 180 s por defecto, y
+  la espera de turno no), y el
   trozo de una operación troceada que agotó el plazo (`0`: la reducción), junto a `pieces`, que
   sin esto no se escribía si fallaba la primera llamada.
 - `cancel_reason` (solo con `error: "cancelled"`, desde la 0.41.0): la

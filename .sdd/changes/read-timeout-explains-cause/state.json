@@ -4,9 +4,9 @@
   "title": "Un read_timeout dice si fue cola, carga o generación y en qué trozo (#572)",
   "mode": "lite",
   "traceability": "strict",
-  "status": "verifying",
+  "status": "result-review",
   "createdAt": "2026-11-04T14:28:02.324Z",
-  "updatedAt": "2026-11-04T14:49:38.487Z",
+  "updatedAt": "2026-11-04T14:56:30.044Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -27,10 +27,10 @@
       "actor": "user"
     },
     "conformance": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-11-04T14:56:30.044Z",
+      "evidence": "review.md: 2 jueces conforms-with-notes; F1-F7 arreglados con tests y control positivo; F8-F9 aceptados como límite",
+      "actor": "user"
     },
     "memory": {
       "status": "pending",
@@ -97,6 +97,21 @@
       "status": "approved",
       "at": "2026-11-04T14:49:38.487Z",
       "evidence": "verification.md: suite completa 6475 passed/30 skipped con pesado.sh; ruff check y format limpios; control positivo de los 8 tests nuevos",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "verifying",
+      "to": "result-review",
+      "at": "2026-11-04T14:56:29.832Z",
+      "reason": "dos jueces: conforms-with-notes; hallazgos F1-F7 arreglados"
+    },
+    {
+      "type": "gate",
+      "gate": "conformance",
+      "status": "approved",
+      "at": "2026-11-04T14:56:30.044Z",
+      "evidence": "review.md: 2 jueces conforms-with-notes; F1-F7 arreglados con tests y control positivo; F8-F9 aceptados como límite",
       "actor": "user"
     }
   ]

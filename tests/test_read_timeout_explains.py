@@ -72,6 +72,25 @@ def _timeout_after(seconds: float):
     return effect
 
 
+def _starting_for_the_watchs_first_sample():
+    """`/running` that answers `starting` only to the first query of the send's watch thread and
+    `ready` to everything else (the deadline's probe, the log's sample): by thread, not by clock,
+    so a loaded machine cannot turn that first sample into `ready` (review of #572, judge 2)."""
+    seen = {"watch": 0}
+    lock = threading.Lock()
+
+    def effect(_request):
+        if threading.current_thread().name == "local-delegate-send-watch":
+            with lock:
+                seen["watch"] += 1
+                first = seen["watch"] == 1
+            if first:
+                return _running("starting")
+        return _running("ready")
+
+    return effect
+
+
 # --- REQ-002: the model loaded during the send ------------------------------------------------
 
 
@@ -82,20 +101,17 @@ def test_a_model_that_loaded_during_the_send_is_not_called_loaded(monkeypatch):
     Positive control (main): the text is «estaba cargado…» (`read_timeout_busy`) and
     `read_timeout_load_ms` does not exist.
     """
-    monkeypatch.setattr(server, "_probe_delay", lambda: 0.35)  # the deadline's sample: ready
-    t0 = time.monotonic()
-    running = backend_mock.get(RUNNING).mock(
-        side_effect=lambda _r: _running("starting" if time.monotonic() - t0 < 0.15 else "ready")
-    )
-    backend_mock.post(CHAT).mock(side_effect=_timeout_after(0.5))
+    monkeypatch.setattr(server, "_probe_delay", lambda: 0.2)  # the deadline's sample: ready
+    running = backend_mock.get(RUNNING).mock(side_effect=_starting_for_the_watchs_first_sample())
+    backend_mock.post(CHAT).mock(side_effect=_timeout_after(0.7))
 
     result = _send_in_slot()
 
-    assert running.call_count >= 2  # guard: the watch saw it load and then ready
+    assert running.call_count >= 3  # guard: watch `starting`, watch `ready`, the probe
     assert result.error == "read_timeout"
     assert result.read_timeout_cause == "busy"  # the cause keeps its value
     assert result.read_timeout_load_ms is not None
-    assert 100 <= result.read_timeout_load_ms <= 450, result.read_timeout_load_ms
+    assert 50 <= result.read_timeout_load_ms < 700, result.read_timeout_load_ms
     load_s = result.read_timeout_load_ms / 1000
     expected = i18n.t(
         "mcp.error.read_timeout_loaded_late",
@@ -130,19 +146,65 @@ def test_the_load_reaches_the_usage_event(monkeypatch, tmp_path):
     """Positive control (main): no `read_timeout_load_ms` in the event (KeyError)."""
     monkeypatch.setattr(config, "LOG_DIR", tmp_path)
     monkeypatch.setattr(config, "USAGE_LOG", tmp_path / "usage.jsonl")
-    monkeypatch.setattr(server, "_probe_delay", lambda: 0.35)
-    t0 = time.monotonic()
-    backend_mock.get(RUNNING).mock(
-        side_effect=lambda _r: _running("starting" if time.monotonic() - t0 < 0.15 else "ready")
-    )
-    backend_mock.post(CHAT).mock(side_effect=_timeout_after(0.5))
+    monkeypatch.setattr(server, "_probe_delay", lambda: 0.2)
+    backend_mock.get(RUNNING).mock(side_effect=_starting_for_the_watchs_first_sample())
+    backend_mock.post(CHAT).mock(side_effect=_timeout_after(0.7))
 
     out = server.local_commit_msg(diff=_diff(1, 40))
 
     assert out.startswith(server.ERROR_PREFIX)
     (event,) = [e for e in _events(tmp_path) if e.get("error") == "read_timeout"]
     assert event["read_timeout_cause"] == "busy"
-    assert 100 <= event["read_timeout_load_ms"] <= 450
+    assert 50 <= event["read_timeout_load_ms"] < 700
+
+
+@backend_mock.mock
+def test_a_model_ready_only_in_the_deadlines_probe_is_ready_at_the_end(monkeypatch):
+    """The watch samples every 10 s: a model ready after its last sample is seen ready only by
+    the deadline's probe. Still not «it was loaded» (review of #572, judge 1).
+
+    Positive control (before the review fix): the busy text, «it was loaded».
+    """
+    monkeypatch.setattr(concurrency, "BACKEND_WAIT_RESAMPLE_S", 30.0)  # one watch sample only
+    monkeypatch.setattr(server, "_probe_delay", lambda: 0.3)
+    running = backend_mock.get(RUNNING).mock(side_effect=_starting_for_the_watchs_first_sample())
+    backend_mock.post(CHAT).mock(side_effect=_timeout_after(0.6))
+
+    result = _send_in_slot()
+
+    assert running.call_count == 2  # guard: the watch saw `starting`, the probe saw `ready`
+    assert result.read_timeout_cause == "busy"
+    assert result.text == server.ERROR_PREFIX + i18n.t(
+        "mcp.error.read_timeout_loaded_at_end", model=ASKED, seconds=_seconds()
+    )
+    assert result.read_timeout_load_ms == 300  # the probe's moment: an upper bound
+
+
+@backend_mock.mock
+def test_a_swap_gets_no_load_note(monkeypatch):
+    """`model_swap`: not ready at the deadline; the watch's view adds nothing to that text."""
+    other = "gemma4-26b-a4b"
+    monkeypatch.setattr(server, "_probe_delay", lambda: 0.2)
+    backend_mock.get(RUNNING).mock(
+        return_value=httpx2.Response(
+            200,
+            json={
+                "running": [
+                    {"model": other, "state": "ready"},
+                    {"model": ASKED, "state": "starting"},
+                ]
+            },
+        )
+    )
+    backend_mock.post(CHAT).mock(side_effect=_timeout_after(0.35))
+
+    result = _send_in_slot()
+
+    assert result.read_timeout_cause == "model_swap"
+    assert result.read_timeout_load_ms is None
+    assert result.text == server.ERROR_PREFIX + i18n.t(
+        "mcp.error.read_timeout_swap", model=ASKED, seconds=_seconds(), loaded=other, hosts=""
+    )
 
 
 # --- REQ-003: the wait before the send ---------------------------------------------------------
