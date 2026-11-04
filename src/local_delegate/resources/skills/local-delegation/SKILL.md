@@ -90,7 +90,9 @@ prompt no se lo manda, lee los archivos enteros con `Read`.
 **Si eres el subagente**, ante un archivo grande localiza y lee el rango: pide a
 `local_extract` o `local_explain_code` (con `path`) las líneas que necesitas y lee solo ese
 rango con `Read(offset=…, limit=…)`. Citar `archivo:línea` o editar justifica leer el rango,
-no el archivo entero.
+no el archivo entero. Con `local_extract`, el nombre del campo tiene que pedir líneas
+(`…_con_lineas`, `numero_de_linea`, `linea_inicio`): solo así el modelo ve los números de línea del fichero (y,
+en un Markdown, sus encabezados con su línea); un campo sin esa palabra no puede dar líneas.
 
 Ejemplo de **revisión** (paso 1 del prompt de un revisor):
 

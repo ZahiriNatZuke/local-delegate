@@ -8,6 +8,22 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ### Corregido
 
+- **`local_extract` puede dar números de línea con `path` (#568).** Un campo de localización
+  (`secciones_con_lineas`) sobre un Markdown grande volvía `null` en los 8 trozos: el modelo nunca
+  veía un número de línea. Ahora, con `path` y un campo cuyo nombre pide líneas (una palabra
+  `lines`, `lineas`, `lineno`, o `line`/`linea` junto a `number`, `start`, `end`, `range`,
+  `heading`, `section`, `título` o `sección`: `sections_with_lines`, `start_line`, `heading_line`;
+  no `location`, `price_range`, `line_items` ni una cantidad como `lines_added`, `total_lines` o
+  `lines_of_code`), el modelo ve cada línea como `N| línea` con su número absoluto del fichero, también
+  en cada trozo (las piezas de #460); en un Markdown (`.md`, `.markdown`, `.mdx`) recibe además el
+  esquema de encabezados con su línea, calculado por programa, si cabe en el 15 % del trozo. El
+  prefijo que el modelo copie en los demás campos se quita, y las líneas citadas en los campos de localización
+  se comprueban contra el fichero: las que no casan van en `_local_delegate.lines_unverified` con
+  un aviso (añadido a los anteriores). Al trocear, los campos de localización los une el programa
+  a partir de los trozos, en orden, así que un reduce cortado por el tope de salida no pierde las
+  secciones. Sin un campo así, o con `text=`, nada cambia. La skill y el bloque de memoria dicen
+  ahora que el nombre del campo tiene que pedir líneas.
+
 - **Los tests de precios de Claude Haiku 5.5 ya no tumban el PR del vigilante (#567).** Fijaban a
   mano las cifras de la tabla, así que cualquier cambio legítimo de precio que propusiera el
   vigilante dejaba su CI en rojo. Ahora la lógica se prueba contra una copia congelada de los

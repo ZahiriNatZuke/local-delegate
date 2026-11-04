@@ -17,7 +17,8 @@ first — the MCP reads them server-side and the content never enters the contex
   question) and loading the tools with `ToolSearch("select:mcp__local-delegate__local_extract,mcp__local-delegate__local_explain_code")`.
   No «if it helps»: a conditional reads as permission not to delegate.
 - **If you are a subagent**, for a large file locate first: ask `local_extract` or
-  `local_explain_code` (with `path`) for the lines you need and read only that range with
+  `local_explain_code` (with `path`; `local_extract` with a field that asks for lines:
+  `…_with_lines`) for the lines you need and read only that range with
   `offset`/`limit`. Quoting or editing exact lines justifies reading the range, not the
   whole file.
 
