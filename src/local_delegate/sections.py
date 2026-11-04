@@ -535,8 +535,11 @@ WARNING_MARKER = "[local-delegate warning: "
 
 #: #580: the end of a sentence: terminal punctuation, the marks that may close it (a parenthesis,
 #: quotes, the end of a bold or italic span), then whitespace or the end of the text. A dot followed
-#: by a digit or a letter (`0.36.0`, `server.py`) is not one.
-_SENTENCE_END = re.compile(r"[.!?…][)\]\"'»”*_]*(?=\s|$)")
+#: by a digit or a letter (`0.36.0`, `server.py`) is not one. The full-width ends of Chinese and
+#: Japanese (`。！？`) need no space after them: those languages write none.
+_SENTENCE_END = re.compile(r"[.!?…][)\]\"'»”*_]*(?=\s|$)|[。！？][」』）)\]\"'”*_]*")
+#: #580: a bold span whose text ends a sentence (`**Una conclusión.**`): a sentence, not a label.
+_BOLD_SENTENCE = re.compile(r"\*\*.*[.!?…。！？]\*\*")
 #: #580: the line that opens or closes a fenced code block.
 _FENCE_LINE = re.compile(r"(?m)^[ \t]*(?:```|~~~)")
 #: #580: what precedes the dot of an ordered list marker (`1.`, `  12.`).
@@ -551,7 +554,7 @@ def _announces(line: str) -> bool:
     if stripped.startswith("#"):
         return True
     if stripped.startswith("**") and stripped.endswith("**"):
-        return True
+        return not _BOLD_SENTENCE.fullmatch(stripped)
     return stripped.strip("*_ ").endswith(":")
 
 
@@ -574,10 +577,16 @@ def trim_to_last_sentence(text: str) -> str | None:
     after the last sentence end of that line whose inline code and bold spans are closed, or else
     at the end of the previous line; then an unclosed code block is dropped, and so are the
     headings, bold labels and `…:` lines that would be left introducing nothing (a list whose items
-    never came). `None` when there is nothing complete to keep or nothing to remove: the caller
-    then returns the answer as it came.
+    never came). A cut table row (a line starting with `|`) goes whole. `None` when there is
+    nothing complete to keep or nothing to remove: the caller then returns the answer as it came.
+
+    Known limit: the dot of an abbreviation followed by a space («p. ej.», «EE. UU.», «e.g.»)
+    counts as a sentence end, so the cut may fall right after one. The text kept is still complete
+    up to there; telling abbreviations apart would need a list per language.
     """
     head, newline, last = text.rpartition("\n")
+    # A table row cut midway has no sentence to keep: the row goes whole.
+    in_table = last.lstrip().startswith("|")
     candidates = [
         head + newline + last[: m.end()]
         for m in reversed(list(_SENTENCE_END.finditer(last)))
@@ -585,6 +594,7 @@ def trim_to_last_sentence(text: str) -> str | None:
         and last[: m.end()].count("**") % 2 == 0
         # The `1.` of an ordered list item is its marker, not a sentence.
         and not _LIST_NUMBER.fullmatch(last[: m.start()])
+        and not in_table
     ]
     if newline:
         candidates.append(head)

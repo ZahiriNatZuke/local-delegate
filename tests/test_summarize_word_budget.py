@@ -66,6 +66,30 @@ def test_the_map_reduce_uses_the_same_cap(monkeypatch, tmp_path):
     assert {c["max_tokens"] for c in seen} == {server._summary_max_tokens(150)} == {514}
 
 
+@backend_mock.mock
+def test_the_other_map_reduce_tools_keep_the_shared_cap(monkeypatch, tmp_path):
+    """Control: the summarize cap does not leak into `_chat_map_reduce`'s default. Mutant (3w+64
+    as the default of `_tokens`): `local_extract` asks 3*224+64 = 736 instead of 512."""
+    monkeypatch.setattr(config, "max_chars_for_role", lambda role: 4_000)
+    monkeypatch.setattr(config, "LOG_DIR", tmp_path)
+    monkeypatch.setattr(config, "USAGE_LOG", tmp_path / "usage.jsonl")
+    monkeypatch.setattr(config, "BASE_URL", "http://test-backend/v1")
+    seen: list[dict] = []
+
+    def _handler(request: httpx2.Request) -> httpx2.Response:
+        seen.append(json.loads(request.content))
+        message = {"content": '{"a": "1"}'}
+        return httpx2.Response(
+            200, json={"choices": [{"message": message, "finish_reason": "stop"}]}
+        )
+
+    backend_mock.post("http://test-backend/v1/chat/completions").mock(side_effect=_handler)
+    text = "".join(f"Línea {i}: a vale 1 en este bloque de relleno.\n" for i in range(600))
+    server.local_extract(fields=["a"], text=text)
+    assert len(seen) > 2  # guard: it went through the map/reduce
+    assert {c["max_tokens"] for c in seen} == {2 * server._EXTRACT_WORDS + 64} == {512}
+
+
 def test_an_answer_that_ends_well_comes_back_unchanged(monkeypatch, tmp_path):
     """REQ-005: without `length` nothing is cut, not even an answer without a final dot."""
     answer = "Primera frase. Segunda sin punto final"
@@ -120,6 +144,23 @@ def test_the_trimmed_notice_in_english(monkeypatch, tmp_path):
         ("Va en la 0.48.0 y se publ", None),
         # The end of a bold span closes the sentence with it.
         ("Esto es **importante.** Y lo otr", "Esto es **importante.**"),
+        # A whole bold line that is a sentence is kept; a bold label with nothing below is not.
+        (
+            "Intro.\n**Primera conclusión completa.**\n**Segunda conclusión completa.**\nTercera sin ter",
+            "Intro.\n**Primera conclusión completa.**\n**Segunda conclusión completa.**",
+        ),
+        ("Intro.\n\n**Arranque**\nSe ini", "Intro."),
+        ("**Arranque**\nSe inicia con uv. Y lue", "**Arranque**\nSe inicia con uv."),
+        # Chinese and Japanese end their sentences with no space after them.
+        ("第一句。第二句！第三句没有结", "第一句。第二句！"),
+        ("最初の文です。次の文で", "最初の文です。"),
+        # A cut table row goes whole, even with a dot inside a cell.
+        (
+            "Tabla.\n\n| a | b |\n| --- | --- |\n| 1 | 2 |\n| 3 | fin. y m",
+            "Tabla.\n\n| a | b |\n| --- | --- |\n| 1 | 2 |",
+        ),
+        # Known limit: an abbreviation counts as a sentence end.
+        ("Se usa p. ej. un fich", "Se usa p. ej."),
         # A cut that fell right after a full sentence leaves nothing to trim.
         ("Primera. Segunda.", None),
         ("sin ninguna frase completa", None),

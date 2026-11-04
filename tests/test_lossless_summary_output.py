@@ -95,8 +95,9 @@ def test_every_step_of_the_chunked_lint_asks_for_the_new_cap(monkeypatch, captur
     assert captured[-1]["max_tokens"] == server._lint_final_max_tokens(200)
 
 
-def test_the_other_tools_keep_the_shared_chunk_cap(monkeypatch, captured):
-    """Control: the lint cap does not leak into the chunking of `local_summarize`."""
+def test_the_lint_cap_does_not_leak_into_the_summarize_chunking(monkeypatch, captured):
+    """Control: the lint cap does not leak into the chunking of `local_summarize`, which since
+    #580 has a cap of its own (3w+64) instead of the shared 2w+64."""
     monkeypatch.setitem(config.MAX_CHARS_BY_ROLE, "mechanical", 1200)
     monkeypatch.setitem(config.MAX_CHARS_BY_ROLE, "long", 1200)
     monkeypatch.setattr(config, "STRUCTURED_SUMMARY", False)
