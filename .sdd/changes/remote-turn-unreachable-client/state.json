@@ -1,0 +1,95 @@
+{
+  "schemaVersion": 1,
+  "slug": "remote-turn-unreachable-client",
+  "title": "Turno remoto inalcanzable: en serie, corte y aviso (#577)",
+  "mode": "lite",
+  "traceability": "strict",
+  "status": "verifying",
+  "createdAt": "2026-11-04T15:26:28.337Z",
+  "updatedAt": "2026-11-04T15:44:11.288Z",
+  "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-11-04T15:28:08.148Z",
+      "evidence": "spec.md 7 REQ; decision seguir sin turno en serie justificada con #512",
+      "actor": "user"
+    },
+    "plan": {
+      "status": "approved",
+      "updatedAt": "2026-11-04T15:28:12.449Z",
+      "evidence": "plan.md 4 tareas, cada REQ con tarea y verificacion",
+      "actor": "user"
+    },
+    "quality": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "conformance": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "memory": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-11-04T15:26:28.337Z",
+      "reason": "SDD change created"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "specifying",
+      "at": "2026-11-04T15:28:07.942Z",
+      "reason": "Research: remote_turn.py, server._OperationTurn, cooldown y jornadas leidas; decision en spec"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-11-04T15:28:08.148Z",
+      "evidence": "spec.md 7 REQ; decision seguir sin turno en serie justificada con #512",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-11-04T15:28:12.231Z",
+      "reason": "spec aprobada"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-11-04T15:28:12.449Z",
+      "evidence": "plan.md 4 tareas, cada REQ con tarea y verificacion",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "implementing",
+      "at": "2026-11-04T15:28:12.677Z",
+      "reason": "gate plan aprobado"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-11-04T15:44:11.288Z",
+      "reason": "4 tareas implementadas; suite y ruff verdes"
+    }
+  ]
+}
