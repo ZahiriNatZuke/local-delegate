@@ -1,0 +1,111 @@
+{
+  "schemaVersion": 1,
+  "slug": "price-watcher-tiered-prices",
+  "title": "Price watcher reads the two Haiku 5.5 price tiers (#564)",
+  "mode": "lite",
+  "traceability": "strict",
+  "status": "verifying",
+  "createdAt": "2026-11-04T13:07:05.628Z",
+  "updatedAt": "2026-11-04T13:15:15.121Z",
+  "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-11-04T13:12:22.228Z",
+      "evidence": "spec from issue #564 and the live page HTML shape read 2026-11-04; plan maps each REQ to a task and test",
+      "actor": "user"
+    },
+    "plan": {
+      "status": "approved",
+      "updatedAt": "2026-11-04T13:12:22.229Z",
+      "evidence": "spec from issue #564 and the live page HTML shape read 2026-11-04; plan maps each REQ to a task and test",
+      "actor": "user"
+    },
+    "quality": {
+      "status": "approved",
+      "updatedAt": "2026-11-04T13:13:25.984Z",
+      "evidence": "sdd check green; ruff green; 116 targeted tests pass; 10 mutants caught; live page pure steps green",
+      "actor": "user"
+    },
+    "conformance": {
+      "status": "approved",
+      "updatedAt": "2026-11-04T13:15:15.121Z",
+      "evidence": "two result reviewers conforms-with-notes; F2-F6 fixed, F7 recorded",
+      "actor": "user"
+    },
+    "memory": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-11-04T13:07:05.628Z",
+      "reason": "SDD change created"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "specifying",
+      "at": "2026-11-04T13:12:22.017Z",
+      "reason": "brief filled"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-11-04T13:12:22.228Z",
+      "evidence": "spec from issue #564 and the live page HTML shape read 2026-11-04; plan maps each REQ to a task and test",
+      "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-11-04T13:12:22.229Z",
+      "evidence": "spec from issue #564 and the live page HTML shape read 2026-11-04; plan maps each REQ to a task and test",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-11-04T13:12:22.434Z",
+      "reason": "spec approved"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "implementing",
+      "at": "2026-11-04T13:12:22.638Z",
+      "reason": "plan approved"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-11-04T13:13:25.760Z",
+      "reason": "implemented and tested"
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-11-04T13:13:25.984Z",
+      "evidence": "sdd check green; ruff green; 116 targeted tests pass; 10 mutants caught; live page pure steps green",
+      "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "conformance",
+      "status": "approved",
+      "at": "2026-11-04T13:15:15.121Z",
+      "evidence": "two result reviewers conforms-with-notes; F2-F6 fixed, F7 recorded",
+      "actor": "user"
+    }
+  ]
+}

@@ -72,7 +72,9 @@ PRICES_HEADER = "Model pricing"
 MIN_ROWS = 5
 # Filas que no son modelos con precio público en vigor. La página marca «Retired» e «Invite only»
 # en el `aria-label` del botón que acompaña al nombre; «limited availability» lo nombra la spec.
-IGNORED_MARKERS = ("retired", "limited availability", "invite only")
+# Desde 2026-11 la página marca Claude Mythos 5.1 y 5 con «Verification required» (antes «Invite
+# only»): el mismo acceso restringido, así que tampoco entran (#564).
+IGNORED_MARKERS = ("retired", "limited availability", "invite only", "verification required")
 # Cabecera de columna de la página → campo de `prices.json`.
 COLUMNS = {
     "input": "input",
@@ -83,7 +85,7 @@ COLUMNS = {
 }
 FIELDS = ("input", "w5m", "w1h", "cache_read", "output")
 _WEB_SEARCH = re.compile(
-    r"Web search is available on the Claude API for \$(\d+(?:\.\d+)?) per 1,000 searches"
+    r"Web search is available on the Claude API for \$(\d+(?:\.\d+)?)(?: USD)? per 1,000 searches"
 )
 # Lo que se pone a un modelo nuevo hasta que una persona lo revise; el cuerpo del PR lo pide.
 NEW_PLACEHOLDER = {"family": "new", "supports_effort": True}
@@ -162,7 +164,8 @@ class _PriceTableReader(HTMLParser):
         elif tag == "tr":
             self._row = []
         elif tag in ("td", "th") and self._row is not None:
-            self._cell = {"text": [], "link": [], "labels": []}
+            span = dict(attrs).get("rowspan") or "1"
+            self._cell = {"text": [], "link": [], "labels": [], "rowspan": span}
         elif tag == "sup":
             self._in_sup += 1
         elif tag == "a":
@@ -195,6 +198,7 @@ class _PriceTableReader(HTMLParser):
                     "text": _normalize("".join(self._cell["text"])),
                     "link": _normalize("".join(self._cell["link"])),
                     "labels": self._cell["labels"],
+                    "rowspan": int(self._cell["rowspan"]) if self._cell["rowspan"].isdigit() else 1,
                 }
             )
             self._cell = None
@@ -226,13 +230,38 @@ def name_to_id(name: str) -> str:
     return "-".join(parts)
 
 
-def _read_price(text: str, model: str, column: str) -> int | float:
-    clean = re.sub(r"/\s*MTok", "", text).strip()
-    m = re.fullmatch(r"\$\s*(\d+(?:\.\d+)?)", clean)
+# Rótulo de tramo que la página pone en la celda de entrada de un modelo con precio por longitud
+# del prompt (Claude Haiku 5.5): «for prompts up to 100,000 tokens» / «for prompts over …».
+_TIER_CAPTION = re.compile(r"for prompts (up to|over) (\d{1,3}(?:,\d{3})*|\d+) tokens")
+
+
+def _read_price_and_caption(text: str, model: str, column: str) -> tuple[int | float, str]:
+    """El precio de la celda y el texto que le sigue (vacío, o un rótulo de tramo)."""
+    clean = re.sub(r"/\s*MTok", " ", text).strip()
+    m = re.match(r"\$\s*(\d+(?:\.\d+)?)\s*", clean)
     if m is None:
         raise WatcherError(f"celda de precio ilegible en {model} / {column}: {text!r}")
     value = m.group(1)
-    return float(value) if "." in value else int(value)
+    return (float(value) if "." in value else int(value)), clean[m.end() :].strip()
+
+
+def _read_price(text: str, model: str, column: str) -> int | float:
+    price, rest = _read_price_and_caption(text, model, column)
+    if rest:
+        raise WatcherError(f"celda de precio ilegible en {model} / {column}: {text!r}")
+    return price
+
+
+def _read_tier(text: str, model: str, column: str) -> tuple[int | float, str, int]:
+    """Precio, sentido (`up to` | `over`) y umbral de una celda con rótulo de tramo.
+
+    Un rótulo que no encaja en `_TIER_CAPTION` es una celda ilegible: se para, no se adivina.
+    """
+    price, rest = _read_price_and_caption(text, model, column)
+    m = _TIER_CAPTION.fullmatch(rest)
+    if m is None:
+        raise WatcherError(f"celda de precio ilegible en {model} / {column}: {text!r}")
+    return price, m.group(1), int(m.group(2).replace(",", ""))
 
 
 def _ignored(name_cell: dict) -> bool:
@@ -244,8 +273,15 @@ def extract_price_table(html: str) -> dict:
     """La tabla «Model pricing» de la página: `{"web_search_per_1000", "models": {id: {...}}}`.
 
     Falla en voz alta (REQ-022) sin la cabecera, sin la tabla, con menos de 5 filas válidas o con
-    una celda que no es un número. Ignora las filas «retired», «limited availability» e «invite
-    only».
+    una celda que no es un número. Ignora las filas «retired», «limited availability», «invite
+    only» y «verification required».
+
+    Un modelo con precio por longitud del prompt (Claude Haiku 5.5, #564) ocupa dos filas: la
+    celda del nombre lleva `rowSpan="2"`, la celda de entrada de la primera dice «for prompts up
+    to N tokens» y la segunda fila, sin celda de nombre, trae los precios «over N tokens». La
+    primera da la entrada de `models`; la segunda, la de `long_prompt` (`{"above_tokens": N,
+    ...}`), clave que solo aparece si la página tiene algún modelo así. Una fila de continuación
+    sin su primera fila, un rótulo distinto o umbrales que no casan paran el job.
     """
     reader = _PriceTableReader()
     reader.feed(html)
@@ -258,26 +294,75 @@ def extract_price_table(html: str) -> dict:
     indices: dict[str, int] | None = None
     width = 0
     models: dict[str, dict] = {}
+    long_prompt: dict[str, dict] = {}
+    # El modelo de dos tramos cuya segunda fila falta por leer: (id, umbral, ignorado).
+    pending: tuple[str, int, bool] | None = None
     for row in reader.rows:
         texts = [c["text"].lower() for c in row]
         if indices is None:
             if all(col in texts for col in COLUMNS):
                 indices = {price_field: texts.index(col) for col, price_field in COLUMNS.items()}
                 width = len(row)
+                if 0 in indices.values():
+                    # La fila del segundo tramo no trae el nombre: sus precios se leen una
+                    # columna antes, lo que solo vale si el nombre es la primera columna.
+                    raise WatcherError(f"la columna del nombre no es la primera: {texts}")
             continue
         if len(row) == 1:
             continue  # separador de grupo («Additional models»)
+        if pending is not None:
+            # Segunda fila de un modelo de dos tramos: sin la celda del nombre (la primera).
+            mid, threshold, ignored = pending
+            pending = None
+            if len(row) != width - 1:
+                raise WatcherError(
+                    f"{mid}: falta la fila de su segundo tramo (fila con {len(row)} celdas, "
+                    f"se esperaban {width - 1}): {texts}"
+                )
+            if ignored:
+                continue
+            cells = {f: row[i - 1]["text"] for f, i in indices.items()}
+            price, direction, above = _read_tier(cells["input"], mid, "input")
+            if direction != "over" or above != threshold:
+                raise WatcherError(
+                    f"{mid}: el segundo tramo dice «{direction} {above}» y se esperaba "
+                    f"«over {threshold}»: {cells['input']!r}"
+                )
+            long_prompt[mid] = {"above_tokens": threshold, "input": price}
+            for price_field in FIELDS[1:]:
+                long_prompt[mid][price_field] = _read_price(cells[price_field], mid, price_field)
+            continue
         if len(row) != width:
             raise WatcherError(f"fila con {len(row)} celdas, se esperaban {width}: {texts}")
+        if row[0]["rowspan"] > 2:
+            raise WatcherError(f"fila con un nombre que ocupa {row[0]['rowspan']} filas: {texts}")
+        tiered = row[0]["rowspan"] == 2
         if _ignored(row[0]):
+            if tiered:
+                pending = (row[0]["link"] or row[0]["text"] or "(fila ignorada)", 0, True)
             continue
         mid = name_to_id(row[0]["link"] or row[0]["text"])
         if mid in models:
             raise WatcherError(f"modelo repetido en la tabla: {mid}")
+        if tiered:
+            price, direction, threshold = _read_tier(row[indices["input"]]["text"], mid, "input")
+            if direction != "up to":
+                raise WatcherError(
+                    f"{mid}: el primer tramo dice «{direction} {threshold}» y se esperaba "
+                    f"«up to»: {row[indices['input']]['text']!r}"
+                )
+            models[mid] = {"input": price}
+            models[mid].update(
+                {f: _read_price(row[i]["text"], mid, f) for f, i in indices.items() if f != "input"}
+            )
+            pending = (mid, threshold, False)
+            continue
         models[mid] = {
             price_field: _read_price(row[i]["text"], mid, price_field)
             for price_field, i in indices.items()
         }
+    if pending is not None:
+        raise WatcherError(f"{pending[0]}: la tabla termina sin la fila de su segundo tramo")
     if indices is None:
         raise WatcherError(f"la tabla no tiene las columnas esperadas: {list(COLUMNS)}")
     if len(models) < MIN_ROWS:
@@ -289,7 +374,10 @@ def extract_price_table(html: str) -> dict:
         raise WatcherError("no aparece el precio de la búsqueda web")
     value = m.group(1)
     search = float(value) if "." in value else int(value)
-    return {"web_search_per_1000": search, "models": models}
+    table: dict = {"web_search_per_1000": search, "models": models}
+    if long_prompt:
+        table["long_prompt"] = long_prompt
+    return table
 
 
 @dataclass
@@ -304,10 +392,13 @@ class Changes:
     new_ones: list[str] = field(default_factory=list)
     vanished: list[str] = field(default_factory=list)
     web_search: tuple[float, float] | None = None
+    # Tramos de prompt largo (`long_prompt`) nuevos o distintos: `{id: tramo de la página}`.
+    # Como `vanished`, un tramo que la página ya no trae no se borra.
+    long_prompt: dict[str, dict] = field(default_factory=dict)
 
     @property
     def has_changes(self) -> bool:
-        return bool(self.prices or self.new_ones or self.web_search)
+        return bool(self.prices or self.new_ones or self.web_search or self.long_prompt)
 
 
 def compare(new: dict, package: dict) -> Changes:
@@ -324,6 +415,13 @@ def compare(new: dict, package: dict) -> Changes:
                     (mid, price_field, old_ones[mid][price_field], prices[price_field])
                 )
     changes.vanished = [mid for mid in old_ones if mid not in new["models"]]
+    old_tiers = package.get("long_prompt") or {}
+    for mid, tier in (new.get("long_prompt") or {}).items():
+        before = old_tiers.get(mid)
+        if before is None or any(
+            float(tier[k]) != float(before.get(k, float("nan"))) for k in ("above_tokens", *FIELDS)
+        ):
+            changes.long_prompt[mid] = tier
     before, now = package["web_search_per_1000"], new["web_search_per_1000"]
     if float(before) != float(now):
         changes.web_search = (before, now)
@@ -339,6 +437,10 @@ def updated_table(package: dict, new: dict, changes: Changes, today: dt.date) ->
         table["models"][mid] = {**new["models"][mid], **NEW_PLACEHOLDER}
     if changes.web_search is not None:
         table["web_search_per_1000"] = changes.web_search[1]
+    if changes.long_prompt:
+        tiers = table.setdefault("long_prompt", {})
+        for mid, tier in changes.long_prompt.items():
+            tiers[mid] = dict(tier)
     table["consulted"] = today.isoformat()
     return table
 
@@ -409,6 +511,18 @@ def prices_pr_body(changes: Changes, *, dry_run: bool = False) -> str:
     if changes.web_search is not None:
         before, now = changes.web_search
         lines += [f"### Búsqueda web: de ${before} a ${now} por cada 1000 búsquedas", ""]
+    if changes.long_prompt:
+        lines += [
+            "### Tramos de prompt largo (`long_prompt`, USD/MTok)",
+            "",
+            "| Modelo | Más de (tokens) | input | w5m | w1h | cache_read | output |",
+            "|---|---:|---:|---:|---:|---:|---:|",
+        ]
+        lines += [
+            f"| `{m}` | {t['above_tokens']} | " + " | ".join(str(t[k]) for k in FIELDS) + " |"
+            for m, t in changes.long_prompt.items()
+        ]
+        lines.append("")
     if changes.new_ones:
         lines += ["### Modelos nuevos: revísalos a mano", ""]
         lines += [f"- `{m}`" for m in changes.new_ones]

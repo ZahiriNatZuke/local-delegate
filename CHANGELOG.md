@@ -23,6 +23,15 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   clon completo recién hecho, un submódulo o una rama de un fork toman el idioma de su historial. El
   aviso de «muy pocos commits» ahora habla del historial leído (repo nuevo o clon con `--depth`).
 
+- **El vigilante semanal de precios vuelve a funcionar** (#564). Desde el 2026-10-19 paraba con
+  «celda de precio ilegible en claude-haiku-5-5 / input»: la página da dos filas a Claude Haiku
+  5.5, una por cada tramo de longitud del prompt. Ahora lee las dos, propone la entrada del modelo
+  y su tramo `long_prompt`, y avisa de los cambios del tramo en el PR. Una celda ilegible, una
+  segunda fila que falta o un umbral que no casa siguen parando el job con un mensaje que nombra
+  el modelo (y el campo, si es una celda). También acepta la frase nueva del precio de la búsqueda web («$10 USD per
+  1,000 searches») y deja fuera, como antes, a Claude Mythos 5.1 y 5, que la página marca ahora
+  «Verification required».
+
 - **`recompute-cost` ya no da el cotejo de precios por fallido porque un modelo no esté en la
   tabla, y la tabla trae Claude Haiku 5.5** (#563). Con un solo modelo sin precio
   (`claude-haiku-5-5`) todo el cotejo salía «falla» y `doctor` dejaba un `[WARN] coste y relleno`
