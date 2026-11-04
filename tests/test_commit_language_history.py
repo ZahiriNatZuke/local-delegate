@@ -245,24 +245,25 @@ def test_merge_subjects_written_by_the_tool_do_not_vote(tmp_path):
     assert server._commit_language_choice(_diff(repo / "src")) == ("es", "repo")
 
 
-def test_a_short_history_is_filled_from_the_reflog(tmp_path, monkeypatch):
-    """A walk cut early (here by a delta depth cap of 0 on a repo whose older commits are deltas)
-    gives too few votes; the reflog fills the rest instead of being dropped. Mutant «history
-    replaces the reflog whenever it is not empty»: `("es", "short_history")`. The guard checks
-    the walk really was cut."""
-    body = "\n".join(f"line {i} of a long shared commit body" for i in range(80))
-    repo = _repo(tmp_path / "repo", ENGLISH, body=body)
-    _git(repo, "repack", "-adfq", "--window=50")
-    _git(repo, "prune-packed")
-    monkeypatch.setattr(git_history, "MAX_DELTA_DEPTH", 0)
+def test_a_short_history_is_filled_from_the_reflog(tmp_path):
+    """A walk cut early (here by a damaged older commit; also a shallow clone or alternates) gives
+    too few votes; the reflog fills the rest instead of being dropped. Mutant «history replaces
+    the reflog whenever it is not empty»: `("es", "short_history")`. The guard checks the walk
+    really was cut after two commits. (Loose objects on purpose: which commit `git repack` keeps
+    whole and which as a delta changes between git versions.)"""
+    repo = _repo(tmp_path / "repo", ENGLISH)
+    third = _git(repo, "rev-parse", "HEAD~2").strip()
+    obj = repo / ".git" / "objects" / third[:2] / third[2:]
+    obj.chmod(0o644)
+    obj.write_bytes(obj.read_bytes()[:10])
     cut = git_history.head_commit_subjects(repo / ".git")
-    assert 0 < len(cut) < 5, f"the walk must stop early: {cut}"
+    assert cut == ENGLISH[-2:], f"the walk must stop after two commits: {cut}"
     assert server._commit_language_choice(_diff(repo / "src")) == ("en", "repo")
 
 
 def test_the_delta_depth_cap_stops_the_walk(tmp_path, monkeypatch):
-    """`MAX_DELTA_DEPTH` bounds the work of a delta chain. Mutant «no depth check»: all six
-    subjects come back."""
+    """`MAX_DELTA_DEPTH` bounds the work of a delta chain. Mutant «no depth check» (both checks,
+    in `read` and in `_from_pack`): all six subjects come back."""
     body = "\n".join(f"line {i} of a long shared commit body" for i in range(80))
     repo = _repo(tmp_path / "repo", ENGLISH, body=body)
     _git(repo, "repack", "-adfq", "--window=50")
@@ -273,7 +274,8 @@ def test_the_delta_depth_cap_stops_the_walk(tmp_path, monkeypatch):
 
 def test_a_huge_packed_refs_is_not_read(tmp_path, monkeypatch):
     """`packed-refs` is disk input: over the cap it is not read, and a line is read in bounded
-    pieces. Mutant «no size check»: the branch is found and the subjects come back."""
+    pieces. Mutant «no size check» (both, the file size and the bytes read): the branch is found
+    and the subjects come back."""
     repo = _repo(tmp_path / "repo", ENGLISH)
     _git(repo, "pack-refs", "--all", "--prune")
     monkeypatch.setattr(git_history, "_PACKED_REFS_MAX_BYTES", 10)

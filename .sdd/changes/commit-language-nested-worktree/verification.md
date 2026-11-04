@@ -26,7 +26,24 @@ Without a declaration, list what was run. Never invent a command. -->
 | --- | --- | --- | --- |
 | `ruff check src tests scripts` | yes | pass | All checks passed |
 | `ruff format --check src tests scripts` | yes | pass | 353 files already formatted |
-| `pytest -q -n 2 --dist loadgroup` (full suite, via `pesado.sh`) | yes | pass | see handoff for counts |
+| `pytest -q -n 2 --dist loadgroup` (full suite, via `pesado.sh`) | yes, before review fixes | 6389 passed, 4 failed (2 fixed: lexicon/catalogue; 2 from editing during the run, pass alone) | local run, 2026-11-04 |
+| `pytest` on the 3 commit-language files + name detector (after review fixes) | yes | 80 passed | local, without the lock (it was held by a hung run) |
+| CI of PR #562 (ubuntu, macos, windows, lang-es, lint, CodeQL…) | yes | see `gh pr checks 562` | first run: 2 failures on ubuntu, fixed (see deviations) |
+
+## Positive control
+
+| Test | Mutant | Assert that fires |
+| --- | --- | --- |
+| nested worktree (loose, packed) and 5 more reading tests | «reflog only» | `("es","mixed_repo") == ("en","repo")` / `[] == ENGLISH` |
+| deltas (ofs, ref) | «delta copies from 0» | subjects garbled |
+| object cap, zip bomb | «no size check» | subjects come back / `pytest.raises` gets `ValueError` |
+| odd HEAD | «any ref» | subjects come back |
+| packed ref | «loose refs only» | `[]` and `mixed_repo` |
+| corrupt store | «errors escape» | `_Unreadable` raised |
+| merges | «use the merge subject» | `any(startswith("Merge pull request"))` |
+| short history filled from the reflog | «history replaces the reflog when not empty» | `("es","short_history") == ("en","repo")` |
+| delta depth cap | «no depth check» (both) | all six subjects come back |
+| huge packed-refs | «no size check» (both) | subjects come back |
 
 ## Quality checks
 
@@ -44,6 +61,13 @@ Without a declaration, list what was run. Never invent a command. -->
   «mixed»; the full-clone case is covered by `test_a_full_fresh_clone_reads_its_history`.
 - Not supported (fall back to the reflog as before): SHA-256 repos, `objects/info/alternates`,
   reftable refs. Shallow repos stop the walk at the boundary.
+- First CI run on ubuntu: `test_a_short_history_is_filled_from_the_reflog` assumed the newest
+  commit is stored whole after `git repack`; the runner's git stored it as a delta, so a depth cap
+  of 0 read nothing. The reader was fine (the packed, delta and nested-worktree tests passed on
+  ubuntu); the test now cuts the walk with a damaged older loose object. Also `regular` went to
+  the lexicon.
+- After the review fixes the full suite could not run locally (the machine-wide lock was held
+  by a hung run of this agent); CI covers it.
 - First full run had 2 failures (`test_density`, `test_dashboard_cost`) caused by editing
   `server.py` comments while the run was going (`inspect.getsource` read shifted lines); both pass
   alone and in the rerun.
