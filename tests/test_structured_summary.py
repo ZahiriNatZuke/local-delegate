@@ -305,7 +305,7 @@ def test_without_headings_the_payload_is_mains(monkeypatch, tmp_path):
     (payload,) = seen
     assert payload["messages"][0]["content"] == MAIN_SYSTEM
     assert payload["messages"][1]["content"] == f"Resume el siguiente contenido:\n\n{text}"
-    assert payload["max_tokens"] == 364
+    assert payload["max_tokens"] == 514  # #580: 3w+64 (364 = 2w+64 until 0.48.0)
     assert "sections" not in _events(tmp_path)[0]
 
 
@@ -315,7 +315,7 @@ def test_with_the_switch_off_the_payload_is_mains(monkeypatch, tmp_path):
     (payload,) = seen
     assert payload["messages"][0]["content"] == MAIN_SYSTEM
     assert payload["messages"][1]["content"] == f"Resume el siguiente contenido:\n\n{text}"
-    assert payload["max_tokens"] == 364
+    assert payload["max_tokens"] == 514  # #580: 3w+64 (364 = 2w+64 until 0.48.0)
 
 
 def test_with_headings_the_model_gets_the_list_and_the_server_completes(monkeypatch, tmp_path):

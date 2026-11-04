@@ -192,6 +192,7 @@
   "mcp.warning.origin.chunk": "desde el trozo {chunk}",
   "mcp.warning.origin.reduce": "en la reducción",
   "mcp.warning.output_truncated": "salida truncada por max_tokens",
+  "mcp.warning.output_trimmed": "salida truncada por max_tokens; se recortó hasta la última frase completa y puede faltar el final",
   "mcp.warning.output_truncated_calls": "salida truncada por max_tokens en {truncated} de {calls} llamadas; puede faltar parte del contenido",
   "mcp.warning.retried_calls": " (aparte, {retried} llamadas cortadas se repitieron partiendo su trozo)",
   "mcp.warning.regroup_stopped": "las notas parciales no se pudieron combinar en una sola respuesta tras {calls} llamadas: se devuelven agrupadas y en orden",

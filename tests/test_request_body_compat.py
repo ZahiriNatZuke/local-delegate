@@ -102,7 +102,24 @@ def test_body_matches_main(captured):
     # `capture` ya convierte con el mismo gancho) tienen la misma forma.
     assert len(result["bodies"]) == len(expected), f"{name}: otro número de llamadas al backend"
     for index, (body, want) in enumerate(zip(result["bodies"], expected, strict=True)):
-        assert body == want, f"{name}: el cuerpo {index} no es el de {BASE_COMMIT}"
+        assert body == _declared(name, want), f"{name}: el cuerpo {index} no es el de {BASE_COMMIT}"
+
+
+#: Caps changed on purpose after the base commit, by path. #580: `local_summarize` (the tool of
+#: these four paths) asks 3w+64 instead of 2w+64, 514 instead of 364 with its default 150 words,
+#: in the single call and in each step of its map/reduce. Everything else stays frozen.
+_CHANGED_MAX_TOKENS = {name: {364: 514} for name in ("simple", "map_chunk", "reduce", "fallback")}
+
+
+def _declared(name: str, body: list) -> list:
+    """The frozen body with the declared changes of that path applied."""
+    changes = _CHANGED_MAX_TOKENS.get(name, {})
+    return [
+        type(pair)((pair[0], changes[pair[1]]))
+        if pair[0] == "max_tokens" and pair[1] in changes
+        else pair
+        for pair in body
+    ]
 
 
 #: Keys added to the usage event after the base commit, on purpose and additive: a reader of the

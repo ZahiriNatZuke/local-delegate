@@ -192,6 +192,7 @@
   "mcp.warning.origin.chunk": "from chunk {chunk}",
   "mcp.warning.origin.reduce": "in the reduce step",
   "mcp.warning.output_truncated": "output truncated by max_tokens",
+  "mcp.warning.output_trimmed": "output truncated by max_tokens; cut back to the last complete sentence, the end may be missing",
   "mcp.warning.output_truncated_calls": "output truncated by max_tokens in {truncated} of {calls} calls; part of the content may be missing",
   "mcp.warning.retried_calls": " (besides, {retried} cut calls were redone on smaller chunks)",
   "mcp.warning.regroup_stopped": "the partial notes could not be combined into one answer after {calls} calls: they are returned grouped and in order",
