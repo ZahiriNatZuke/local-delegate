@@ -2,9 +2,11 @@
 
 Este módulo es la red: **un hook sale siempre con 0**. Claude Code bloquea el prompt o la tool cuando
 un hook sale con 2, así que ni un `sys.exit(2)` de dentro, ni una excepción, ni un import roto pueden
-llegar a ese código. The only other code is 1, when the dispatched target returns 1: a failed
-`classify` or `record-read` of the read mod (not hooks of `hooks.json`), so the mod knows. Con un paquete 0.39 este módulo no existe y Python sale con 1, que el motor
+llegar a ese código. Con un paquete 0.39 este módulo no existe y Python sale con 1, que el motor
 trata como error no bloqueante (medido en T0).
+
+The only other exit code is 1, when the dispatched target returns 1: a failed `classify` or
+`record-read` of the read mod (they are not hooks of `hooks.json`), so the mod knows.
 
 No importa nada del paquete al cargarse: el despacho (`hook_entry`) se importa dentro de la red.
 """

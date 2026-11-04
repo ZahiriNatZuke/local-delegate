@@ -193,6 +193,30 @@ def test_a_normal_hook_with_the_same_broken_destination_exits_zero(tmp_path):
     payload = json.dumps({"session_id": "s", "prompt": "resume esto"}).encode("utf-8")
     result = _process(tmp_path, "prompt", payload, _broken_destination(tmp_path))
     assert result.returncode == 0, result.stderr
+    # `record` swallowed the write error inside the hook: had it raised, `main` would have
+    # caught it and left a failure line.
+    assert _failures(tmp_path) == []
+
+
+def test_a_trailing_newline_is_not_a_short_name(tmp_path, monkeypatch):
+    entry = _entry(tmp_path, decision="summarized\n")
+    destination = _broken_destination(tmp_path)
+    assert _in_process(monkeypatch, json.dumps(entry), _env(tmp_path, destination)) == 1
+    (line,) = _failures(tmp_path)
+    assert line["decision"] == "other"
+
+
+def test_a_failed_classify_exits_one_and_leaves_a_failure_line(tmp_path, monkeypatch):
+    monkeypatch.setenv("LOCAL_DELEGATE_LOG_DIR", str(tmp_path / "data"))
+
+    def boom(args):
+        raise RuntimeError("classifier broke")
+
+    monkeypatch.setattr(hook_entry, "_classify", boom)
+    assert hook_entry.main(["classify"]) == 1
+    (line,) = _failures(tmp_path)
+    assert (line["hook"], line["error"]) == ("classify", "RuntimeError")
+    assert "decision" not in line
 
 
 # --- The daemon road ------------------------------------------------------------------------------

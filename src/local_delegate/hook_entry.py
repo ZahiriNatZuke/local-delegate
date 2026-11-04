@@ -9,7 +9,7 @@ este proceso con `runpy` y con su ruta empaquetada como `__file__`: así la huel
 Tres reglas, y las tres existen porque Claude Code bloquea el prompt o la tool con el código 2:
 
 - un nombre desconocido sale con 0 y sin texto (un plugin más nuevo que el paquete);
-- cualquier fallo sale con 0 y deja una línea en `LOG_DIR/hook-failures.jsonl`, solo con el tipo;
+- cualquier fallo de un hook sale con 0 y deja una línea en `LOG_DIR/hook-failures.jsonl`, solo con el tipo;
 - `local_delegate.hook` envuelve todo esto y sale con 0 en todo hook de `hooks.json`.
 
 The two mod subcommands below are not hooks of `hooks.json`: a failed `classify` or `record-read`
@@ -234,7 +234,7 @@ _FAILURE_NAME = re.compile(r"^[a-z0-9_]{1,40}$")
 
 
 def _failure_name(value: object) -> str:
-    return value if isinstance(value, str) and _FAILURE_NAME.match(value) else "other"
+    return value if isinstance(value, str) and _FAILURE_NAME.fullmatch(value) else "other"
 
 
 def _log_failure(name: str, exc: BaseException, entry: object = None) -> None:
