@@ -8,6 +8,14 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ### Corregido
 
+- **Los tests de la cola saturada ya no dependen de la velocidad del runner (#584).** En Windows,
+  `test_slot_wait_past_the_limit_fails_fast_and_is_logged` vio terminar bien la llamada que debía
+  saturar: los dos huecos volvían 5 s después del inicio del test, y un runner cargado llegaba a
+  esperar el hueco a los 4,98 s (medido con 16 procesos quemando CPU, una vez de cada 40). Ahora los
+  huecos vuelven 5 s después de que la llamada empieza a esperar. Con el mismo defecto,
+  `test_a_queue_that_does_not_move_saturates` usaba un trozo de 5 s contado desde su inicio; ahora
+  el trozo no termina hasta que acaba el test. Las cotas superiores de tiempo pasan a ser guardas
+  contra cuelgues: que la cola saturó lo dice el error, no el reloj. Solo cambian los tests.
 - **Con el turno remoto sin responder, las delegaciones ya no compiten a ciegas por el backend
   (#577).** Desde la Mac, con el turno de la PC caído y su backend ocupado, cinco
   `local_describe_image` esperaron ~55 s el turno, fueron igualmente al backend dos a la vez y
