@@ -134,6 +134,49 @@ def test_read_hook_records_why_it_stops_when_the_file_is_missing(tmp_path):
     assert lines[0]["path_sha"] == common.path_digest(str(missing))
 
 
+def test_shell_hook_finds_a_file_with_a_non_ascii_path(tmp_path):
+    document = _prose(tmp_path / "ñandú" / "report.md")
+    env = _env(tmp_path)
+    payload = {
+        "session_id": "s1",
+        "tool_name": "Bash",
+        "tool_input": {"command": f'cat "{document}"'},
+        "cwd": str(tmp_path),
+    }
+
+    stdout = _run("suggest_delegate_shell.py", payload, env)
+
+    lines = _telemetry(tmp_path)
+    assert len(lines) == 1, "guard: the shell hook recorded the command"
+    assert lines[0].get("reason") != "no_file", "the path arrived mangled and the file was lost"
+    assert lines[0]["path_sha"] == common.path_digest(str(document))
+    assert lines[0]["size_kb"] > 8
+    text = stdout.decode("utf-8")
+    assert json.loads(text)["hookSpecificOutput"]["permissionDecision"] == "deny"
+
+
+def test_subagent_hook_writes_its_notice_in_utf8(monkeypatch):
+    """Today the notice is ASCII in both languages; a translation with accents must still reach
+    Claude Code as UTF-8, not in the code page of the pipe."""
+    sys.path.insert(0, str(HOOKS))
+    try:
+        subagent = _load("_utf8_subagent_start", HOOKS / "subagent_start.py")
+    finally:
+        sys.path.remove(str(HOOKS))
+    monkeypatch.setattr(subagent, "enabled", lambda: True)
+    monkeypatch.setattr(subagent, "backend_down", lambda: False)
+    monkeypatch.setattr(subagent, "hook_text", lambda key: "Cárgalas → ñ")
+    out_bytes = io.BytesIO()
+    monkeypatch.setattr(sys, "stdin", io.TextIOWrapper(io.BytesIO(b"{}"), encoding="cp1252"))
+    monkeypatch.setattr(sys, "stdout", io.TextIOWrapper(out_bytes, encoding="cp1252"))
+
+    subagent.main()
+    sys.stdout.flush()
+
+    notice = json.loads(out_bytes.getvalue().decode("utf-8"))
+    assert notice["hookSpecificOutput"]["additionalContext"] == "Cárgalas → ñ"
+
+
 def test_prompt_hook_reads_accented_words_of_the_host_only_rule(tmp_path):
     env = _env(tmp_path)
 

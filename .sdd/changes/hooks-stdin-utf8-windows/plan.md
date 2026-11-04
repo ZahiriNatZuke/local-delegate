@@ -32,6 +32,10 @@ entradas y a enseñar a `doctor` las dos formas, con riesgo de duplicados.
   - Files or modules: CHANGELOG.md
   - Verification: pytest -n 2, ruff, after.txt
   - Depends on: T4
+- [x] T6 — Ajustes de la revisión: `no_file` fuera de `reads` en `measure_adoption.py` y tests de shell y subagente que discriminen (REQ-009, REQ-010)
+  - Files or modules: scripts/measure_adoption.py, tests/test_measure_adoption.py, tests/test_hook_stdin_utf8.py
+  - Verification: control positivo de los tres tests; comparación vieja/nueva sobre una copia fija del log real
+  - Depends on: T5
 
 ## Test strategy
 

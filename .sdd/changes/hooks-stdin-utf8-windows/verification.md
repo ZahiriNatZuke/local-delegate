@@ -17,6 +17,8 @@
 | REQ-006 | test `test_utf8_stdio_switches_a_cp1252_pipe_to_utf8` + prueba instalada | pass | `stdout` decodifica en UTF-8 y trae la ruta con `ñ` íntegra (`path_echoed_intact=True`) |
 | REQ-007 | `installed_probe.py` en HOME temporal, comando del settings por `sh -c`, stdin UTF-8 en bytes | pass | scratchpad `utf8hooks/before.txt` (3 fallos) y `after.txt` (0) |
 | REQ-008 | review | pass | `utf8_stdio()` solo se llama dentro de `main()` de cada hook |
+| REQ-009 | test `test_a_file_the_hook_could_not_size_is_not_a_read` + versión vieja contra nueva sobre una copia fija del log real | pass | solo cambian las 18 líneas `no_file` (13 «antes», 5 «después», todas de shell); `offered`, `blocks`, `accepted` y delegaciones idénticos |
+| REQ-010 | tests de shell y subagente con control positivo | pass | sin `utf8_stdio()` en shell: `reason == "no_file"`; en subagente: `UnicodeEncodeError` |
 
 ## Commands
 

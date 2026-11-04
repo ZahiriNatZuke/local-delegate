@@ -19,6 +19,8 @@
 | REQ-006 | sí | test + prueba instalada | ruta con `ñ` íntegra en el `deny` |
 | REQ-007 | sí | before.txt / after.txt | |
 | REQ-008 | sí | review | `utf8_stdio` no se llama al importar |
+| REQ-009 | sí | test + comparación sobre el log real | |
+| REQ-010 | sí | test con control positivo | |
 
 ## Findings
 

@@ -41,6 +41,14 @@ con motivo cuando no puede medir el fichero, en vez de callarse.
   la reconfiguración solo ocurre dentro del `main()` de cada hook.
   - Request: derived: el transporte MCP stdio del servidor no debe alterarse
   - Verify: review `utf8_stdio` no se llama al importar; test suite completa en verde
+- **REQ-009** — `scripts/measure_adoption.py` no cuenta como lectura un evento con
+  `reason: "no_file"` (de lectura ni de shell): no entra en `reads`, `by_side`, `by_reason` ni
+  `by_path`, y se muestra aparte en `not_reads`. El resto de cifras no cambia.
+  - Request: derived: revisión del PR #560 — la línea `no_file` nueva inflaría el denominador del tramo «después» en la medición de adopción del 2026-11-05
+  - Verify: test tests/test_measure_adoption.py::test_a_file_the_hook_could_not_size_is_not_a_read
+- **REQ-010** — Quitar `utf8_stdio()` solo del hook de shell o solo del de subagente hace fallar un test.
+  - Request: derived: revisión del PR #560 — esos dos hooks no tenían test que discriminara
+  - Verify: test tests/test_hook_stdin_utf8.py::test_shell_hook_finds_a_file_with_a_non_ascii_path y ::test_subagent_hook_writes_its_notice_in_utf8
 
 ## Acceptance scenarios
 
