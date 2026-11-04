@@ -41,3 +41,10 @@
   with it it would push a branch and open a PR. The pure steps were run instead.
 - Once merged, the watcher will open a PR proposing Sonnet 5.5 cache read 0.20 → 0.10 (page
   value); Claude Code's own `costUSD` uses 0.20 on this PC, so that PR needs a human decision.
+
+## Final result
+
+- Merged in `main` as `2ef5cf44` (PR #566, closes #564).
+- PR checks: 22 of 22 green (`gh pr checks 566`: tests on ubuntu/windows/macos, Python 3.11–3.15 matrix, lint, secrets, ci-gate, CodeQL, Socket, GitGuardian).
+- `main` CI after the merge: green (`gh run list --branch main`).
+- Closed on 2026-11-04 by the closing PR `chore/close-sdd-2026-11-04`.

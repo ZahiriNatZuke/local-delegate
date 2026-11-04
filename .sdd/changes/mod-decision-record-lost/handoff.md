@@ -2,24 +2,25 @@
 
 ## Current state
 
-- SDD status:
-- Last completed gate:
-- Current revision:
+- SDD status: closed (closing PR `chore/close-sdd-2026-11-04`)
+- Last completed gate: memory
+- Current revision: merged in `main` as `3e826b56` (PR #559)
 
 ## What changed
 
-- Summarize completed work without reproducing the full Git history.
+- `hook_common.record_or_raise`: the `record-read` road re-raises the write `OSError` instead of swallowing it; normal `hooks.json` hooks stay best effort.
+- `POST /api/hook/record-read` answers 500 and `classify`/`record-read` exit 1 when the line was not written; `hook-failures.jsonl` gains `decision` and `via` (allow-listed short names).
+- `mod/read.js` unchanged: it already retries and reports `ModRecordLost` on 500 or a non-zero exit.
 
 ## Decisions
 
-- Record decisions that a future session cannot reliably derive from code alone.
+- Each road (daemon, process, mod) reports its own failure, so one lost decision can leave up to three failure lines (review F5, accepted).
 
 ## Next action
 
-- State the single best next step and any prerequisite context.
+- None. Watch the failure lines in the next adoption measurement.
 
 ## Memory
 
-- Canonical note:
-- Indexes updated:
-
+- Canonical note: vault `projects/local-delegate/jornada-2026-11-04-seis-arreglos-y-el-vigilante-de-precios.md`
+- Indexes updated: `projects/local-delegate` journey index (main session)
