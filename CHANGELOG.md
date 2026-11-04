@@ -14,7 +14,8 @@ delegaciones van de una en una y se cortan pronto en vez de competir a ciegas po
 daemon ya no se queda vivo sin escuchar; un plazo agotado dice dónde se fue el tiempo y en qué trozo;
 `local_summarize` no corta a mitad de palabra ni deja fuera la sección del enfoque;
 `local_explain_code` da el índice completo de un diff troceado; `local_commit_msg` toma el idioma de
-los commits de HEAD; y `recompute-cost` y el vigilante de precios entienden Claude Haiku 5.5.
+los commits de HEAD; `recompute-cost` y el vigilante de precios entienden Claude Haiku 5.5; y la lectura de caché de
+Claude Sonnet 5.5 se valora a 0,10 USD por millón de tokens.
 
 ### Cómo actualizar
 
@@ -42,6 +43,13 @@ los commits de HEAD; y `recompute-cost` y el vigilante de precios entienden Clau
   a partir de los trozos, en orden, así que un reduce cortado por el tope de salida no pierde las
   secciones. Sin un campo así, o con `text=`, nada cambia. La skill y el bloque de memoria dicen
   ahora que el nombre del campo tiene que pedir líneas.
+
+### Cambiado
+
+- **La lectura de caché de Claude Sonnet 5.5 cuesta 0,10 USD por millón de tokens, no 0,20 (#567).**
+  El vigilante semanal de precios vio la cifra nueva en la página oficial y la tabla del paquete
+  (`prices.json`) la recoge; los costes de Sonnet 5.5 con lecturas de caché salen a la mitad en esa
+  parte.
 
 ### Corregido
 
