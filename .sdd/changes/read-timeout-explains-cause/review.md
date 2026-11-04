@@ -32,4 +32,4 @@
 
 ## Required follow-up
 
-- Prueba en vivo con un plazo agotado de verdad (sesión principal, si la quiere).
+- Ninguno obligatorio; queda opcional una prueba en vivo con un plazo agotado de verdad. Revisión antes de mezclar: la de resultado con dos jueces de esta tabla (`conforms-with-notes`), cuyos ajustes F1–F7 se aplicaron en el segundo commit de la rama; en el PR no consta otra revisión independiente (sin reviews ni comentarios). Mezclado en `main` como `fae612c7` (PR #575) con 19 de 22 checks en verde: `test (macos-latest)` y `plugin (macos-latest)` cancelados a los ~20 min y, por ellos, `ci-gate` en rojo; en el CI de `main` de `fae612c7` los dos de macOS también se cancelaron y `ci-gate` quedó en rojo. El usuario autorizó expresamente esta mezcla sin macOS el 2026-11-04 (bypass temporal del ruleset `protect-main`, restaurado después; consta en el relevo de la jornada). El CI de `main` vuelve a verde en `576344b5` y en `cf1474d8`.

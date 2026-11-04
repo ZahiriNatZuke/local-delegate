@@ -4,9 +4,9 @@
   "title": "Un read_timeout dice si fue cola, carga o generación y en qué trozo (#572)",
   "mode": "lite",
   "traceability": "strict",
-  "status": "result-review",
+  "status": "closed",
   "createdAt": "2026-11-04T14:28:02.324Z",
-  "updatedAt": "2026-11-04T14:56:30.044Z",
+  "updatedAt": "2026-11-04T21:02:33.498Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -33,10 +33,10 @@
       "actor": "user"
     },
     "memory": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-11-04T21:02:33.272Z",
+      "evidence": "vault projects/local-delegate/jornada-2026-11-04-seis-arreglos-y-el-vigilante-de-precios.md",
+      "actor": "user"
     }
   },
   "history": [
@@ -113,6 +113,28 @@
       "at": "2026-11-04T14:56:30.044Z",
       "evidence": "review.md: 2 jueces conforms-with-notes; F1-F7 arreglados con tests y control positivo; F8-F9 aceptados como límite",
       "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "result-review",
+      "to": "closing",
+      "at": "2026-11-04T21:02:33.042Z",
+      "reason": "conformance approved; PR #575 merged in main as fae612c7 without the macOS jobs (cancelled); main CI green again on 576344b5"
+    },
+    {
+      "type": "gate",
+      "gate": "memory",
+      "status": "approved",
+      "at": "2026-11-04T21:02:33.272Z",
+      "evidence": "vault projects/local-delegate/jornada-2026-11-04-seis-arreglos-y-el-vigilante-de-precios.md",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "closing",
+      "to": "closed",
+      "at": "2026-11-04T21:02:33.498Z",
+      "reason": "PR #575 merged (fae612c7); main CI on fae612c7 red only for cancelled macOS jobs and ci-gate, green again on 576344b5 and cf1474d8; memory note written; closing PR chore/close-sdd-2026-11-04-tarde"
     }
   ]
 }

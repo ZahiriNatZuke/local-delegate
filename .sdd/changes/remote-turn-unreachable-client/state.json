@@ -4,9 +4,9 @@
   "title": "Turno remoto inalcanzable: en serie, corte y aviso (#577)",
   "mode": "lite",
   "traceability": "strict",
-  "status": "verifying",
+  "status": "closed",
   "createdAt": "2026-11-04T15:26:28.337Z",
-  "updatedAt": "2026-11-04T15:44:11.288Z",
+  "updatedAt": "2026-11-04T21:04:14.977Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -21,22 +21,22 @@
       "actor": "user"
     },
     "quality": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-11-04T21:04:13.812Z",
+      "evidence": "PR #579: 22/22 checks green (tests and plugin on ubuntu/windows/macos, Python 3.11-3.15 matrix, lint, audit, secrets, CodeQL, Socket, GitGuardian); local full suite 6400 passed, 30 skipped, 2 first-run reds explained and green after the fix; ruff check and format clean",
+      "actor": "user"
     },
     "conformance": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-11-04T21:04:14.274Z",
+      "evidence": "review.md: REQ-001..008 implemented and verified (tests with mutants + live run with real sockets); independent review before merge (commit 58afc614): four adjustments applied (cut only on read_timeout, arrival-order queue released between chunks with QueueSaturated, 429 wait not cut by another, series per process in docs); PR #579 22/22 checks green incl. macOS; main CI green on 576344b5; CodeQL notes 202/203 left as follow-up",
+      "actor": "user"
     },
     "memory": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-11-04T21:04:14.735Z",
+      "evidence": "vault projects/local-delegate/jornada-2026-11-04-seis-arreglos-y-el-vigilante-de-precios.md",
+      "actor": "user"
     }
   },
   "history": [
@@ -90,6 +90,51 @@
       "to": "verifying",
       "at": "2026-11-04T15:44:11.288Z",
       "reason": "4 tareas implementadas; suite y ruff verdes"
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-11-04T21:04:13.812Z",
+      "evidence": "PR #579: 22/22 checks green (tests and plugin on ubuntu/windows/macos, Python 3.11-3.15 matrix, lint, audit, secrets, CodeQL, Socket, GitGuardian); local full suite 6400 passed, 30 skipped, 2 first-run reds explained and green after the fix; ruff check and format clean",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "verifying",
+      "to": "result-review",
+      "at": "2026-11-04T21:04:14.036Z",
+      "reason": "quality approved; PR #579 merged in main as 576344b5"
+    },
+    {
+      "type": "gate",
+      "gate": "conformance",
+      "status": "approved",
+      "at": "2026-11-04T21:04:14.274Z",
+      "evidence": "review.md: REQ-001..008 implemented and verified (tests with mutants + live run with real sockets); independent review before merge (commit 58afc614): four adjustments applied (cut only on read_timeout, arrival-order queue released between chunks with QueueSaturated, 429 wait not cut by another, series per process in docs); PR #579 22/22 checks green incl. macOS; main CI green on 576344b5; CodeQL notes 202/203 left as follow-up",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "result-review",
+      "to": "closing",
+      "at": "2026-11-04T21:04:14.505Z",
+      "reason": "conformance approved; PR #579 merged in main as 576344b5"
+    },
+    {
+      "type": "gate",
+      "gate": "memory",
+      "status": "approved",
+      "at": "2026-11-04T21:04:14.735Z",
+      "evidence": "vault projects/local-delegate/jornada-2026-11-04-seis-arreglos-y-el-vigilante-de-precios.md",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "closing",
+      "to": "closed",
+      "at": "2026-11-04T21:04:14.977Z",
+      "reason": "PR #579 merged (576344b5), main CI green, memory note written; closing PR chore/close-sdd-2026-11-04-tarde"
     }
   ]
 }

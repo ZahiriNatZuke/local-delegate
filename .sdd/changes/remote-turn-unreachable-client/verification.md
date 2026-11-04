@@ -44,3 +44,11 @@
 - Los ~55 s de espera de turno del issue venían de respuestas `queued`/`429` seguidas de dos lecturas
   perdidas (el daemon a medio colgar, #576); eso sigue costándole a la primera tanda. Lo nuevo evita
   que se repita en las que esperan detrás y en las siguientes.
+
+## Final result
+
+- Merged in `main` as `576344b5` (PR #579) on 2026-11-04T18:29:54Z.
+- PR checks: 22 of 22 green (`gh pr checks 579`: tests on ubuntu/windows/macos, plugin on ubuntu/windows/macos, Python 3.11–3.15 matrix, lint, audit, secrets, install-smoke, test-lang-es, ci-gate, CodeQL, Socket, GitGuardian). macOS ran and passed; no bypass.
+- `main` CI on `576344b5`: green (`gh run list --commit 576344b5…`: CI, Vendor audit, Wiki, CodeQL success).
+- Open after the merge: CodeQL alerts 202 and 203 (`py/catch-base-exception`, note) in `tests/test_remote_turn_unreachable.py`, and their two PR threads unresolved.
+- Closed on 2026-11-04 by the closing PR `chore/close-sdd-2026-11-04-tarde`.

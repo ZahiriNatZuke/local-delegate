@@ -44,3 +44,5 @@
 ## Required follow-up
 
 - Ninguno bloqueante. F7 y F8 quedan como riesgo residual anotado en la entrega.
+- Revisión independiente antes de mezclar: consta en la sección «Segunda revisión (independiente, coordinador, PR #573)» de este fichero; pidió cinco ajustes (G1–G5), aplicados en la rama con test; el cuerpo del PR lo recoge («Segunda revisión (cinco hallazgos)»). En el PR no hay reviews ni comentarios de GitHub.
+- Mezclado en `main` como `d4a3bb1f` (PR #573) sin los jobs de macOS: 19 checks del PR en verde; `test (macos-latest)`, `plugin (macos-latest)` y `ci-gate` en rojo porque GitHub no asignó runner de macOS («The job was not acquired by Runner of type hosted even after multiple attempts»). El usuario autorizó expresamente esta mezcla sin macOS el 2026-11-04 (bypass temporal del ruleset `protect-main`, restaurado después; consta en el relevo de la jornada).
