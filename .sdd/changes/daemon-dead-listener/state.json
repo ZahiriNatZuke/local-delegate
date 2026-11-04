@@ -6,7 +6,7 @@
   "traceability": "strict",
   "status": "verifying",
   "createdAt": "2026-11-04T14:57:45.127Z",
-  "updatedAt": "2026-11-04T15:35:35.768Z",
+  "updatedAt": "2026-11-04T16:38:21.257Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -27,10 +27,10 @@
       "actor": "agent"
     },
     "conformance": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-11-04T16:38:21.257Z",
+      "evidence": "Dos jueces independientes (conforms-with-notes y does-not-conform sobre un estado intermedio); sus hallazgos F1-F5 corregidos (guarda de pid con tests doblados, skipif macOS y doctor sin promesa, segunda parada tolerada en el test, SIGKILL con recomprobación, verification.md al día) y F6 anotado como riesgo residual. PR #578: test windows/ubuntu, matriz CLI, plugin x3, lint, CodeQL, GitGuardian y Socket en verde; macOS en cola al cerrar.",
+      "actor": "agent"
     },
     "memory": {
       "status": "pending",
@@ -97,6 +97,14 @@
       "status": "approved",
       "at": "2026-11-04T15:35:35.768Z",
       "evidence": "Suite completa pytest -n 2 --dist loadgroup: 6480 passed, 30 skipped (corrida final con REQ-006); ruff check y format en verde; 10 mutantes, cada uno falla en su assert (verification.md); prueba de carga turn_stress.py: sin arreglo el puerto muere en 1 s, con arreglo 60 s y 43842 peticiones.",
+      "actor": "agent"
+    },
+    {
+      "type": "gate",
+      "gate": "conformance",
+      "status": "approved",
+      "at": "2026-11-04T16:38:21.257Z",
+      "evidence": "Dos jueces independientes (conforms-with-notes y does-not-conform sobre un estado intermedio); sus hallazgos F1-F5 corregidos (guarda de pid con tests doblados, skipif macOS y doctor sin promesa, segunda parada tolerada en el test, SIGKILL con recomprobación, verification.md al día) y F6 anotado como riesgo residual. PR #578: test windows/ubuntu, matriz CLI, plugin x3, lint, CodeQL, GitGuardian y Socket en verde; macOS en cola al cerrar.",
       "actor": "agent"
     }
   ]
