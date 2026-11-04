@@ -8,6 +8,17 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ### Corregido
 
+- **`local_summarize` ya no corta el resumen a mitad de palabra con el `max_words` por defecto
+  (#580).** La llamada única pedía `max_tokens = 2 × max_words + 64` (364 con 150) y, medido contra
+  el backend real, el modelo gasta 1,5–1,7 tokens por palabra en español y escribe hasta 1,5 veces
+  las palabras pedidas: todos los cortes del log caían justo en ese tope. Ahora el tope es
+  `3 × max_words + 64` (514 con 150), el mismo factor que ya usaba el resumen por secciones, también
+  en cada paso del map/reduce. Y si aun así el modelo se queda sin tokens, la respuesta acaba en su
+  última frase completa (o en su última línea completa), sin dejar un título, una etiqueta
+  `**…:**`, una lista sin elementos ni un bloque de código abierto, y el aviso dice «salida
+  truncada por max_tokens; se recortó hasta la última frase completa». Las llamadas que acaban bien
+  devuelven lo mismo que antes.
+
 - **`local_extract` puede dar números de línea con `path` (#568).** Un campo de localización
   (`secciones_con_lineas`) sobre un Markdown grande volvía `null` en los 8 trozos: el modelo nunca
   veía un número de línea. Ahora, con `path` y un campo cuyo nombre pide líneas (una palabra

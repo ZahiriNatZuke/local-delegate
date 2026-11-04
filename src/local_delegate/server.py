@@ -4142,6 +4142,7 @@ def _chat(
     num_sections: int | None = None,
     focus: bool = False,
     report: dict | None = None,
+    trim_cut: Callable[[str], str | None] | None = None,
 ) -> str:
     """POST al endpoint. Devuelve solo texto y registra la llamada en USAGE_LOG.
 
@@ -4149,6 +4150,9 @@ def _chat(
     llama (REQ-005). Con `fallback`, el aviso de que respondió otro modelo se deja en ese dict en
     vez de pegarlo al texto: lo usa quien parsea el resultado (REQ-007). Con `report`, lo mismo
     para el aviso de salida truncada: va a `report["truncated_out"]` y no al texto (B2c).
+
+    #580: with `trim_cut`, an answer cut by `max_tokens` goes through it before the postprocess;
+    when it returns a shorter text, that is what is returned and the notice says it was cut back.
 
     `user` acepta un `str` (texto->texto) o una lista de bloques de contenido
     OpenAI-compatible (p. ej. `[{"type":"text",...},{"type":"image_url",...}]` para
@@ -4191,12 +4195,21 @@ def _chat(
     if strip_fences and result.ok:
         text = _strip_fences(text)
     truncated_out = result.finish_reason == "length"
+    # #580: never on a write to disk, whose content is the model's answer and nothing else.
+    trimmed = None
+    if trim_cut is not None and truncated_out and result.ok and write_to is None:
+        trimmed = trim_cut(text)
+        if trimmed is not None:
+            text = trimmed
     # El postproceso trabaja sobre la salida PURA del modelo: antes del aviso de truncado, del de
     # respaldo, de `chars_out` y de la coletilla de ahorro. Hacerlo después dejaría lo que inserta
     # detrás de esos avisos (resumen-por-secciones, revisión del plan B3).
     if postprocess is not None and result.ok:
         text = postprocess(text, truncated_out)
-    truncation_notice = f"\n\n{WARNING_MARKER}{i18n.t('mcp.warning.output_truncated')}]"
+    notice_key = (
+        "mcp.warning.output_trimmed" if trimmed is not None else "mcp.warning.output_truncated"
+    )
+    truncation_notice = f"\n\n{WARNING_MARKER}{i18n.t(notice_key)}]"
     # Con `write_to` el aviso viaja en el RECIBO, no dentro del archivo: lo que se escribe es lo
     # que generó el modelo y nada más.
     if report is not None:
@@ -6867,6 +6880,21 @@ def _string_literal_notice(content: str, *, kind: str) -> Callable[[str, bool], 
 
 
 # --- Tools ------------------------------------------------------------------
+#: #580: output tokens per requested word in the flat `local_summarize` (single call and
+#: map/reduce). Measured on 2026-11-04 against the real backend (gemma4-26b-a4b and gemma3-4b,
+#: Spanish output, `max_words=150`): 1.46-1.67 tokens per written word (backticks and bold spans
+#: add up), and the model writes up to 1.49x the words asked for (224 for 150). Together ~2.5 per
+#: requested word; with the old 2 every flat cut in the log ended exactly at 2w+64 (364 with 150,
+#: then 464, 564, 664). 3 is the factor the structured summary already uses.
+SUMMARY_TOKENS_PER_WORD = 3
+SUMMARY_TOKENS_BASE = 64
+
+
+def _summary_max_tokens(words: int) -> int:
+    """#580: the cap of a flat `local_summarize` call for `words` words (514 for 150)."""
+    return int(words * SUMMARY_TOKENS_PER_WORD) + SUMMARY_TOKENS_BASE
+
+
 @mcp.tool(annotations=_annotations(TOOL_TITLES["local_summarize"]))
 def local_summarize(
     text: str | None = None,
@@ -6970,6 +6998,8 @@ def local_summarize(
             # #558: the note goes only to the map, on the input's own sections; the regroup works
             # on partial summaries (with `_build`), where the sections are no longer the input's.
             user_for=lambda piece: _build_with_note(piece.strip()),
+            # #580: the same margin as the single call, in the map, the regroup and the reduce.
+            max_tokens_for=_summary_max_tokens,
         )
 
     user = _build_with_note(content)
@@ -6977,7 +7007,9 @@ def local_summarize(
         model,
         system,
         user,
-        max_tokens=int(max_words * 2) + 64,
+        max_tokens=_summary_max_tokens(max_words),
+        # #580: if the margin is still not enough, the answer ends at its last complete sentence.
+        trim_cut=sections.trim_to_last_sentence,
         tool="local_summarize",
         role=role,
         chars_in=len(content),
