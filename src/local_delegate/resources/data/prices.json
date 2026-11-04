@@ -12,7 +12,7 @@
     "claude-opus-4-7": {"input": 5, "w5m": 6.25, "w1h": 10, "cache_read": 0.50, "output": 25, "family": "new", "supports_effort": true},
     "claude-opus-4-6": {"input": 5, "w5m": 6.25, "w1h": 10, "cache_read": 0.50, "output": 25, "family": "previous", "supports_effort": true},
     "claude-opus-4-5": {"input": 5, "w5m": 6.25, "w1h": 10, "cache_read": 0.50, "output": 25, "family": "previous", "supports_effort": true},
-    "claude-sonnet-5-5": {"input": 2, "w5m": 2.5, "w1h": 4, "cache_read": 0.20, "output": 10, "family": "new", "supports_effort": true},
+    "claude-sonnet-5-5": {"input": 2, "w5m": 2.5, "w1h": 4, "cache_read": 0.1, "output": 10, "family": "new", "supports_effort": true},
     "claude-sonnet-5": {"input": 2, "w5m": 2.5, "w1h": 4, "cache_read": 0.20, "output": 10, "family": "new", "supports_effort": true},
     "claude-sonnet-4-6": {"input": 3, "w5m": 3.75, "w1h": 6, "cache_read": 0.30, "output": 15, "family": "previous", "supports_effort": true},
     "claude-sonnet-4-5": {"input": 3, "w5m": 3.75, "w1h": 6, "cache_read": 0.30, "output": 15, "family": "previous", "supports_effort": false},
