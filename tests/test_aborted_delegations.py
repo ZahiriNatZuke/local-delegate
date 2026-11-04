@@ -190,19 +190,38 @@ def test_slot_wait_past_the_limit_fails_fast_and_is_logged(monkeypatch, slow_bac
                 slots.release()
                 slots.release()
 
-    # Without the limit the call would wait forever: the slots come back after 5 s, so the test
-    # ends (and fails on its asserts) instead of hanging.
-    timer = threading.Timer(5.0, free)
+    # Without the limit the call would wait forever: the slots come back 5 s after the call starts
+    # waiting for one, so the test ends (and fails on its asserts) instead of hanging. Issue #584:
+    # the 5 s used to count from the test's start, and a loaded Windows runner (or 16 CPU hogs on
+    # 12 cores, once in 40) reached the slot at 4.98 s, got it back at 5 s and answered fine.
+    stop = threading.Event()
+    waiting = threading.Event()
+
+    def free_after_the_wait() -> None:
+        cap = time.monotonic() + 60
+        while not stop.is_set() and time.monotonic() < cap:
+            if server._slot_waiters._n > 0:
+                waiting.set()
+                stop.wait(5.0)
+                break
+            stop.wait(0.005)
+        free()
+
+    timer = threading.Thread(target=free_after_the_wait, daemon=True)
     timer.start()
     try:
         with real_daemon(monkeypatch, TOKEN) as url:
             answer, elapsed = _call(url, CLASSIFY)
     finally:
-        timer.cancel()
+        stop.set()
+        timer.join(10)
         free()
+    assert waiting.is_set(), "the call never waited for a slot"
     text = _error_text(answer)
     assert "LOCAL_DELEGATE_QUEUE_MAX_WAIT_S" in text and "2" in text, text
-    assert elapsed < 3.0, f"the saturated queue held the caller {elapsed:.1f} s"
+    # That it failed fast, before the slots came back, is told by the error above (with them back
+    # it answers fine). This bound only keeps a call that never stops from hanging the suite.
+    assert elapsed < 20.0, f"the saturated queue held the caller {elapsed:.1f} s"
     assert slow_backend.calls == [], "a call that never got a slot reached the backend"
     events = [e for e in _events(tmp_path) if e.get("tool") == "local_classify"]
     assert len(events) == 1, events
@@ -286,13 +305,31 @@ def test_a_queue_that_moves_never_saturates(monkeypatch, slow_backend, tmp_path)
 
 
 def test_a_queue_that_does_not_move_saturates(monkeypatch, slow_backend, tmp_path):
-    """The piece ahead takes 5 s and nothing else moves: past 1 s the waiting call is told so."""
+    """The piece ahead never ends and nothing else moves: past 1 s the waiting call is told so.
+
+    Issue #584: the piece used to take 5 s from its start, so a waiting call that reached its turn
+    late (4.5 s on a loaded runner) saw it end, got the turn and answered fine. Now the piece ends
+    only when the test is done, whenever the waiting call arrives.
+    """
     monkeypatch.setattr(config, "QUEUE_MAX_WAIT_S", 1.0)
-    slow_backend.delay = 5.0
+    release = threading.Event()
+    slow_backend.delay = 0.0
+
+    def stalled(model: str, payload: dict) -> server.ChatResult:
+        result = slow_backend(model, payload)  # counted at once
+        release.wait(30)  # the piece ahead does not end while the test looks
+        return result
+
+    monkeypatch.setattr(server, "_post_chat", stalled)
     with real_daemon(monkeypatch, TOKEN) as url:
-        answer, elapsed = _behind_a_summary(url, slow_backend, cap_s=25)
+        try:
+            answer, elapsed = _behind_a_summary(url, slow_backend, cap_s=25)
+        finally:
+            release.set()  # before the daemon stops, so it does not wait for the piece
     text = _error_text(answer)
     assert "LOCAL_DELEGATE_QUEUE_MAX_WAIT_S" in text, text
-    assert elapsed < 4.0, f"the stalled queue held the caller {elapsed:.1f} s"
+    # That it failed fast is told by the error (without the limit it waits until `cap_s`). This
+    # bound only keeps a call that never stops from hanging the suite.
+    assert elapsed < 20.0, f"the stalled queue held the caller {elapsed:.1f} s"
     events = [e for e in _events(tmp_path) if e.get("tool") == "local_classify"]
     assert len(events) == 1 and events[0]["error"] == "queue_saturated", events
