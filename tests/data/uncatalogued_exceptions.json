@@ -768,6 +768,24 @@
     },
     {
       "file": "src/local_delegate/server.py",
+      "text": " Cada línea del contenido empieza por su número de línea en el fichero seguido de «| »; ese prefijo no es parte del texto: no lo copies en los valores. En las claves de ubicación ({fields}) da esos números de línea, con lo que ubican (por ejemplo «Título: líneas 120-160»).",
+      "kind": "verbatim",
+      "reason": "prompt del modelo local (#568, los números de línea de `local_extract` con `path` y un campo que pide líneas): no es texto de interfaz y su idioma lo decide REQ-028 (los prompts no se traducen)"
+    },
+    {
+      "file": "src/local_delegate/server.py",
+      "text": "Esquema de encabezados del documento completo (línea: encabezado; calculado por programa, fiable):\n",
+      "kind": "verbatim",
+      "reason": "prompt del modelo local (#568, el esquema de encabezados de un Markdown que precede al contenido en `local_extract`): no es texto de interfaz y su idioma lo decide REQ-028 (los prompts no se traducen)"
+    },
+    {
+      "file": "src/local_delegate/server.py",
+      "text": " En las claves de ubicación, une los valores de todos los objetos, en orden, y conserva sus números de línea.",
+      "kind": "verbatim",
+      "reason": "prompt del modelo local (#568, el reduce de `local_extract` troceado con un campo que pide líneas): no es texto de interfaz y su idioma lo decide REQ-028 (los prompts no se traducen)"
+    },
+    {
+      "file": "src/local_delegate/server.py",
       "text": "{} en total, como nombre:línea",
       "kind": "verbatim",
       "reason": "prompt del modelo local (#460, los números de línea de `local_explain_code` con `path`): no es texto de interfaz y su idioma lo decide REQ-028 (los prompts no se traducen)"

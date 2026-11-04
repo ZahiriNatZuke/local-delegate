@@ -1,0 +1,95 @@
+{
+  "schemaVersion": 1,
+  "slug": "extract-line-numbers",
+  "title": "local_extract numera las líneas con path para campos de ubicación (#568)",
+  "mode": "lite",
+  "traceability": "strict",
+  "status": "verifying",
+  "createdAt": "2026-11-04T13:41:00.609Z",
+  "updatedAt": "2026-11-04T13:51:41.775Z",
+  "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-11-04T13:42:14.291Z",
+      "evidence": "spec.md 6 REQ; alcance del encargo del orquestador (#568), lite",
+      "actor": "user"
+    },
+    "plan": {
+      "status": "approved",
+      "updatedAt": "2026-11-04T13:42:14.529Z",
+      "evidence": "plan.md T1-T4, cada REQ con tarea y verificación",
+      "actor": "user"
+    },
+    "quality": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "conformance": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "memory": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-11-04T13:41:00.609Z",
+      "reason": "SDD change created"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-11-04T13:42:14.291Z",
+      "evidence": "spec.md 6 REQ; alcance del encargo del orquestador (#568), lite",
+      "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-11-04T13:42:14.529Z",
+      "evidence": "plan.md T1-T4, cada REQ con tarea y verificación",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "specifying",
+      "at": "2026-11-04T13:51:41.023Z",
+      "reason": "brief y spec escritos"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-11-04T13:51:41.266Z",
+      "reason": "spec aprobada"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "implementing",
+      "at": "2026-11-04T13:51:41.518Z",
+      "reason": "plan aprobado"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-11-04T13:51:41.775Z",
+      "reason": "T1-T4 hechas, tests nuevos en verde"
+    }
+  ]
+}

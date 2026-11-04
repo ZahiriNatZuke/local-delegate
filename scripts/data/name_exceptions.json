@@ -1045,6 +1045,11 @@
       "title": "Dato congelado de corpus o caso",
       "entries": [
         {
+          "name": "secciones_con_lineas",
+          "file": "tests/test_extract_line_numbers.py",
+          "reason": "dato congelado de corpus o caso: el nombre de campo literal del issue #568, en español a propósito, para comprobar que el criterio de campo que pide líneas reconoce también los nombres en español"
+        },
+        {
           "name": "nonce-neutro",
           "file": "scripts/clean_watcher_fixtures.py",
           "reason": "dato congelado de corpus o caso: valor neutro (`NEUTRAL_NONCE`) que el limpiador ya escribió en las copias de `tests/fixtures/vigilante/*.html`; cambiarlo obligaría a reescribir esas copias (ola A10a-1)"

@@ -8,6 +8,19 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ### Corregido
 
+- **`local_extract` puede dar números de línea con `path` (#568).** Un campo de localización
+  (`secciones_con_lineas`) sobre un Markdown grande volvía `null` en los 8 trozos: el modelo nunca
+  veía un número de línea. Ahora, con `path` y un campo cuyo nombre pide líneas (una palabra
+  `lines`, `lineas`, `lineno`, o `line`/`linea` junto a `number`, `start`, `end`, `range`, `inicio`,
+  `fin` o `rango`: `sections_with_lines`, `start_line`, `lineRange`; no `location`, `price_range` ni
+  `line_items`), el modelo ve cada línea como `N| línea` con su número absoluto del fichero, también
+  en cada trozo (las piezas de #460); en un Markdown (`.md`, `.markdown`, `.mdx`) recibe además el
+  esquema de encabezados con su línea, calculado por programa, si cabe en el 15 % del trozo. El
+  prefijo que el modelo copie en los demás campos se quita, y las líneas citadas en los campos de localización
+  se comprueban contra el fichero: las que no casan van en `_local_delegate.lines_unverified` con
+  un aviso. Sin un campo así, o con `text=`, nada cambia. La skill y el bloque de memoria dicen
+  ahora que el nombre del campo tiene que pedir líneas.
+
 - **`local_commit_msg` toma el idioma del historial del repo, no del reflog (#548).** Desde un
   worktree de agente anidado en la copia principal, con el diff en su raíz o en una subcarpeta, el
   mensaje salía en el idioma del producto con el aviso «los commits recientes del repo no dejan claro

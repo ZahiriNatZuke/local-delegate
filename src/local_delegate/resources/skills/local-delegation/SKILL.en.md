@@ -90,7 +90,9 @@ its prompt does not tell it to, it reads files whole with `Read`.
 **If you are the subagent**, for a large file locate and read the range: ask `local_extract`
 or `local_explain_code` (with `path`) for the lines you need and read only that range with
 `Read(offset=…, limit=…)`. Quoting `file:line` or editing justifies reading the range, not the
-whole file.
+whole file. With `local_extract`, the field name must ask for lines (`…_with_lines`, `line_number`,
+`start_line`): only then does the model see the file's line numbers (and, in a Markdown file, its
+headings with their lines); a field without such a word cannot give lines.
 
 **Review** example (step 1 of a reviewer's prompt):
 

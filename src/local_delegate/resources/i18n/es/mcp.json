@@ -194,6 +194,7 @@
   "mcp.warning.extract_missing_keys": "el modelo omitió estas claves pedidas, se devuelven a null: {fields}",
   "mcp.warning.extract_renamed_keys": "el modelo escribió claves pedidas de otra forma, se emparejaron: {pairs}",
   "mcp.warning.extract_null_in_chunks": "documento procesado en {pieces} trozos y ninguno dio valor para: {fields}; ese null puede significar «no visto», no «no existe»",
+  "mcp.warning.extract_lines_unverified": "líneas citadas que no contienen lo que el valor nombra, o fuera del fichero; no te fíes de esos números: {lines}",
   "mcp.warning.lint_invented_files": "el resumen nombra ficheros que no aparecen en la entrada y pueden ser inventados: {files}",
   "mcp.warning.sections_not_summarized": "{n} secciones sin resumir por el límite de palabras o del modelo",
   "mcp.warning.sections_not_summarized_one": "1 sección sin resumir por el límite de palabras o del modelo",

@@ -7009,6 +7009,58 @@ def _normalize_extract_keys(
     return missing, renamed, dropped
 
 
+# --- #568: line numbers in `local_extract` --------------------------------------------------------
+# A field that asks for lines (`line_check.is_location_field`) had no possible answer: the model saw
+# the text bare, and each chunk started without knowing where it fell. With `path` and such a field,
+# the model sees `N| line` with the file's absolute line (the pieces of #460), Markdown headings
+# with their lines (by program, so it only has to filter), and the program checks the lines cited.
+# Without such a field, or with `text=`, nothing changes: a name extracted from a numbered line
+# would come back as `12| name`, so numbering is not the default.
+
+#: The share of a map piece's budget the Markdown outline may take; a longer outline is left out.
+_EXTRACT_OUTLINE_SHARE = 0.15
+#: The files whose `#` lines are headings, so the outline is computed for them only.
+_MARKDOWN_SUFFIXES = frozenset({".md", ".markdown", ".mdx"})
+
+_EXTRACT_LINES_CLAUSE = (
+    " Cada línea del contenido empieza por su número de línea en el fichero seguido de «| »; ese "
+    "prefijo no es parte del texto: no lo copies en los valores. En las claves de ubicación "
+    "({fields}) da esos números de línea, con lo que ubican (por ejemplo «Título: líneas "
+    "120-160»)."
+)
+#: The `N| ` of `_number_lines` at a line start (or `N|` ending the line, a blank file line);
+#: `12|34`, a table row, is data and stays.
+_EXTRACT_PREFIX = re.compile(r"(?m)^([ \t]*)(\d{1,7})\|(?: |$)")
+
+
+def _extract_outline_block(content: str, budget: int) -> str:
+    """The Markdown outline of `content` for the prompt, or "" if it has none or it is too long."""
+    outline = line_check.markdown_outline(content)
+    if not outline:
+        return ""
+    block = (
+        "Esquema de encabezados del documento completo (línea: encabezado; calculado por "
+        "programa, fiable):\n" + "\n".join(f"{n}: {heading}" for n, heading in outline) + "\n\n"
+    )
+    return block if len(block) <= budget * _EXTRACT_OUTLINE_SHARE else ""
+
+
+def _strip_extract_prefixes(value: Any, total_lines: int) -> Any:
+    """`value` without the `N| ` the model copied at the start of a line from its numbered input.
+
+    Only a prefix whose N is a line of the file is dropped; strings inside lists and objects too.
+    """
+    if isinstance(value, str):
+        return _EXTRACT_PREFIX.sub(
+            lambda m: m.group(1) if 1 <= int(m.group(2)) <= total_lines else m.group(0), value
+        )
+    if isinstance(value, list):
+        return [_strip_extract_prefixes(v, total_lines) for v in value]
+    if isinstance(value, dict):
+        return {k: _strip_extract_prefixes(v, total_lines) for k, v in value.items()}
+    return value
+
+
 @mcp.tool(annotations=_annotations(TOOL_TITLES["local_extract"]))
 def local_extract(
     fields: list[str],
@@ -7034,6 +7086,10 @@ def local_extract(
     difference in UTF-8, acceptable).
     By default it asks the backend for schema-constrained JSON (`LOCAL_DELEGATE_JSON_SCHEMA=auto`);
     if the backend does not support it, it retries in free mode.
+    To locate: with 'path', a field whose name asks for lines (`sections_with_lines`,
+    `line_number`, `start_line`, `lineRange`; also in Spanish) makes the model see line numbers
+    (and a Markdown file's headings with their lines), so it can answer for `Read` offset/limit;
+    cited lines that do not hold in the file are listed in `lines_unverified`.
 
     Args:
         fields: Names of the fields to extract (JSON keys).
@@ -7051,6 +7107,15 @@ def local_extract(
     max_chars = config.max_chars_for_role(role)
     key_list = ", ".join(f'"{f}"' for f in fields)
     system = _guard(f"un objeto JSON válido con exactamente estas claves: {{{key_list}}}")
+    # #568: with `path` and a field that asks for lines, the model sees them (see above).
+    location_fields = [f for f in fields if isinstance(f, str) and line_check.is_location_field(f)]
+    numbered = bool(path) and bool(location_fields)
+    outline_block = ""
+    if numbered:
+        system += _EXTRACT_LINES_CLAUSE.format(fields=", ".join(f'"{f}"' for f in location_fields))
+        # Only a Markdown file: in Python, YAML or shell a `# comment` would pass for a heading.
+        if Path(path).suffix.lower() in _MARKDOWN_SUFFIXES:
+            outline_block = _extract_outline_block(content, _map_budget(max_chars))
     use_schema = config.JSON_SCHEMA_MODE != "off"
     response_format = _json_schema_payload(fields) if use_schema else None
     json_schema_fallback = config.JSON_SCHEMA_MODE == "auto"
@@ -7059,8 +7124,20 @@ def local_extract(
     source = "path" if path else "inline"
 
     def _build(piece: str) -> str:
-        return f"Extrae los campos del siguiente contenido:\n\n{piece}"
+        # The outline goes before the frozen instruction, which stays the same literal (corpus).
+        return outline_block + f"Extrae los campos del siguiente contenido:\n\n{piece}"
 
+    reduce_system = (
+        system + " Combina los objetos parciales: para cada clave, el valor que traigan; si "
+        "difieren, el más completo y específico; null si ninguno lo trae."
+    )
+    if numbered:
+        reduce_system += (
+            " En las claves de ubicación, une los valores de todos los objetos, en orden, y "
+            "conserva sus números de línea."
+        )
+
+    # Chunking is decided on the bare text, as in #460: the prefix travels, the threshold stays.
     if len(content) > max_chars:
         # SIN nada pegado al texto (`report`): esta tool parsea el resultado. El aviso de truncado,
         # el respaldo y el ahorro bajan a `_local_delegate`.
@@ -7076,9 +7153,7 @@ def local_extract(
             max_words=_EXTRACT_WORDS,
             partial_max_words=_EXTRACT_WORDS,
             temperature=0.0,
-            reduce_system=system
-            + " Combina los objetos parciales: para cada clave, el valor que traigan; si "
-            "difieren, el más completo y específico; null si ninguno lo trae.",
+            reduce_system=reduce_system,
             build_reduce=lambda joined: (
                 "Estos son objetos JSON parciales y EN ORDEN extraídos de los fragmentos de un "
                 f"mismo documento. Devuelve un único objeto con las claves pedidas:\n\n{joined}"
@@ -7086,6 +7161,12 @@ def local_extract(
             reduce_shortcut=_extract_shortcut,
             raw_len=raw_len,
             path=path,
+            # #568: each piece numbered with its absolute lines; the outline leaves room for itself.
+            pieces=(
+                _numbered_code_pieces(content, _map_budget(max_chars) - len(outline_block))
+                if numbered
+                else None
+            ),
             response_format=response_format,
             json_schema_fallback=json_schema_fallback,
             report=report,
@@ -7102,7 +7183,7 @@ def local_extract(
         raw = _chat(
             model,
             system,
-            _build(content),
+            _build(_number_lines(content) if numbered else content),
             max_tokens=512,
             temperature=0.0,
             tool="local_extract",
@@ -7168,6 +7249,19 @@ def local_extract(
     # or `auto` after the backend refused the schema) nothing forces the model to it. Normalize
     # always, here, before `_local_delegate` is added (so it is never counted as an extra key).
     missing_keys, renamed_keys, dropped = _normalize_extract_keys(data, fields)
+    unverified: list[str] = []
+    if numbered:
+        # #568: the prefix is the input's format, not data: it leaves the other fields; the lines
+        # cited in the location fields are checked against the whole file.
+        total_lines = len(content.split("\n")) - (1 if content.endswith("\n") else 0)
+        for name in dict.fromkeys(fields):
+            if name == _EXTRACT_META_KEY or data.get(name) is None:
+                continue
+            if name in location_fields:
+                for citation in line_check.check_values(data[name], content):
+                    unverified.append(f"{name}: {citation.label()}")
+            else:
+                data[name] = _strip_extract_prefixes(data[name], total_lines)
     meta: dict = dict(truncation)
     # #473: a chunked document where some field stayed null in every chunk. No chunk saw the
     # whole document, so that null may mean "not seen", not "absent": say so, with the count
@@ -7199,6 +7293,11 @@ def local_extract(
             notices.append(i18n.t("mcp.warning.extract_dropped_keys", fields=", ".join(dropped)))
         # An earlier warning (truncation, chunked nulls) keeps its exact text (#455 contract).
         meta.setdefault("warning", "; ".join(notices))
+    if unverified:
+        meta["lines_unverified"] = unverified
+        meta.setdefault(
+            "warning", i18n.t("mcp.warning.extract_lines_unverified", lines=", ".join(unverified))
+        )
     if path and config.FEEDBACK_ENABLED:
         # Tokens de Claude de la fila en curso (REQ-035), no del modelo local.
         event = cost.in_flight_row(tool="local_extract", source="path", path=path)
