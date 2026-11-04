@@ -414,5 +414,7 @@ def head_commit_subjects(
                 if subject:
                     subjects.append(subject)
     except (_Unreadable, OSError, ValueError, IndexError, zlib.error):
+        # A damaged or hostile store ends the walk: keep the subjects read so far,
+        # and the caller fills the rest from the reflog.
         pass
     return subjects[::-1]
