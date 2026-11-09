@@ -8,6 +8,14 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ### Corregido
 
+- **`local_lint_summary` ya no bloquea el daemon con un log que tiene líneas largas sin espacios.**
+  La línea de progreso de `python -m unittest` (un punto por test) hacía que la búsqueda de
+  ficheros del inventario tardara un tiempo cuadrático, con la CPU tomada: 8 000 puntos costaban
+  6 s y 20 000, unos 40. Ahora la búsqueda es lineal y encuentra exactamente los mismos ficheros;
+  también la de contadores de hallazgos en las claves de un informe JSON.
+- **`local_summarize` con `focus` ya no avisa de que falta el enfoque cuando el resumen le dedica una sección (#593).**
+  Un título del resumen que lleva el término cuenta como mención si debajo tiene contenido propio;
+  un título copiado sin nada debajo, o solo con «(sin datos)», sigue sin contar.
 - `local_explain_code` troceado ya no da por bueno un paso de combinar notas cortado por `max_tokens` que no se puede partir: con una pregunta, lo repite una vez con el doble de margen; si sigue cortado, el aviso dice que fue al combinar notas, y una respuesta que niega algo («no se observan escrituras») avisa de que esa negación puede venir de lo perdido (#598).
 - `local_commit_msg` con un diff muy grande se queda dentro del límite de tiempo de la tool en vez de acabar cancelado: si leer todas sus partes no cabe en un presupuesto de 95 s (el cliente corta hacia los 120 s), deja de leer partes, redacta el mensaje con las leídas y el inventario completo de archivos, y avisa de cuánto se leyó (#596).
 
