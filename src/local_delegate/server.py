@@ -5240,10 +5240,14 @@ def _monotonic() -> float:
     return time.monotonic()
 
 
-def _call_started() -> float:
-    """#596: when the tool call started (its cancellation token), or now outside a call."""
+def _call_started() -> float | None:
+    """#596: when the tool call started (its cancellation token); `None` outside a tool call.
+
+    Outside one (a measurement script against the backend) there is no client limit to keep, so
+    the map reads every chunk, as always.
+    """
     token = cancellation.current()
-    return token.started if token is not None else _monotonic()
+    return token.started if token is not None else None
 
 
 def _map_time_left(budget_s: float, piece_seconds: list[float], started: float) -> bool:
@@ -5355,22 +5359,24 @@ def _truncated_calls_notice(truncated: int, calls: int, retried: int = 0) -> str
     return notice
 
 
-def _combine_cut_notice(steps: list[dict], widened: int = 0) -> str:
-    """#598: the tail of the truncation notice for the cuts left in steps that combine notes.
+def _combine_cut_notice(steps: list[dict], retried: int = 0, widened: int = 0) -> str:
+    """#598: the tail of the truncation notice, right after «truncated in N of M calls».
 
-    A cut map partial loses part of one chunk; a cut regroup or reduce loses the notes of whole
-    chunks, so an answer built on it may deny what those notes said. `widened` counts the cut
-    regroup steps redone with a wider cap (#598), named apart like the split retries of #487.
-    Empty when there is neither.
+    First how many of the cuts left are regroup steps: a cut map partial loses part of one chunk,
+    a cut regroup loses the notes of whole chunks, so an answer built on it may deny what those
+    notes said. Then the split retries of #487 (`retried`) and the cut regroup steps redone with a
+    wider cap (`widened`), named apart so the notice adds up to the `length` steps of the log.
     """
     combine = sum(
         1
         for s in steps
-        if s.get("kind") in ("regroup", "reduce")
+        if s.get("kind") == "regroup"
         and s.get("finish_reason") == "length"
         and not s.get("retried")
     )
     notice = i18n.t("mcp.warning.combine_cut", count=combine) if combine else ""
+    if retried:
+        notice += i18n.t("mcp.warning.retried_calls", retried=retried)
     if widened:
         notice += i18n.t("mcp.warning.widened_calls", widened=widened)
     return notice
@@ -5733,9 +5739,9 @@ def _chat_map_reduce(
                 regroup_system, build_user(group.strip()), cap * REGROUP_WIDEN_FACTOR, "regroup"
             )
             if wide is None:
-                if not _is_context_overflow(failed):
-                    return None
-                failed = None  # the wider cap did not fit: the cut output stays, as before
+                # The retry is optional: whatever made it fail (the wider cap did not fit the
+                # context, a timeout, a 5xx), the cut output stays, as before.
+                failed = None
                 return [out]
             # The cut step is the one redone: it stops counting as truncated (#487's bookkeeping).
             cut_step["retried"] = True
@@ -5758,7 +5764,11 @@ def _chat_map_reduce(
         piece_seconds: list[float] = []
         call_started = _call_started()
         for index, piece in enumerate(pieces, start=1):
-            if time_budget_s and not _map_time_left(time_budget_s, piece_seconds, call_started):
+            if (
+                time_budget_s
+                and call_started is not None
+                and not _map_time_left(time_budget_s, piece_seconds, call_started)
+            ):
                 time_cut = index - 1
                 break
             _inflight_progress(entry_id, index)
@@ -5860,9 +5870,12 @@ def _chat_map_reduce(
             finish_reason = "length"
         if report is None:
             if truncated_calls:
-                notice = _truncated_calls_notice(truncated_calls, calls, retried_calls)
                 if widen_cut_regroup:
-                    notice += _combine_cut_notice(steps, widened_calls)
+                    notice = i18n.t(
+                        "mcp.warning.output_truncated_calls", truncated=truncated_calls, calls=calls
+                    ) + _combine_cut_notice(steps, retried_calls, widened_calls)
+                else:
+                    notice = _truncated_calls_notice(truncated_calls, calls, retried_calls)
                 notice += _truncated_pieces_notice(
                     _truncated_piece_entries(content, truncated_pieces)
                 )
@@ -5939,7 +5952,8 @@ def _chat_map_reduce(
         event = cost.in_flight_row(tool=tool, source=source, path=path)
         text += _savings_feedback(len(content), "chars", event=event)
     if ok and calls > 1 and config.FEEDBACK_ENABLED:
-        text += "\n\n" + i18n.t("mcp.receipt.map_reduce", parts=len(pieces), calls=calls)
+        read = len(pieces) if time_cut is None else time_cut  # #596: the parts actually read
+        text += "\n\n" + i18n.t("mcp.receipt.map_reduce", parts=read, calls=calls)
     return text
 
 

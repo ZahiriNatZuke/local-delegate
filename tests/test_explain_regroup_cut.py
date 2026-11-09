@@ -129,7 +129,9 @@ def test_a_regroup_cut_again_is_named_as_a_combining_step(backend, tmp_path):
     ]
     assert cut_left  # guard: a regroup is still cut after the widened retry
     assert row["truncated_out"] is True
-    assert i18n.t("mcp.warning.combine_cut", count=len(cut_left)) in out
+    # Right after the main sentence, so «de ellas» reads as «of the cut calls».
+    main = i18n.t("mcp.warning.output_truncated_calls", truncated=len(cut_left), calls=len(_calls))
+    assert main + i18n.t("mcp.warning.combine_cut", count=len(cut_left)) in out
     assert i18n.t("mcp.warning.widened_calls", widened=len(cut_left)) in out
     # The notice adds up to the `length` steps of the log: left + split retries + widened.
     length_steps = sum(1 for s in row["steps"] if s["finish_reason"] == "length")
@@ -154,6 +156,8 @@ def test_a_widened_retry_that_overflows_keeps_the_cut_output(backend, tmp_path):
     state["answer"] = answer
     assert server._is_context_overflow(answer({"user": "GRP:x", "max_tokens": 999}))  # guard
     out = _map_reduce()
+    # Guard: the widened retry was made (and overflowed); without it this test proves nothing.
+    assert any(c["max_tokens"] > REGROUP_CAP for c in _calls if c["user"].startswith("GRP:"))
     row = _row(tmp_path, "local_summarize")
     assert row["ok"] is True
     assert row["truncated_out"] is True
@@ -212,14 +216,14 @@ def _big_code() -> str:
     return "".join(f"def part_{i}():\n{body}\n" for i in range(4))[:48_000]
 
 
-def _explain(state, reduce_text: str, reduce_finish: str) -> str:
+def _explain(state, reduce_text: str, reduce_finish: str, question: str | None = None) -> str:
     def answer(call):
         if call["user"].startswith("Toma notas"):
             return _ok("- part (línea 1): nota")
         return _ok(reduce_text, reduce_finish)
 
     state["answer"] = answer
-    return server.local_explain_code(code=_big_code())
+    return server.local_explain_code(code=_big_code(), question=question)
 
 
 NEGATIVE = "El módulo calcula valores. No se observan escrituras de ficheros."
@@ -232,6 +236,13 @@ def test_a_cut_answer_that_denies_gets_the_warning(backend):
     assert (
         i18n.t("mcp.warning.output_truncated_calls", truncated=1, calls=5).split(" en ")[0] in out
     )
+    assert i18n.t("mcp.explain.negative_unreliable") in out
+
+
+def test_with_a_question_a_cut_answer_that_denies_gets_the_warning(backend):
+    """The issue's case: a question about what the code writes, a cut, and a denial."""
+    _calls, state = backend
+    out = _explain(state, NEGATIVE, "length", question="¿Qué ficheros escribe?")
     assert i18n.t("mcp.explain.negative_unreliable") in out
 
 
@@ -257,6 +268,9 @@ def test_a_cut_answer_that_denies_nothing_gets_no_warning(backend):
         ("No solo lee el fichero, también lo valida.", False),
         ("Sin embargo, escribe el fichero.", False),
         ("Escribe el fichero.\n```\nif not x: pass\n```", False),
+        ("Devuelve None si falla y escribe sin duplicados.", False),
+        ("Comprueba `if not path` y escribe el fichero.", False),
+        ("Nothing is written to disk.", True),
     ],
 )
 def test_denies_something(answer, denies):

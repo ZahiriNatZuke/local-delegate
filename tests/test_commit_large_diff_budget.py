@@ -39,6 +39,8 @@ def backend(monkeypatch, tmp_path):
 
     monkeypatch.setattr(server, "_run_chat", run_chat)
     monkeypatch.setattr(server, "_monotonic", lambda: clock["now"])
+    # Inside a tool call, its cancellation token says when it started: the fake clock's now.
+    monkeypatch.setattr(server, "_call_started", lambda: clock["now"])
     monkeypatch.setattr(config, "FEEDBACK_ENABLED", False)
     monkeypatch.setattr(config, "LOG_DIR", tmp_path)
     monkeypatch.setattr(config, "USAGE_LOG", tmp_path / "usage.jsonl")
@@ -89,22 +91,40 @@ def _maps(calls: list[dict]) -> list[dict]:
     return [c for c in calls if MAP_MARK in c["user"]]
 
 
+def _chunks(diff: str) -> list[str]:
+    return server._chunk_text(diff, server._map_budget(config.max_chars_for_role("code")))
+
+
 def test_the_issue_diff_stops_the_map_in_time_and_says_so(backend, tmp_path):
-    """Mutant `main` (no time budget): 7 map calls and 134 fake seconds; the `<= 120` assert
+    """Mutant `main` (no time budget): 8 map calls and 148 fake seconds; the `<= 120` assert
     fails, then the one on the warning."""
     calls, clock, state = backend
     state["seconds"] = _issue_pace
     diff = _issue_diff()
     start = clock["now"]
-    pieces = len(server._chunk_text(diff, server._map_budget(config.max_chars_for_role("code"))))
-    assert pieces >= 7  # guard: the chunks of the issue
+    chunks = _chunks(diff)
+    assert len(chunks) >= 7  # guard: the chunks of the issue
     out = server.local_commit_msg(diff=diff)
     assert clock["now"] - start <= 120
-    assert 2 <= len(_maps(calls)) < pieces
-    head = i18n.t(
-        "mcp.warning.time_budget", seconds=0, read=0, total=0, chars=0, total_chars=0
-    ).split(" (")[0]
-    assert head in out
+    # 36 + 14 + 14 + 14 s, then 78 + 2 × 14 > 95: four chunks and the reduce.
+    assert len(_maps(calls)) == 4
+    read_chars = server._pieces_chars(chunks[:4])
+    warning = i18n.t(
+        "mcp.warning.time_budget",
+        seconds=95,
+        read=4,
+        total=len(chunks),
+        chars=server._machine(read_chars),
+        total_chars=server._machine(len(diff)),
+    )
+    assert warning in out
+    scope = i18n.t(
+        "mcp.receipt.commit_scope_partial",
+        files=24,
+        kept=server._machine(read_chars),
+        chars=server._machine(len(diff)),
+    )
+    assert scope in out
     assert "leídos enteros" not in out
     row = _row(tmp_path)
     assert row["truncated_in"] is True and row["ok"] is True
@@ -126,6 +146,27 @@ def test_with_time_left_the_prompts_are_unchanged(backend, monkeypatch, tmp_path
     out_without = server.local_commit_msg(diff=diff)
     assert with_budget == [(c["system"], c["user"], c["max_tokens"]) for c in calls]
     assert out == out_without
+    assert "leídos enteros" in out
+
+
+def test_the_map_reduce_receipt_counts_the_parts_read(backend, monkeypatch):
+    """With the feedback on, the receipt says the parts read, not the total (it contradicted the
+    warning). Mutant `parts=len(pieces)`: the receipt assert fails."""
+    _calls, _clock, state = backend
+    monkeypatch.setattr(config, "FEEDBACK_ENABLED", True)
+    state["seconds"] = _issue_pace
+    out = server.local_commit_msg(diff=_issue_diff())
+    assert i18n.t("mcp.receipt.map_reduce", parts=4, calls=5) in out  # 4 maps + the reduce
+
+
+def test_outside_a_tool_call_every_chunk_is_read(backend, monkeypatch):
+    """A measurement script calls the tool with no client limit: no budget (the ceiling case)."""
+    calls, _clock, state = backend
+    monkeypatch.setattr(server, "_call_started", lambda: None)
+    state["seconds"] = _issue_pace
+    diff = _issue_diff()
+    out = server.local_commit_msg(diff=diff)
+    assert len(_maps(calls)) == len(_chunks(diff))
     assert "leídos enteros" in out
 
 

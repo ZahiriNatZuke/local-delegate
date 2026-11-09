@@ -44,5 +44,8 @@ Without a declaration, list what was run. Never invent a command. -->
 - #598 is gated to explain with a question; the other chunked tools keep today's regroup.
 - The issue's count complaint («1 de 17» with 2 cut regroups) was already covered by #487: the
   split retry is named apart («aparte, 1 llamadas cortadas se repitieron…»).
+- Residual time risks (judge B, B-07): a chunk split by #455 or overflowing costs ~3× the
+  estimate after the check (worst case ~123 s); a regroup inside the reduce is not estimated; a
+  wait over 95 s before the second chunk cannot be stopped (two chunks are needed to estimate).
 - No live check against the real backend (tests fake it); the behaviour on the 125 KB diff is
   modelled with the issue's measured pace.

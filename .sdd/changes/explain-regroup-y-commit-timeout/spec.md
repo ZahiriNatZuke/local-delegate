@@ -23,7 +23,7 @@ Two failures of the chunked (map/reduce) path, both in `src/local_delegate/serve
   - Request: "#598: local_explain_code acepta regroup cortados por max_tokens tras el reintento"
   - Verify: test `tests/test_explain_regroup_cut.py`
 - **REQ-002** — Under the same flag, when a cut stays in the result, the truncation notice says how
-  many of the cut calls left are steps that combine notes (regroup/reduce), and the widened retries
+  many of the cut calls left are regroup steps (right after the main sentence), and the widened retries
   are named apart, so the notice adds up to the `length` steps of the log.
   - Request: "#598: … acepta regroup cortados por max_tokens tras el reintento"
   - Verify: test `tests/test_explain_regroup_cut.py`
@@ -36,7 +36,8 @@ Two failures of the chunked (map/reduce) path, both in `src/local_delegate/serve
 - **REQ-004** — A chunked `local_commit_msg` stops its map before a chunk when the time since the
   tool call started plus twice the slowest chunk after the first would pass
   `server.COMMIT_TIME_BUDGET_S` (95 s; the client cancels at ~120 s); the reduce drafts the message
-  from the chunks read and the whole inventory. With fewer than two chunks read it never stops.
+  from the chunks read and the whole inventory. With fewer than two chunks read it never stops,
+  and outside a tool call (no cancellation token: a measurement script) there is no budget.
   - Request: "#596: local_commit_msg con un diff de ~125 KB supera los 120 s de la tool y acaba cancelado"
   - Verify: test `tests/test_commit_large_diff_budget.py`
 - **REQ-005** — When the map stopped, the answer carries a warning with the parts and chars read
