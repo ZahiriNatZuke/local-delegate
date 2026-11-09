@@ -37,6 +37,7 @@ from hook_common import (
     cooled_model,
     deny,
     hook_text,
+    local_tools_absent,
     mod_decision_fields,
     mod_record_id,
     new_id,
@@ -123,6 +124,10 @@ def main() -> None:
         return
     if backend_down():
         record("PreToolUse", suggested=False, reason="backend_down", **common)
+        return
+    if local_tools_absent(payload):
+        # Issue #595: la sesion no tiene `local_summarize`; bloquear no dejaria a donde ir.
+        record("PreToolUse", suggested=False, reason="mcp_absent", **common)
         return
     if not backend_available():
         record("PreToolUse", suggested=False, reason="backend_missing", **common)

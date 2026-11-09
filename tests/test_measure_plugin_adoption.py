@@ -137,6 +137,26 @@ def test_plugin_calls_excluded(world):
     assert m["excluded_rows"].get("plugin") == 1
 
 
+def test_excluded_rows_bounded_to_the_period(world):
+    """`excluded_rows` cuenta solo las filas de `[since, until)`, no las de después (#597).
+
+    Guarda: la delegación del modelo registrada después de `until` sigue contando para su sesión
+    del periodo (la búsqueda de ids no tiene final). Sin el arreglo, la fila del mod de después del
+    corte sale como `plugin: 1` en el periodo.
+    """
+    world.delegation("toolu_01Late", "2026-10-21T10:00:00Z")  # después de UNTIL
+    world.session("s-late", "2026-10-19T23:00:00Z", ["toolu_01Late"])
+    world.delegation("toolu_plugin_after", "2026-10-25T10:00:00Z")  # mod, después de UNTIL
+    world.delegation("toolu_plugin_at", UNTIL)  # justo en el corte: del periodo siguiente
+    world.delegation("toolu_plugin_in", "2026-10-15T10:00:00Z")  # mod, dentro
+
+    m = world.measure()
+    assert m["with_delegation"] == 1, "guarda: la delegación tardía sigue contando"
+    assert m["excluded_rows"] == {"plugin": 1}
+    after = world.measure(since=UNTIL, until="2026-11-01T00:00:00Z")
+    assert after["excluded_rows"] == {"plugin": 2}
+
+
 def test_test_windows_excluded(world):
     """Una delegación dentro de una ventana de prueba no hace «con delegación» a su sesión.
 

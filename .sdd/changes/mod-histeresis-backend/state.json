@@ -1,0 +1,118 @@
+{
+  "schemaVersion": 1,
+  "slug": "mod-histeresis-backend",
+  "title": "El mod usa la histéresis del panel para el estado del backend",
+  "mode": "lite",
+  "traceability": "strict",
+  "status": "result-review",
+  "createdAt": "2026-11-09T12:32:24.085Z",
+  "updatedAt": "2026-11-09T13:10:45.307Z",
+  "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-11-09T12:33:07.145Z",
+      "evidence": "Autorrevision estricta: 4 REQ con test; fuente unica en common.js incrustada en metrics.HTML a nivel de modulo (los tests del panel siguen extrayendo de metrics.HTML); riesgo declarado: tests del mod que esperan CAIDO con un fallo cambian lo minimo.",
+      "actor": "agent-mod-histeresis"
+    },
+    "plan": {
+      "status": "approved",
+      "updatedAt": "2026-11-09T12:33:07.145Z",
+      "evidence": "Autorrevision estricta: 4 REQ con test; fuente unica en common.js incrustada en metrics.HTML a nivel de modulo (los tests del panel siguen extrayendo de metrics.HTML); riesgo declarado: tests del mod que esperan CAIDO con un fallo cambian lo minimo.",
+      "actor": "agent-mod-histeresis"
+    },
+    "quality": {
+      "status": "approved",
+      "updatedAt": "2026-11-09T13:10:44.768Z",
+      "evidence": "Suite 6642 passed/30 skipped; plugin test 158/0; controles positivos: 3 tests del mod fallan con status.js de HEAD, la atadura falla con un mutante; ruff limpio",
+      "actor": "agent-mod-histeresis"
+    },
+    "conformance": {
+      "status": "approved",
+      "updatedAt": "2026-11-09T13:10:45.307Z",
+      "evidence": "Dos jueces conforms-with-notes; A1 aceptado y escrito en la spec, A2 reforzado, A3 y B1 aceptados (review.md)",
+      "actor": "agent-mod-histeresis"
+    },
+    "memory": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-11-09T12:32:24.085Z",
+      "reason": "SDD change created"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "specifying",
+      "at": "2026-11-09T12:33:06.891Z",
+      "reason": "causa vista en status.js y metrics.py"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-11-09T12:33:07.145Z",
+      "evidence": "Autorrevision estricta: 4 REQ con test; fuente unica en common.js incrustada en metrics.HTML a nivel de modulo (los tests del panel siguen extrayendo de metrics.HTML); riesgo declarado: tests del mod que esperan CAIDO con un fallo cambian lo minimo.",
+      "actor": "agent-mod-histeresis"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-11-09T12:33:07.145Z",
+      "evidence": "Autorrevision estricta: 4 REQ con test; fuente unica en common.js incrustada en metrics.HTML a nivel de modulo (los tests del panel siguen extrayendo de metrics.HTML); riesgo declarado: tests del mod que esperan CAIDO con un fallo cambian lo minimo.",
+      "actor": "agent-mod-histeresis"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-11-09T12:33:07.420Z",
+      "reason": "ok"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "implementing",
+      "at": "2026-11-09T12:33:07.652Z",
+      "reason": "ok"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-11-09T13:10:44.506Z",
+      "reason": "implementado y probado"
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-11-09T13:10:44.768Z",
+      "evidence": "Suite 6642 passed/30 skipped; plugin test 158/0; controles positivos: 3 tests del mod fallan con status.js de HEAD, la atadura falla con un mutante; ruff limpio",
+      "actor": "agent-mod-histeresis"
+    },
+    {
+      "type": "transition",
+      "from": "verifying",
+      "to": "result-review",
+      "at": "2026-11-09T13:10:45.031Z",
+      "reason": "quality aprobada"
+    },
+    {
+      "type": "gate",
+      "gate": "conformance",
+      "status": "approved",
+      "at": "2026-11-09T13:10:45.307Z",
+      "evidence": "Dos jueces conforms-with-notes; A1 aceptado y escrito en la spec, A2 reforzado, A3 y B1 aceptados (review.md)",
+      "actor": "agent-mod-histeresis"
+    }
+  ]
+}

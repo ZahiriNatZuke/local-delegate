@@ -43,7 +43,14 @@ def _load(name: str, path: Path):
     return module
 
 
-classifier = _load("_rc_read_classifier", HOOKS / "read_classifier.py")
+# Loaded by path, the classifier is a loose script: its `import path_rules` looks next to it, as
+# the hooks run. Without the folder on the path the file only ran inside the whole suite (another
+# test had put it there).
+sys.path.insert(0, str(HOOKS))
+try:
+    classifier = _load("_rc_read_classifier", HOOKS / "read_classifier.py")
+finally:
+    sys.path.remove(str(HOOKS))
 common = _load("_rc_hook_common", HOOKS / "hook_common.py")
 measure = _load("_rc_measure_read_paths", ROOT / "scripts" / "measure_read_paths.py")
 
@@ -888,3 +895,45 @@ def test_harmless_first_tokens_never_write():
     for first in classifier.HARMLESS_FIRST:
         found = classifier.classify_shell(f"{first} docs/notes.md")
         assert all(a.kind != "write" for a in found), (first, found)
+
+
+# Commands that start with a harmless first word and still read a file: a second line, a
+# substitution. The mod's prefilter (`READ_CHAINING` in `mod/read.js`) must send them to the
+# classifier, or the shell hook steps aside for a mod that never looked.
+_HIDDEN_READS = [
+    ("Bash", "cd docs\ncat ../CHANGELOG.md"),
+    ("Bash", "ls\ncat CHANGELOG.md"),
+    ("Bash", "ls\r\ncat CHANGELOG.md"),
+    ("Bash", "echo $(cat CHANGELOG.md)"),
+    ("PowerShell", "echo (Get-Content CHANGELOG.md)"),
+]
+READ_JS = (
+    ROOT
+    / "src"
+    / "local_delegate"
+    / "resources"
+    / "claude-plugin"
+    / "local-delegate"
+    / "mod"
+    / "read.js"
+)
+
+
+def _mod_prefilter() -> re.Pattern[str]:
+    source = READ_JS.read_text(encoding="utf-8")
+    found = re.search(r"^const READ_CHAINING = /(.+)/$", source, re.MULTILINE)
+    assert found, "READ_CHAINING no está en mod/read.js"
+    return re.compile(found.group(1))
+
+
+@pytest.mark.parametrize(("tool", "command"), _HIDDEN_READS)
+def test_mod_prefilter_does_not_drop_a_hidden_read(tool, command):
+    first = command.split()[0].lower()
+    assert first in classifier.HARMLESS_FIRST, (
+        "el caso tiene que empezar por una palabra inofensiva"
+    )
+    reads = [a for a in classifier.classify_shell(command, tool) if a.kind == "read"]
+    assert reads and reads[0].path.endswith("CHANGELOG.md"), (command, reads)
+    assert _mod_prefilter().search(command), (
+        f"el prefiltro del mod descartaría {command!r} sin clasificar"
+    )

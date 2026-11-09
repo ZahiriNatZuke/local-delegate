@@ -141,9 +141,10 @@ def _read_file_cached(path) -> list[dict]:
                     # Formato nuevo aunque la fila sea vieja (REQ-006): todo lo que sale de
                     # aquí (/api/events, /api/stats, «En curso») ya habla con claves en inglés.
                     row = json.loads(line)
-                    rows.append(
-                        legacy_names.normalize("usage", row) if isinstance(row, dict) else row
-                    )
+                    # Un trozo de una línea partida puede ser JSON válido sin ser una fila (`123`):
+                    # se aparta aquí, porque quien lee las filas hace `row.get(...)`.
+                    if isinstance(row, dict):
+                        rows.append(legacy_names.normalize("usage", row))
                 except json.JSONDecodeError:
                     continue
     except OSError:
@@ -2753,25 +2754,10 @@ function turnWords(it){
   return T('model.turn', {models: (it.turn_in_use||[]).join(', ') || T('model.turn_nothing')});
 }
 
-function initialView(){
-  return {status:'checking', available:false, ref:null, lastGood:null, failures:0, last:null};
-}
-
-// Estado VISIBLE del backend (REQ-028), lo que pintan el badge y las filas. Un sondeo bueno lo
-// deja disponible al instante; un fallo tras uno bueno conserva lo que se pintaba (y el sondeo
-// bueno como referencia de las filas); el SEGUNDO fallo seguido lo pasa a caído. Sin ningún
-// sondeo bueno todavía, el primer fallo es «comprobando».
-function visibleState(prev, bj){
-  const THRESHOLD = 2;   // fallos seguidos antes de «caído»
-  const p = prev || initialView();
-  if(bj && bj.available) return {status:'connected', available:true, ref:bj, lastGood:bj, failures:0, last:bj};
-  const failures = (p.failures||0) + 1;
-  if(failures < THRESHOLD && p.lastGood)
-    return {status:'connected', available:true, ref:p.lastGood, lastGood:p.lastGood, failures, last:bj};
-  if(failures < THRESHOLD)
-    return {status:'checking', available:false, ref:bj, lastGood:null, failures, last:bj};
-  return {status:'down', available:false, ref:bj, lastGood:p.lastGood, failures, last:bj};
-}
+// `initialView` y `visibleState` (REQ-028) viven en `mod/common.js`, entre `backend-view:start`
+// y `backend-view:end`: el mod de la banda (issue #612) aplica la MISMA regla. Se incrustan aqui
+// al importar (`_backend_view_js`).
+__BACKEND_VIEW__
 
 // Badge del backend (REQ-014) a partir del estado visible: {texto, clase, title}.
 function badgeBackend(view, baseUrl){
@@ -3788,6 +3774,35 @@ pollSystem();
 </script>
 </body>
 </html>"""
+
+#: Marcas del bloque de `mod/common.js` que comparten el panel y el mod (issue #612).
+BACKEND_VIEW_START = "// backend-view:start"
+BACKEND_VIEW_END = "// backend-view:end"
+
+
+def _backend_view_js() -> str:
+    """El estado visible del backend (`initialView`, `visibleState`), tal como lo usa el mod.
+
+    Una sola fuente: `resources/claude-plugin/local-delegate/mod/common.js`. Se quita `export` para
+    que en el panel sean funciones sueltas. Sin el fichero el panel no puede pintar el backend, asi
+    que falla al importar en vez de servir una pagina rota.
+    """
+    path = (
+        Path(str(_resource_files("local_delegate")))
+        / "resources"
+        / "claude-plugin"
+        / "local-delegate"
+        / "mod"
+        / "common.js"
+    )
+    source = path.read_text(encoding="utf-8")
+    start = source.index(BACKEND_VIEW_START)
+    end = source.index(BACKEND_VIEW_END, start)
+    block = source[source.index("\n", start) + 1 : end]
+    return re.sub(r"^export ", "", block, flags=re.MULTILINE).rstrip("\n")
+
+
+HTML = HTML.replace("__BACKEND_VIEW__", _backend_view_js())
 
 
 if __name__ == "__main__":

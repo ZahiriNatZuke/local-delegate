@@ -1,0 +1,250 @@
+"""#596: a chunked `local_commit_msg` stops its map before the tool's time limit, and says so.
+
+A ~125 KB diff (24 files) went to the backend in 7 chunks in series plus the reduce and the model
+load: 124 s, and the client cancelled the tool at 120 s. Now the map stops before a chunk that
+would leave no time for itself and the reduce within `COMMIT_TIME_BUDGET_S` of the call; the
+message is drafted from the chunks read and the whole inventory, with a warning. A diff that has
+the time keeps its prompts byte for byte (the corpus `techo-commit-156k` checks it too). The
+backend is faked (`_run_chat`) and so is the clock (`_monotonic`): no network, log in tmp.
+"""
+
+from __future__ import annotations
+
+import json
+from pathlib import Path
+
+import pytest
+
+from local_delegate import config, i18n, server
+
+MAP_MARK = "Di qué cambia en este fragmento"
+
+
+def _ok(text: str, finish: str = "stop"):
+    return server.ChatResult(text=text, ok=True, finish_reason=finish)
+
+
+@pytest.fixture
+def backend(monkeypatch, tmp_path):
+    """Every call recorded; each call advances the fake clock by `state["seconds"](n)`."""
+    calls: list[dict] = []
+    clock = {"now": 1000.0}
+    state = {"seconds": lambda n: 0.0}
+
+    def run_chat(model, system, user, max_tokens, temperature, **_):
+        calls.append({"system": system, "user": user, "max_tokens": max_tokens})
+        clock["now"] += state["seconds"](len(calls))
+        text = "- src/x.py: cambia algo" if MAP_MARK in user else "feat(core): cambia\n\n- a\n- b"
+        return _ok(text), 0, None, [server.Attempt(model, True, None, None, 0)]
+
+    monkeypatch.setattr(server, "_run_chat", run_chat)
+    monkeypatch.setattr(server, "_monotonic", lambda: clock["now"])
+    # Inside a tool call, its cancellation token says when it started: the fake clock's now.
+    monkeypatch.setattr(server, "_call_started", lambda: clock["now"])
+    monkeypatch.setattr(config, "FEEDBACK_ENABLED", False)
+    monkeypatch.setattr(config, "LOG_DIR", tmp_path)
+    monkeypatch.setattr(config, "USAGE_LOG", tmp_path / "usage.jsonl")
+    monkeypatch.setenv("LOCAL_DELEGATE_LANG", "es")
+    monkeypatch.setenv("LOCAL_DELEGATE_COMMIT_LANGUAGE", "es")
+    i18n.reset()
+    return calls, clock, state
+
+
+def _row(tmp_path: Path) -> dict:
+    rows = [
+        json.loads(line)
+        for file in sorted(tmp_path.glob("*.jsonl"))
+        for line in file.read_text(encoding="utf-8").splitlines()
+        if line.strip() and json.loads(line)["tool"] == "local_commit_msg"
+    ]
+    assert len(rows) == 1
+    return rows[0]
+
+
+def _file(n: int, hunks: int) -> str:
+    out = [
+        f"diff --git a/src/mod_{n}.py b/src/mod_{n}.py\n",
+        f"index 0000000..1111111 100644\n--- a/src/mod_{n}.py\n+++ b/src/mod_{n}.py\n",
+    ]
+    for h in range(hunks):
+        out.append(f"@@ -{h * 20 + 1},10 +{h * 20 + 1},10 @@ def func_{n}_{h}():\n")
+        out += [f"     contexto {n} {h} {i} sin cambios en esta linea\n" for i in range(3)]
+        out += [f"-    viejo_{n}_{h}_{i} = calcula(a, b)\n" for i in range(4)]
+        out += [f"+    nuevo_{n}_{h}_{i} = calcula(a, b, c)\n" for i in range(4)]
+        out += [f"     contexto {n} {h} {i} tras el cambio\n" for i in range(3)]
+    return "".join(out)
+
+
+def _issue_diff() -> str:
+    """~125 000 chars in 24 files: 7–8 chunks for the `code` role at 20 000 chars."""
+    diff = "".join(_file(n, 9) for n in range(24))
+    assert 115_000 < len(diff) < 135_000, len(diff)  # guard: the size of the issue
+    return diff
+
+
+def _issue_pace(n: int) -> float:
+    """The issue's pace: the first call also loads the model (36 s), the rest 14 s each."""
+    return 36.0 if n == 1 else 14.0
+
+
+def _maps(calls: list[dict]) -> list[dict]:
+    return [c for c in calls if MAP_MARK in c["user"]]
+
+
+def _chunks(diff: str) -> list[str]:
+    return server._chunk_text(diff, server._map_budget(config.max_chars_for_role("code")))
+
+
+def test_the_issue_diff_stops_the_map_in_time_and_says_so(backend, tmp_path):
+    """Mutant `main` (no time budget): 8 map calls and 148 fake seconds; the `<= 120` assert
+    fails, then the one on the warning."""
+    calls, clock, state = backend
+    state["seconds"] = _issue_pace
+    diff = _issue_diff()
+    start = clock["now"]
+    chunks = _chunks(diff)
+    assert len(chunks) >= 7  # guard: the chunks of the issue
+    out = server.local_commit_msg(diff=diff)
+    assert clock["now"] - start <= 120
+    # 36 + 14 + 14 + 14 s, then 78 + 2 × 14 > 95: four chunks and the reduce.
+    assert len(_maps(calls)) == 4
+    read_chars = server._pieces_chars(chunks[:4])
+    warning = i18n.t(
+        "mcp.warning.time_budget",
+        seconds=95,
+        read=4,
+        total=len(chunks),
+        chars=server._machine(read_chars),
+        total_chars=server._machine(len(diff)),
+    )
+    assert warning in out
+    scope = i18n.t(
+        "mcp.receipt.commit_scope_partial",
+        files=24,
+        kept=server._machine(read_chars),
+        chars=server._machine(len(diff)),
+    )
+    assert scope in out
+    assert "leídos enteros" not in out
+    row = _row(tmp_path)
+    assert row["truncated_in"] is True and row["ok"] is True
+    # The message is still drafted, over the whole inventory: every file is named there.
+    reduce_user = calls[-1]["user"]
+    assert MAP_MARK not in reduce_user
+    assert all(f"src/mod_{n}.py" in reduce_user for n in range(24))
+
+
+def test_with_time_left_the_prompts_are_unchanged(backend, monkeypatch, tmp_path):
+    """A diff whose chunks fit the budget keeps every prompt and the answer byte for byte."""
+    calls, _clock, state = backend
+    state["seconds"] = lambda n: 5.0
+    diff = _issue_diff()
+    out = server.local_commit_msg(diff=diff)
+    with_budget = [(c["system"], c["user"], c["max_tokens"]) for c in calls]
+    calls.clear()
+    monkeypatch.setattr(server, "COMMIT_TIME_BUDGET_S", 0)
+    out_without = server.local_commit_msg(diff=diff)
+    assert with_budget == [(c["system"], c["user"], c["max_tokens"]) for c in calls]
+    assert out == out_without
+    assert "leídos enteros" in out
+
+
+def test_the_map_reduce_receipt_counts_the_parts_read(backend, monkeypatch):
+    """With the feedback on, the receipt says the parts read, not the total (it contradicted the
+    warning). Mutant `parts=len(pieces)`: the receipt assert fails."""
+    _calls, _clock, state = backend
+    monkeypatch.setattr(config, "FEEDBACK_ENABLED", True)
+    state["seconds"] = _issue_pace
+    out = server.local_commit_msg(diff=_issue_diff())
+    assert i18n.t("mcp.receipt.map_reduce", parts=4, calls=5) in out  # 4 maps + the reduce
+
+
+def test_outside_a_tool_call_every_chunk_is_read(backend, monkeypatch):
+    """A measurement script calls the tool with no client limit: no budget (the ceiling case)."""
+    calls, _clock, state = backend
+    monkeypatch.setattr(server, "_call_started", lambda: None)
+    state["seconds"] = _issue_pace
+    diff = _issue_diff()
+    out = server.local_commit_msg(diff=diff)
+    assert len(_maps(calls)) == len(_chunks(diff))
+    assert "leídos enteros" in out
+
+
+def test_the_first_chunk_alone_never_stops_the_map():
+    """The first chunk pays the model load: with fewer than two chunks read, no estimate."""
+    assert server._map_time_left(10, [], 0.0)
+    assert server._map_time_left(10, [500.0], 0.0)
+
+
+def test_the_estimate_skips_the_first_chunk(monkeypatch):
+    monkeypatch.setattr(server, "_monotonic", lambda: 50.0)
+    # 50 s elapsed + 2 × 14 s (the slowest after the first) = 78 ≤ 95.
+    assert server._map_time_left(95, [36.0, 14.0], 0.0)
+    # 50 + 2 × 30 = 110 > 95.
+    assert not server._map_time_left(95, [36.0, 14.0, 30.0], 0.0)
+
+
+# --- (j) the worst case: a chunk split in two levels near the end, and a regroup in the reduce ----
+
+
+def _paragraph(tag: str, chars: int = 9_000) -> str:
+    line = f"{tag} " + "x" * 60 + "\n"
+    return line * (chars // len(line))
+
+
+def _worst_case(monkeypatch, clock, budget_s):
+    """Four chunks; the third is cut at every depth (7 calls if split twice); the four notes of
+    4 200 chars do not fit one reduce of 10 000, so the reduce regroups. 36 s for the first
+    call, 15 s for each other."""
+    content = "\n\n".join(_paragraph(t) for t in ("uno", "dos", "CUTME", "cuatro"))
+    note = "nota " + "n" * 64 + "\n"
+
+    def run_chat(model, system, user, max_tokens, temperature, **_):
+        clock["calls"].append(user[:4])
+        clock["now"] += 36.0 if len(clock["calls"]) == 1 else 15.0
+        if user.startswith("MAP:"):
+            finish = "length" if "CUTME" in user else "stop"
+            return _ok(note * 60, finish), 0, None, [server.Attempt(model, True, None, None, 0)]
+        if user.startswith("GRP:"):
+            return _ok(note * 10), 0, None, [server.Attempt(model, True, None, None, 0)]
+        return _ok("final"), 0, None, [server.Attempt(model, True, None, None, 0)]
+
+    monkeypatch.setattr(server, "_run_chat", run_chat)
+    start = clock["now"]
+    out = server._chat_map_reduce(
+        "m",
+        "MAP",
+        content,
+        lambda piece: f"GRP:{piece}",
+        max_chars=12_500,  # budget 10 000
+        tool="local_commit_msg",
+        source="inline",
+        max_words=100,
+        user_for=lambda piece: f"MAP:{piece}",
+        reduce_system="RED",
+        build_reduce=lambda joined: f"RED:{joined}",
+        time_budget_s=budget_s,
+        time_report={},
+    )
+    assert len(server._chunk_text(content, 10_000)) == 4  # guard: the four chunks
+    return out, clock["now"] - start
+
+
+def test_the_worst_case_stays_well_under_the_client_limit(backend, monkeypatch):
+    """Mutant «retries do not look at the clock»: the third chunk is split twice (7 calls) and the
+    reduce regroups, 156 fake seconds or more; the `<= 110` assert fails."""
+    _calls, clock, _state = backend
+    clock["calls"] = []
+    out, elapsed = _worst_case(monkeypatch, clock, 95.0)
+    assert "MAP:" in clock["calls"] and "RED:" in clock["calls"]  # guard: it mapped and reduced
+    assert elapsed <= 110  # a margin under the 120 s of the client
+    assert i18n.t("mcp.warning.time_budget_retries", seconds=95) in out
+
+
+def test_without_a_budget_the_worst_case_does_retry(backend, monkeypatch):
+    """Control: the same input without a budget does split the cut chunk and regroup."""
+    _calls, clock, _state = backend
+    clock["calls"] = []
+    _out, elapsed = _worst_case(monkeypatch, clock, None)
+    assert clock["calls"].count("MAP:") >= 7 and "GRP:" in clock["calls"]
+    assert elapsed > 120

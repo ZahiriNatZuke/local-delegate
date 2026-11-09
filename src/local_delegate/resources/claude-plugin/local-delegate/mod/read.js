@@ -94,8 +94,10 @@ const READ_SUMMARIZABLE_TOOLS = ['Read', 'Bash', 'PowerShell']
 // goes to the classifier, which decides (nothing is dropped on a guess).
 const READ_DEFAULT_TOOLS = ['Read', 'Bash', 'PowerShell', 'Grep']
 // A harmless first word (`harmless_first`, from Python) only counts without redirection, pipe or
-// chaining (`> | ; &`): those go on to the prefilter whatever they start with.
-const READ_CHAINING = /[>|;&]/
+// chaining (`> | ; &`), a second line or a command substitution (`` ` ``, `$(`, PowerShell's `(`):
+// those go on to the prefilter whatever they start with. `read_classifier` splits segments on the
+// same `\n ( )`, so `cd docs` + newline + `cat ../CHANGELOG.md` is a read there too.
+const READ_CHAINING = /[>|;&(\n\r`]/
 // The input keys that name a file for the size check (`Read`, `Grep`).
 const READ_PATH_KEYS = ['file_path', 'path']
 // Shell words looked at for the size check: at most this many, so a long command stays cheap.

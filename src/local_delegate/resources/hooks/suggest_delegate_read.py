@@ -72,6 +72,7 @@ from hook_common import (
     deny,
     emit,
     hook_text,
+    local_tools_absent,
     mod_decision_fields,
     mod_record_id,
     new_id,
@@ -277,6 +278,9 @@ def suggest_media_read(
     if backend_down():
         record("PreToolUse", suggested=False, reason="backend_down", **common)
         return
+    if local_tools_absent(payload):
+        record("PreToolUse", suggested=False, reason="mcp_absent", **common)
+        return
     subagent = bool(str(payload.get("agent_id") or "").strip())
     emit(
         "PreToolUse",
@@ -391,6 +395,12 @@ def main() -> None:
         # El servidor tiene el corte abierto (issue #436): cualquier `local_*` responderia que el
         # backend no esta. Ni bloqueo ni sugerencia; el motivo queda en el dato.
         record("PreToolUse", suggested=False, reason="backend_down", **common)
+        return
+
+    if local_tools_absent(payload):
+        # La sesion no tiene las tools `local_*` (issue #595): avisar o bloquear mandaria al agente
+        # a una tool que no existe. Solo con prueba de ausencia en el transcript; si no, como siempre.
+        record("PreToolUse", suggested=False, reason="mcp_absent", **common)
         return
 
     # Solo la prosa se bloquea, y solo si hay a donde delegar. Cada una de las tres guardas

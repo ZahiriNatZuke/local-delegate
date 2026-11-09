@@ -8,6 +8,19 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ### Corregido
 
+- **`local_summarize` da más margen al resumen de una entrada grande con el `max_words` por defecto (#580).**
+  Con más de 16 000 caracteres el modelo escribe bastante más que las palabras pedidas, y el tope
+  de 3·w+64 tokens (514 con 150) lo cortaba a menudo. Ahora el tope crece con la entrada a partir de
+  ahí (884 tokens para 23 400 caracteres), sin pasar de `LOCAL_DELEGATE_CHUNK_MAX_TOKENS` ni de
+  lo que el contexto del modelo deja tras la entrada; también en el resumen por secciones. Si aun
+  así se corta, sigue acabando en la última frase completa y con aviso.
+- **`tests/test_read_classifier.py` ya se puede correr solo.** Cargaba el clasificador por ruta sin
+  la carpeta de los hooks en el `sys.path`, y su `import path_rules` fallaba al recoger los tests si
+  ningún otro fichero la había puesto antes. Solo cambian los tests.
+- **`local_explain_code` ya no da por falsa una cita correcta porque la línea use una constante o un alias del nombre (#616).**
+  Si el fichero liga otro nombre al citado (`TOOL = 'local_summarize'`, `summarize_fn = readSummarize`,
+  `import … as`), una línea que usa ese nombre confirma la cita. Una línea sin el nombre ni sus
+  alias sigue avisando, y una comparación o una expresión más larga no crean alias.
 - **`local_lint_summary` ya no bloquea el daemon con un log que tiene líneas largas sin espacios.**
   La línea de progreso de `python -m unittest` (un punto por test) hacía que la búsqueda de
   ficheros del inventario tardara un tiempo cuadrático, con la CPU tomada: 8 000 puntos costaban
@@ -16,6 +29,49 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 - **`local_summarize` con `focus` ya no avisa de que falta el enfoque cuando el resumen le dedica una sección (#593).**
   Un título del resumen que lleva el término cuenta como mención si debajo tiene contenido propio;
   un título copiado sin nada debajo, o solo con «(sin datos)», sigue sin contar.
+- Los hooks de `Read` y de shell ya no sugieren ni exigen una tool `local_*` cuando la sesión no
+  tiene el MCP `local-delegate`: si el transcript dice que esas tools no están, dejan pasar la
+  lectura y lo anotan como `mcp_absent`; ante la duda, avisan como antes (#595).
+- El mod de lectura ya no deja pasar sin mirar un comando de varias líneas o con `$(…)`, comillas
+  invertidas o `(…)` que empieza por `cd`, `ls` o `echo`: ahora lo clasifica, y la lectura entera de
+  un fichero grande de prosa recibe su resumen o su aviso.
+- Un fallo pasajero al leer `test-windows.json` o `backend-params.json` (un antivirus con el fichero
+  abierto) ya no se queda en caché hasta que el fichero cambie: la siguiente llamada lo vuelve a
+  leer, y las pruebas marcadas y los parámetros del backend vuelven solos.
+- **La medición de adopción del plugin ya no cuenta como exclusiones del periodo base las filas de
+  después (#597).** `scripts/measure_plugin_adoption.py` sacaba `excluded_rows` de la búsqueda de
+  delegaciones, que no tiene final a propósito, y el periodo base mostraba `plugin: 146` antes de
+  que existiera el plugin. Ahora el desglose cuenta solo las filas de `[since, until)`; el
+  porcentaje y las delegaciones tardías de una sesión del periodo no cambian. El periodo «después»
+  tampoco cuenta ya las filas de pasados sus 14 días.
+- **`recompute-cost` ya no reescribe el relleno de atribución ni `cost-aggregates.json` con menos
+  de lo que tenían.** Si el fichero existe y no se pudo leer (un antivirus o un indexador que lo
+  tiene abierto un instante), lo reintenta; si sigue sin poder, se para sin reescribirlo y lo dice
+  («no se pudo leer…»), en vez de tomarlo por vacío y perder lo que ya no se puede reconstruir. Uno
+  dañado se guarda aparte (`<nombre>.damaged-<fecha>`) antes de reemplazarlo, y el resumen lo
+  cuenta. Dos `recompute-cost` a la vez ya no se pisan: el segundo espera al primero.
+- **La telemetría de los hooks ya no pierde ni parte líneas cuando escriben varios a la vez.** Cada
+  hook, los hilos del daemon y el CLI añaden su línea bajo un cerrojo de fichero (en Windows
+  `msvcrt.locking`, en macOS y Linux `flock`) y de una sola escritura. Antes, en Windows, seis
+  procesos con 300 líneas cada uno perdían entre el 10 y el 16 % y dejaban líneas partidas. Pasa
+  lo mismo con el log de fallos de los hooks y con las notas de bloqueo, donde dos bloqueos a la vez
+  ya no se quitan la nota el uno al otro. En el camino del mod, una decisión que llega a la vez por
+  dos vías se escribe una sola vez. Si la línea anterior quedó partida, la nueva ya no se le pega
+  detrás, y el panel y la medición de adopción se saltan un trozo de línea que sea JSON válido sin
+  ser un evento, en vez de fallar. El cerrojo espera como mucho un segundo: un hook no se cuelga por
+  la telemetría.
+- `local_extract`: un campo que pide la línea de un título y recibe el esquema de encabezados entero
+  ya no sale en silencio: se recorta al encabezado que nombra solo si no hay duda (nombre en
+  singular y un único encabezado); si la hay, se deja como vino. Los dos casos van en
+  `_local_delegate.outline_copies`, con aviso. «Título: línea 1» sobre un encabezado ya no se marca
+  como línea dudosa (#594).
+- `local_explain_code` troceado con una pregunta ya no da por bueno un paso de combinar notas cortado por `max_tokens` que no se puede partir: lo repite una vez con más margen de salida (el doble, dentro de lo que acepta el backend); si sigue cortado, el aviso dice que fue al combinar notas y que una afirmación de que algo no ocurre puede deberse al corte (#598).
+- `local_commit_msg` con un diff muy grande se queda dentro del límite de tiempo de la tool en vez de acabar cancelado: si leer todas sus partes no cabe en un presupuesto de 95 s (el cliente corta hacia los 120 s), deja de leer partes (y de repetir trozos cortados o reagrupar notas cuando no da tiempo), redacta el mensaje con lo leído y el inventario completo de archivos, y avisa de cuánto se leyó (#596).
+- **La banda del mod ya no marca el backend como CAÍDO por un solo sondeo lento** (#612). Aplica la
+  misma regla que el panel web, con el mismo código: un fallo tras un sondeo bueno conserva lo que
+  se veía y solo el segundo fallo seguido es caído. Tras un fallo, el sondeo siguiente llega al
+  segundo y no a los 30, así que un pico suelto apenas se nota; con la caída ya confirmada, vuelve a
+  mirar cada 30 s.
 - **El mod de lectura ya no vuelve a resumir un fichero cuyo texto no ha cambiado (#608).**
   Mientras Claude Code siga abierto reutiliza el resumen que ya hizo, también desde un subagente,
   y lo registra en la telemetría de hooks como `summary_reused`: sin delegación nueva, sin fila en
