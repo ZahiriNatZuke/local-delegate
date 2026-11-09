@@ -967,7 +967,8 @@ def local_tools_absent(payload: object) -> bool:
         if not isinstance(payload, Mapping):
             return False
         path = _session_transcript(payload)
-        if path is None or path.stat().st_size > TRANSCRIPT_MAX_BYTES:
+        # Solo un fichero normal: una FIFO o un dispositivo colgarian `read_bytes`.
+        if path is None or not path.is_file() or path.stat().st_size > TRANSCRIPT_MAX_BYTES:
             return False
         data = path.read_bytes()
         if _LOCAL_TOOL_USE.search(data):
@@ -995,6 +996,10 @@ def local_tools_absent(payload: object) -> bool:
         if not seen:
             return False
         if any("local-delegate" in str(server) for server in pending):
+            return False
+        # Sin ninguna tool MCP diferida, las MCP pueden estar cargadas de entrada (tool search
+        # apagado o por debajo de su umbral) y el delta solo traer built-ins: no prueba nada.
+        if not any(name.startswith("mcp__") for name in deferred):
             return False
         return not any(LOCAL_TOOL_MARK in name for name in deferred)
     except (OSError, ValueError, TypeError, AttributeError, RecursionError):

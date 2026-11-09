@@ -256,6 +256,8 @@ def test_absent_only_with_a_delta_and_no_local_tool(hook_common, tmp_path):
     # Con prefijo de plugin tambien cuenta.
     plugin = "mcp__plugin_local-delegate_local-delegate__local_status"
     assert _absent(hook_common, tmp_path, [_delta(added=[plugin])]) is False
+    # Only built-ins deferred: the MCP tools may be loaded up front (tool search off), no proof.
+    assert _absent(hook_common, tmp_path, [_delta(added=["Monitor", "CronList"])]) is False
 
 
 def test_a_local_tool_use_means_present(hook_common, tmp_path):
@@ -291,6 +293,8 @@ def test_doubt_means_suggest(hook_common, tmp_path, monkeypatch):
         hook_common.local_tools_absent({"transcript_path": str(tmp_path / "missing.jsonl")})
         is False
     )
+    # A folder (or a FIFO) is not read.
+    assert hook_common.local_tools_absent({"transcript_path": str(tmp_path)}) is False
     transcript = _write_transcript(tmp_path / "t.jsonl", ABSENT)
     # Un `agent_id` con forma de ruta no construye ninguna.
     assert (
