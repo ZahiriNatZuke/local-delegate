@@ -11,14 +11,81 @@ from __future__ import annotations
 
 import json
 import re
+from array import array
 from collections import Counter
 
-#: A file name or path with a known extension.
-FILE = re.compile(
-    r"(?:[\w.~-]+[/\\])*[\w.-]+\.(?:py|pyi|ts|tsx|js|jsx|mjs|cjs|json|jsonl|md|txt|toml|ya?ml|"
-    r"ps1|sh|cfg|ini|lock|html|css|scss|rs|go|java|exe|log|spec\.ts)\b",
-    re.IGNORECASE,
+_EXTENSIONS = (
+    r"\.(?:py|pyi|ts|tsx|js|jsx|mjs|cjs|json|jsonl|md|txt|toml|ya?ml|"
+    r"ps1|sh|cfg|ini|lock|html|css|scss|rs|go|java|exe|log|spec\.ts)\b"
 )
+#: A file name or path with a known extension. The definition; search a log with `file_spans`,
+#: which gives the same matches in linear time (`findall` of this is quadratic on a long run).
+FILE = re.compile(r"(?:[\w.~-]+[/\\])*[\w.-]+" + _EXTENSIONS, re.IGNORECASE)
+#: The extension of `FILE` at a dot, with the alternative and the `\b` the full pattern would take.
+_EXT = re.compile(_EXTENSIONS, re.IGNORECASE)
+#: The characters a match of `FILE` is made of: a run of them holds every match whole.
+_PATH_RUN = re.compile(r"[\w.~/\\-]+")
+_SLASHES = "/\\"
+
+
+def _run_spans(text: str, start: int, end: int) -> list[tuple[int, int]]:
+    """The spans of `FILE.finditer(text)` inside the run `text[start:end]`, in O(end - start).
+
+    `FILE` is `D* F`, `D` = `[\\w.~-]+[/\\\\]` and `F` = `[\\w.-]+` plus an extension. A `D` is
+    deterministic: `[\\w.~-]+` cannot take a slash, so it always runs to the next one, and backing
+    off never makes a slash follow it. `F` from `x` takes the RIGHTMOST dot `q > x` of the `[\\w.-]`
+    stretch of `x` where an extension matches (greedy backtracking tries the longest first) and
+    ends where that extension ends. `D*` is greedy: the most segments first, one fewer when that
+    fails. So the match from each position is computed once, scanning from the right.
+    """
+    # Nothing at or after the end of the last extension can be part of a match.
+    last_dot = text.rfind(".", start, end)
+    while last_dot != -1 and not _EXT.match(text, last_dot, end):
+        last_dot = text.rfind(".", start, last_dot)
+    if last_dot == -1:
+        return []
+    end = _EXT.match(text, last_dot, end).end()
+    # Match end from each position of the run, -1 if none: 8 bytes per character.
+    best = array("q", [-1]) * (end - start + 1)
+    f_end = -1  # where `F` ends from left of here in the current `[\w.-]` stretch, -1 if none
+    slash = -1  # the slash that ends the current `[\w.~-]` stretch, -1 if none
+    for x in range(end - 1, start - 1, -1):
+        char = text[x]
+        if char in _SLASHES:
+            f_end = -1
+            slash = x
+            continue
+        here = -1
+        if char == "~":
+            f_end = -1
+        else:
+            here = f_end
+            if f_end == -1 and char == ".":
+                found = _EXT.match(text, x, end)
+                if found:
+                    f_end = found.end()
+        deeper = best[slash + 1 - start] if slash != -1 else -1
+        best[x - start] = deeper if deeper != -1 else here
+    spans: list[tuple[int, int]] = []
+    x = start
+    while x < end:
+        stop = best[x - start]
+        if stop != -1:
+            spans.append((x, stop))
+            x = stop
+        else:
+            x += 1
+    return spans
+
+
+def file_spans(text: str) -> list[tuple[int, int]]:
+    """The spans of `FILE.finditer(text)`, in linear time: run by run of path characters."""
+    spans: list[tuple[int, int]] = []
+    for run in _PATH_RUN.finditer(text):
+        spans += _run_spans(text, run.start(), run.end())
+    return spans
+
+
 #: A rule or error code (`E501`, `TS2345`, `PLR2004`) or a kebab/slash rule name.
 CODE = re.compile(r"\b[A-Z]{1,5}\d{2,5}\b|\b[a-z]+(?:[/-][a-z]+){1,4}\b")
 #: A rule of the inventory: a code with letters and digits (`E501`, `TS2345`), the first
@@ -36,7 +103,8 @@ def files_by_frequency(log: str) -> list[str]:
     """The files the log names, most named first (ties in order of first appearance)."""
     seen: dict[str, str] = {}
     counts: Counter[str] = Counter()
-    for match in FILE.findall(log):
+    for begin, end in file_spans(log):
+        match = log[begin:end]
         key = norm_path(match)
         seen.setdefault(key, match.replace("\\", "/"))
         counts[key] += 1
@@ -63,7 +131,12 @@ def code_counts(log: str) -> list[tuple[str, int]]:
     in a warning line (`D203` in "D203 and D211 are incompatible"). Wave lint-counts gives these
     figures to the model of the single `long` call so that it copies them instead of counting.
     """
-    found = RULE.findall(FILE.sub(" ", log))
+    pieces, last = [], 0
+    for begin, end in file_spans(log):
+        pieces += [log[last:begin], " "]
+        last = end
+    pieces.append(log[last:])
+    found = RULE.findall("".join(pieces))
     counts = Counter(found)
     order: dict[str, int] = {}
     for match in found:
@@ -207,7 +280,25 @@ _DIAGNOSTIC_KEYS = frozenset(
 )
 
 #: A counter of findings in a JSON report (`errorCount`, `fatalErrorCount`, `offense_count`).
+#: The definition, kept as the reference of `is_finding_counter`, which checks it in linear time.
 _FINDING_COUNT = re.compile(r"(?i).*(?:error|warning|offense|issue|problem|violation).*count")
+_FINDING_WORD = re.compile(r"error|warning|offense|issue|problem|violation", re.IGNORECASE)
+_COUNT_SUFFIX = re.compile(r"count", re.IGNORECASE)
+
+
+def is_finding_counter(key: str) -> bool:
+    """`_FINDING_COUNT.fullmatch(key)`, in linear time: a JSON key is untrusted input.
+
+    The `.*` of the pattern takes no line break, so the key holds none; it ends in `count`, and a
+    word of the list comes before that suffix. The fullmatch backtracked in quadratic time.
+    """
+    size = len(key) - 5
+    return (
+        size >= 0
+        and "\n" not in key
+        and _COUNT_SUFFIX.fullmatch(key, size) is not None
+        and _FINDING_WORD.search(key, 0, size) is not None
+    )
 
 
 def _is_number(value: object) -> bool:
@@ -228,7 +319,7 @@ def _json_object_is_clean(obj: dict) -> bool:
     """
     if obj.get("errored") is True:
         return False
-    if any(_FINDING_COUNT.fullmatch(k) and _is_number(v) and v for k, v in obj.items()):
+    if any(is_finding_counter(k) and _is_number(v) and v for k, v in obj.items()):
         return False
     present = [key for key in obj if key in _DIAGNOSTIC_KEYS]
     if not present:

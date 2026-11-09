@@ -449,6 +449,10 @@ def _read_document(file: Path) -> tuple[dict | None, str | None]:
     except FileNotFoundError:
         return _empty_document(), None
     except OSError:
+        # Transient (an antivirus holding the file without sharing): `_resolved` does not cache it.
+        global _transient_reads
+        with _cache_lock:
+            _transient_reads += 1
         return None, "file_unreadable"
     if len(data) > MAX_FILE_BYTES:  # it grew between `stat` and the read
         return None, "file_too_large"
@@ -672,6 +676,11 @@ class _Resolved(NamedTuple):
 _cache_lock = threading.Lock()
 # {file path: (key, _Resolved)}; key = (path, (st_mtime_ns, st_size, st_ino) | None, raw variable).
 _cache: dict[str, tuple[tuple, _Resolved]] = {}
+# How many reads failed with an `OSError` other than `FileNotFoundError` (`_read_document`). If it
+# moves while `_resolved` computes, the result is not cached: a lock that is gone by the next call
+# must not leave "no parameters" until the file changes. Another thread's failure also counts: one
+# more read, never a stale answer.
+_transient_reads = 0
 
 
 def _file_key(file: Path) -> tuple[int, int, int] | None:
@@ -720,11 +729,15 @@ def _resolved(log_dir: Path | None = None) -> _Resolved:
         cached = _cache.get(str(file))
         if cached is not None and cached[0] == key:
             return cached[1]
+    with _cache_lock:
+        failures = _transient_reads
     result = _compute(log_dir)
     try:
         still = (str(file), _file_key(file), raw) == key
     except OSError:
         still = False
+    with _cache_lock:
+        still = still and _transient_reads == failures
     if still:
         with _cache_lock:
             _cache[str(file)] = (key, result)

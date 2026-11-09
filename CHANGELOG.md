@@ -8,6 +8,23 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ### Corregido
 
+- **`local_lint_summary` ya no bloquea el daemon con un log que tiene líneas largas sin espacios.**
+  La línea de progreso de `python -m unittest` (un punto por test) hacía que la búsqueda de
+  ficheros del inventario tardara un tiempo cuadrático, con la CPU tomada: 8 000 puntos costaban
+  6 s y 20 000, unos 40. Ahora la búsqueda es lineal y encuentra exactamente los mismos ficheros;
+  también la de contadores de hallazgos en las claves de un informe JSON.
+- **`local_summarize` con `focus` ya no avisa de que falta el enfoque cuando el resumen le dedica una sección (#593).**
+  Un título del resumen que lleva el término cuenta como mención si debajo tiene contenido propio;
+  un título copiado sin nada debajo, o solo con «(sin datos)», sigue sin contar.
+- Los hooks de `Read` y de shell ya no sugieren ni exigen una tool `local_*` cuando la sesión no
+  tiene el MCP `local-delegate`: si el transcript dice que esas tools no están, dejan pasar la
+  lectura y lo anotan como `mcp_absent`; ante la duda, avisan como antes (#595).
+- El mod de lectura ya no deja pasar sin mirar un comando de varias líneas o con `$(…)`, comillas
+  invertidas o `(…)` que empieza por `cd`, `ls` o `echo`: ahora lo clasifica, y la lectura entera de
+  un fichero grande de prosa recibe su resumen o su aviso.
+- Un fallo pasajero al leer `test-windows.json` o `backend-params.json` (un antivirus con el fichero
+  abierto) ya no se queda en caché hasta que el fichero cambie: la siguiente llamada lo vuelve a
+  leer, y las pruebas marcadas y los parámetros del backend vuelven solos.
 - **La medición de adopción del plugin ya no cuenta como exclusiones del periodo base las filas de
   después (#597).** `scripts/measure_plugin_adoption.py` sacaba `excluded_rows` de la búsqueda de
   delegaciones, que no tiene final a propósito, y el periodo base mostraba `plugin: 146` antes de
