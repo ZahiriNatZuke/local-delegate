@@ -57,7 +57,10 @@ def test_versioned_corpus_still_mirrors_production():
     `_translate_system` deja una diferencia de una tool fuera de la lista y falla `== []`."""
     notices: list[str] = []
     assert build.check_versioned(DESTINATION, notices=notices) == []
-    assert _noticed_tools(notices, DESTINATION) == set(build.PROMPT_BOUNDARIES["0.36.0"])
+    # #586 (0.50.0): el `system` de `local_extract` pide null y prohíbe rellenar con otra clave.
+    assert _noticed_tools(notices, DESTINATION) == set(build.PROMPT_BOUNDARIES["0.36.0"]) | set(
+        build.PROMPT_BOUNDARIES["0.50.0"]
+    )
     # B2c: el commit cambia también sus topes; el resto de tools, solo el `system`. B2f: el lint
     # largo de una llamada cambia también su `user_template` (`lint-9k`), y solo esa tool.
     assert all("system" in n or "max_tokens" in n or "user_template" in n for n in notices), (
@@ -1057,11 +1060,12 @@ def test_affinity_check_is_ok_with_any_environment_language(monkeypatch, environ
     notices: list[str] = []
     assert build.check_versioned_affinity(build.AFFINITY_TARGET, notices=notices) == []
     # B2b-2: lint ×4 y summarize ×1 cambian a propósito (REQ-028). B2c: los 40 commits también
-    # (cuerpo obligatorio y topes nuevos).
+    # (cuerpo obligatorio y topes nuevos). #586 (0.50.0): los 9 de `local_extract` (su `system`).
     assert _noticed_tools(notices, build.AFFINITY_TARGET) == {
         "local_lint_summary",
         "local_summarize",
         "local_commit_msg",
+        "local_extract",
     }
 
 

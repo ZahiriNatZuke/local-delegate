@@ -72,6 +72,12 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   se veía y solo el segundo fallo seguido es caído. Tras un fallo, el sondeo siguiente llega al
   segundo y no a los 30, así que un pico suelto apenas se nota; con la caída ya confirmada, vuelve a
   mirar cada 30 s.
+- `local_extract` ya no rellena una clave sin dato con lo que encuentra cerca: el prompt de todas sus
+  llamadas (la única, cada trozo y el paso final) pide `null` para lo que la entrada no trae y
+  prohíbe usar el dato de otra clave o de otra fila, sin dejar de resumir, contar, clasificar o
+  deducir lo que el contenido permite; antes solo lo decían los trozos. Una lista
+  vacía que el modelo escribía como el texto `"[]"` vuelve como `[]` (el texto queda en
+  `_local_delegate.decoded_keys`) (#586).
 
 ## [0.49.0] - 2026-11-04
 
