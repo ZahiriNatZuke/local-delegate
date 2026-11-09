@@ -76,6 +76,8 @@ def read(path: Path, since: str | None) -> list[dict]:
             event = json.loads(line)
         except ValueError:
             continue
+        if not isinstance(event, dict):
+            continue  # un trozo de una línea partida que es JSON válido sin ser un evento
         if since and str(event.get("ts", "")) < since:
             continue
         events.append(event)
