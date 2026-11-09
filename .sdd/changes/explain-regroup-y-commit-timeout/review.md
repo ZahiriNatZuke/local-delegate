@@ -4,7 +4,7 @@
 
 - Level: standard
 - Judges: result-reviewer-A, result-reviewer-B
-- Security reviewer: none (no auth, secrets, permissions or user data touched)
+- Security reviewer: no — no auth, secrets, permissions or user data touched
 - Verdict: conforms-with-notes
 
 ## Specification comparison

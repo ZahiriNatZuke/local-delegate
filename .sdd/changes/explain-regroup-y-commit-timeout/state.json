@@ -6,7 +6,7 @@
   "traceability": "strict",
   "status": "result-review",
   "createdAt": "2026-11-09T10:44:02.927Z",
-  "updatedAt": "2026-11-09T12:35:58.447Z",
+  "updatedAt": "2026-11-09T12:36:13.721Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -27,10 +27,10 @@
       "actor": "user"
     },
     "conformance": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-11-09T12:36:13.721Z",
+      "evidence": "Revisión estándar con 2 jueces: conforms-with-notes; hallazgos B-01, A1, A2/B-04, A3/B-02, A4/B-09, B-03, B-05, A5, B-08 corregidos; B-06 y B-07 aceptados y anotados; suite 6720 passed (1 flake de test_install bajo xdist que pasa solo); 7 mutantes fallan por su assert",
+      "actor": "user"
     },
     "memory": {
       "status": "pending",
@@ -121,6 +121,14 @@
       "to": "result-review",
       "at": "2026-11-09T12:35:58.447Z",
       "reason": "suite y mutantes verdes tras correcciones"
+    },
+    {
+      "type": "gate",
+      "gate": "conformance",
+      "status": "approved",
+      "at": "2026-11-09T12:36:13.721Z",
+      "evidence": "Revisión estándar con 2 jueces: conforms-with-notes; hallazgos B-01, A1, A2/B-04, A3/B-02, A4/B-09, B-03, B-05, A5, B-08 corregidos; B-06 y B-07 aceptados y anotados; suite 6720 passed (1 flake de test_install bajo xdist que pasa solo); 7 mutantes fallan por su assert",
+      "actor": "user"
     }
   ]
 }
