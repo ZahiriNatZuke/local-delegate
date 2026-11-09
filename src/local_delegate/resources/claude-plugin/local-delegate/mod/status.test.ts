@@ -1126,8 +1126,18 @@ test('no answer from /api/backend is not a probe: the held state stays', { optio
   // The daemon does not answer the backend route: neither a second failure nor a recovery.
   daemon = { stats: UP.stats, inflight: UP.inflight }
   await $.session.measure(measureInput())
-  // So the next failure is the second in a row: down, as the panel would say.
+  // That beat says it has no backend data, as before (the daemon did not answer that route)...
+  expect((await line($)).line).toContain('sin datos')
+  // ...but it did not reset the count: the next failure is the second in a row, down.
   daemon = DOWN
   await $.session.measure(measureInput())
   expect((await line($)).line).toContain('○ modelo local caído')
+  // Nor does it count as a failure: good, no answer, one failure is still ready.
+  daemon = UP
+  await $.session.measure(measureInput())
+  daemon = { stats: UP.stats, inflight: UP.inflight }
+  await $.session.measure(measureInput())
+  daemon = DOWN
+  await $.session.measure(measureInput())
+  expect((await line($)).line).toContain('● qwen3-8b listo')
 })
