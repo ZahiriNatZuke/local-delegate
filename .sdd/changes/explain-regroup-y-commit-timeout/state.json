@@ -4,9 +4,9 @@
   "title": "Regroup cortado en explain_code y diff grande en commit_msg (#598, #596)",
   "mode": "lite",
   "traceability": "strict",
-  "status": "verifying",
+  "status": "result-review",
   "createdAt": "2026-11-09T10:44:02.927Z",
-  "updatedAt": "2026-11-09T12:11:13.210Z",
+  "updatedAt": "2026-11-09T12:35:58.447Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -114,6 +114,13 @@
       "at": "2026-11-09T12:11:13.210Z",
       "evidence": "pytest -n 2 suite completa: 6715 passed, 29 skipped; ruff check/format verdes; 5 mutantes fallan por su assert; sdd check verde",
       "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "verifying",
+      "to": "result-review",
+      "at": "2026-11-09T12:35:58.447Z",
+      "reason": "suite y mutantes verdes tras correcciones"
     }
   ]
 }
