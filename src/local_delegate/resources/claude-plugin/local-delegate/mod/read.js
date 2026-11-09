@@ -135,6 +135,9 @@ const READ_STATE = {
 const READ_SUMMARY_CACHE_ENTRIES = 16
 const READ_SUMMARY_CACHE_CHARS = 4 * 1024 * 1024
 const READ_SUMMARY_CACHE_FILE_CHARS = 1024 * 1024
+// What starts a warning of the server in a tool's answer, and its receipt of a server-side read.
+const READ_WARNING_MARK = '[local-delegate warning:'
+const READ_RECEIPT = /^\((?:leído|read) server-side: .*\)$/
 
 function readText(value) {
   return typeof value === 'string' && value.trim() !== ''
@@ -845,6 +848,15 @@ async function readSummarize($, path) {
   }
 }
 
+/** The summary without the server's receipt lines (`mcp.receipt.read_server_side*`, es and en). */
+function readWithoutReceipt(text) {
+  return text
+    .split('\n')
+    .filter(line => !READ_RECEIPT.test(line))
+    .join('\n')
+    .trimEnd()
+}
+
 /** The file's text, or null when it cannot be read (then no summary of it is reused or kept). */
 async function readFileText($, path) {
   try {
@@ -898,9 +910,11 @@ function readKeepSummary(key, text, summary) {
  * The summary of the file: the one kept while its text is the same (`reused`), else a new one from
  * `local_summarize`, kept only when the file read the same before and after it. Null when it fails.
  */
-async function readSummaryOf($, key, path) {
-  const read = await readFileText($, path)
-  // Over the per-file cap it is never kept: no second read of a file that large.
+async function readSummaryOf($, key, path, bytes) {
+  // Over the per-file cap it is never kept: a file that large is not even read for it (its size
+  // in bytes is never below its length in characters).
+  const small = !(typeof bytes === 'number' && bytes > READ_SUMMARY_CACHE_FILE_CHARS)
+  const read = small ? await readFileText($, path) : null
   const before = read !== null && read.length <= READ_SUMMARY_CACHE_FILE_CHARS ? read : null
   const kept = readCachedSummary(key, before)
   if (kept !== null) {
@@ -910,7 +924,9 @@ async function readSummaryOf($, key, path) {
   if (text === null) {
     return null
   }
-  if (before !== null && (await readFileText($, path)) === before) {
+  // A summary with a warning of the server (cut output, fallback model, input cut) is not kept:
+  // reused, the same flawed answer would come back for as long as the file does not change.
+  if (before !== null && !text.includes(READ_WARNING_MARK) && (await readFileText($, path)) === before) {
     readKeepSummary(key, before, text)
   }
   return { text, reused: false }
@@ -986,18 +1002,21 @@ async function readSteer($, common, e, next, ctx) {
     }
     decision = 'summarized'
   }
-  const summary = await readSummaryOf($, key, path)
+  const summary = await readSummaryOf($, key, path, classified.bytes)
   if (summary === null) {
     return readPass($, common, e, next, ctx, 'summary_failed')
   }
+  let text = summary.text
   if (summary.reused) {
-    // Issue #608: no delegation (no `tools/call`, no row in the usage log), so its own decision.
+    // Issue #608: no delegation (no `tools/call`, no row in the usage log), so its own decision,
+    // and the server's receipt («read server-side: …») does not pass for a new read.
     decision = 'summary_reused'
+    text = `${readWithoutReceipt(text)}\n\n${common.t('read.summary.reused')}`
   }
   READ_STATE.guard.add(key)
   await readSaveGuard($, common, sessionId)
   await readRecord($, common, classified, decision, sessionId)
-  return readAsResult(e, `${await readSummaryHeader($, common, ctx)}\n\n${summary.text}`)
+  return readAsResult(e, `${await readSummaryHeader($, common, ctx)}\n\n${text}`)
 }
 
 /**

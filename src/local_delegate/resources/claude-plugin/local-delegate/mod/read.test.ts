@@ -1381,3 +1381,55 @@ test('the_summary_cache_caps_its_characters', async () => {
   await call(env, { tool: 'Read', file_path: names[0] }) // the oldest: dropped for room
   expect(env.mcpCalls).toHaveLength(6)
 })
+
+test('a_summary_with_a_warning_is_not_kept', async () => {
+  // A cut output, a fallback model or a cut input: reused, it would come back unchanged forever.
+  const env = makeEnv({ classify: byInput, mcpResult: summaryResult('## Intro\nPART\n\n[local-delegate warning: output cut]') })
+  await call(env, { tool: 'Read', file_path: BIG })
+  await call(env, { tool: 'Read', file_path: BIG })
+  expect(env.mcpCalls).toHaveLength(2)
+  expect(decisions(env)).toEqual(['auto_summarized', 'auto_summarized'])
+  // Guard: the same summary without the warning is kept.
+  const clean = makeEnv({ classify: byInput, mcpResult: summaryResult('## Intro\nPART') })
+  await call(clean, { tool: 'Read', file_path: BIG })
+  await call(clean, { tool: 'Read', file_path: BIG })
+  expect(clean.mcpCalls).toHaveLength(1)
+})
+
+test('a_reused_summary_says_so_instead_of_the_receipt', async () => {
+  for (const receipt of [
+    '(leído server-side: 64 KB ≈ 16000 tokens de Claude que no entraron a tu contexto)',
+    '(read server-side: 64 KB ≈ 16000 Claude tokens that did not enter your context)',
+  ]) {
+    const env = makeEnv({ classify: byInput, mcpResult: summaryResult(`## Intro\nSUMMARY OF THE FILE\n\n${receipt}`) })
+    const first = await call(env, { tool: 'Read', file_path: BIG })
+    expect(first.result.file.content.includes(receipt)).toBe(true)
+    expect(first.result.file.content.includes('read.summary.reused')).toBe(false)
+    const again = await call(env, { tool: 'Read', file_path: BIG })
+    expect(env.mcpCalls).toHaveLength(1)
+    expect(again.result.file.content.includes('SUMMARY OF THE FILE')).toBe(true)
+    expect(again.result.file.content.includes(receipt)).toBe(false)
+    expect(again.result.file.content.endsWith('read.summary.reused')).toBe(true)
+  }
+})
+
+test('a_file_over_the_cap_is_not_read_for_the_cache', async () => {
+  const reads = async (bytes: number) => {
+    const env = makeEnv({ classify: () => readCls({ bytes }) })
+    let count = 0
+    const realRead = env.$.fs.read
+    env.$.fs.read = async (p: string) => {
+      if (p === BIG) count += 1
+      return realRead(p)
+    }
+    await call(env, { tool: 'Read', file_path: BIG })
+    await call(env, { tool: 'Read', file_path: BIG })
+    return { count, calls: env.mcpCalls.length }
+  }
+  const small = await reads(BIG_BYTES)
+  const large = await reads(1024 * 1024 + 1)
+  // The small one: read before and after the first summary, and before the reused one.
+  expect(small.calls).toBe(1)
+  expect(large.calls).toBe(2)
+  expect(small.count - large.count).toBe(3)
+})

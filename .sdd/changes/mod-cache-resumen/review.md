@@ -33,3 +33,10 @@
 ## Required follow-up
 
 - Ninguno antes de cerrar. Repeticiones entre procesos (28 de 157 en el #608) quedarían para otra tarjeta si hacen falta.
+
+## Revisión independiente posterior (orquestador)
+
+- F8: un resumen con `[local-delegate warning:` se guardaba y se repetiría mientras el fichero no cambie: ya no se guarda (`a_summary_with_a_warning_is_not_kept`, mutante sin la comprobación: 1 llamada en vez de 2).
+- F9: el resumen reutilizado repetía el recibo «leído server-side»: se quita y se dice que se reutilizó (`a_reused_summary_says_so_instead_of_the_receipt`, es y en; mutante sin quitarlo: falla).
+- F10: un fichero de más de 1 M se leía solo para descartarlo: ahora decide `classified.bytes` (`a_file_over_the_cap_is_not_read_for_the_cache`; mutante que siempre lee: falla).
+- Pendiente, al final de la cola: regenerar las huellas de los hooks tras mezclar `main` (#603 cambió los hooks).
