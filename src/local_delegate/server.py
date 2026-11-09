@@ -6845,6 +6845,37 @@ def _focus_note(text: str, terms: list[str]) -> str:
 _FOCUS_LANGUAGE_LINES = 400
 #: A heading line of the summary: copying a title is not summarizing its section.
 _SUMMARY_HEADING_LINE = re.compile(r"^ {0,3}#{1,6}[ \t].*$", re.MULTILINE)
+#: #593: words a heading's own body needs, outside parentheses, for the heading to count: a
+#: placeholder such as «(sin datos)» or «(sin resumir)» is no summary of the section.
+_HEADING_BODY_MIN_WORDS = 3
+_PARENTHESIZED = re.compile(r"\([^()]*\)")
+#: A word of a heading's body: letters or digits, so the `_` of «_(sin datos)_» is none.
+_BODY_WORD = re.compile(r"[^\W_]+")
+#: A level-1 heading: the title of the whole summary, which copies the document's, never a section.
+_TOP_HEADING = re.compile(r" {0,3}#[ \t]")
+
+
+def _without_bare_headings(summary: str) -> str:
+    """`summary` without the heading lines that are no mention of their section (#593).
+
+    A heading of level 2 or more counts when its own body (to the next heading of any level) has
+    `_HEADING_BODY_MIN_WORDS` words outside parentheses; a level-1 heading never does.
+    """
+    matches = list(_SUMMARY_HEADING_LINE.finditer(summary))
+    kept: list[str] = []
+    last = 0
+    for i, match in enumerate(matches):
+        end = matches[i + 1].start() if i + 1 < len(matches) else len(summary)
+        body = _PARENTHESIZED.sub(" ", summary[match.end() : end])
+        kept.append(summary[last : match.start()])
+        if (
+            not _TOP_HEADING.match(match.group())
+            and len(_BODY_WORD.findall(body)) >= _HEADING_BODY_MIN_WORDS
+        ):
+            kept.append(match.group())
+        last = match.end()
+    kept.append(summary[last:])
+    return "".join(kept)
 
 
 def _summary_language() -> str:
@@ -6875,8 +6906,9 @@ def _focus_missing(
         in_input = [term for term in in_input if term in literal]
     if not in_input:
         return []
-    # Copying a title is not summarizing its section: the heading lines do not count as mentions.
-    if sections.focus_terms_in(_SUMMARY_HEADING_LINE.sub("", summary), in_input):
+    # Copying a title is not summarizing its section: a heading line counts as a mention only when
+    # its own body says something (#593).
+    if sections.focus_terms_in(_without_bare_headings(summary), in_input):
         return []
     return in_input
 
