@@ -6,6 +6,15 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Corregido
+
+- **`recompute-cost` ya no reescribe el relleno de atribución ni `cost-aggregates.json` con menos
+  de lo que tenían.** Si el fichero existe y no se pudo leer (un antivirus o un indexador que lo
+  tiene abierto un instante), lo reintenta; si sigue sin poder, se para sin reescribirlo y lo dice
+  («no se pudo leer…»), en vez de tomarlo por vacío y perder lo que ya no se puede reconstruir. Uno
+  dañado se guarda aparte (`<nombre>.damaged-<fecha>`) antes de reemplazarlo, y el resumen lo
+  cuenta. Dos `recompute-cost` a la vez ya no se pisan: el segundo espera al primero.
+
 ## [0.49.0] - 2026-11-04
 
 Más fiable bajo carga y con datos dudosos. `local_extract` puede dar números de línea reales
