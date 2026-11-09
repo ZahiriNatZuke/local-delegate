@@ -7121,11 +7121,25 @@ def _string_literal_notice(content: str, *, kind: str) -> Callable[[str, bool], 
 #: then 464, 564, 664). 3 is the factor the structured summary already uses.
 SUMMARY_TOKENS_PER_WORD = 3
 SUMMARY_TOKENS_BASE = 64
+#: #580, reopened in 0.49.0: on a big input the model writes far more than the words asked for, and
+#: 3w+64 still cut it (5 of 5 calls over a 23 409-char Markdown on the Mac, at exactly 514). The
+#: answers grow with the input: in the usage log the median output of the `stop` answers of
+#: gemma4-26b-a4b goes 442 -> 552 -> 769 tokens from 8-16 K to 16-24 K to 24-32 K characters, and
+#: every cut of a default-sized call is on 16 K characters or more. Above `SUMMARY_FLAT_CHARS` the
+#: single call gets one more token per `SUMMARY_CHARS_PER_EXTRA_TOKEN` characters (884 for that
+#: case, 2 114 at the 48 000 of the `long` role). A cap is only a bound: a model that is done stops.
+SUMMARY_FLAT_CHARS = 16_000
+SUMMARY_CHARS_PER_EXTRA_TOKEN = 20
 
 
-def _summary_max_tokens(words: int) -> int:
-    """#580: the cap of a flat `local_summarize` call for `words` words (514 for 150)."""
-    return int(words * SUMMARY_TOKENS_PER_WORD) + SUMMARY_TOKENS_BASE
+def _summary_max_tokens(words: int, chars: int = 0) -> int:
+    """#580: the cap of a flat `local_summarize` call for `words` words (514 for 150).
+
+    `chars`, the characters of the input of a single call, widens it above `SUMMARY_FLAT_CHARS`.
+    The map/reduce passes the words only: its pieces have their own size.
+    """
+    extra = max(0, chars - SUMMARY_FLAT_CHARS) // SUMMARY_CHARS_PER_EXTRA_TOKEN
+    return int(words * SUMMARY_TOKENS_PER_WORD) + SUMMARY_TOKENS_BASE + extra
 
 
 @mcp.tool(annotations=_annotations(TOOL_TITLES["local_summarize"]))
@@ -7240,7 +7254,8 @@ def local_summarize(
         model,
         system,
         user,
-        max_tokens=_summary_max_tokens(max_words),
+        # #580: a big input gets room to finish (reopened in 0.49.0).
+        max_tokens=_summary_max_tokens(max_words, len(content)),
         # #580: if the margin is still not enough, the answer ends at its last complete sentence.
         trim_cut=sections.trim_to_last_sentence,
         tool="local_summarize",
