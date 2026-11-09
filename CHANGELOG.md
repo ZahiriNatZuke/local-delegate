@@ -47,6 +47,11 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   detrás, y el panel y la medición de adopción se saltan un trozo de línea que sea JSON válido sin
   ser un evento, en vez de fallar. El cerrojo espera como mucho un segundo: un hook no se cuelga por
   la telemetría.
+- `local_extract`: un campo que pide la línea de un título y recibe el esquema de encabezados entero
+  ya no sale en silencio: se recorta al encabezado que nombra solo si no hay duda (nombre en
+  singular y un único encabezado); si la hay, se deja como vino. Los dos casos van en
+  `_local_delegate.outline_copies`, con aviso. «Título: línea 1» sobre un encabezado ya no se marca
+  como línea dudosa (#594).
 
 ## [0.49.0] - 2026-11-04
 
