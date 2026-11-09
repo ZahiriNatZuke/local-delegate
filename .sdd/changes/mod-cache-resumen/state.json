@@ -4,9 +4,9 @@
   "title": "El mod de lectura reutiliza el resumen de un fichero sin cambios (#608)",
   "mode": "lite",
   "traceability": "strict",
-  "status": "closing",
+  "status": "closed",
   "createdAt": "2026-11-09T12:07:13.648Z",
-  "updatedAt": "2026-11-09T13:29:29.623Z",
+  "updatedAt": "2026-11-09T19:09:40.145Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -33,10 +33,10 @@
       "actor": "user"
     },
     "memory": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-11-09T19:09:39.941Z",
+      "evidence": "Sin nota aparte: lo durable va en el CHANGELOG 0.50.0, el PR y review.md; la jornada del 2026-11-09 del vault la escribe la sesión principal",
+      "actor": "user"
     }
   },
   "history": [
@@ -120,6 +120,21 @@
       "to": "closing",
       "at": "2026-11-09T13:29:29.623Z",
       "reason": "conformance aprobada"
+    },
+    {
+      "type": "gate",
+      "gate": "memory",
+      "status": "approved",
+      "at": "2026-11-09T19:09:39.941Z",
+      "evidence": "Sin nota aparte: lo durable va en el CHANGELOG 0.50.0, el PR y review.md; la jornada del 2026-11-09 del vault la escribe la sesión principal",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "closing",
+      "to": "closed",
+      "at": "2026-11-09T19:09:40.145Z",
+      "reason": "PR #614 merged (42d1c420), main at c25e608f green, handoff filled; closed in the 0.50.0 release PR"
     }
   ]
 }

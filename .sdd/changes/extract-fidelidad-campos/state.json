@@ -4,9 +4,9 @@
   "title": "local_extract: aviso de valores sin respaldo y campos de línea por título",
   "mode": "lite",
   "traceability": "strict",
-  "status": "result-review",
+  "status": "closed",
   "createdAt": "2026-11-09T10:46:09.147Z",
-  "updatedAt": "2026-11-09T12:05:10.119Z",
+  "updatedAt": "2026-11-09T19:09:37.306Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -33,10 +33,10 @@
       "actor": "user"
     },
     "memory": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-11-09T19:09:37.103Z",
+      "evidence": "Sin nota aparte: lo durable va en el CHANGELOG 0.50.0, el PR y review.md; la jornada del 2026-11-09 del vault la escribe la sesión principal",
+      "actor": "user"
     }
   },
   "history": [
@@ -113,6 +113,28 @@
       "at": "2026-11-09T12:05:10.119Z",
       "evidence": "revisión standard con dos jueces (review.md): F1-F6 corregidos, F7-F9 aceptados con motivo",
       "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "result-review",
+      "to": "closing",
+      "at": "2026-11-09T19:09:36.898Z",
+      "reason": "conformance approved; PR #609 merged in main as c6a8cc4d; main at c25e608f green"
+    },
+    {
+      "type": "gate",
+      "gate": "memory",
+      "status": "approved",
+      "at": "2026-11-09T19:09:37.103Z",
+      "evidence": "Sin nota aparte: lo durable va en el CHANGELOG 0.50.0, el PR y review.md; la jornada del 2026-11-09 del vault la escribe la sesión principal",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "closing",
+      "to": "closed",
+      "at": "2026-11-09T19:09:37.306Z",
+      "reason": "PR #609 merged (c6a8cc4d), main at c25e608f green, handoff filled; closed in the 0.50.0 release PR"
     }
   ]
 }

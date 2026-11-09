@@ -31,3 +31,10 @@
 ## Deviations and residual risk
 
 - Filler of 3+ words without parentheses under a copied heading counts as a mention (accepted, spec Non-goals).
+
+## Final result
+
+- Merged in `main` as `2fd7ab43` (PR #606, 2026-11-09T12:32:26Z).
+- `main` CI on `2fd7ab43`: all check runs green.
+- `main` at `c25e608f`: CI (run 42678307325 Wiki, 42678307752 CI), CodeQL and Vendor audit green on `c25e608f`.
+- Closed on 2026-11-09 in the 0.50.0 release PR (`release/0.50.0`).

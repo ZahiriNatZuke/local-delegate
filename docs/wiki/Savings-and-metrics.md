@@ -577,6 +577,13 @@ la hora y la tool de la línea, que ya están en el log). Es idempotente y **no 
 transcript ya se borró sigue contando hasta que caduque. En la máquina de referencia tarda 3,3 s
 sobre 456 transcripts.
 
+**No reescribe lo que no pudo leer (desde la 0.50.0, #604).** Si `attribution-AAAAMM.json` o
+`cost-aggregates.json` existen y no se pueden leer (un antivirus o un indexador con el fichero
+abierto), lo reintenta; si sigue sin poder, se para sin reescribirlo y lo dice («no se pudo
+leer…»), en vez de tomarlo por vacío y perder lo que ya no se puede reconstruir. Uno dañado se
+guarda aparte (`<nombre>.damaged-<fecha>`) antes de reemplazarlo, y el resumen lo cuenta. Dos
+corridas a la vez no se pisan: la segunda espera a la primera.
+
 **Cuándo lanzarlo.** Claude Code borra los transcripts a los `cleanupPeriodDays` de
 `~/.claude/settings.json` (30 días si no está puesto), y con ellos la posibilidad de atribuir las
 delegaciones que no se atribuyeron al momento. `doctor` da `warn` cuando la delegación pendiente
@@ -670,7 +677,9 @@ uv run python scripts/measure_plugin_adoption.py --install 2026-10-22T20:00:00Z 
 - **Qué no cuenta**: las llamadas del mod, las pruebas (la regla común y las ventanas de
   `test-window`), los subagentes y las sesiones `-p` o del SDK.
 - **Periodos**: la base va del 2026-10-08 (antes faltan los `tool_use_id`) hasta `--install`, el
-  instante en que se instaló la 0.40.0; el después, los 14 días siguientes.
+  instante en que se instaló la 0.40.0; el después, los 14 días siguientes. Desde la 0.50.0
+  (#597) el desglose de exclusiones (`excluded_rows`) de cada periodo cuenta solo sus filas de
+  `[since, until)`, y el después ya no cuenta las de pasados sus 14 días.
 - **Criterio**: éxito si el después tiene al menos 30 sesiones y sube al menos 10 puntos sobre la
   base. El JSON lo da en `criterion.status`: `no_install`, `too_early`, `too_few_sessions`, `met`
   o `not_met`.

@@ -4,9 +4,9 @@
   "title": "La medicion de adopcion del plugin acota las exclusiones a su periodo",
   "mode": "lite",
   "traceability": "strict",
-  "status": "result-review",
+  "status": "closed",
   "createdAt": "2026-11-09T10:42:17.958Z",
-  "updatedAt": "2026-11-09T12:17:32.889Z",
+  "updatedAt": "2026-11-09T19:09:34.482Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -33,10 +33,10 @@
       "actor": "user"
     },
     "memory": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-11-09T19:09:34.266Z",
+      "evidence": "Sin nota aparte: lo durable va en el CHANGELOG 0.50.0, el PR y review.md; la jornada del 2026-11-09 del vault la escribe la sesión principal",
+      "actor": "user"
     }
   },
   "history": [
@@ -113,6 +113,28 @@
       "at": "2026-11-09T12:17:32.889Z",
       "evidence": "Dos jueces independientes aprueban; hallazgos menores resueltos (CHANGELOG) o aceptados (doble pasada, filas sin ts); sdd check verde.",
       "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "result-review",
+      "to": "closing",
+      "at": "2026-11-09T19:09:34.047Z",
+      "reason": "conformance approved; PR #611 merged in main as 12b8a577; main at c25e608f green"
+    },
+    {
+      "type": "gate",
+      "gate": "memory",
+      "status": "approved",
+      "at": "2026-11-09T19:09:34.266Z",
+      "evidence": "Sin nota aparte: lo durable va en el CHANGELOG 0.50.0, el PR y review.md; la jornada del 2026-11-09 del vault la escribe la sesión principal",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "closing",
+      "to": "closed",
+      "at": "2026-11-09T19:09:34.482Z",
+      "reason": "PR #611 merged (12b8a577), main at c25e608f green, handoff filled; closed in the 0.50.0 release PR"
     }
   ]
 }

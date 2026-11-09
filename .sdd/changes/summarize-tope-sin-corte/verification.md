@@ -38,3 +38,10 @@
 - Just above 16 000 characters the extra is small (564 at 17 000); cuts there still end at a
   sentence with the notice. A runaway answer is now bounded by `CHUNK_MAX_TOKENS` (2 048, 4x before).
 - The map/reduce pieces keep 3w+64 (out of #610's way).
+
+## Final result
+
+- Merged in `main` as `f0dea77a` (PR #615, 2026-11-09T17:04:44Z).
+- `main` CI on `f0dea77a`: all check runs green.
+- `main` at `c25e608f`: CI (run 42678307325 Wiki, 42678307752 CI), CodeQL and Vendor audit green on `c25e608f`.
+- Closed on 2026-11-09 in the 0.50.0 release PR (`release/0.50.0`).

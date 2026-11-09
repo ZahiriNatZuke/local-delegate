@@ -2,24 +2,24 @@
 
 ## Current state
 
-- SDD status:
-- Last completed gate:
-- Current revision:
+- SDD status: closed (cerrado en el PR de la release 0.50.0, rama `release/0.50.0`)
+- Last completed gate: memory
+- Current revision: mezclado en `main` como `c05cc744` (PR #613, 2026-11-09T16:56:21Z)
 
 ## What changed
 
-- Summarize completed work without reproducing the full Git history.
+- La banda del mod usa la histéresis del panel con el mismo código (`mod/common.js`): solo el segundo fallo seguido es CAÍDO, y tras un fallo el siguiente sondeo llega al segundo.
 
 ## Decisions
 
-- Record decisions that a future session cannot reliably derive from code alone.
+- Se tocaron 5 tests existentes del mod (dar el segundo sondeo): esperaban CAÍDO tras un solo fallo, que es lo que el issue declara malo.
+- Si el daemon no contesta `/api/backend`, la banda dice «sin datos» ese latido; el panel repinta lo anterior.
 
 ## Next action
 
-- State the single best next step and any prerequisite context.
+- Ninguna para este cambio.
 
 ## Memory
 
-- Canonical note:
-- Indexes updated:
-
+- Canonical note: Sin nota aparte: lo durable va en el CHANGELOG 0.50.0, el PR y `review.md`; la jornada del 2026-11-09 del vault la escribe la sesión principal.
+- Indexes updated: ninguno desde este cambio (la sesión principal actualiza el índice de jornadas).

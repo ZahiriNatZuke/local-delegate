@@ -4,9 +4,9 @@
   "title": "recompute-cost no pierde el relleno ni los agregados si la lectura previa falla",
   "mode": "lite",
   "traceability": "strict",
-  "status": "result-review",
+  "status": "closed",
   "createdAt": "2026-11-09T10:44:54.748Z",
-  "updatedAt": "2026-11-09T11:59:16.332Z",
+  "updatedAt": "2026-11-09T19:09:42.193Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -33,10 +33,10 @@
       "actor": "user"
     },
     "memory": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-11-09T19:09:41.978Z",
+      "evidence": "Sin nota aparte: lo durable va en el CHANGELOG 0.50.0, el PR y review.md; la jornada del 2026-11-09 del vault la escribe la sesión principal",
+      "actor": "user"
     }
   },
   "history": [
@@ -113,6 +113,28 @@
       "at": "2026-11-09T11:59:16.332Z",
       "evidence": "Revision por niveles en review.md: dos jueces independientes (y revisor de seguridad en el standard); hallazgos resueltos o aceptados con motivo; sdd check verde.",
       "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "result-review",
+      "to": "closing",
+      "at": "2026-11-09T19:09:41.765Z",
+      "reason": "conformance approved; PR #604 merged in main as bc8dc80e; main at c25e608f green"
+    },
+    {
+      "type": "gate",
+      "gate": "memory",
+      "status": "approved",
+      "at": "2026-11-09T19:09:41.978Z",
+      "evidence": "Sin nota aparte: lo durable va en el CHANGELOG 0.50.0, el PR y review.md; la jornada del 2026-11-09 del vault la escribe la sesión principal",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "closing",
+      "to": "closed",
+      "at": "2026-11-09T19:09:42.193Z",
+      "reason": "PR #604 merged (bc8dc80e), main at c25e608f green, handoff filled; closed in the 0.50.0 release PR"
     }
   ]
 }

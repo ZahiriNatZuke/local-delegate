@@ -4,9 +4,9 @@
   "title": "local_extract: el prompt pide null y prohíbe rellenar con otra clave o fila",
   "mode": "lite",
   "traceability": "strict",
-  "status": "result-review",
+  "status": "closed",
   "createdAt": "2026-11-09T12:53:03.369Z",
-  "updatedAt": "2026-11-09T13:37:15.560Z",
+  "updatedAt": "2026-11-09T19:09:46.350Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -33,10 +33,10 @@
       "actor": "user"
     },
     "memory": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-11-09T19:09:46.138Z",
+      "evidence": "Sin nota aparte: lo durable va en el CHANGELOG 0.50.0, el PR y review.md; la jornada del 2026-11-09 del vault la escribe la sesión principal",
+      "actor": "user"
     }
   },
   "history": [
@@ -113,6 +113,28 @@
       "at": "2026-11-09T13:37:15.560Z",
       "evidence": "revisión standard con dos jueces (review.md): F1-F5 corregidos, F6 aceptado; suite 6757 passed",
       "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "result-review",
+      "to": "closing",
+      "at": "2026-11-09T19:09:45.913Z",
+      "reason": "conformance approved; PR #621 merged in main as 1a4d720d; main at c25e608f green"
+    },
+    {
+      "type": "gate",
+      "gate": "memory",
+      "status": "approved",
+      "at": "2026-11-09T19:09:46.138Z",
+      "evidence": "Sin nota aparte: lo durable va en el CHANGELOG 0.50.0, el PR y review.md; la jornada del 2026-11-09 del vault la escribe la sesión principal",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "closing",
+      "to": "closed",
+      "at": "2026-11-09T19:09:46.350Z",
+      "reason": "closed as reverted: PR #621 (1a4d720d) reverted by PR #624 (c25e608f) after two regressions in the live test with the real backend and the #586 case not fixed; #586 reopened; closed in the 0.50.0 release PR"
     }
   ]
 }

@@ -2,23 +2,24 @@
 
 ## Current state
 
-- SDD status: verifying (puertas quality y conformance aprobadas; memory y cierre los hace el orquestador tras mezclar)
-- Last completed gate: conformance
-- Current revision: rama `fix/adopcion-exclusiones-por-periodo`
+- SDD status: closed (cerrado en el PR de la release 0.50.0, rama `release/0.50.0`)
+- Last completed gate: memory
+- Current revision: mezclado en `main` como `12b8a577` (PR #611, 2026-11-09T13:50:06Z)
 
 ## What changed
 
-- `measure()` saca `excluded_rows` de una segunda pasada acotada a `[since, until)`; los ids siguen sin final.
+- `scripts/measure_plugin_adoption.py` cuenta `excluded_rows` solo con las filas de `[since, until)` de cada periodo.
+- El periodo «después» deja de contar las filas de pasados sus 14 días; el porcentaje no cambia.
 
 ## Decisions
 
-- Segunda llamada a `model_decided_ids` en vez de cambiar su contrato: la función queda igual y las filas ya están en memoria.
+- Las filas sin `ts` se siguen saltando en las dos pasadas (sin test propio).
 
 ## Next action
 
-- Mezclar el PR y cerrar el SDD (puerta memory + `closed`).
+- Ninguna para este cambio.
 
 ## Memory
 
-- Canonical note: ninguna nueva (cambio pequeño; la jornada del día la recoge el orquestador)
-- Indexes updated: no
+- Canonical note: Sin nota aparte: lo durable va en el CHANGELOG 0.50.0, el PR y `review.md`; la jornada del 2026-11-09 del vault la escribe la sesión principal.
+- Indexes updated: ninguno desde este cambio (la sesión principal actualiza el índice de jornadas).

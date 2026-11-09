@@ -96,6 +96,13 @@ lanza el proceso a la vez: espera a la siguiente llamada, que la reintenta con e
 si ese intento también falla queda el rastro. Así una línea que el daemon escribió tarde no sale
 dos veces (prueba en vivo del 2026-10-23).
 
+Desde la 0.50.0 (#605) cada línea de telemetría (de los hooks, de los hilos del daemon o del CLI) se
+añade bajo un cerrojo de fichero (`msvcrt.locking` en Windows, `flock` en macOS y Linux) y de una
+sola escritura; igual el log de fallos de los hooks y las notas de bloqueo. Antes, con varios
+procesos a la vez en Windows, se perdía entre el 10 y el 16 % de las líneas. El cerrojo espera como
+mucho un segundo, una decisión que llega a la vez por dos vías se escribe una sola vez, y el panel
+y la medición de adopción se saltan un trozo de línea partida en vez de fallar.
+
 ### Leer literal un fichero que llegó resumido
 
 Lo que el mod cuenta es **cuánto del fichero se ha leído en la sesión**, no el tamaño de cada
@@ -116,6 +123,16 @@ Desde la 0.44.2 (#472) hay tres excepciones en que un rango pasa siempre literal
 
 Cuando un rango sí se resume, el aviso dice qué líneas no llegaron literales y cuántas se pueden
 pedir todavía en tramos más cortos, o que ya no queda margen en esta sesión.
+
+**Resumen reutilizado (desde la 0.50.0, #608).** Mientras Claude Code siga abierto, una nueva
+lectura entera de un fichero cuyo texto no ha cambiado recibe el resumen que ya se hizo, también
+desde un subagente, sin delegación nueva: la telemetría de hooks lo anota como `summary_reused`, y no
+deja fila en el log de uso ni nota de bloqueo, así que el panel y la medición de adopción no lo
+cuentan como ahorro nuevo. Si el texto cambia, aunque sea con el mismo tamaño, se vuelve a resumir.
+
+**Comandos compuestos (desde la 0.50.0, #595).** Un comando de varias líneas o con `$(…)`, comillas
+invertidas o `(…)` ya no pasa sin mirar porque empiece por `cd`, `ls` o `echo`: se clasifica como
+los demás.
 
 ### El hook de lectura y el mod de lectura
 
@@ -145,6 +162,10 @@ en la 0.40: si el mod se apaga o falla, el hook vuelve. Los hooks de lectura que
 `settings.json` no ven la opción del plugin y no se apartan; `doctor` lo avisa en «mod de lectura y
 hooks de lectura coordinados» (`mod.read_overlap`), igual que avisa si la opción está encendida con
 la capa activa apagada (entonces no actúa ninguno).
+
+**Sesión sin el MCP (desde la 0.50.0, #595).** Si el transcript dice que las tools `local_*` no
+están en la sesión, los hooks de `Read` y de shell dejan pasar la lectura sin sugerir ni exigir
+ninguna y lo anotan como `mcp_absent`; ante la duda, avisan como antes.
 
 **Verificación.** Antes de encenderlo por defecto se probó en vivo con `claude -p` en Windows: el
 control positivo (sin el mod, `Write` pasa), el negativo (con el mod, tras un resumen, `Write` se

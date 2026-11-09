@@ -68,6 +68,11 @@ se daba por bueno). Si aun así queda alguno cortado, el resultado lo avisa con 
 el resumen termina en la última frase o línea completa, no a mitad de palabra; y con `focus` (#558)
 el mensaje al modelo nombra las secciones Markdown que tratan el enfoque y, si el resumen no
 menciona ninguna de sus palabras aunque la entrada sí las tiene, la salida lleva un aviso.
+Desde la 0.50.0, con una entrada de más de 16 000 caracteres ese tope crece con la entrada (884
+tokens para 23 400 caracteres con el `max_words` por defecto), sin pasar de
+`LOCAL_DELEGATE_CHUNK_MAX_TOKENS` ni de lo que el contexto deja tras la entrada, también en el
+resumen por secciones (#580); y un título del resumen con el término del enfoque y contenido propio
+debajo cuenta como mención, así que ya no dispara el aviso (#593).
 
 ### Resumen por secciones (experimental, apagado)
 
@@ -242,6 +247,11 @@ backend abierto). Cualquier otra cosa va al modelo, y si el resumen nombra fiche
 en la entrada, la respuesta termina con `[local-delegate warning: el resumen nombra ficheros que no aparecen en la entrada y
 pueden ser inventados: …]`.
 
+**Líneas largas sin espacios.** Desde la 0.50.0 la búsqueda de ficheros del inventario y la de
+contadores en las claves de un informe JSON van en tiempo lineal: la línea de puntos de
+`python -m unittest` (20 000 puntos costaban unos 40 s de CPU) ya no bloquea el daemon, y los
+ficheros encontrados son los mismos.
+
 ## `local_commit_msg`
 
 ```python
@@ -289,6 +299,11 @@ cambia y para qué, también en el paso final del map-reduce. Topes: 700 tokens 
 250 palabras en el paso final. Antes el cuerpo era opcional, con 256 tokens y 90 palabras, y el
 modelo paraba tras la primera línea (medido: 53–66 caracteres en 8 de 10 llamadas).
 
+**Presupuesto de tiempo (desde la 0.50.0, #596).** Con un diff muy grande, si leer todas sus partes
+no cabe en 95 s (el cliente MCP corta hacia los 120 s), deja de leer partes, y de repetir trozos
+cortados o reagrupar notas cuando no da tiempo, y redacta el mensaje con lo leído y el inventario
+completo de archivos. El mensaje avisa de cuánto se leyó.
+
 ## `local_translate`
 
 ```python
@@ -333,7 +348,14 @@ servidor revisa al final la respuesta contra el fichero entero: las líneas cita
 después, aparece nada de lo que nombra la frase que las cita salen en un aviso de líneas dudosas.
 Además, cada identificador de código de la pregunta recibe una línea «Apariciones de `x` en el
 fichero (búsqueda exacta): 233, 270, …», con un tope de 20. La prosa del modelo no se toca. Con
-`code` o sin `question`, la salida no cambia.
+`code` o sin `question`, la salida no cambia. Desde la 0.50.0 (#616), si el fichero liga otro
+nombre al citado (`TOOL = 'local_summarize'`, `summarize_fn = readSummarize`, `import … as`), una
+línea que usa ese alias confirma la cita; una comparación o una expresión más larga no crean alias.
+
+**Combinación de notas cortada (desde la 0.50.0, #598).** Troceado y con pregunta, un paso de
+combinar notas cortado por `max_tokens` que no se puede partir se repite una vez con el doble de
+margen de salida (dentro de lo que acepta el backend). Si sigue cortado, el aviso dice que fue al
+combinar notas y que una afirmación de que algo no ocurre puede deberse al corte.
 
 **Un «no hay información» que contradice la búsqueda exacta lleva aviso (issue #527).** Con `path`
 y `question`, en un fichero troceado cada trozo recibe las líneas donde aparecen los identificadores

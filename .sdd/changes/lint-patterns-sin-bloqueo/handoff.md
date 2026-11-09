@@ -2,24 +2,23 @@
 
 ## Current state
 
-- SDD status:
-- Last completed gate:
-- Current revision:
+- SDD status: closed (cerrado en el PR de la release 0.50.0, rama `release/0.50.0`)
+- Last completed gate: memory
+- Current revision: mezclado en `main` como `7d972fc8` (PR #607, 2026-11-09T12:25:36Z)
 
 ## What changed
 
-- Summarize completed work without reproducing the full Git history.
+- La búsqueda de ficheros del inventario de `local_lint_summary` y la de contadores en claves JSON van en tiempo lineal; mismos resultados.
 
 ## Decisions
 
-- Record decisions that a future session cannot reliably derive from code alone.
+- `scripts/score_lint_fidelity.py` sigue con `FILE.findall` (script de medición, fuera de alcance).
 
 ## Next action
 
-- State the single best next step and any prerequisite context.
+- Ninguna para este cambio.
 
 ## Memory
 
-- Canonical note:
-- Indexes updated:
-
+- Canonical note: Sin nota aparte: lo durable va en el CHANGELOG 0.50.0, el PR y `review.md`; la jornada del 2026-11-09 del vault la escribe la sesión principal.
+- Indexes updated: ninguno desde este cambio (la sesión principal actualiza el índice de jornadas).
