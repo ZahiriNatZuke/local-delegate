@@ -8,6 +8,9 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ### Corregido
 
+- **`tests/test_read_classifier.py` ya se puede correr solo.** Cargaba el clasificador por ruta sin
+  la carpeta de los hooks en el `sys.path`, y su `import path_rules` fallaba al recoger los tests si
+  ningún otro fichero la había puesto antes. Solo cambian los tests.
 - **`local_lint_summary` ya no bloquea el daemon con un log que tiene líneas largas sin espacios.**
   La línea de progreso de `python -m unittest` (un punto por test) hacía que la búsqueda de
   ficheros del inventario tardara un tiempo cuadrático, con la CPU tomada: 8 000 puntos costaban

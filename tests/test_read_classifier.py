@@ -43,7 +43,14 @@ def _load(name: str, path: Path):
     return module
 
 
-classifier = _load("_rc_read_classifier", HOOKS / "read_classifier.py")
+# Loaded by path, the classifier is a loose script: its `import path_rules` looks next to it, as
+# the hooks run. Without the folder on the path the file only ran inside the whole suite (another
+# test had put it there).
+sys.path.insert(0, str(HOOKS))
+try:
+    classifier = _load("_rc_read_classifier", HOOKS / "read_classifier.py")
+finally:
+    sys.path.remove(str(HOOKS))
 common = _load("_rc_hook_common", HOOKS / "hook_common.py")
 measure = _load("_rc_measure_read_paths", ROOT / "scripts" / "measure_read_paths.py")
 
