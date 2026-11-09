@@ -59,7 +59,7 @@
 // `register` inside its own `try`. It only declares at load, so loading it cannot throw. Its
 // top-level names carry `status`, so they cannot clash with another piece's.
 
-import { daemonFetch, hasDialog, language, readModOn, t, token } from './common.js'
+import { daemonFetch, hasDialog, language, readModOn, t, token, visibleState } from './common.js'
 
 export const STATUS_SWITCH = 'status_enabled'
 export const STATUS_STYLE = 'status_style'
@@ -657,6 +657,11 @@ async function statusRead($, view, full) {
   }
   const [backend, inflight, stats] = await Promise.all(asks)
   view.backend = statusBody(backend)
+  // Each answer of `/api/backend` is a probe (issue #612): the panel's rule decides what is shown.
+  // No answer at all is not a probe, as in the panel: the visible state stays.
+  if (view.backend && typeof view.backend.available === 'boolean') {
+    view.backendView = visibleState(view.backendView, view.backend)
+  }
   view.inflight = statusBody(inflight)
   if (full) {
     view.stats = statusBody(stats)
@@ -664,15 +669,33 @@ async function statusRead($, view, full) {
   return true
 }
 
+/**
+ * The `/api/backend` body the band draws from: the panel's visible state (issue #612). The last good
+ * probe while a single failure waits for the next one, the failed one once two in a row failed, and
+ * none before any probe was good (the panel's «checking»). No answer at all: as it came.
+ */
+export function statusShownBackend(view) {
+  const seen = view.backendView
+  if (!view.backend || typeof view.backend.available !== 'boolean' || !seen) {
+    return view.backend
+  }
+  if (seen.status === 'connected') {
+    return seen.ref
+  }
+  return seen.status === 'down' ? seen.last : null
+}
+
 /** Redraws the band if the snapshot changed, and sets the timer's pace for it. */
 async function statusApply($, view) {
-  const snapshot = statusSnapshot(view.stats, view.backend, view.inflight)
+  const snapshot = statusSnapshot(view.stats, statusShownBackend(view), view.inflight)
   if (JSON.stringify(snapshot) !== JSON.stringify(view.snapshot)) {
     view.snapshot = snapshot
     await $.ui.invalidate('ui.render')
   }
   // `shared` too: the band has to drop the note as soon as the other session's call ends.
-  const hot = snapshot.backend === 'busy' || snapshot.backend === 'shared' || snapshot.loading === true
+  // A failed probe too (held or down): the next one confirms or clears it in a second, not in 30.
+  const failing = view.backendView !== null && view.backendView.failures > 0
+  const hot = snapshot.backend === 'busy' || snapshot.backend === 'shared' || snapshot.loading === true || failing
   statusArm($, view, hot ? STATUS_HOT_MS : STATUS_COLD_MS)
 }
 
@@ -747,6 +770,7 @@ export function register(on, options) {
     snapshot: null,
     stats: null,
     backend: null,
+    backendView: null,
     inflight: null,
     timer: null,
     period: 0,

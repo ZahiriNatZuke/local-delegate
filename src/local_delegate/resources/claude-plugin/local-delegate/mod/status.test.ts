@@ -229,6 +229,7 @@ test('bar: the chip says each state in its color', { options: QUIET }, async ($,
   for (const [answers, text, props] of cases) {
     daemon = answers
     await $.session.measure(measureInput())
+    await $.session.measure(measureInput())  // Two probes: one failed probe alone is not «down» (issue #612).
     const { chip, boxes, texts } = await bar($)
     expect(chip.text).toBe(text)
     expect(chip.props).toMatchObject({ inverse: true, bold: true, ...props })
@@ -281,6 +282,7 @@ test('bar: failed attempts are not delegations, they go apart (issue #436)', { o
   // The session of the issue: the backend unreachable, 17 attempts logged, 15 of them failed.
   engine(on, { LOCAL_DELEGATE_WEB_TOKEN: TOKEN }, () => ({ ...UP, stats: () => stats(17, 4200, null, 15), backend: () => backend(false) }))
   await $.session.measure(measureInput())
+  await $.session.measure(measureInput())  // Two probes: one failed probe alone is not «down» (issue #612).
   const { left, texts } = await bar($)
   expect(left).toBe(' ○ CAÍDO  2 delegaciones · 15 fallidas · 4,2k tokens ahorrados')
   expect(texts.find((t: any) => t.text === '15')?.props.bold).toBe(true)
@@ -290,6 +292,7 @@ test('bar: failed attempts are not delegations, they go apart (issue #436)', { o
 test('bar: only failures, no delegation yet, says both', { options: QUIET }, async ($, on) => {
   engine(on, { LOCAL_DELEGATE_WEB_TOKEN: TOKEN }, () => ({ ...UP, stats: () => stats(1, 0, null, 1), backend: () => backend(false) }))
   await $.session.measure(measureInput())
+  await $.session.measure(measureInput())  // Two probes: one failed probe alone is not «down» (issue #612).
   expect((await bar($)).left).toBe(' ○ CAÍDO  0 delegaciones · 1 fallida')
 })
 
@@ -331,6 +334,7 @@ test('line: each state', { options: LINE }, async ($, on) => {
   for (const [answers, part, glyph, color] of cases) {
     daemon = answers
     await $.session.measure(measureInput())
+    await $.session.measure(measureInput())  // Two probes: one failed probe alone is not «down» (issue #612).
     const { line: text, texts } = await line($)
     expect(text).toContain(part)
     expect(colorOf(texts, glyph)).toBe(color)
@@ -583,6 +587,7 @@ test('desktop: each state', { options: QUIET }, async ($, on) => {
 
   daemon = { ...UP, backend: () => backend(false) }
   await $.session.measure(measureInput())
+  await $.session.measure(measureInput())  // Two probes: one failed probe alone is not «down» (issue #612).
   drawn = await desk($)
   expectPlainDesktop(drawn)
   expect(drawn.left.text.startsWith('local-delegate · ○ Modelo local caído · 3 delegaciones')).toBe(true)
@@ -592,6 +597,7 @@ test('desktop: each state', { options: QUIET }, async ($, on) => {
   // Issue #436 on Desktop: the failed attempts apart from the delegations, no bold.
   daemon = { ...UP, stats: () => stats(17, 4200, null, 15), backend: () => backend(false) }
   await $.session.measure(measureInput())
+  await $.session.measure(measureInput())  // Two probes: one failed probe alone is not «down» (issue #612).
   drawn = await desk($)
   expectPlainDesktop(drawn)
   expect(drawn.left.text).toBe('local-delegate · ○ Modelo local caído · 2 delegaciones · 15 fallidas · 4,2k tokens ahorrados')
@@ -1064,4 +1070,64 @@ test('line: a state the mod does not know ranks and reads as running, as before'
   const shown = (await line($)).line
   expect(shown).toContain('· local_summarize 42 s +1 ·')
   expect(shown).toContain('qwen3-8b delegando')
+})
+
+// --- Issue #612: the panel's hysteresis (REQ-028), one slow probe is not «down» -------------------
+
+const DOWN: Daemon = { ...UP, backend: () => backend(false) }
+
+test('one failed probe after a good one keeps the band; the second in a row is down', { options: LINE }, async ($, on) => {
+  let daemon: Daemon = UP
+  const seen = engine(on, { LOCAL_DELEGATE_WEB_TOKEN: TOKEN }, () => daemon)
+  await $.session.measure(measureInput())
+  expect((await line($)).line).toContain('● qwen3-8b listo')
+  // A slow probe: still ready, and the next probe comes in a second, not in 30.
+  daemon = DOWN
+  await seen.clock.advance(30000)
+  expect((await line($)).line).toContain('● qwen3-8b listo')
+  const before = seen.fetches.length
+  await seen.clock.advance(1000)
+  expect(since(seen, before)).toEqual(['/api/backend', '/api/inflight'])
+  expect((await line($)).line).toContain('○ modelo local caído')
+  // Down, it keeps asking every second and is back as soon as the backend answers.
+  daemon = UP
+  await seen.clock.advance(1000)
+  expect((await line($)).line).toContain('● qwen3-8b listo')
+  // Back with nothing in flight: the slow pace again.
+  const after = seen.fetches.length
+  await seen.clock.advance(1000)
+  expect(seen.fetches.length).toBe(after)
+})
+
+test('a failure between two good probes never shows down', { options: LINE }, async ($, on) => {
+  let daemon: Daemon = BUSY
+  engine(on, { LOCAL_DELEGATE_WEB_TOKEN: TOKEN }, () => daemon)
+  for (const next of [BUSY, DOWN, BUSY, DOWN, UP]) {
+    daemon = next
+    await $.session.measure(measureInput())
+    expect((await line($)).line).not.toContain('caído')
+  }
+})
+
+test('without any good probe yet, the first failure is not down (the panel says «checking»)', { options: LINE }, async ($, on) => {
+  engine(on, { LOCAL_DELEGATE_WEB_TOKEN: TOKEN }, () => DOWN)
+  await $.session.measure(measureInput())
+  expect((await line($)).line).not.toContain('caído')
+  await $.session.measure(measureInput())
+  expect((await line($)).line).toContain('○ modelo local caído')
+})
+
+test('no answer from /api/backend is not a probe: the held state stays', { options: LINE }, async ($, on) => {
+  let daemon: Daemon = UP
+  engine(on, { LOCAL_DELEGATE_WEB_TOKEN: TOKEN }, () => daemon)
+  await $.session.measure(measureInput())
+  daemon = DOWN
+  await $.session.measure(measureInput())
+  // The daemon does not answer the backend route: neither a second failure nor a recovery.
+  daemon = { stats: UP.stats, inflight: UP.inflight }
+  await $.session.measure(measureInput())
+  // So the next failure is the second in a row: down, as the panel would say.
+  daemon = DOWN
+  await $.session.measure(measureInput())
+  expect((await line($)).line).toContain('○ modelo local caído')
 })
