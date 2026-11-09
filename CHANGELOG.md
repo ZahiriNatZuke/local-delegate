@@ -8,6 +8,10 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ### Corregido
 
+- **`local_explain_code` ya no da por falsa una cita correcta porque la línea use una constante o un alias del nombre (#616).**
+  Si el fichero liga otro nombre al citado (`TOOL = 'local_summarize'`, `summarize_fn = readSummarize`,
+  `import … as`), una línea que usa ese nombre confirma la cita. Una línea sin el nombre ni sus
+  alias sigue avisando, y una comparación o una expresión más larga no crean alias.
 - **`local_lint_summary` ya no bloquea el daemon con un log que tiene líneas largas sin espacios.**
   La línea de progreso de `python -m unittest` (un punto por test) hacía que la búsqueda de
   ficheros del inventario tardara un tiempo cuadrático, con la CPU tomada: 8 000 puntos costaban
