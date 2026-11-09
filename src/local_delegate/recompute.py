@@ -20,6 +20,7 @@ mismos datos, deja los mismos ficheros salvo `generated` (REQ-074).
 
 from __future__ import annotations
 
+import errno
 import json
 import os
 import re
@@ -29,7 +30,9 @@ from collections.abc import Iterator
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
-from . import attribution, cost, i18n, legacy_names, pricing, quota, transcripts
+from filelock import FileLock, Timeout
+
+from . import attribution, cost, i18n, json_state, legacy_names, pricing, quota, transcripts
 
 OLD_FILE_NAME, FILE_NAME = legacy_names.COST_AGGREGATES_FILE_NAMES
 VERSION = 1
@@ -38,6 +41,15 @@ VERSION = 1
 CLOSED_MONTH = timedelta(days=30)
 
 _MONTH_FILE = re.compile(r"^usage-(\d{6})\.jsonl$")
+
+#: Cerrojo de una corrida entera: dos `recompute-cost` a la vez fundirían cada uno contra lo que
+#: había antes del otro. No acaba en `.json`: no es uno de los ficheros que se leen.
+LOCK_NAME = "recompute-cost.lock"
+LOCK_TIMEOUT_S = 60.0
+
+
+class BusyError(OSError):
+    """Otro `recompute-cost` tiene el cerrojo del directorio de logs más de `LOCK_TIMEOUT_S`."""
 
 
 # --- cost-aggregates.json -----------------------------------------------------------------------
@@ -66,6 +78,30 @@ def read_aggregates(log_dir: Path) -> dict | None:
     path = aggregates_path(log_dir)
     data = _load(path) if path.exists() else _load(Path(log_dir) / OLD_FILE_NAME)
     return legacy_names.normalize_cost_aggregates(data) if data is not None else None
+
+
+def _previous_aggregates(log_dir: Path, on_damaged) -> dict:
+    """Lo que `run` va a fundir: como `read_aggregates`, pero un fallo de lectura no es «vacío».
+
+    Si el fichero existe y no se lee tras los reintentos, lanza `json_state.UnreadableStateError`
+    ANTES de que `run` escriba nada. Uno dañado (o sin la forma) se copia aparte y cuenta como
+    vacío, como hasta ahora; si el nuevo existe, el viejo no se vuelve a leer (REQ-006).
+
+    Si el nuevo existe se decide LEYÉNDOLO, no con `exists()`: desde Python 3.13 `exists()` da
+    `False` ante cualquier fallo de `stat` (un acceso denegado), y se sembraría desde el viejo
+    encima de un nuevo que sí estaba. El viejo nunca se reescribe: dañado, cuenta como vacío sin
+    copia.
+    """
+    path = aggregates_path(log_dir)
+    previous = json_state.read_before_merge(path)
+    if not previous.exists:
+        previous = json_state.read_before_merge(Path(log_dir) / OLD_FILE_NAME)
+        if not previous.exists or previous.damaged or not isinstance(previous.data, dict):
+            return {}
+    elif previous.damaged or not isinstance(previous.data, dict):
+        on_damaged(json_state.set_aside(path))
+        return {}
+    return legacy_names.normalize_cost_aggregates(previous.data) or {}
 
 
 def write_aggregates(log_dir: Path, aggregates: dict) -> None:
@@ -271,14 +307,33 @@ def run(
     now: datetime | None = None,
     reset: str | None = None,
 ) -> dict:
-    """Recalcula todo y devuelve un resumen con conteos (sin rutas)."""
-    now = now or datetime.now(UTC)
-    claude_dir, log_dir = Path(claude_dir), Path(log_dir)
+    """Recalcula todo y devuelve un resumen con conteos (sin rutas).
+
+    Toma el cerrojo `LOCK_NAME` del directorio de logs para toda la corrida (`BusyError` si otro
+    lo tiene más de `LOCK_TIMEOUT_S`). Si un fichero que ya existe no se puede leer, lanza
+    `json_state.UnreadableStateError` sin reescribirlo: los agregados se leen antes de escribir
+    nada; un mes del relleno, antes de escribir ese mes.
+    """
+    log_dir = Path(log_dir)
+    log_dir.mkdir(parents=True, exist_ok=True)
+    lock = FileLock(str(log_dir / LOCK_NAME), timeout=LOCK_TIMEOUT_S)
+    try:
+        lock.acquire()
+    except Timeout as exc:
+        raise BusyError(errno.EBUSY, os.strerror(errno.EBUSY), LOCK_NAME) from exc
+    try:
+        return _run(Path(claude_dir), log_dir, now=now or datetime.now(UTC), reset=reset)
+    finally:
+        lock.release()
+
+
+def _run(claude_dir: Path, log_dir: Path, *, now: datetime, reset: str | None) -> dict:
     cleanup_days = attribution.cleanup_period_days(claude_dir)
     projects = claude_dir / "projects"
     has_transcripts = projects.is_dir()
     index = transcripts.read(projects)
-    previous = read_aggregates(log_dir) or {}
+    set_aside: list[Path] = []
+    previous = _previous_aggregates(log_dir, set_aside.append)
 
     # 1. Relleno, por fichero y con las claves del fichero ENTERO (REQ-004, REQ-005).
     since = now - timedelta(days=cleanup_days)
@@ -300,7 +355,7 @@ def run(
                 if month:
                     by_month.setdefault(month, {})[key] = entries[key]
         for month, month_entries in sorted(by_month.items()):
-            attribution.write_backfill(log_dir, month, month_entries)
+            attribution.write_backfill(log_dir, month, month_entries, on_damaged=set_aside.append)
         lines_in_window += len(entries)
         matches.update(e["match"] for e in entries.values())
 
@@ -354,6 +409,7 @@ def run(
         "discards": discards,
         "quota": {t: e["status"] for t, e in status.items()},
         "resets": resets,
+        "set_aside": len(set_aside),
     }
 
 
@@ -466,4 +522,6 @@ def summary_text(r: dict) -> str:
                 discards=discards or none,
             )
         )
+    if r.get("set_aside"):
+        lines.append(i18n.t("cli.recompute_cost.summary.set_aside", n=n(r["set_aside"])))
     return "\n".join(lines)
