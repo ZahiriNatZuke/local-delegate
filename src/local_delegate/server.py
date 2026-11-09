@@ -7436,8 +7436,9 @@ def _is_no_data_marker(value: Any) -> bool:
 
 #: #586: an empty list written as a string. The schema of `local_extract` allows only primitive
 #: values, so the model answers a list that the input has empty (`"comments": []`) as the text
-#: `"[]"`. It is the answer "zero items", like "none" above, not a missing value.
-_EMPTY_LIST_TEXT = re.compile(r"\[\s*\]")
+#: `"[]"`. It is the answer "zero items", like "none" above, not a missing value. Only `[]` with
+#: nothing inside: `[ ]` is an unchecked Markdown task box (`- [ ] migrar`), a real value.
+_EMPTY_LIST_TEXT = re.compile(r"\[\]")
 
 
 def _decode_empty_lists(
@@ -7587,10 +7588,11 @@ _MARKDOWN_SUFFIXES = frozenset({".md", ".markdown", ".mdx"})
 #: #586: the model filled a key the input has no data for with an inference ("positive" with no
 #: review), with another key's content (the PR body as its comments) or with another table row.
 _EXTRACT_NO_FILL_CLAUSE = (
-    " Si el contenido no trae el dato de una clave, pon null en vez de suponerlo, y no la "
-    "rellenes con el dato de otra clave ni de otra fila de una tabla o lista. Resumir, "
-    "contar o tomar lo que el contenido sí dice, aunque vaya dentro de una ruta o de un "
-    "nombre, está permitido."
+    " Si el contenido no trae el dato de una clave, pon null en vez de inventarlo, y no la "
+    "rellenes con el dato de otra clave ni de otra fila de una tabla o lista. Sigue "
+    "valiendo resumir, contar, clasificar o deducir lo que el contenido permite (por "
+    "ejemplo, false si no menciona algo), y tomar lo que va dentro de una ruta o de un "
+    "nombre."
 )
 
 _EXTRACT_LINES_CLAUSE = (

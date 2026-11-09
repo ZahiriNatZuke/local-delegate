@@ -23,7 +23,8 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   como línea dudosa (#594).
 - `local_extract` ya no rellena una clave sin dato con lo que encuentra cerca: el prompt de todas sus
   llamadas (la única, cada trozo y el paso final) pide `null` para lo que la entrada no trae y
-  prohíbe usar el dato de otra clave o de otra fila; antes solo lo decían los trozos. Una lista
+  prohíbe usar el dato de otra clave o de otra fila, sin dejar de resumir, contar, clasificar o
+  deducir lo que el contenido permite; antes solo lo decían los trozos. Una lista
   vacía que el modelo escribía como el texto `"[]"` vuelve como `[]` (el texto queda en
   `_local_delegate.decoded_keys`) (#586).
 

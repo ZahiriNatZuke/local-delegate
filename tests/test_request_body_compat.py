@@ -114,10 +114,11 @@ _CHANGED_MAX_TOKENS = {name: {364: 514} for name in ("simple", "map_chunk", "red
 #: forbids filling a key with another key's or row's data (`PROMPT_BOUNDARIES`, 0.50.0).
 _CHANGED_SYSTEM_SUFFIX = dict.fromkeys(
     ("extract_schema", "extract_schema_retry"),
-    " Si el contenido no trae el dato de una clave, pon null en vez de suponerlo, y no la "
-    "rellenes con el dato de otra clave ni de otra fila de una tabla o lista. Resumir, "
-    "contar o tomar lo que el contenido sí dice, aunque vaya dentro de una ruta o de un "
-    "nombre, está permitido.",
+    " Si el contenido no trae el dato de una clave, pon null en vez de inventarlo, y no la "
+    "rellenes con el dato de otra clave ni de otra fila de una tabla o lista. Sigue "
+    "valiendo resumir, contar, clasificar o deducir lo que el contenido permite (por "
+    "ejemplo, false si no menciona algo), y tomar lo que va dentro de una ruta o de un "
+    "nombre.",
 )
 
 

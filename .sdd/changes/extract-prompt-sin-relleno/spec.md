@@ -10,8 +10,10 @@ schema obligó a escribir como la cadena `"[]"` vuelve como `[]`.
 ## Requirements
 
 - **REQ-001** — El `system` de `local_extract` lleva, detrás del de siempre, la cláusula
-  `_EXTRACT_NO_FILL_CLAUSE` («Si el contenido no trae el dato de una clave, pon null: no lo deduzcas
-  ni lo inventes, y no la rellenes con el dato de otra clave ni de otra fila o elemento.») en la
+  `_EXTRACT_NO_FILL_CLAUSE` («Si el contenido no trae el dato de una clave, pon null en vez de
+  inventarlo, y no la rellenes con el dato de otra clave ni de otra fila de una tabla o lista.
+  Sigue valiendo resumir, contar, clasificar o deducir lo que el contenido permite (por ejemplo,
+  false si no menciona algo), y tomar lo que va dentro de una ruta o de un nombre.») en la
   llamada única, en cada trozo del map y en el reduce, también con la entrada numerada (#568).
   - Request: "El prompt de la llamada única (y el de los trozos, si lo hay) pide null para lo que la entrada no trae y prohíbe rellenar una clave con datos de otra clave o de otra fila"
   - Verify: test tests/test_extract_no_fill.py
@@ -25,9 +27,10 @@ schema obligó a escribir como la cadena `"[]"` vuelve como `[]`.
   no se regeneran (llevan anotado `f2dd267` y un test lo exige).
   - Request: "es el único caso en que se permite tocar tests existentes, y solo las fixtures de la petición" (ampliado por el orquestador: `_CHANGED_SYSTEM` como el #580 y las listas de fronteras de `test_corpus.py`)
   - Verify: test tests/test_request_body_compat.py
-- **REQ-004** — Un valor de primer nivel que es, entero, el texto de una lista vacía (`"[]"`,
-  `" [ ] "`) vuelve como `[]`, con el texto original en `_local_delegate.decoded_keys` y sin
-  aviso; cualquier otro texto (`"[1]"`, `"{}"`, `"none"`) no se toca.
+- **REQ-004** — Un valor de primer nivel que es, entero (sin espacios alrededor y con o sin el
+  prefijo de línea), el texto `"[]"` vuelve como `[]`, con el texto original en
+  `_local_delegate.decoded_keys` y sin aviso; cualquier otro texto (`"[1]"`, `"{}"`, `"none"`,
+  y `"[ ]"`, la casilla sin marcar de Markdown) no se toca.
   - Request: "mira si el post-proceso puede normalizar una lista vacía en forma de cadena a `[]` o a null sin riesgo"
   - Verify: test tests/test_extract_no_fill.py
 

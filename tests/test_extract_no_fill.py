@@ -16,10 +16,11 @@ import pytest
 from local_delegate import config, i18n, server
 
 RULE = (
-    "Si el contenido no trae el dato de una clave, pon null en vez de suponerlo, y no la "
-    "rellenes con el dato de otra clave ni de otra fila de una tabla o lista. Resumir, "
-    "contar o tomar lo que el contenido sí dice, aunque vaya dentro de una ruta o de un "
-    "nombre, está permitido."
+    "Si el contenido no trae el dato de una clave, pon null en vez de inventarlo, y no la "
+    "rellenes con el dato de otra clave ni de otra fila de una tabla o lista. Sigue "
+    "valiendo resumir, contar, clasificar o deducir lo que el contenido permite (por "
+    "ejemplo, false si no menciona algo), y tomar lo que va dentro de una ruta o de un "
+    "nombre."
 )
 
 
@@ -82,7 +83,7 @@ def test_every_map_piece_and_the_reduce_carry_the_rule(backend, monkeypatch):
 # --- "[]" written as text is an empty list ----------------------------------------------------
 
 
-@pytest.mark.parametrize("text", ["[]", " [ ] ", "[\n]"])
+@pytest.mark.parametrize("text", ["[]", " [] ", "\n[]\n"])
 def test_an_empty_list_as_text_is_an_empty_list(backend, text):
     _calls, state = backend
     state["answer"] = lambda call: _ok(json.dumps({"comments_authors_and_gist": text}))
@@ -93,7 +94,8 @@ def test_an_empty_list_as_text_is_an_empty_list(backend, text):
     assert "warning" not in meta
 
 
-@pytest.mark.parametrize("value", ["[1]", "[] y más", "{}", "none", "", "x"])
+# `[ ]` is an unchecked Markdown task box (`- [ ] migrar`): a value, not an empty list.
+@pytest.mark.parametrize("value", ["[1]", "[] y más", "{}", "none", "", "x", "[ ]", "[\n]"])
 def test_other_texts_are_not_decoded(backend, value):
     _calls, state = backend
     state["answer"] = lambda call: _ok(json.dumps({"k": value}))
@@ -111,3 +113,11 @@ def test_an_empty_list_with_a_copied_line_prefix_is_an_empty_list(backend, tmp_p
     data = server.local_extract(fields=["intro_heading_line", "comments"], path=str(path))
     assert data["comments"] == []
     assert data["_local_delegate"]["decoded_keys"] == {"comments": "3| []"}
+
+
+def test_an_unchecked_task_box_is_kept(backend):
+    """The review's case: `estado_tarea` over `- [ ] migrar` is the box itself, not a list."""
+    _calls, state = backend
+    state["answer"] = lambda call: _ok(json.dumps({"estado_tarea": "[ ]"}))
+    data = server.local_extract(fields=["estado_tarea"], text="- [ ] migrar\n")
+    assert data == {"estado_tarea": "[ ]"}
