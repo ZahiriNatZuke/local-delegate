@@ -7434,6 +7434,27 @@ def _is_no_data_marker(value: Any) -> bool:
     return text in _NO_DATA_MARKERS
 
 
+#: #586: an empty list written as a string. The schema of `local_extract` allows only primitive
+#: values, so the model answers a list that the input has empty (`"comments": []`) as the text
+#: `"[]"`. It is the answer "zero items", like "none" above, not a missing value.
+_EMPTY_LIST_TEXT = re.compile(r"\[\s*\]")
+
+
+def _decode_empty_lists(data: dict, fields: list[str]) -> dict[str, str]:
+    """Turn, in place, each requested key whose value is, whole, the text `"[]"` into `[]`.
+
+    Returns {key: original text}, in request order, for `_local_delegate.decoded_keys`.
+    """
+    found: dict[str, str] = {}
+    for name in dict.fromkeys(fields):
+        value = data.get(name)
+        is_text = name != _EXTRACT_META_KEY and isinstance(value, str)
+        if is_text and _EMPTY_LIST_TEXT.fullmatch(value.strip()):
+            found[name] = value
+            data[name] = []
+    return found
+
+
 def _null_placeholders(
     data: dict, fields: list[str], strip_prefix: Callable[[Any], Any] | None = None
 ) -> dict[str, str]:
@@ -7557,6 +7578,13 @@ def _as_figure(value: Any) -> float | None:
 _EXTRACT_OUTLINE_SHARE = 0.15
 #: The files whose `#` lines are headings, so the outline is computed for them only.
 _MARKDOWN_SUFFIXES = frozenset({".md", ".markdown", ".mdx"})
+
+#: #586: the model filled a key the input has no data for with an inference ("positive" with no
+#: review), with another key's content (the PR body as its comments) or with another table row.
+_EXTRACT_NO_FILL_CLAUSE = (
+    " Si el contenido no trae el dato de una clave, pon null: no lo deduzcas ni lo inventes, y no "
+    "la rellenes con el dato de otra clave ni de otra fila o elemento."
+)
 
 _EXTRACT_LINES_CLAUSE = (
     " Cada línea del contenido empieza por su número de línea en el fichero seguido de «| »; ese "
@@ -7710,6 +7738,8 @@ def local_extract(
     `placeholder_keys`. With a JSON object as input, a field that counts one of its top-level
     lists (`number_of_comments`) left empty or ABOVE the list's length is counted by the program,
     unless the JSON already holds a total for it; the model's figure is in `recounted_keys`.
+    The model is asked for null where the input has no data, never another key's or row's data;
+    an empty list it wrote as the text `"[]"` comes back as `[]` (the text in `decoded_keys`).
     A location field naming one heading (`intro_heading_line`) that got the whole Markdown
     outline is cut to the only heading its singular name fits; with any doubt (a plural
     subject, no single heading) it is left as it came. Both go to `outline_copies`, with a warning.
@@ -7729,7 +7759,11 @@ def local_extract(
     content, _truncated_in, raw_len = _read_input(text, path, _NO_TRUNCATE)
     max_chars = config.max_chars_for_role(role)
     key_list = ", ".join(f'"{f}"' for f in fields)
-    system = _guard(f"un objeto JSON válido con exactamente estas claves: {{{key_list}}}")
+    # #586: the null rule goes in every call (single, map and reduce); before, only the map said it.
+    system = (
+        _guard(f"un objeto JSON válido con exactamente estas claves: {{{key_list}}}")
+        + _EXTRACT_NO_FILL_CLAUSE
+    )
     # #568: with `path` and a field that asks for lines, the model sees them (see above).
     location_fields = [f for f in fields if isinstance(f, str) and line_check.is_location_field(f)]
     numbered = bool(path) and bool(location_fields)
@@ -7899,6 +7933,8 @@ def local_extract(
     placeholders = _null_placeholders(
         data, fields, (lambda v: _strip_extract_prefixes(v, total_lines)) if numbered else None
     )
+    # #586: `"[]"` is an empty list the schema made the model write as text.
+    decoded = _decode_empty_lists(data, fields)
     recounted = _recount_lists(data, fields, content)
     for name in recounted:
         if name in placeholders:
@@ -7971,6 +8007,9 @@ def local_extract(
         late_notices.append(
             i18n.t("mcp.warning.extract_placeholder_keys", fields=", ".join(placeholders))
         )
+    if decoded:
+        # Lossless (the text is kept here) and the answer the model meant: no warning.
+        meta["decoded_keys"] = decoded
     if recounted:
         meta["recounted_keys"] = recounted
         pairs = ", ".join(

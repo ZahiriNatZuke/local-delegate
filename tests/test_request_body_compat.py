@@ -109,17 +109,38 @@ def test_body_matches_main(captured):
 #: these four paths) asks 3w+64 instead of 2w+64, 514 instead of 364 with its default 150 words,
 #: in the single call and in each step of its map/reduce. Everything else stays frozen.
 _CHANGED_MAX_TOKENS = {name: {364: 514} for name in ("simple", "map_chunk", "reduce", "fallback")}
+#: System prompts changed on purpose after the base commit, by path: the text appended to the
+#: frozen one. #586: `local_extract` (these two paths) asks null where the input has no data and
+#: forbids filling a key with another key's or row's data (`PROMPT_BOUNDARIES`, 0.50.0).
+_CHANGED_SYSTEM_SUFFIX = dict.fromkeys(
+    ("extract_schema", "extract_schema_retry"),
+    " Si el contenido no trae el dato de una clave, pon null: no lo deduzcas ni lo inventes, y no "
+    "la rellenes con el dato de otra clave ni de otra fila o elemento.",
+)
+
+
+def _with_system_suffix(messages: list, suffix: str) -> list:
+    """`messages` (as pairs) with `suffix` appended to the content of the system message."""
+    out = []
+    for message in messages:
+        if ("role", "system") in [tuple(p) for p in message]:
+            message = [type(p)((p[0], p[1] + suffix)) if p[0] == "content" else p for p in message]
+        out.append(message)
+    return out
 
 
 def _declared(name: str, body: list) -> list:
     """The frozen body with the declared changes of that path applied."""
     changes = _CHANGED_MAX_TOKENS.get(name, {})
-    return [
-        type(pair)((pair[0], changes[pair[1]]))
-        if pair[0] == "max_tokens" and pair[1] in changes
-        else pair
-        for pair in body
-    ]
+    suffix = _CHANGED_SYSTEM_SUFFIX.get(name)
+    out = []
+    for pair in body:
+        if pair[0] == "max_tokens" and pair[1] in changes:
+            pair = type(pair)((pair[0], changes[pair[1]]))
+        elif pair[0] == "messages" and suffix:
+            pair = type(pair)((pair[0], _with_system_suffix(pair[1], suffix)))
+        out.append(pair)
+    return out
 
 
 #: Keys added to the usage event after the base commit, on purpose and additive: a reader of the

@@ -780,6 +780,12 @@
     },
     {
       "file": "src/local_delegate/server.py",
+      "text": " Si el contenido no trae el dato de una clave, pon null: no lo deduzcas ni lo inventes, y no la rellenes con el dato de otra clave ni de otra fila o elemento.",
+      "kind": "verbatim",
+      "reason": "prompt del modelo local (#586, `_EXTRACT_NO_FILL_CLAUSE` de `local_extract`): no es texto de interfaz y su idioma lo decide REQ-028 (los prompts no se traducen); frontera declarada en `PROMPT_BOUNDARIES` (0.50.0)"
+    },
+    {
+      "file": "src/local_delegate/server.py",
       "text": "Esquema de encabezados del documento completo (línea: encabezado; calculado por programa, fiable):\n",
       "kind": "verbatim",
       "reason": "prompt del modelo local (#568, el esquema de encabezados de un Markdown que precede al contenido en `local_extract`): no es texto de interfaz y su idioma lo decide REQ-028 (los prompts no se traducen)"
