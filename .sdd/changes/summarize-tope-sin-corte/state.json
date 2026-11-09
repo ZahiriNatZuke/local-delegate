@@ -1,0 +1,125 @@
+{
+  "schemaVersion": 1,
+  "slug": "summarize-tope-sin-corte",
+  "title": "local_summarize: tope de salida que crece con la entrada grande",
+  "mode": "lite",
+  "traceability": "strict",
+  "status": "result-review",
+  "createdAt": "2026-11-09T12:54:19.900Z",
+  "updatedAt": "2026-11-09T13:36:23.640Z",
+  "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-11-09T12:54:54.020Z",
+      "evidence": "Self-review strict: 4 REQs observable; data from usage log (stop tokens_out grows with input; length only >=16K) and the Mac comment; retry rejected with reason; existing pins kept by the 16K threshold; no overlap with #610",
+      "actor": "summarize-cap-agent"
+    },
+    "plan": {
+      "status": "approved",
+      "updatedAt": "2026-11-09T12:54:54.021Z",
+      "evidence": "Self-review strict: 4 REQs observable; data from usage log (stop tokens_out grows with input; length only >=16K) and the Mac comment; retry rejected with reason; existing pins kept by the 16K threshold; no overlap with #610",
+      "actor": "summarize-cap-agent"
+    },
+    "quality": {
+      "status": "approved",
+      "updatedAt": "2026-11-09T13:36:23.139Z",
+      "evidence": "Full suite -n 2: 6727 passed, 29 skipped; lexicon word added, rerun green (51 passed); ruff clean",
+      "actor": "summarize-cap-agent"
+    },
+    "conformance": {
+      "status": "approved",
+      "updatedAt": "2026-11-09T13:36:23.640Z",
+      "evidence": "review.md: 2 judges, conforms after F2/F4/F5; F1/F3 accepted and recorded",
+      "actor": "summarize-cap-agent"
+    },
+    "memory": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-11-09T12:54:19.900Z",
+      "reason": "SDD change created"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "specifying",
+      "at": "2026-11-09T12:54:53.777Z",
+      "reason": "cause and data recorded"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-11-09T12:54:54.020Z",
+      "evidence": "Self-review strict: 4 REQs observable; data from usage log (stop tokens_out grows with input; length only >=16K) and the Mac comment; retry rejected with reason; existing pins kept by the 16K threshold; no overlap with #610",
+      "actor": "summarize-cap-agent"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-11-09T12:54:54.021Z",
+      "evidence": "Self-review strict: 4 REQs observable; data from usage log (stop tokens_out grows with input; length only >=16K) and the Mac comment; retry rejected with reason; existing pins kept by the 16K threshold; no overlap with #610",
+      "actor": "summarize-cap-agent"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-11-09T13:36:22.138Z",
+      "reason": "spec/plan approved; T1-T3 done; full suite green"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "plan-review",
+      "at": "2026-11-09T13:36:22.380Z",
+      "reason": "spec/plan approved; T1-T3 done; full suite green"
+    },
+    {
+      "type": "transition",
+      "from": "plan-review",
+      "to": "implementing",
+      "at": "2026-11-09T13:36:22.651Z",
+      "reason": "spec/plan approved; T1-T3 done; full suite green"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-11-09T13:36:22.880Z",
+      "reason": "spec/plan approved; T1-T3 done; full suite green"
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-11-09T13:36:23.139Z",
+      "evidence": "Full suite -n 2: 6727 passed, 29 skipped; lexicon word added, rerun green (51 passed); ruff clean",
+      "actor": "summarize-cap-agent"
+    },
+    {
+      "type": "transition",
+      "from": "verifying",
+      "to": "result-review",
+      "at": "2026-11-09T13:36:23.388Z",
+      "reason": "quality approved"
+    },
+    {
+      "type": "gate",
+      "gate": "conformance",
+      "status": "approved",
+      "at": "2026-11-09T13:36:23.640Z",
+      "evidence": "review.md: 2 judges, conforms after F2/F4/F5; F1/F3 accepted and recorded",
+      "actor": "summarize-cap-agent"
+    }
+  ]
+}

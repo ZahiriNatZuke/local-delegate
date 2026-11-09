@@ -7207,11 +7207,16 @@ def _structured_summary(
 
     max_chars = config.max_chars_for_role(role)
     if len(content) <= max_chars:
+        system = _structured_system(max_words, extra)
+        user = _structured_user(plan, max_words, content, focus_note=_focus_note(content, terms))
         return _chat(
             model,
-            _structured_system(max_words, extra),
-            _structured_user(plan, max_words, content, focus_note=_focus_note(content, terms)),
-            max_tokens=_structured_max_tokens(max_words, plan),
+            system,
+            user,
+            # #580: the same room for a big input as the flat single call.
+            max_tokens=_single_call_cap(
+                _structured_max_tokens(max_words, plan), len(content), model, system, user
+            ),
             tool="local_summarize",
             role=role,
             chars_in=len(content),
@@ -7317,11 +7322,53 @@ def _string_literal_notice(content: str, *, kind: str) -> Callable[[str, bool], 
 #: then 464, 564, 664). 3 is the factor the structured summary already uses.
 SUMMARY_TOKENS_PER_WORD = 3
 SUMMARY_TOKENS_BASE = 64
+#: #580, reopened in 0.49.0: on a big input the model writes far more than the words asked for, and
+#: 3w+64 still cut it (5 of 5 calls over a 23 409-char Markdown on the Mac, at exactly 514). The
+#: answers grow with the input: in the usage log the median output of the `stop` answers of
+#: gemma4-26b-a4b goes 442 -> 552 -> 769 tokens from 8-16 K to 16-24 K to 24-32 K characters, and
+#: every cut of a default-sized call is on 16 K characters or more. Above `SUMMARY_FLAT_CHARS` the
+#: single call gets one more token per `SUMMARY_CHARS_PER_EXTRA_TOKEN` characters (884 for that
+#: case, 2 114 at the 48 000 of the `long` role). A cap is only a bound: a model that is done stops.
+SUMMARY_FLAT_CHARS = 16_000
+SUMMARY_CHARS_PER_EXTRA_TOKEN = 20
 
 
-def _summary_max_tokens(words: int) -> int:
-    """#580: the cap of a flat `local_summarize` call for `words` words (514 for 150)."""
-    return int(words * SUMMARY_TOKENS_PER_WORD) + SUMMARY_TOKENS_BASE
+def _summary_max_tokens(words: int, chars: int = 0) -> int:
+    """#580: the cap of a flat `local_summarize` call for `words` words (514 for 150).
+
+    `chars`, the characters of the input of a single call, widens it above `SUMMARY_FLAT_CHARS`.
+    The map/reduce passes the words only: its pieces have their own size.
+    """
+    return int(words * SUMMARY_TOKENS_PER_WORD) + SUMMARY_TOKENS_BASE + _big_input_extra(chars)
+
+
+def _big_input_extra(chars: int) -> int:
+    """#580: the output tokens a single call of `chars` characters gets on top of its usual cap."""
+    return max(0, chars - SUMMARY_FLAT_CHARS) // SUMMARY_CHARS_PER_EXTRA_TOKEN
+
+
+def _single_call_cap(base: int, chars: int, model: str, system: str, user: str) -> int:
+    """#580: `base` widened for a big input, under a ceiling, never below `base`.
+
+    The ceiling is `CHUNK_MAX_TOKENS` and what the model's context leaves after the prompt (the
+    estimate of `_reasoning_fits`): 48 000 characters would ask 2 114, and a raised
+    `LOCAL_DELEGATE_MAX_CHARS_LONG` far more than the model can give. Only the widening is capped:
+    a call that asked `base` before still asks it.
+    """
+    extra = _big_input_extra(chars)
+    if not extra:
+        return base
+    ceiling = config.CHUNK_MAX_TOKENS
+    n_ctx, estimated = llamaswap_config.model_context_size(model)
+    # Only a context read from the llama-swap config: its fallback (8 192) is a guess, and a remote
+    # backend (the Mac's) has no config here, so it would take the widening away from the very
+    # calls of the issue.
+    if not estimated:
+        prompt = math.ceil(
+            (len(system) + len(user)) * config.REASONING_CONTEXT_MARGIN / config.CHARS_PER_TOKEN
+        )
+        ceiling = min(ceiling, n_ctx - prompt)
+    return max(base, min(base + extra, ceiling))
 
 
 @mcp.tool(annotations=_annotations(TOOL_TITLES["local_summarize"]))
@@ -7436,7 +7483,10 @@ def local_summarize(
         model,
         system,
         user,
-        max_tokens=_summary_max_tokens(max_words),
+        # #580: a big input gets room to finish (reopened in 0.49.0), under a ceiling.
+        max_tokens=_single_call_cap(
+            _summary_max_tokens(max_words), len(content), model, system, user
+        ),
         # #580: if the margin is still not enough, the answer ends at its last complete sentence.
         trim_cut=sections.trim_to_last_sentence,
         tool="local_summarize",
