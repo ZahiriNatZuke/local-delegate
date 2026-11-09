@@ -153,6 +153,17 @@ Dos cosas que conviene saber y solo estaban en el código:
   trozo, y en un Markdown recibe el esquema de encabezados con su línea. Las líneas citadas se
   comprueban contra el fichero: las que no casan van en `_local_delegate.lines_unverified` con aviso.
   Al trocear, esos campos los une el programa en orden. Sin un campo así, o con `text=`, nada cambia.
+  Si un campo nombra UN título (`local_extract_section_heading_line`) y el modelo copia el esquema
+  entero, el programa lo recorta al único encabezado que casa con el nombre (o lo deja, si no hay
+  uno solo) y lo dice en `_local_delegate.outline_copies`, con aviso (#594). «Título: línea 1»
+  sobre un encabezado ya no cuenta como línea dudosa.
+- **Un valor con palabras que la entrada no tiene sale con aviso** (#586). Un texto corto (8
+  palabras o menos) con alguna palabra de 5+ letras que no está en la entrada, ni sin tildes ni
+  en singular (un `review_verdict: "positive"` sin ninguna revisión), se devuelve tal cual, con
+  esas palabras en `_local_delegate.ungrounded_keys` y un aviso: puede ser una deducción, una
+  traducción o un invento. No se comprueban números, palabras cortas ni textos largos (los
+  resúmenes parafrasean), y **no se detecta un valor copiado de otra fila o de otro campo** de la
+  entrada: sus palabras sí están en ella.
 
 ## `local_boilerplate`
 
