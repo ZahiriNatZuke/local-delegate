@@ -1222,3 +1222,120 @@ test('a_range_past_the_end_passes_and_a_summary_never_names_lines_past_it', asyn
   const header: string = last.result.file.content.split('\n\n')[0]
   expect(header.endsWith(' read.summary.range_omitted_none first=95 last=100')).toBe(true)
 })
+
+// --- Issue #608: a file summarized once is not summarized again while its text is the same -------
+
+test('a_repeated_read_reuses_the_summary', async () => {
+  const env = makeEnv({ classify: byInput, files: { [BIG]: HUNDRED_LINES, [OTHER]: HUNDRED_LINES } })
+  const first = await call(env, { tool: 'Read', file_path: BIG })
+  expect(first.result.file.content.includes('SUMMARY OF THE FILE')).toBe(true)
+  // The backend would answer something else now: a reused summary is the first one.
+  env.mcpResult = summaryResult('## Intro\nA NEW SUMMARY')
+  const again = await call(env, { tool: 'Read', file_path: BIG })
+  const sub = await call(env, { tool: 'Read', file_path: BIG, agentId: 'agent-1' })
+  expect(env.mcpCalls).toHaveLength(1)
+  expect(again.result.file.content.includes('SUMMARY OF THE FILE')).toBe(true)
+  expect(sub.result.file.content.includes('SUMMARY OF THE FILE')).toBe(true)
+  expect(env.nexts).toHaveLength(0)
+  expect(decisions(env)).toEqual(['auto_summarized', 'summary_reused', 'summary_reused'])
+  // Guard: another file with the same text is its own entry, so the reuse above is by file.
+  const other = await call(env, { tool: 'Read', file_path: OTHER })
+  expect(env.mcpCalls).toHaveLength(2)
+  expect(other.result.file.content.includes('A NEW SUMMARY')).toBe(true)
+})
+
+test('a_changed_file_is_summarized_again', async () => {
+  const env = makeEnv({ classify: byInput })
+  await call(env, { tool: 'Read', file_path: BIG })
+  // Same size, other text: only the content tells it apart.
+  env.files.set(BIG, HUNDRED_LINES.replace('line 1\n', 'LINE 1\n'))
+  env.mcpResult = summaryResult('## Intro\nA NEW SUMMARY')
+  const out = await call(env, { tool: 'Read', file_path: BIG })
+  expect(env.mcpCalls).toHaveLength(2)
+  expect(out.result.file.content.includes('A NEW SUMMARY')).toBe(true)
+  expect(decisions(env)).toEqual(['auto_summarized', 'auto_summarized'])
+  // And the new summary is the one kept.
+  env.mcpResult = summaryResult('## Intro\nA THIRD SUMMARY')
+  const kept = await call(env, { tool: 'Read', file_path: BIG })
+  expect(env.mcpCalls).toHaveLength(2)
+  expect(kept.result.file.content.includes('A NEW SUMMARY')).toBe(true)
+})
+
+test('a_file_changed_while_summarizing_is_not_cached', async () => {
+  const env = makeEnv({ classify: byInput })
+  const changed = HUNDRED_LINES.replace('line 2\n', 'LINE 2\n')
+  const realCall = env.$.mcp.call
+  env.$.mcp.call = async (server: string, tool: string, args: any) => {
+    env.files.set(BIG, changed)
+    return realCall(server, tool, args)
+  }
+  await call(env, { tool: 'Read', file_path: BIG })
+  env.$.mcp.call = realCall
+  // The summary was made while the file held `changed`; back to the text read before the call,
+  // that summary must not pass for this text's.
+  env.files.set(BIG, HUNDRED_LINES)
+  await call(env, { tool: 'Read', file_path: BIG })
+  expect(env.mcpCalls).toHaveLength(2)
+  expect(decisions(env)).toEqual(['auto_summarized', 'auto_summarized'])
+})
+
+test('an_unreadable_file_is_not_cached', async () => {
+  const env = makeEnv({ classify: byInput })
+  env.$.fs.read = async (p: string) => {
+    if (p === BIG) throw new Error('EACCES')
+    if (!env.files.has(p)) throw new Error('missing')
+    return env.files.get(p)
+  }
+  await call(env, { tool: 'Read', file_path: BIG })
+  await call(env, { tool: 'Read', file_path: BIG })
+  expect(env.mcpCalls).toHaveLength(2)
+  expect(decisions(env)).toEqual(['auto_summarized', 'auto_summarized'])
+})
+
+test('the_dialog_still_decides_with_a_cached_summary', async () => {
+  const env = makeEnv({ dialog: true, answer: 'read.ask.summarize', classify: byInput })
+  await call(env, { tool: 'Read', file_path: BIG })
+  env.answer = 'read.ask.whole'
+  const whole = await call(env, { tool: 'Read', file_path: BIG })
+  expect(whole.result.file.content).toBe('REAL')
+  expect(env.nexts).toHaveLength(1)
+  env.answer = 'read.ask.summarize'
+  const reused = await call(env, { tool: 'Read', file_path: BIG })
+  expect(reused.result.file.content.includes('SUMMARY OF THE FILE')).toBe(true)
+  expect(env.asks).toHaveLength(3)
+  expect(env.mcpCalls).toHaveLength(1)
+  expect(decisions(env)).toEqual(['summarized', 'read_whole', 'summary_reused'])
+})
+
+test('the_summary_cache_is_bounded', async () => {
+  const names = Array.from({ length: 17 }, (_, i) => `C:/work/docs/f${i}.md`)
+  const files: Record<string, string> = {}
+  const sizes: Record<string, number> = {}
+  for (const name of names) {
+    files[name] = HUNDRED_LINES
+    sizes[name] = BIG_BYTES
+  }
+  const env = makeEnv({ classify: byInput, files, sizes })
+  for (const name of names) {
+    await call(env, { tool: 'Read', file_path: name })
+  }
+  expect(env.mcpCalls).toHaveLength(17)
+  await call(env, { tool: 'Read', file_path: names[16] }) // the newest: kept
+  expect(env.mcpCalls).toHaveLength(17)
+  await call(env, { tool: 'Read', file_path: names[0] }) // the oldest: dropped at the 17th
+  expect(env.mcpCalls).toHaveLength(18)
+
+  // A file over the per-file cap is never kept.
+  const huge = 'x'.repeat(1024 * 1024 + 1)
+  const big = makeEnv({ classify: byInput, files: { [BIG]: huge } })
+  await call(big, { tool: 'Read', file_path: BIG })
+  await call(big, { tool: 'Read', file_path: BIG })
+  expect(big.mcpCalls).toHaveLength(2)
+
+  // A new `register` starts with an empty cache.
+  const before = makeEnv({ classify: byInput })
+  await call(before, { tool: 'Read', file_path: BIG })
+  const after = makeEnv({ classify: byInput })
+  await call(after, { tool: 'Read', file_path: BIG })
+  expect(after.mcpCalls).toHaveLength(1)
+})

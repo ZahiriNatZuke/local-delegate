@@ -1,0 +1,110 @@
+{
+  "schemaVersion": 1,
+  "slug": "mod-cache-resumen",
+  "title": "El mod de lectura reutiliza el resumen de un fichero sin cambios (#608)",
+  "mode": "lite",
+  "traceability": "strict",
+  "status": "result-review",
+  "createdAt": "2026-11-09T12:07:13.648Z",
+  "updatedAt": "2026-11-09T12:51:27.597Z",
+  "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-11-09T12:09:32.754Z",
+      "evidence": "spec.md con REQ-001..006 verificables, apoyado en el issue #608, copia del log de la PC y read.js:823/888/1100",
+      "actor": "user"
+    },
+    "plan": {
+      "status": "approved",
+      "updatedAt": "2026-11-09T12:09:33.183Z",
+      "evidence": "Autorevisión adversarial: caché en el mod (82% de repeticiones misma sesión), clave por contenido exacto con relectura, decisión summary_reused en MOD_DECISIONS; sin hallazgos bloqueantes",
+      "actor": "user"
+    },
+    "quality": {
+      "status": "approved",
+      "updatedAt": "2026-11-09T12:51:27.353Z",
+      "evidence": "pytest 6624 passed/30 skipped; claude plugin test 160/0; ruff check+format ok; build_mod --check ok; sdd check verde",
+      "actor": "user"
+    },
+    "conformance": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "memory": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-11-09T12:07:13.648Z",
+      "reason": "SDD change created"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "specifying",
+      "at": "2026-11-09T12:09:32.541Z",
+      "reason": "issue #608 leído; read.js inspeccionado"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-11-09T12:09:32.754Z",
+      "evidence": "spec.md con REQ-001..006 verificables, apoyado en el issue #608, copia del log de la PC y read.js:823/888/1100",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-11-09T12:09:32.972Z",
+      "reason": "spec aprobada"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-11-09T12:09:33.183Z",
+      "evidence": "Autorevisión adversarial: caché en el mod (82% de repeticiones misma sesión), clave por contenido exacto con relectura, decisión summary_reused en MOD_DECISIONS; sin hallazgos bloqueantes",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "implementing",
+      "at": "2026-11-09T12:09:33.410Z",
+      "reason": "spec y plan aprobados"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-11-09T12:51:19.766Z",
+      "reason": "implementado y probado"
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-11-09T12:51:27.353Z",
+      "evidence": "pytest 6624 passed/30 skipped; claude plugin test 160/0; ruff check+format ok; build_mod --check ok; sdd check verde",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "verifying",
+      "to": "result-review",
+      "at": "2026-11-09T12:51:27.597Z",
+      "reason": "quality aprobada"
+    }
+  ]
+}

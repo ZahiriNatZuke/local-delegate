@@ -221,6 +221,9 @@ def record(event: str, step_aside: str | None = None, **metadata: object) -> Non
 MOD_DECISIONS: dict[str, tuple[bool, bool, str]] = {
     "summarized": (True, True, "large_prose"),  # con dialogo: eligio resumir con el modelo local
     "auto_summarized": (True, True, "large_prose"),  # sin dialogo: el mod resume solo
+    # el mod reutiliza el resumen de un fichero sin cambios (#608): la lectura se sustituye igual,
+    # pero sin delegacion nueva (ni `tools/call` ni fila en el log de uso)
+    "summary_reused": (True, True, "large_prose"),
     "read_whole": (True, False, "large_prose"),  # con dialogo: eligio leer entero
     "dismissed": (True, False, "large_prose"),  # cerro el dialogo sin elegir: la lectura pasa
     "summary_failed": (True, False, "summary_failed"),  # el resumen fallo: la lectura pasa

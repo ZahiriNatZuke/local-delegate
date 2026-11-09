@@ -6,6 +6,10 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Corregido
+
+- El mod de lectura del plugin ya no vuelve a resumir un fichero cuyo texto no ha cambiado: reutiliza el resumen que hizo en la misma sesión de Claude Code (también desde un subagente) y lo registra en la telemetría de hooks como `summary_reused`, sin delegación nueva ni fila en el log de uso, así que el panel no lo cuenta como ahorro nuevo (#608).
+
 ## [0.49.0] - 2026-11-04
 
 Más fiable bajo carga y con datos dudosos. `local_extract` puede dar números de línea reales
