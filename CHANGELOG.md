@@ -8,6 +8,19 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ### Corregido
 
+- **`local_summarize` da más margen al resumen de una entrada grande con el `max_words` por defecto (#580).**
+  Con más de 16 000 caracteres el modelo escribe bastante más que las palabras pedidas, y el tope
+  de 3·w+64 tokens (514 con 150) lo cortaba a menudo. Ahora el tope crece con la entrada a partir de
+  ahí (884 tokens para 23 400 caracteres), sin pasar de `LOCAL_DELEGATE_CHUNK_MAX_TOKENS` ni de
+  lo que el contexto del modelo deja tras la entrada; también en el resumen por secciones. Si aun
+  así se corta, sigue acabando en la última frase completa y con aviso.
+- **`tests/test_read_classifier.py` ya se puede correr solo.** Cargaba el clasificador por ruta sin
+  la carpeta de los hooks en el `sys.path`, y su `import path_rules` fallaba al recoger los tests si
+  ningún otro fichero la había puesto antes. Solo cambian los tests.
+- **`local_explain_code` ya no da por falsa una cita correcta porque la línea use una constante o un alias del nombre (#616).**
+  Si el fichero liga otro nombre al citado (`TOOL = 'local_summarize'`, `summarize_fn = readSummarize`,
+  `import … as`), una línea que usa ese nombre confirma la cita. Una línea sin el nombre ni sus
+  alias sigue avisando, y una comparación o una expresión más larga no crean alias.
 - **`local_lint_summary` ya no bloquea el daemon con un log que tiene líneas largas sin espacios.**
   La línea de progreso de `python -m unittest` (un punto por test) hacía que la búsqueda de
   ficheros del inventario tardara un tiempo cuadrático, con la CPU tomada: 8 000 puntos costaban
@@ -52,6 +65,13 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   singular y un único encabezado); si la hay, se deja como vino. Los dos casos van en
   `_local_delegate.outline_copies`, con aviso. «Título: línea 1» sobre un encabezado ya no se marca
   como línea dudosa (#594).
+- `local_explain_code` troceado con una pregunta ya no da por bueno un paso de combinar notas cortado por `max_tokens` que no se puede partir: lo repite una vez con más margen de salida (el doble, dentro de lo que acepta el backend); si sigue cortado, el aviso dice que fue al combinar notas y que una afirmación de que algo no ocurre puede deberse al corte (#598).
+- `local_commit_msg` con un diff muy grande se queda dentro del límite de tiempo de la tool en vez de acabar cancelado: si leer todas sus partes no cabe en un presupuesto de 95 s (el cliente corta hacia los 120 s), deja de leer partes (y de repetir trozos cortados o reagrupar notas cuando no da tiempo), redacta el mensaje con lo leído y el inventario completo de archivos, y avisa de cuánto se leyó (#596).
+- **La banda del mod ya no marca el backend como CAÍDO por un solo sondeo lento** (#612). Aplica la
+  misma regla que el panel web, con el mismo código: un fallo tras un sondeo bueno conserva lo que
+  se veía y solo el segundo fallo seguido es caído. Tras un fallo, el sondeo siguiente llega al
+  segundo y no a los 30, así que un pico suelto apenas se nota; con la caída ya confirmada, vuelve a
+  mirar cada 30 s.
 - `local_extract` ya no rellena una clave sin dato con lo que encuentra cerca: el prompt de todas sus
   llamadas (la única, cada trozo y el paso final) pide `null` para lo que la entrada no trae y
   prohíbe usar el dato de otra clave o de otra fila, sin dejar de resumir, contar, clasificar o
