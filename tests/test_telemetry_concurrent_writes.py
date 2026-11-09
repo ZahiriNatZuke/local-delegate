@@ -21,11 +21,10 @@ from pathlib import Path
 
 import pytest
 
-import local_delegate
 from local_delegate import hook_entry
 from local_delegate.resources.hooks import hook_common
 
-SRC = Path(local_delegate.__file__).resolve().parents[1]
+SRC = Path(hook_entry.__file__).resolve().parents[1]
 HOOKS = Path(hook_common.__file__).resolve().parent
 PROCESSES = 6
 LINES = 400
