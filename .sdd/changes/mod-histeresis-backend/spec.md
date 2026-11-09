@@ -15,8 +15,10 @@ del backend con la misma funcion, y estando caido el mod vuelve en cuanto el bac
   fallo no pinta caido (equivale a «comprobando» del panel: sin estado de backend).
   - Request: "El mod marca CAÍDO por un solo sondeo lento"
   - Verify: test mod/status.test.ts
-- **REQ-002** — Con un fallo pendiente o caido, el temporizador del mod va a `STATUS_HOT_MS`; al
-  volver un sondeo bueno sin nada en curso, vuelve a `STATUS_COLD_MS`.
+- **REQ-002** — Con un fallo pendiente de confirmar (`failures === 1`), el temporizador del mod va a
+  `STATUS_HOT_MS`; con la caida ya confirmada, o al volver un sondeo bueno sin nada en curso, vuelve
+  a `STATUS_COLD_MS` (revision del orquestador: 1 s durante toda una caida eran ~20 sondeos por
+  minuto y sesion contra el backend).
   - Request: "y se queda así hasta 30 s"
   - Verify: test mod/status.test.ts
 - **REQ-003** — `initialView` y `visibleState` tienen una sola fuente (`mod/common.js`) y el panel

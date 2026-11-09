@@ -693,8 +693,10 @@ async function statusApply($, view) {
     await $.ui.invalidate('ui.render')
   }
   // `shared` too: the band has to drop the note as soon as the other session's call ends.
-  // A failed probe too (held or down): the next one confirms or clears it in a second, not in 30.
-  const failing = view.backendView !== null && view.backendView.failures > 0
+  // A failure waiting for confirmation too: the next probe confirms or clears it in a second, not in
+  // 30. Only that one: once down, the slow pace again (a long outage at 1 s would be ~20 probes a
+  // minute per session, each one a call to the backend).
+  const failing = view.backendView !== null && view.backendView.failures === 1
   const hot = snapshot.backend === 'busy' || snapshot.backend === 'shared' || snapshot.loading === true || failing
   statusArm($, view, hot ? STATUS_HOT_MS : STATUS_COLD_MS)
 }

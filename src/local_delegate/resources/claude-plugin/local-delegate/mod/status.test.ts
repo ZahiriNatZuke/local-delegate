@@ -1089,9 +1089,15 @@ test('one failed probe after a good one keeps the band; the second in a row is d
   await seen.clock.advance(1000)
   expect(since(seen, before)).toEqual(['/api/backend', '/api/inflight'])
   expect((await line($)).line).toContain('○ modelo local caído')
-  // Down, it keeps asking every second and is back as soon as the backend answers.
+  // Down, confirmed: back to the slow pace, not a probe a second for the whole outage.
+  const down = seen.fetches.length
+  await seen.clock.advance(1000)
+  expect(seen.fetches.length).toBe(down)
+  await seen.clock.advance(28000)
+  expect(seen.fetches.length).toBe(down)
   daemon = UP
   await seen.clock.advance(1000)
+  expect(since(seen, down)).toEqual(['/api/backend', '/api/inflight'])
   expect((await line($)).line).toContain('● qwen3-8b listo')
   // Back with nothing in flight: the slow pace again.
   const after = seen.fetches.length

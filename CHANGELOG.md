@@ -15,8 +15,9 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   también la de contadores de hallazgos en las claves de un informe JSON.
 - **La banda del mod ya no marca el backend como CAÍDO por un solo sondeo lento** (#612). Aplica la
   misma regla que el panel web, con el mismo código: un fallo tras un sondeo bueno conserva lo que
-  se veía y solo el segundo fallo seguido es caído. Con un fallo pendiente o caído, vuelve a mirar
-  cada segundo en vez de cada 30, así que sale de CAÍDO en cuanto el backend responde.
+  se veía y solo el segundo fallo seguido es caído. Tras un fallo, el sondeo siguiente llega al
+  segundo y no a los 30, así que un pico suelto apenas se nota; con la caída ya confirmada, vuelve a
+  mirar cada 30 s.
 
 ## [0.49.0] - 2026-11-04
 

@@ -13,7 +13,7 @@
 | Requirement | Check performed | Result | Evidence |
 | --- | --- | --- | --- |
 | REQ-001 | mod/status.test.ts (tests #612) | pass | con el `status.js` de HEAD fallan 3 de los 4 nuevos (un fallo suelto pinta caído) |
-| REQ-002 | mod/status.test.ts `one failed probe after a good one…` | pass | tras el fallo, el siguiente sondeo llega a 1 s; de vuelta, 30 s |
+| REQ-002 | mod/status.test.ts `one failed probe after a good one…` | pass | tras el primer fallo, el siguiente sondeo llega a 1 s; confirmada la caida, 30 s (con el mutante `failures > 0` el test falla) |
 | REQ-003 | tests/test_backend_view_shared.py | pass | con un `statusShownBackend` que devuelve el cuerpo crudo falla `assert 'down' == 'ready'` |
 | REQ-004 | mod/status.test.ts `no answer from /api/backend…` | pass | la respuesta nula ni suma fallo ni pone la cuenta a cero; ese latido dice «sin datos» |
 
