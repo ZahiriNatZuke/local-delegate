@@ -625,6 +625,91 @@ def markdown_outline(content: str) -> list[tuple[int, str]]:
     return out
 
 
+# --- #594: the outline copied into the field of ONE heading -----------------------------------
+#: Words of a location field name that say how to locate, not what: what is left names the
+#: heading (`local_extract_section_heading_line` -> `local extract`).
+_LOCATION_NAME_WORDS = (
+    _LINES_WORDS
+    | _LINE_WORDS
+    | _LINE_QUALIFIERS
+    | frozenset(
+        {
+            "of", "de", "del", "la", "el", "the", "with", "con", "for", "para", "where", "donde",
+            "location", "locations", "ubicacion", "position", "posicion", "header", "headers",
+            "cabecera", "chapter", "capitulo", "apartado", "all", "and", "names", "name",
+            "nombre", "nombres", "todas", "todos", "outline", "esquema", "index", "indice", "list",
+            "lista",
+        }
+    )
+)  # fmt: skip
+#: #594: the singular words that make a field ask for ONE place.
+_ONE_PLACE_WORDS = frozenset(
+    {
+        "line", "linea", "heading", "title", "titulo", "section", "seccion", "encabezado",
+        "header", "cabecera", "chapter", "capitulo", "apartado",
+    }
+)  # fmt: skip
+#: With one of these the field asks for several places (`tools_with_lines`, `capitulos_con_linea`,
+#: `line_of_each_heading`): the whole outline is its answer, never a copy.
+_SEVERAL_PLACES_WORDS = frozenset(
+    {
+        "lines", "lineas", "headings", "titles", "titulos", "sections", "secciones",
+        "encabezados", "linenos", "headers", "cabeceras", "chapters", "capitulos", "apartados",
+        "each", "every", "all", "cada", "todos", "todas",
+    }
+)  # fmt: skip
+#: The `#` marks (and blanks) in front of an outline heading.
+_HEADING_MARKS = re.compile(r"^\s*#+\s*")
+#: An outline copy cites at least this many heading lines (and half of the outline).
+OUTLINE_COPY_MIN = 3
+
+
+def _name_words(text: str) -> set[str]:
+    return set(_FIELD_WORD.findall(_fold(_CAMEL_BOUNDARY.sub(" ", text))))
+
+
+def heading_text(heading: str) -> str:
+    """An outline heading (`## \\`local_extract\\``) without its `#` marks."""
+    return _HEADING_MARKS.sub("", heading)
+
+
+def outline_copy(
+    field_name: str, value: object, outline: list[tuple[int, str]]
+) -> tuple[bool, tuple[int, str] | None]:
+    """#594: whether `value` is the whole outline put in a field that names ONE heading.
+
+    The field must ask for one place (a singular `line`, `heading`, `section`...; a plural or
+    `each`/`cada` asks for several: `sections_with_lines`, `capitulos_con_linea`) and name
+    something besides how to locate it (`<x>_section_heading_line`), and the value must cite
+    `OUTLINE_COPY_MIN`+ heading lines and at least half of the outline. Returns (copied, target).
+    The target, the line to cut the value to, is given only without doubt: the subject is singular
+    (no word of it ends in `s`: `tools_section_line` and `pasos_heading_line` may ask for several)
+    and exactly one heading holds every word of it as a whole word, the one with the fewest other
+    words. Otherwise None: the value is left as it came, with a warning.
+    """
+    names = _name_words(field_name)
+    if names & _SEVERAL_PLACES_WORDS or not names & _ONE_PLACE_WORDS:
+        return False, None
+    subject = names - _LOCATION_NAME_WORDS
+    if not subject or len(outline) < OUTLINE_COPY_MIN:
+        return False, None
+    heading_lines = {number for number, _ in outline}
+    cited = {start for _, spans in _items(value) for start, _ in spans} & heading_lines
+    if len(cited) < OUTLINE_COPY_MIN or 2 * len(cited) < len(outline):
+        return False, None
+    if any(word.endswith("s") for word in subject):
+        return True, None
+    candidates = []
+    for number, heading in outline:
+        words = _name_words(heading_text(heading))
+        if subject <= words:
+            candidates.append((len(words - subject), number, heading_text(heading)))
+    candidates.sort()
+    if not candidates or (len(candidates) > 1 and candidates[0][0] == candidates[1][0]):
+        return True, None
+    return True, (candidates[0][1], candidates[0][2])
+
+
 #: #582: words of a question that ask for the files of a diff or their lines, compared without
 #: accents or case, as whole words. A question with one of them gets the whole index; any other
 #: gets a short one. A closed list, not a judgment of the question: «¿qué cambia?» is not in it.
@@ -917,6 +1002,7 @@ def check_values(value: object, content: str) -> list[Citation]:
     total = len(lines)
     mismatched: list[Citation] = []
     seen: set[tuple[_Span, tuple[str, ...]]] = set()
+    headings: set[int] | None = None  # #594: computed on the first generic citation
     for text, spans in _items(value):
         words = _words(text)
         folded_words = [_fold(w) for w in words]
@@ -931,7 +1017,22 @@ def check_values(value: object, content: str) -> list[Citation]:
             if not folded_words:
                 continue
             low = max(start - TOLERANCE, 1)
-            window = _fold("\n".join(lines[low - 1 : min(end + TOLERANCE, total)]))
+            window_lines = lines[low - 1 : min(end + TOLERANCE, total)]
+            window = _fold("\n".join(window_lines))
+            # #594: «Título: línea 1» names no heading, it says the line is one: a heading of the
+            # outline (outside fenced code) on the cited lines holds it, as the word itself still
+            # does around them (the `title:` of a front matter).
+            if all(w in _GENERIC_HEADING_WORDS for w in folded_words):
+                if headings is None:
+                    headings = {number for number, _ in markdown_outline(content)}
+                if any(start <= number <= end for number in headings):
+                    continue
             if not any(w in window for w in folded_words):
                 mismatched.append(citation)
     return mismatched
+
+
+#: #594: the words of a citation that say "a heading" without naming one (`Título: línea 1`).
+_GENERIC_HEADING_WORDS = frozenset(
+    {"titulo", "title", "heading", "encabezado", "cabecera", "header"}
+)

@@ -158,6 +158,132 @@ def context_of(payload: dict, script: str) -> dict:
     return {"version": version_de(script), "session_id": str(payload.get("session_id") or "")}
 
 
+# --- Añadir una línea entre procesos (telemetria-escritura-concurrente) ---------------------------
+#
+# Escriben a la vez en el mismo fichero cada hook, los hilos del daemon (`/api/hook/record-read`) y
+# el CLI. En Windows el modo «a» del CRT hace «ir al final + escribir», que no es atómico entre
+# procesos: con 6 procesos x 300 líneas se perdía entre el 10 y el 16 % y salían líneas partidas.
+# `append_line` toma un cerrojo de fichero, comprueba que lo anterior acaba en salto de línea y
+# escribe la línea entera con UN `os.write`. Solo stdlib: los hooks no tienen `filelock`.
+#
+# En Windows el cerrojo de rango es OBLIGATORIO (no consultivo): cerrar el byte 0 haría fallar a
+# quien lee el fichero. Se cierra un byte en `_LOCK_OFFSET`, muy lejos de cualquier final, que nadie
+# lee ni escribe. En POSIX, `flock` sobre el fichero entero, que es consultivo y no molesta a nadie.
+
+#: Lo más que espera un hook por el cerrojo. Pasado esto la línea se escribe igual (sin cerrojo,
+#: como antes): un hook no se cuelga por la telemetría, y perder la línea sería peor.
+APPEND_LOCK_WAIT_S = 1.0
+_LOCK_OFFSET = 2**62
+_LOCK_POLL_S = 0.002
+
+if os.name == "nt":
+    import msvcrt
+
+    #: «Lo tiene otro»: con cualquier otro `errno` (un sistema de ficheros sin cerrojos) no se espera.
+    _BUSY_ERRNOS = frozenset({13, 36})  # EACCES, EDEADLK
+
+    def _try_lock(fd: int) -> bool:
+        os.lseek(fd, _LOCK_OFFSET, os.SEEK_SET)
+        try:
+            msvcrt.locking(fd, msvcrt.LK_NBLCK, 1)
+        except OSError as exc:
+            if exc.errno in _BUSY_ERRNOS:
+                return False
+            raise
+        return True
+
+    def _unlock(fd: int) -> None:
+        os.lseek(fd, _LOCK_OFFSET, os.SEEK_SET)
+        msvcrt.locking(fd, msvcrt.LK_UNLCK, 1)
+
+else:
+    import errno
+    import fcntl
+
+    _BUSY_ERRNOS = frozenset({errno.EAGAIN, errno.EWOULDBLOCK, errno.EACCES})
+
+    def _try_lock(fd: int) -> bool:
+        try:
+            fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except OSError as exc:
+            if exc.errno in _BUSY_ERRNOS:
+                return False
+            raise
+        return True
+
+    def _unlock(fd: int) -> None:
+        fcntl.flock(fd, fcntl.LOCK_UN)
+
+
+@contextlib.contextmanager
+def _exclusive(fd: int, wait_s: float):
+    """El cerrojo de `fd` mientras dura el bloque, esperando como mucho `wait_s`.
+
+    Da `True` si lo tomó y `False` si no (ocupado todo el plazo, o un sistema de ficheros sin
+    cerrojos): quien lo usa sigue igual, porque perder la línea sería peor que arriesgarla.
+    """
+    deadline = time.monotonic() + wait_s
+    locked = False
+    while True:
+        try:
+            locked = _try_lock(fd)
+        except OSError:
+            break  # no hay cerrojos aquí: no tiene sentido esperar
+        if locked or time.monotonic() >= deadline:
+            break
+        time.sleep(_LOCK_POLL_S)
+    try:
+        yield locked
+    finally:
+        if locked:
+            try:
+                _unlock(fd)
+            except OSError:
+                pass  # al cerrar el descriptor el sistema lo suelta igual
+
+
+def _open_shared(path: Path, flags: int) -> int:
+    # 0o600: en un /tmp compartido (Linux) otro usuario podría abrirlo y retener el cerrojo.
+    return os.open(path, flags | os.O_CREAT | getattr(os, "O_BINARY", 0), 0o600)
+
+
+def _ends_without_newline(fd: int) -> bool:
+    size = os.fstat(fd).st_size
+    if size == 0:
+        return False
+    os.lseek(fd, size - 1, os.SEEK_SET)
+    return os.read(fd, 1) != b"\n"
+
+
+def _tail_has(fd: int, needle: bytes) -> bool:
+    size = os.fstat(fd).st_size
+    os.lseek(fd, max(0, size - RECORD_ID_TAIL_BYTES), os.SEEK_SET)
+    return needle in os.read(fd, RECORD_ID_TAIL_BYTES)
+
+
+def append_line(path: Path, line: str, *, unless: bytes | None = None) -> bool:
+    """Añade `line` (sin el salto final) a `path`, entera, aunque escriban otros a la vez.
+
+    Bajo el cerrojo: si el fichero no acaba en salto de línea (una línea partida de antes), se
+    añade uno para que la nueva no quede pegada a ella; con `unless`, si esos bytes ya están en la
+    cola del fichero (`RECORD_ID_TAIL_BYTES`) no se escribe y devuelve `False`. Lanza el `OSError`
+    de abrir o escribir: quien llama decide si se lo traga.
+    """
+    data = line.encode("utf-8") + b"\n"
+    fd = _open_shared(Path(path), os.O_RDWR | os.O_APPEND)
+    try:
+        with _exclusive(fd, APPEND_LOCK_WAIT_S):
+            if unless is not None and _tail_has(fd, unless):
+                return False
+            if _ends_without_newline(fd):
+                data = b"\n" + data
+            while data:  # con `O_APPEND`, al final; en un fichero normal, de una vez
+                data = data[os.write(fd, data) :]
+        return True
+    finally:
+        os.close(fd)
+
+
 #: Set only inside `record_or_raise`: `record` then re-raises a write error instead of swallowing it.
 _RECORD_STRICT: contextvars.ContextVar[bool] = contextvars.ContextVar(
     "local_delegate_record_strict", default=False
@@ -195,11 +321,17 @@ def record(event: str, step_aside: str | None = None, **metadata: object) -> Non
             "step_aside": step_aside,
         }
     payload = {"ts": datetime.now(UTC).isoformat(), "event": event, **metadata}
+    # On the mod's road the same decision can arrive by two roads at once (a late daemon and the
+    # process fallback): the `id` check and the write are one locked step (`append_line(unless=)`).
+    record_id = mod_record_id(payload) if _RECORD_STRICT.get() else None
     try:
         path = Path(destination)
         path.parent.mkdir(parents=True, exist_ok=True)
-        with path.open("a", encoding="utf-8") as stream:
-            stream.write(json.dumps(payload, ensure_ascii=False) + "\n")
+        append_line(
+            path,
+            json.dumps(payload, ensure_ascii=False),
+            unless=_id_needle(record_id) if record_id else None,
+        )
     except OSError:
         # La telemetría es best-effort y corre dentro de un hook del agente: si el destino no se
         # puede crear o escribir (permisos, disco lleno, ruta inválida en LD_HOOK_TELEMETRY_LOG),
@@ -263,13 +395,18 @@ def mod_record_id(entry: Mapping) -> str | None:
     return value if isinstance(value, str) and _MOD_RECORD_ID.match(value) else None
 
 
+def _id_needle(record_id: str) -> bytes:
+    """`"id": "<record_id>"` as `record` writes it (`json.dumps` with its default separators)."""
+    return json.dumps({"id": record_id})[1:-1].encode("utf-8")
+
+
 def already_recorded(record_id: str) -> bool:
     """Si la cola del destino de la telemetria ya tiene una linea con `record_id`. Lee solo los
     ultimos `RECORD_ID_TAIL_BYTES`; sin destino o sin fichero, `False` (se escribe como siempre)."""
     destination = str(current_environ().get("LD_HOOK_TELEMETRY_LOG", "")).strip()
     if not destination:
         return False
-    needle = json.dumps({"id": record_id})[1:-1].encode("utf-8")
+    needle = _id_needle(record_id)
     try:
         with Path(destination).open("rb") as stream:
             stream.seek(0, os.SEEK_END)
@@ -1049,12 +1186,36 @@ def record_block(block_id: str, path: str, notes: Path | None = None) -> None:
         {"id": block_id, "sha": path_digest(path), "ts": time.time()},
         ensure_ascii=False,
     )
+    # Leer, añadir y recortar es un solo paso bajo el cerrojo de `append_line`: dos bloqueos a la
+    # vez reescribían el fichero cada uno con lo que leyó, y la nota del primero se perdía. Mientras
+    # cabe se añade al final; lleno, se queda la mitad más reciente (una reescritura cada
+    # `MAX_NOTES // 2` notas, y no en cada una).
     try:
-        previous = notes_file.read_text(encoding="utf-8").splitlines()[-(MAX_NOTES - 1) :]
-    except OSError:
-        previous = []
-    try:
-        notes_file.write_text("\n".join([*previous, line]) + "\n", encoding="utf-8")
+        fd = _open_shared(notes_file, os.O_RDWR)
+        try:
+            with _exclusive(fd, APPEND_LOCK_WAIT_S):
+                os.lseek(fd, 0, os.SEEK_SET)
+                chunks = []
+                while chunk := os.read(fd, 1 << 16):
+                    chunks.append(chunk)
+                previous = b"".join(chunks)
+                lines = [x for x in previous.decode("utf-8", "replace").splitlines() if x.strip()]
+                if len(lines) < MAX_NOTES:
+                    data = line.encode("utf-8") + b"\n"
+                    if previous and not previous.endswith(b"\n"):
+                        data = b"\n" + data
+                    os.lseek(fd, 0, os.SEEK_END)
+                else:
+                    keep = lines[-(MAX_NOTES // 2 - 1) :]
+                    data = ("\n".join([*keep, line]) + "\n").encode("utf-8")
+                    os.lseek(fd, 0, os.SEEK_SET)
+                end = len(data)
+                while data:
+                    data = data[os.write(fd, data) :]
+                if len(lines) >= MAX_NOTES:
+                    os.ftruncate(fd, end)  # después de escribir: nunca queda vacío
+        finally:
+            os.close(fd)
     except OSError:
         # Best-effort a proposito: perder esta nota cuesta una correlacion en la medicion;
         # romperle la lectura al usuario por no poder escribir un fichero cuesta mucho mas.

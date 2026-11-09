@@ -1065,6 +1065,26 @@
           "reason": "dato congelado de corpus o caso: nombre de campo de la revisión del PR #573, en español a propósito, para comprobar que una cantidad de líneas no pide numeración"
         },
         {
+          "name": "pasos_heading_line",
+          "file": "tests/test_extract_field_fidelity.py",
+          "reason": "dato congelado de corpus o caso: nombre de campo de la revisión del PR #609 (#594), en español a propósito, para comprobar que un sujeto en plural en español es dudoso y no se recorta"
+        },
+        {
+          "name": "uso_heading_line",
+          "file": "tests/test_extract_field_fidelity.py",
+          "reason": "dato congelado de corpus o caso: nombre de campo de la revisión del PR #609 (#594), en español a propósito, para comprobar que un sujeto en singular en español con un solo encabezado sí se recorta"
+        },
+        {
+          "name": "capitulos_con_linea",
+          "file": "tests/test_extract_field_fidelity.py",
+          "reason": "dato congelado de corpus o caso: nombre de campo de la revisión del PR #609 (#594), en español a propósito, para comprobar que una palabra de sitio en plural en español pide varios sitios y no es copia"
+        },
+        {
+          "name": "linea_de_cada_seccion",
+          "file": "tests/test_extract_field_fidelity.py",
+          "reason": "dato congelado de corpus o caso: nombre de campo de la revisión del PR #609 (#594), en español a propósito, para comprobar que «cada» pide varios sitios y no es copia"
+        },
+        {
           "name": "nonce-neutro",
           "file": "scripts/clean_watcher_fixtures.py",
           "reason": "dato congelado de corpus o caso: valor neutro (`NEUTRAL_NONCE`) que el limpiador ya escribió en las copias de `tests/fixtures/vigilante/*.html`; cambiarlo obligaría a reescribir esas copias (ola A10a-1)"
