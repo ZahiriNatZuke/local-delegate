@@ -39,3 +39,10 @@
 - Un fichero que cambia y vuelve a su texto original mientras se resume no se detecta (hallazgo F6): raro y aceptado.
 - Un resumen reutilizado no refleja un cambio de configuración del servidor (modelo, idioma) hecho a mitad de sesión; se acepta.
 - Una `test_read_classifier.py` corrida sola no se colecciona (falta `path_rules` en `sys.path`) también en `main`: es previo y ajeno; dentro de la suite completa pasa.
+
+## Final result
+
+- Merged in `main` as `42d1c420` (PR #614, 2026-11-09T18:43:09Z).
+- `main` CI on `42d1c420`: all check runs green.
+- `main` at `c25e608f`: CI (run 42678307325 Wiki, 42678307752 CI), CodeQL and Vendor audit green on `c25e608f`.
+- Closed on 2026-11-09 in the 0.50.0 release PR (`release/0.50.0`).

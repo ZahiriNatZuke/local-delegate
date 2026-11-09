@@ -4,9 +4,9 @@
   "title": "El verificador de citas acepta un alias o una constante del nombre citado (#616)",
   "mode": "lite",
   "traceability": "strict",
-  "status": "closing",
+  "status": "closed",
   "createdAt": "2026-11-09T13:44:18.957Z",
-  "updatedAt": "2026-11-09T14:12:24.198Z",
+  "updatedAt": "2026-11-09T19:09:35.294Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -33,10 +33,10 @@
       "actor": "user"
     },
     "memory": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-11-09T19:09:35.089Z",
+      "evidence": "Sin nota aparte: lo durable va en el CHANGELOG 0.50.0, el PR y review.md; la jornada del 2026-11-09 del vault la escribe la sesión principal",
+      "actor": "user"
     }
   },
   "history": [
@@ -120,6 +120,21 @@
       "to": "closing",
       "at": "2026-11-09T14:12:24.198Z",
       "reason": "conformance aprobada"
+    },
+    {
+      "type": "gate",
+      "gate": "memory",
+      "status": "approved",
+      "at": "2026-11-09T19:09:35.089Z",
+      "evidence": "Sin nota aparte: lo durable va en el CHANGELOG 0.50.0, el PR y review.md; la jornada del 2026-11-09 del vault la escribe la sesión principal",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "closing",
+      "to": "closed",
+      "at": "2026-11-09T19:09:35.294Z",
+      "reason": "PR #618 merged (1cfb3364), main at c25e608f green, handoff filled; closed in the 0.50.0 release PR"
     }
   ]
 }

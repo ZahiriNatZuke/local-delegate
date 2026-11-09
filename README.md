@@ -171,7 +171,7 @@ al contexto de Claude, y de ahí sale el ahorro.
 | `local_boilerplate` | Genera código desde una spec y lo **escribe en `target`**; devuelve solo un recibo | código |
 | `local_delegate` | Escape genérico texto→texto | mecánico (o el que pases) |
 | `local_lint_summary` | Resume logs de lint/tests/CI | mecánico / largo (auto) |
-| `local_commit_msg` | Mensaje de commit desde un diff; con `path` toma el idioma del repo y avisa si no pudo | código |
+| `local_commit_msg` | Mensaje de commit desde un diff; con `path` toma el idioma del repo y avisa si no pudo; con un diff enorme acaba a tiempo con lo leído y lo avisa | código |
 | `local_translate` | Traduce texto o archivo | mecánico / largo (auto) |
 | `local_explain_code` | Explica código en prosa; con `path` y pregunta avisa de líneas citadas dudosas y de una premisa que el código no sostiene | código |
 | `local_describe_image` | Describe una imagen o responde una pregunta sobre ella (imagen→texto) | visión |
@@ -320,7 +320,8 @@ descuenta las relecturas del mismo fichero. Junto a ella, un bloque de **cuota**
 calibrar» hasta que hay al menos tres medidas del statusline de ventanas distintas, y nunca enseña
 un porcentaje sin esa calibración. Para atribuir el histórico y alimentar esos dos bloques, lanza
 de vez en cuando `local-delegate recompute-cost` (lee tus transcripts en local y escribe solo
-agregados); `doctor` avisa si hay delegaciones a punto de quedarse sin transcript.
+agregados; desde la 0.50.0, si no puede leer uno de sus ficheros se para sin reescribirlo);
+`doctor` avisa si hay delegaciones a punto de quedarse sin transcript.
 
 Las **pruebas no cuentan**: las delegaciones del cliente `mcp` de los scripts, las de bancos y
 las que caen en una **ventana de prueba** se apartan del panel y de `local_status`. Antes de probar
@@ -426,8 +427,9 @@ El plugin trae además un **mod**, que corre dentro de Claude Code sin gastar tu
   con varias delegaciones a la vez nombra primero la que procesa el backend y, si todas esperan, la
   más antigua con su espera (`en cola · 4 min 0 s`). Una delegación que espera a que llama-swap
   cambie de modelo dice ` ◐ ESPERANDO BACKEND ` con el modelo que pidió, no el cargado. Se
-  refresca sola cada segundo mientras hay una delegación en curso. La cuota de Claude no va
-  aquí: es de la status line.
+  refresca sola cada segundo mientras hay una delegación en curso. Desde la 0.50.0 un solo sondeo
+  lento no la pone en ` ○ CAÍDO `: como el panel, hace falta un segundo fallo seguido. La cuota de
+  Claude no va aquí: es de la status line.
 - Desde la 0.41, el **mod de lectura** (encendido por defecto, opción `read_mod_enabled`) resume
   con `local_summarize` la prosa grande que se lee entera y entrega el resumen como resultado de
   la propia tool; con diálogo pregunta antes. Tras un resumen, escribir en ese fichero se rechaza
@@ -437,7 +439,9 @@ El plugin trae además un **mod**, que corre dentro de Claude Code sin gastar tu
   apagaste en la 0.40.0, se vuelve a encender en el menú de configuración del plugin. Desde la
   0.44.2 una lectura por rango pasa siempre literal en un subagente (sin gastar el margen del
   80 % del hilo principal), en un fichero corto (200 líneas o menos y menos de 32 KB) y cuando el
-  rango empieza después de la última línea.
+  rango empieza después de la última línea. Desde la 0.50.0 reutiliza el resumen de un fichero
+  cuyo texto no cambió (`summary_reused` en la telemetría, sin contar como ahorro nuevo), y los
+  hooks dejan pasar la lectura cuando la sesión no tiene el MCP.
 - Tras actualizar, abre una sesión nueva de Claude Code: los mods se cargan al empezar la sesión.
 
 En Windows, `install --desktop` añade el chat de **Claude Desktop**: escribe una entrada que lanza

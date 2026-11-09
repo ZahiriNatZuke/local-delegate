@@ -46,3 +46,10 @@ Without a declaration, list what was run. Never invent a command. -->
 - El panel lee `mod/common.js` al importar; si faltara en la instalacion, `web.metrics` no importa.
   La rueda lleva todo `src/local_delegate` y el sdist lo comprueba `test_build_hook.py`.
 - No toca hooks: `hook_hashes_after.json` no cambia.
+
+## Final result
+
+- Merged in `main` as `c05cc744` (PR #613, 2026-11-09T16:56:21Z).
+- `main` CI on `c05cc744`: all check runs green.
+- `main` at `c25e608f`: CI (run 42678307325 Wiki, 42678307752 CI), CodeQL and Vendor audit green on `c25e608f`.
+- Closed on 2026-11-09 in the 0.50.0 release PR (`release/0.50.0`).

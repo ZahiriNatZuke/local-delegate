@@ -37,3 +37,11 @@
 - Datos: excepción del prompt en `tests/data/uncatalogued_exceptions.json`; `authors` y `gist` en el léxico.
 - Sin medición «después» contra el backend real en esta rama: la clave del backend es un secreto
   DPAPI del usuario y no se toca; queda para la prueba conjunta (REQ-005).
+
+## Final result
+
+- Merged in `main` as `1a4d720d` (PR #621, 2026-11-09T17:44:22Z).
+- `main` CI on `1a4d720d`: test (windows-latest) red on its own merge commit: `test_questions.py::test_the_timeout_expires_and_not_before`, unrelated and intermittent.
+- Reverted by PR #624 (`c25e608f`, 2026-11-09T18:54:51Z): two regressions in the live test and the #586 case not fixed. #586 reopened.
+- `main` at `c25e608f`: CI (run 42678307325 Wiki, 42678307752 CI), CodeQL and Vendor audit green on `c25e608f`.
+- Closed on 2026-11-09 in the 0.50.0 release PR (`release/0.50.0`).

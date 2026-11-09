@@ -42,3 +42,10 @@
   en vivo antes del cambio y el humo usa ese valor exacto.
 - Excepciones de datos añadidas: cuatro nombres de campo en español en
   `scripts/data/name_exceptions.json` y `capitulos`/`doubtful` en el léxico, como en #568/#573.
+
+## Final result
+
+- Merged in `main` as `c6a8cc4d` (PR #609, 2026-11-09T16:30:01Z).
+- `main` CI on `c6a8cc4d`: all check runs green.
+- `main` at `c25e608f`: CI (run 42678307325 Wiki, 42678307752 CI), CodeQL and Vendor audit green on `c25e608f`.
+- Closed on 2026-11-09 in the 0.50.0 release PR (`release/0.50.0`).

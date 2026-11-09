@@ -40,3 +40,10 @@ Repro de la tarjeta con el arreglo (6 × 300): `valid=1800 corrupt=0` tres veces
 - En POSIX los tests concurrentes no discriminan (el `write` con `O_APPEND` ya era atómico): son de no regresión.
 - `mod/read.js` `readRecordLost` sigue reescribiendo `hook-failures.jsonl` (fuera de alcance; seguimiento).
 - Un hook que escribe nota y línea puede esperar hasta ~2 s si otro retiene el cerrojo (acotado).
+
+## Final result
+
+- Merged in `main` as `22e15bc7` (PR #605, 2026-11-09T16:19:33Z).
+- `main` CI on `22e15bc7`: all check runs green.
+- `main` at `c25e608f`: CI (run 42678307325 Wiki, 42678307752 CI), CodeQL and Vendor audit green on `c25e608f`.
+- Closed on 2026-11-09 in the 0.50.0 release PR (`release/0.50.0`).

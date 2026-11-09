@@ -4,9 +4,9 @@
   "title": "Hooks, mod y caché: lecturas sin MCP, prefiltro multilínea y fallo pasajero",
   "mode": "lite",
   "traceability": "strict",
-  "status": "result-review",
+  "status": "closed",
   "createdAt": "2026-11-09T10:45:58.966Z",
-  "updatedAt": "2026-11-09T11:58:10.635Z",
+  "updatedAt": "2026-11-09T19:09:38.326Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -33,10 +33,10 @@
       "actor": "agent-hooks-mod"
     },
     "memory": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-11-09T19:09:38.122Z",
+      "evidence": "Sin nota aparte: lo durable va en el CHANGELOG 0.50.0, el PR y review.md; la jornada del 2026-11-09 del vault la escribe la sesión principal",
+      "actor": "user"
     }
   },
   "history": [
@@ -113,6 +113,28 @@
       "at": "2026-11-09T11:58:10.635Z",
       "evidence": "Dos jueces (conforms-with-notes); F1 y F2 arreglados con test y mutante; F3-F5 aceptados y anotados en review.md",
       "actor": "agent-hooks-mod"
+    },
+    {
+      "type": "transition",
+      "from": "result-review",
+      "to": "closing",
+      "at": "2026-11-09T19:09:37.920Z",
+      "reason": "conformance approved; PR #603 merged in main as 26a14cb9; main at c25e608f green"
+    },
+    {
+      "type": "gate",
+      "gate": "memory",
+      "status": "approved",
+      "at": "2026-11-09T19:09:38.122Z",
+      "evidence": "Sin nota aparte: lo durable va en el CHANGELOG 0.50.0, el PR y review.md; la jornada del 2026-11-09 del vault la escribe la sesión principal",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "closing",
+      "to": "closed",
+      "at": "2026-11-09T19:09:38.326Z",
+      "reason": "PR #603 merged (26a14cb9), main at c25e608f green, handoff filled; closed in the 0.50.0 release PR"
     }
   ]
 }
