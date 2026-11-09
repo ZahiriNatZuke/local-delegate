@@ -8,7 +8,19 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ### Corregido
 
-- El mod de lectura del plugin ya no vuelve a resumir un fichero cuyo texto no ha cambiado: mientras Claude Code siga abierto reutiliza el resumen que ya hizo (también desde un subagente) y lo registra en la telemetría de hooks como `summary_reused`, sin delegación nueva, sin fila en el log de uso y sin nota de bloqueo, así que ni el panel ni la medición de adopción lo cuentan como ahorro nuevo (#608).
+- **`local_lint_summary` ya no bloquea el daemon con un log que tiene líneas largas sin espacios.**
+  La línea de progreso de `python -m unittest` (un punto por test) hacía que la búsqueda de
+  ficheros del inventario tardara un tiempo cuadrático, con la CPU tomada: 8 000 puntos costaban
+  6 s y 20 000, unos 40. Ahora la búsqueda es lineal y encuentra exactamente los mismos ficheros;
+  también la de contadores de hallazgos en las claves de un informe JSON.
+- **`local_summarize` con `focus` ya no avisa de que falta el enfoque cuando el resumen le dedica una sección (#593).**
+  Un título del resumen que lleva el término cuenta como mención si debajo tiene contenido propio;
+  un título copiado sin nada debajo, o solo con «(sin datos)», sigue sin contar.
+- **El mod de lectura ya no vuelve a resumir un fichero cuyo texto no ha cambiado (#608).**
+  Mientras Claude Code siga abierto reutiliza el resumen que ya hizo, también desde un subagente,
+  y lo registra en la telemetría de hooks como `summary_reused`: sin delegación nueva, sin fila en
+  el log de uso y sin nota de bloqueo, así que ni el panel ni la medición de adopción lo cuentan
+  como ahorro nuevo. Si el texto cambia, aunque sea con el mismo tamaño, se vuelve a resumir.
 
 ## [0.49.0] - 2026-11-04
 

@@ -1,0 +1,125 @@
+{
+  "schemaVersion": 1,
+  "slug": "summarize-focus-aviso",
+  "title": "local_summarize: el aviso de foco reconoce el término en títulos con contenido",
+  "mode": "lite",
+  "traceability": "strict",
+  "status": "result-review",
+  "createdAt": "2026-11-09T10:42:43.508Z",
+  "updatedAt": "2026-11-09T11:59:09.582Z",
+  "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-11-09T10:43:40.974Z",
+      "evidence": "Self-review (personal-sdd-review, strict): 4 REQs observable and traced to T1/T2; cause reproduced with _focus_missing on issue shape; conservative rule keeps #561 copied-heading tests; parent/doc-title edge case covered",
+      "actor": "summarize-agent"
+    },
+    "plan": {
+      "status": "approved",
+      "updatedAt": "2026-11-09T10:43:40.974Z",
+      "evidence": "Self-review (personal-sdd-review, strict): 4 REQs observable and traced to T1/T2; cause reproduced with _focus_missing on issue shape; conservative rule keeps #561 copied-heading tests; parent/doc-title edge case covered",
+      "actor": "summarize-agent"
+    },
+    "quality": {
+      "status": "approved",
+      "updatedAt": "2026-11-09T11:59:00.969Z",
+      "evidence": "Full suite -n 2: 6706 passed, 29 skipped, 1 lexicon failure fixed then green (75 passed on affected); ruff clean",
+      "actor": "summarize-agent"
+    },
+    "conformance": {
+      "status": "approved",
+      "updatedAt": "2026-11-09T11:59:09.582Z",
+      "evidence": "review.md: 2 judges, conforms after fixes F1-F5; verification.md rows pass",
+      "actor": "summarize-agent"
+    },
+    "memory": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-11-09T10:42:43.508Z",
+      "reason": "SDD change created"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "specifying",
+      "at": "2026-11-09T10:43:40.699Z",
+      "reason": "brief done, cause reproduced"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-11-09T10:43:40.974Z",
+      "evidence": "Self-review (personal-sdd-review, strict): 4 REQs observable and traced to T1/T2; cause reproduced with _focus_missing on issue shape; conservative rule keeps #561 copied-heading tests; parent/doc-title edge case covered",
+      "actor": "summarize-agent"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-11-09T10:43:40.974Z",
+      "evidence": "Self-review (personal-sdd-review, strict): 4 REQs observable and traced to T1/T2; cause reproduced with _focus_missing on issue shape; conservative rule keeps #561 copied-heading tests; parent/doc-title edge case covered",
+      "actor": "summarize-agent"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-11-09T11:58:51.710Z",
+      "reason": "spec/plan approved; T1-T2 done; full suite green"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "plan-review",
+      "at": "2026-11-09T11:58:51.988Z",
+      "reason": "spec/plan approved; T1-T2 done; full suite green"
+    },
+    {
+      "type": "transition",
+      "from": "plan-review",
+      "to": "implementing",
+      "at": "2026-11-09T11:58:52.246Z",
+      "reason": "spec/plan approved; T1-T2 done; full suite green"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-11-09T11:58:52.516Z",
+      "reason": "spec/plan approved; T1-T2 done; full suite green"
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-11-09T11:59:00.969Z",
+      "evidence": "Full suite -n 2: 6706 passed, 29 skipped, 1 lexicon failure fixed then green (75 passed on affected); ruff clean",
+      "actor": "summarize-agent"
+    },
+    {
+      "type": "transition",
+      "from": "verifying",
+      "to": "result-review",
+      "at": "2026-11-09T11:59:09.318Z",
+      "reason": "quality approved"
+    },
+    {
+      "type": "gate",
+      "gate": "conformance",
+      "status": "approved",
+      "at": "2026-11-09T11:59:09.582Z",
+      "evidence": "review.md: 2 judges, conforms after fixes F1-F5; verification.md rows pass",
+      "actor": "summarize-agent"
+    }
+  ]
+}
