@@ -4,9 +4,9 @@
   "title": "lint_patterns: buscar ficheros en tiempo lineal sobre logs con tramos largos sin espacios",
   "mode": "standard",
   "traceability": "strict",
-  "status": "result-review",
+  "status": "closed",
   "createdAt": "2026-11-09T10:50:58.761Z",
-  "updatedAt": "2026-11-09T11:59:10.094Z",
+  "updatedAt": "2026-11-09T19:09:39.325Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -33,10 +33,10 @@
       "actor": "lint-agent"
     },
     "memory": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-11-09T19:09:39.120Z",
+      "evidence": "Sin nota aparte: lo durable va en el CHANGELOG 0.50.0, el PR y review.md; la jornada del 2026-11-09 del vault la escribe la sesión principal",
+      "actor": "user"
     }
   },
   "history": [
@@ -134,6 +134,28 @@
       "at": "2026-11-09T11:59:10.094Z",
       "evidence": "review.md deep: 2 judges + security reviewer, conforms after fixes F1-F6; verification.md rows pass",
       "actor": "lint-agent"
+    },
+    {
+      "type": "transition",
+      "from": "result-review",
+      "to": "closing",
+      "at": "2026-11-09T19:09:38.908Z",
+      "reason": "conformance approved; PR #607 merged in main as 7d972fc8; main at c25e608f green"
+    },
+    {
+      "type": "gate",
+      "gate": "memory",
+      "status": "approved",
+      "at": "2026-11-09T19:09:39.120Z",
+      "evidence": "Sin nota aparte: lo durable va en el CHANGELOG 0.50.0, el PR y review.md; la jornada del 2026-11-09 del vault la escribe la sesión principal",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "closing",
+      "to": "closed",
+      "at": "2026-11-09T19:09:39.325Z",
+      "reason": "PR #607 merged (7d972fc8), main at c25e608f green, handoff filled; closed in the 0.50.0 release PR"
     }
   ]
 }

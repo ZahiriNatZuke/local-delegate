@@ -32,3 +32,10 @@
 
 - Solo un nivel de alias; una llamada indirecta (tabla de despacho, `getattr`) sigue pudiendo dar un aviso falso.
 - Un alias de un nombre muy repetido puede confirmar una cita cercana a cualquier uso de ese alias; con tope de 5 alias por nombre.
+
+## Final result
+
+- Merged in `main` as `1cfb3364` (PR #618, 2026-11-09T17:37:11Z).
+- `main` CI on `1cfb3364`: all check runs green.
+- `main` at `c25e608f`: CI (run 42678307325 Wiki, 42678307752 CI), CodeQL and Vendor audit green on `c25e608f`.
+- Closed on 2026-11-09 in the 0.50.0 release PR (`release/0.50.0`).

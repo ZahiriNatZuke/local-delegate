@@ -44,3 +44,10 @@ Before/after (`files_by_frequency` on a log with a line of n dots; this PC):
 - `scripts/score_lint_fidelity.py` (offline measurement script) still calls `FILE.findall`: out of scope.
 - Memory of the scanner: 8 bytes per character of a path run that holds an extension (`array('q')`);
   the input size of `local_lint_summary` itself is not capped (pre-existing).
+
+## Final result
+
+- Merged in `main` as `7d972fc8` (PR #607, 2026-11-09T12:25:36Z).
+- `main` CI on `7d972fc8`: all check runs green.
+- `main` at `c25e608f`: CI (run 42678307325 Wiki, 42678307752 CI), CodeQL and Vendor audit green on `c25e608f`.
+- Closed on 2026-11-09 in the 0.50.0 release PR (`release/0.50.0`).

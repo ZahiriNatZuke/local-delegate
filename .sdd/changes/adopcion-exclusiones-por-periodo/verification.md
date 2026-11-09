@@ -31,3 +31,10 @@
 
 - El test se escribió justo después del brief/spec/plan y antes de aprobar las puertas en el CLI; el arreglo, después de ver fallar el test.
 - No hay test para filas sin `ts` (comportamiento sin cambios: se saltan en las dos pasadas).
+
+## Final result
+
+- Merged in `main` as `12b8a577` (PR #611, 2026-11-09T13:50:06Z).
+- `main` CI on `12b8a577`: test (windows-latest) red on its own merge commit: `test_daemon_dead_listener` and `test_read_timeout_explains` (the latter fixed by #620), unrelated and intermittent.
+- `main` at `c25e608f`: CI (run 42678307325 Wiki, 42678307752 CI), CodeQL and Vendor audit green on `c25e608f`.
+- Closed on 2026-11-09 in the 0.50.0 release PR (`release/0.50.0`).

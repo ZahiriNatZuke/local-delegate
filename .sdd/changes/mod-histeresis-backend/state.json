@@ -4,9 +4,9 @@
   "title": "El mod usa la histéresis del panel para el estado del backend",
   "mode": "lite",
   "traceability": "strict",
-  "status": "result-review",
+  "status": "closed",
   "createdAt": "2026-11-09T12:32:24.085Z",
-  "updatedAt": "2026-11-09T13:10:45.307Z",
+  "updatedAt": "2026-11-09T19:09:41.162Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -33,10 +33,10 @@
       "actor": "agent-mod-histeresis"
     },
     "memory": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-11-09T19:09:40.952Z",
+      "evidence": "Sin nota aparte: lo durable va en el CHANGELOG 0.50.0, el PR y review.md; la jornada del 2026-11-09 del vault la escribe la sesión principal",
+      "actor": "user"
     }
   },
   "history": [
@@ -113,6 +113,28 @@
       "at": "2026-11-09T13:10:45.307Z",
       "evidence": "Dos jueces conforms-with-notes; A1 aceptado y escrito en la spec, A2 reforzado, A3 y B1 aceptados (review.md)",
       "actor": "agent-mod-histeresis"
+    },
+    {
+      "type": "transition",
+      "from": "result-review",
+      "to": "closing",
+      "at": "2026-11-09T19:09:40.745Z",
+      "reason": "conformance approved; PR #613 merged in main as c05cc744; main at c25e608f green"
+    },
+    {
+      "type": "gate",
+      "gate": "memory",
+      "status": "approved",
+      "at": "2026-11-09T19:09:40.952Z",
+      "evidence": "Sin nota aparte: lo durable va en el CHANGELOG 0.50.0, el PR y review.md; la jornada del 2026-11-09 del vault la escribe la sesión principal",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "closing",
+      "to": "closed",
+      "at": "2026-11-09T19:09:41.162Z",
+      "reason": "PR #613 merged (c05cc744), main at c25e608f green, handoff filled; closed in the 0.50.0 release PR"
     }
   ]
 }

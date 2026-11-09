@@ -50,3 +50,10 @@ Without a declaration, list what was run. Never invent a command. -->
   is not checked (without it the operation fails anyway).
 - No live check against the real backend (tests fake it); the behaviour on the 125 KB diff is
   modelled with the issue's measured pace.
+
+## Final result
+
+- Merged in `main` as `0bfef1d2` (PR #610, 2026-11-09T16:44:39Z).
+- `main` CI on `0bfef1d2`: test (ubuntu-latest) red on its own merge commit: `tests/test_completion_powershell.py` (`pwsh exit=-6`), unrelated and intermittent.
+- `main` at `c25e608f`: CI (run 42678307325 Wiki, 42678307752 CI), CodeQL and Vendor audit green on `c25e608f`.
+- Closed on 2026-11-09 in the 0.50.0 release PR (`release/0.50.0`).

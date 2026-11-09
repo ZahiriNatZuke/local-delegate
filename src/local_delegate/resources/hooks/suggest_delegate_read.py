@@ -61,6 +61,7 @@ import sys
 
 import read_classifier
 from hook_common import (
+    MOD_NO_BLOCK_NOTE,
     STEP_ASIDE_READ_MOD,
     already_recorded,
     backend_available,
@@ -487,7 +488,7 @@ def record_decision(entry: dict) -> None:
                 except ValueError:
                     strong_kb = 100.0
                 fields["band"] = "strong" if size_kb > strong_kb else "suggest"
-    if fields.get("blocked") and path:
+    if fields.get("blocked") and path and fields["decision"] not in MOD_NO_BLOCK_NOTE:
         fields["id"] = record_id or new_id()
         record_block(fields["id"], path)
     elif record_id:

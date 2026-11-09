@@ -48,3 +48,10 @@ Without a declaration, list what was run. Never invent a command. -->
   regenerar `scripts/data/hook_hashes_after.json` con `bump_version.py --boundaries`.
 - `tests/test_read_classifier.py` no se puede correr solo (ImportError de `path_rules`) tambien en
   main: depende de que otro test meta la carpeta de hooks en `sys.path`. Preexistente; no se toco.
+
+## Final result
+
+- Merged in `main` as `26a14cb9` (PR #603, 2026-11-09T13:42:22Z).
+- `main` CI on `26a14cb9`: all check runs green.
+- `main` at `c25e608f`: CI (run 42678307325 Wiki, 42678307752 CI), CodeQL and Vendor audit green on `c25e608f`.
+- Closed on 2026-11-09 in the 0.50.0 release PR (`release/0.50.0`).

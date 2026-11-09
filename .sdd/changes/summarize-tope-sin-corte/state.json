@@ -4,9 +4,9 @@
   "title": "local_summarize: tope de salida que crece con la entrada grande",
   "mode": "lite",
   "traceability": "strict",
-  "status": "result-review",
+  "status": "closed",
   "createdAt": "2026-11-09T12:54:19.900Z",
-  "updatedAt": "2026-11-09T13:36:23.640Z",
+  "updatedAt": "2026-11-09T19:09:44.268Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -33,10 +33,10 @@
       "actor": "summarize-cap-agent"
     },
     "memory": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-11-09T19:09:44.063Z",
+      "evidence": "Sin nota aparte: lo durable va en el CHANGELOG 0.50.0, el PR y review.md; la jornada del 2026-11-09 del vault la escribe la sesión principal",
+      "actor": "user"
     }
   },
   "history": [
@@ -120,6 +120,28 @@
       "at": "2026-11-09T13:36:23.640Z",
       "evidence": "review.md: 2 judges, conforms after F2/F4/F5; F1/F3 accepted and recorded",
       "actor": "summarize-cap-agent"
+    },
+    {
+      "type": "transition",
+      "from": "result-review",
+      "to": "closing",
+      "at": "2026-11-09T19:09:43.833Z",
+      "reason": "conformance approved; PR #615 merged in main as f0dea77a; main at c25e608f green"
+    },
+    {
+      "type": "gate",
+      "gate": "memory",
+      "status": "approved",
+      "at": "2026-11-09T19:09:44.063Z",
+      "evidence": "Sin nota aparte: lo durable va en el CHANGELOG 0.50.0, el PR y review.md; la jornada del 2026-11-09 del vault la escribe la sesión principal",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "closing",
+      "to": "closed",
+      "at": "2026-11-09T19:09:44.268Z",
+      "reason": "PR #615 merged (f0dea77a), main at c25e608f green, handoff filled; closed in the 0.50.0 release PR"
     }
   ]
 }

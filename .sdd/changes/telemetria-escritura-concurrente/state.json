@@ -4,9 +4,9 @@
   "title": "Las escrituras concurrentes a la telemetria no pierden ni corrompen lineas",
   "mode": "standard",
   "traceability": "strict",
-  "status": "result-review",
+  "status": "closed",
   "createdAt": "2026-11-09T10:58:01.355Z",
-  "updatedAt": "2026-11-09T11:59:16.869Z",
+  "updatedAt": "2026-11-09T19:09:45.316Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -33,10 +33,10 @@
       "actor": "user"
     },
     "memory": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-11-09T19:09:45.102Z",
+      "evidence": "Sin nota aparte: lo durable va en el CHANGELOG 0.50.0, el PR y review.md; la jornada del 2026-11-09 del vault la escribe la sesión principal",
+      "actor": "user"
     }
   },
   "history": [
@@ -127,6 +127,28 @@
       "at": "2026-11-09T11:59:16.869Z",
       "evidence": "Revision por niveles en review.md: dos jueces independientes (y revisor de seguridad en el standard); hallazgos resueltos o aceptados con motivo; sdd check verde.",
       "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "result-review",
+      "to": "closing",
+      "at": "2026-11-09T19:09:44.853Z",
+      "reason": "conformance approved; PR #605 merged in main as 22e15bc7; main at c25e608f green"
+    },
+    {
+      "type": "gate",
+      "gate": "memory",
+      "status": "approved",
+      "at": "2026-11-09T19:09:45.102Z",
+      "evidence": "Sin nota aparte: lo durable va en el CHANGELOG 0.50.0, el PR y review.md; la jornada del 2026-11-09 del vault la escribe la sesión principal",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "closing",
+      "to": "closed",
+      "at": "2026-11-09T19:09:45.316Z",
+      "reason": "PR #605 merged (22e15bc7), main at c25e608f green, handoff filled; closed in the 0.50.0 release PR"
     }
   ]
 }

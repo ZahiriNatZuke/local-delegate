@@ -780,12 +780,6 @@
     },
     {
       "file": "src/local_delegate/server.py",
-      "text": " Si el contenido no trae el dato de una clave, pon null en vez de inventarlo, y no la rellenes con el dato de otra clave ni de otra fila de una tabla o lista. Sigue valiendo resumir, contar, clasificar o deducir lo que el contenido permite (por ejemplo, false si no menciona algo), y tomar lo que va dentro de una ruta o de un nombre.",
-      "kind": "verbatim",
-      "reason": "prompt del modelo local (#586, `_EXTRACT_NO_FILL_CLAUSE` de `local_extract`): no es texto de interfaz y su idioma lo decide REQ-028 (los prompts no se traducen); frontera declarada en `PROMPT_BOUNDARIES` (0.50.0)"
-    },
-    {
-      "file": "src/local_delegate/server.py",
       "text": "Esquema de encabezados del documento completo (línea: encabezado; calculado por programa, fiable):\n",
       "kind": "verbatim",
       "reason": "prompt del modelo local (#568, el esquema de encabezados de un Markdown que precede al contenido en `local_extract`): no es texto de interfaz y su idioma lo decide REQ-028 (los prompts no se traducen)"

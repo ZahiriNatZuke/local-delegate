@@ -125,7 +125,21 @@ const READ_STATE = {
   recordVars: undefined,
   recordDownUntil: 0,
   pending: [],
+  // Issue #608: the summary of each file by its key, with the exact text it summarized, oldest
+  // first, and how many characters they hold together.
+  summaries: new Map(),
+  summaryChars: 0,
 }
+
+// Issue #608: a file whose text has not changed is not summarized again (13-128 s each, and 61 % of
+// the mod's calls were repeats). The key is the file's own text, compared whole: neither its size nor
+// its mtime can miss a change. The cap keeps the memory of the Claude Code process bounded.
+const READ_SUMMARY_CACHE_ENTRIES = 16
+const READ_SUMMARY_CACHE_CHARS = 4 * 1024 * 1024
+const READ_SUMMARY_CACHE_FILE_CHARS = 1024 * 1024
+// What starts a warning of the server in a tool's answer, and its receipt of a server-side read.
+const READ_WARNING_MARK = '[local-delegate warning:'
+const READ_RECEIPT = /^\((?:leído|read) server-side: .*\)$/
 
 function readText(value) {
   return typeof value === 'string' && value.trim() !== ''
@@ -836,6 +850,90 @@ async function readSummarize($, path) {
   }
 }
 
+/** The summary without the server's receipt lines (`mcp.receipt.read_server_side*`, es and en). */
+function readWithoutReceipt(text) {
+  return text
+    .split('\n')
+    .filter(line => !READ_RECEIPT.test(line))
+    .join('\n')
+    .trimEnd()
+}
+
+/** The file's text, or null when it cannot be read (then no summary of it is reused or kept). */
+async function readFileText($, path) {
+  try {
+    const text = await $.fs.read(path)
+    return typeof text === 'string' ? text : null
+  } catch {
+    return null
+  }
+}
+
+/** The summary kept for `key` when it was made from exactly `text`, else null. */
+function readCachedSummary(key, text) {
+  const kept = text === null ? undefined : READ_STATE.summaries.get(key)
+  if (!kept) {
+    return null
+  }
+  if (kept.text !== text) {
+    // The file changed: that summary can never be reused, so it does not hold its place.
+    readForgetSummary(key)
+    return null
+  }
+  // The most recently used goes last, so the oldest is the first to go.
+  READ_STATE.summaries.delete(key)
+  READ_STATE.summaries.set(key, kept)
+  return kept.summary
+}
+
+function readForgetSummary(key) {
+  const kept = READ_STATE.summaries.get(key)
+  if (kept) {
+    READ_STATE.summaries.delete(key)
+    READ_STATE.summaryChars -= kept.text.length + kept.summary.length
+  }
+}
+
+/** Keeps `summary` as the one of `key` while its text is `text`, within the cache's caps. */
+function readKeepSummary(key, text, summary) {
+  readForgetSummary(key)
+  const size = text.length + summary.length
+  if (size > READ_SUMMARY_CACHE_FILE_CHARS) {
+    return
+  }
+  READ_STATE.summaries.set(key, { text, summary })
+  READ_STATE.summaryChars += size
+  while (READ_STATE.summaries.size > READ_SUMMARY_CACHE_ENTRIES || READ_STATE.summaryChars > READ_SUMMARY_CACHE_CHARS) {
+    readForgetSummary(READ_STATE.summaries.keys().next().value)
+  }
+}
+
+/**
+ * The summary of the file: the one kept while its text is the same (`reused`), else a new one from
+ * `local_summarize`, kept only when the file read the same before and after it. Null when it fails.
+ */
+async function readSummaryOf($, key, path, bytes) {
+  // Over the per-file cap it is never kept: a file that large is not even read for it (its size
+  // in bytes is never below its length in characters).
+  const small = !(typeof bytes === 'number' && bytes > READ_SUMMARY_CACHE_FILE_CHARS)
+  const read = small ? await readFileText($, path) : null
+  const before = read !== null && read.length <= READ_SUMMARY_CACHE_FILE_CHARS ? read : null
+  const kept = readCachedSummary(key, before)
+  if (kept !== null) {
+    return { text: kept, reused: true }
+  }
+  const text = await readSummarize($, path)
+  if (text === null) {
+    return null
+  }
+  // A summary with a warning of the server (cut output, fallback model, input cut) is not kept:
+  // reused, the same flawed answer would come back for as long as the file does not change.
+  if (before !== null && !text.includes(READ_WARNING_MARK) && (await readFileText($, path)) === before) {
+    readKeepSummary(key, before, text)
+  }
+  return { text, reused: false }
+}
+
 /** The summary as the result of the tool that was called, in that tool's own shape. */
 function readAsResult(e, content) {
   if (e.tool === 'Read') {
@@ -906,14 +1004,21 @@ async function readSteer($, common, e, next, ctx) {
     }
     decision = 'summarized'
   }
-  const summary = await readSummarize($, path)
+  const summary = await readSummaryOf($, key, path, classified.bytes)
   if (summary === null) {
     return readPass($, common, e, next, ctx, 'summary_failed')
+  }
+  let text = summary.text
+  if (summary.reused) {
+    // Issue #608: no delegation (no `tools/call`, no row in the usage log), so its own decision,
+    // and the server's receipt («read server-side: …») does not pass for a new read.
+    decision = 'summary_reused'
+    text = `${readWithoutReceipt(text)}\n\n${common.t('read.summary.reused')}`
   }
   READ_STATE.guard.add(key)
   await readSaveGuard($, common, sessionId)
   await readRecord($, common, classified, decision, sessionId)
-  return readAsResult(e, `${await readSummaryHeader($, common, ctx)}\n\n${summary}`)
+  return readAsResult(e, `${await readSummaryHeader($, common, ctx)}\n\n${text}`)
 }
 
 /**
@@ -1113,6 +1218,8 @@ export function register(on, options, common) {
   READ_STATE.recordVars = undefined
   READ_STATE.recordDownUntil = 0
   READ_STATE.pending = []
+  READ_STATE.summaries = new Map()
+  READ_STATE.summaryChars = 0
   if (!READ_STATE.enabled) {
     return
   }

@@ -35,3 +35,10 @@
 
 - Las copias `.damaged-*` no se podan (fuera de alcance; solo aparecen con un fichero dañado).
 - En POSIX el `.lock` queda en disco, como los demás cerrojos del proyecto.
+
+## Final result
+
+- Merged in `main` as `bc8dc80e` (PR #604, 2026-11-09T14:46:54Z).
+- `main` CI on `bc8dc80e`: all check runs green.
+- `main` at `c25e608f`: CI (run 42678307325 Wiki, 42678307752 CI), CodeQL and Vendor audit green on `c25e608f`.
+- Closed on 2026-11-09 in the 0.50.0 release PR (`release/0.50.0`).

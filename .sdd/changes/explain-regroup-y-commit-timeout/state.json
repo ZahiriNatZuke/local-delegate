@@ -4,9 +4,9 @@
   "title": "Regroup cortado en explain_code y diff grande en commit_msg (#598, #596)",
   "mode": "lite",
   "traceability": "strict",
-  "status": "result-review",
+  "status": "closed",
   "createdAt": "2026-11-09T10:44:02.927Z",
-  "updatedAt": "2026-11-09T12:36:13.721Z",
+  "updatedAt": "2026-11-09T19:09:36.306Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -33,10 +33,10 @@
       "actor": "user"
     },
     "memory": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-11-09T19:09:36.094Z",
+      "evidence": "Sin nota aparte: lo durable va en el CHANGELOG 0.50.0, el PR y review.md; la jornada del 2026-11-09 del vault la escribe la sesión principal",
+      "actor": "user"
     }
   },
   "history": [
@@ -129,6 +129,28 @@
       "at": "2026-11-09T12:36:13.721Z",
       "evidence": "Revisión estándar con 2 jueces: conforms-with-notes; hallazgos B-01, A1, A2/B-04, A3/B-02, A4/B-09, B-03, B-05, A5, B-08 corregidos; B-06 y B-07 aceptados y anotados; suite 6720 passed (1 flake de test_install bajo xdist que pasa solo); 7 mutantes fallan por su assert",
       "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "result-review",
+      "to": "closing",
+      "at": "2026-11-09T19:09:35.881Z",
+      "reason": "conformance approved; PR #610 merged in main as 0bfef1d2; main at c25e608f green"
+    },
+    {
+      "type": "gate",
+      "gate": "memory",
+      "status": "approved",
+      "at": "2026-11-09T19:09:36.094Z",
+      "evidence": "Sin nota aparte: lo durable va en el CHANGELOG 0.50.0, el PR y review.md; la jornada del 2026-11-09 del vault la escribe la sesión principal",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "closing",
+      "to": "closed",
+      "at": "2026-11-09T19:09:36.306Z",
+      "reason": "PR #610 merged (0bfef1d2), main at c25e608f green, handoff filled; closed in the 0.50.0 release PR"
     }
   ]
 }
