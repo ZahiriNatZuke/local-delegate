@@ -52,6 +52,8 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   singular y un único encabezado); si la hay, se deja como vino. Los dos casos van en
   `_local_delegate.outline_copies`, con aviso. «Título: línea 1» sobre un encabezado ya no se marca
   como línea dudosa (#594).
+- `local_explain_code` troceado con una pregunta ya no da por bueno un paso de combinar notas cortado por `max_tokens` que no se puede partir: lo repite una vez con más margen de salida (el doble, dentro de lo que acepta el backend); si sigue cortado, el aviso dice que fue al combinar notas y que una afirmación de que algo no ocurre puede deberse al corte (#598).
+- `local_commit_msg` con un diff muy grande se queda dentro del límite de tiempo de la tool en vez de acabar cancelado: si leer todas sus partes no cabe en un presupuesto de 95 s (el cliente corta hacia los 120 s), deja de leer partes (y de repetir trozos cortados o reagrupar notas cuando no da tiempo), redacta el mensaje con lo leído y el inventario completo de archivos, y avisa de cuánto se leyó (#596).
 
 ## [0.49.0] - 2026-11-04
 
