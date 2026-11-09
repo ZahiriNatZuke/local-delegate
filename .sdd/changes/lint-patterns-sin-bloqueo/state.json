@@ -1,0 +1,139 @@
+{
+  "schemaVersion": 1,
+  "slug": "lint-patterns-sin-bloqueo",
+  "title": "lint_patterns: buscar ficheros en tiempo lineal sobre logs con tramos largos sin espacios",
+  "mode": "standard",
+  "traceability": "strict",
+  "status": "result-review",
+  "createdAt": "2026-11-09T10:50:58.761Z",
+  "updatedAt": "2026-11-09T11:59:10.094Z",
+  "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-11-09T10:53:03.068Z",
+      "evidence": "Self-review (personal-sdd-review, strict): 5 observable REQs with time caps and exact-equality criterion; scope bounded to lint_patterns; security NFR explicit",
+      "actor": "lint-agent"
+    },
+    "plan": {
+      "status": "approved",
+      "updatedAt": "2026-11-09T10:53:03.624Z",
+      "evidence": "Self-review: every REQ maps to T1-T4; tests first with positive control on main; differential fuzz guards semantic regressions; no dependency or config change",
+      "actor": "lint-agent"
+    },
+    "quality": {
+      "status": "approved",
+      "updatedAt": "2026-11-09T11:59:01.722Z",
+      "evidence": "Full suite -n 2: 6714 passed, 29 skipped, 1 lexicon failure fixed then green (63 passed on affected); ruff clean; positive control on origin/main fails by time asserts",
+      "actor": "lint-agent"
+    },
+    "conformance": {
+      "status": "approved",
+      "updatedAt": "2026-11-09T11:59:10.094Z",
+      "evidence": "review.md deep: 2 judges + security reviewer, conforms after fixes F1-F6; verification.md rows pass",
+      "actor": "lint-agent"
+    },
+    "memory": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-11-09T10:50:58.761Z",
+      "reason": "SDD change created"
+    },
+    {
+      "type": "escalation",
+      "from": "lite",
+      "to": "standard",
+      "at": "2026-11-09T10:50:59.023Z",
+      "reason": "Cause verified: polynomial (quadratic) backtracking of lint_patterns.FILE on untrusted log input, a ReDoS-class security issue (8000 dots: 6.0 s; 4000: 1.4 s). _FINDING_COUNT fullmatch on JSON keys is quadratic too."
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "researching",
+      "at": "2026-11-09T10:53:02.426Z",
+      "reason": "repro and timings"
+    },
+    {
+      "type": "transition",
+      "from": "researching",
+      "to": "specifying",
+      "at": "2026-11-09T10:53:02.719Z",
+      "reason": "research recorded"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-11-09T10:53:03.068Z",
+      "evidence": "Self-review (personal-sdd-review, strict): 5 observable REQs with time caps and exact-equality criterion; scope bounded to lint_patterns; security NFR explicit",
+      "actor": "lint-agent"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-11-09T10:53:03.349Z",
+      "reason": "spec approved"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-11-09T10:53:03.624Z",
+      "evidence": "Self-review: every REQ maps to T1-T4; tests first with positive control on main; differential fuzz guards semantic regressions; no dependency or config change",
+      "actor": "lint-agent"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "plan-review",
+      "at": "2026-11-09T11:58:52.795Z",
+      "reason": "plan approved; T1-T4 done; full suite green"
+    },
+    {
+      "type": "transition",
+      "from": "plan-review",
+      "to": "implementing",
+      "at": "2026-11-09T11:58:53.120Z",
+      "reason": "plan approved; T1-T4 done; full suite green"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-11-09T11:58:53.399Z",
+      "reason": "plan approved; T1-T4 done; full suite green"
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-11-09T11:59:01.722Z",
+      "evidence": "Full suite -n 2: 6714 passed, 29 skipped, 1 lexicon failure fixed then green (63 passed on affected); ruff clean; positive control on origin/main fails by time asserts",
+      "actor": "lint-agent"
+    },
+    {
+      "type": "transition",
+      "from": "verifying",
+      "to": "result-review",
+      "at": "2026-11-09T11:59:09.847Z",
+      "reason": "quality approved"
+    },
+    {
+      "type": "gate",
+      "gate": "conformance",
+      "status": "approved",
+      "at": "2026-11-09T11:59:10.094Z",
+      "evidence": "review.md deep: 2 judges + security reviewer, conforms after fixes F1-F6; verification.md rows pass",
+      "actor": "lint-agent"
+    }
+  ]
+}
