@@ -13,6 +13,9 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   ficheros del inventario tardara un tiempo cuadrático, con la CPU tomada: 8 000 puntos costaban
   6 s y 20 000, unos 40. Ahora la búsqueda es lineal y encuentra exactamente los mismos ficheros;
   también la de contadores de hallazgos en las claves de un informe JSON.
+- **`local_summarize` con `focus` ya no avisa de que falta el enfoque cuando el resumen le dedica una sección (#593).**
+  Un título del resumen que lleva el término cuenta como mención si debajo tiene contenido propio;
+  un título copiado sin nada debajo, o solo con «(sin datos)», sigue sin contar.
 - **La banda del mod ya no marca el backend como CAÍDO por un solo sondeo lento** (#612). Aplica la
   misma regla que el panel web, con el mismo código: un fallo tras un sondeo bueno conserva lo que
   se veía y solo el segundo fallo seguido es caído. Tras un fallo, el sondeo siguiente llega al
