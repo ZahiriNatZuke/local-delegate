@@ -28,8 +28,9 @@ is time, which is every test and corpus capture (fake backend, no elapsed time).
   - Files or modules: `src/local_delegate/server.py`, `resources/i18n/{es,en}/mcp.json`
   - Verification: `tests/test_explain_regroup_cut.py`, existing regroup tests
   - Depends on: none
-- [x] T2 — Negative-claim warning in chunked explain (REQ-003)
-  - Files or modules: `src/local_delegate/line_check.py`, `server.py`, i18n
+- [x] T2 — The combining tail says a «does not happen» may come from the cut (REQ-003); the denial
+  detector of the first round was removed after the independent review
+  - Files or modules: `server.py`, i18n
   - Verification: `tests/test_explain_regroup_cut.py`
   - Depends on: T1
 - [x] T3 — Time budget of the chunked commit_msg and its notice (REQ-004, REQ-005)
@@ -43,7 +44,8 @@ is time, which is every test and corpus capture (fake backend, no elapsed time).
 
 ## Test strategy
 
-- Unit: `_map_time_left`, `line_check.denies_something`.
+- Unit: `_map_time_left`, `_widened_cap`.
+- Worst case with a fake clock: a chunk split twice near the end and a regroup in the reduce.
 - Integration: the tools by their real path with `_run_chat` faked (no network, log in tmp).
 - End-to-end or manual: none (tests fake the backend).
 - Security and secret scanning: no secrets touched; `personal-security-check` before commit.

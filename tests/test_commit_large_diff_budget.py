@@ -182,3 +182,69 @@ def test_the_estimate_skips_the_first_chunk(monkeypatch):
     assert server._map_time_left(95, [36.0, 14.0], 0.0)
     # 50 + 2 × 30 = 110 > 95.
     assert not server._map_time_left(95, [36.0, 14.0, 30.0], 0.0)
+
+
+# --- (j) the worst case: a chunk split in two levels near the end, and a regroup in the reduce ----
+
+
+def _paragraph(tag: str, chars: int = 9_000) -> str:
+    line = f"{tag} " + "x" * 60 + "\n"
+    return line * (chars // len(line))
+
+
+def _worst_case(monkeypatch, clock, budget_s):
+    """Four chunks; the third is cut at every depth (7 calls if split twice); the four notes of
+    4 200 chars do not fit one reduce of 10 000, so the reduce regroups. 36 s for the first
+    call, 15 s for each other."""
+    content = "\n\n".join(_paragraph(t) for t in ("uno", "dos", "CUTME", "cuatro"))
+    note = "nota " + "n" * 64 + "\n"
+
+    def run_chat(model, system, user, max_tokens, temperature, **_):
+        clock["calls"].append(user[:4])
+        clock["now"] += 36.0 if len(clock["calls"]) == 1 else 15.0
+        if user.startswith("MAP:"):
+            finish = "length" if "CUTME" in user else "stop"
+            return _ok(note * 60, finish), 0, None, [server.Attempt(model, True, None, None, 0)]
+        if user.startswith("GRP:"):
+            return _ok(note * 10), 0, None, [server.Attempt(model, True, None, None, 0)]
+        return _ok("final"), 0, None, [server.Attempt(model, True, None, None, 0)]
+
+    monkeypatch.setattr(server, "_run_chat", run_chat)
+    start = clock["now"]
+    out = server._chat_map_reduce(
+        "m",
+        "MAP",
+        content,
+        lambda piece: f"GRP:{piece}",
+        max_chars=12_500,  # budget 10 000
+        tool="local_commit_msg",
+        source="inline",
+        max_words=100,
+        user_for=lambda piece: f"MAP:{piece}",
+        reduce_system="RED",
+        build_reduce=lambda joined: f"RED:{joined}",
+        time_budget_s=budget_s,
+        time_report={},
+    )
+    assert len(server._chunk_text(content, 10_000)) == 4  # guard: the four chunks
+    return out, clock["now"] - start
+
+
+def test_the_worst_case_stays_well_under_the_client_limit(backend, monkeypatch):
+    """Mutant «retries do not look at the clock»: the third chunk is split twice (7 calls) and the
+    reduce regroups, 156 fake seconds or more; the `<= 110` assert fails."""
+    _calls, clock, _state = backend
+    clock["calls"] = []
+    out, elapsed = _worst_case(monkeypatch, clock, 95.0)
+    assert "MAP:" in clock["calls"] and "RED:" in clock["calls"]  # guard: it mapped and reduced
+    assert elapsed <= 110  # a margin under the 120 s of the client
+    assert i18n.t("mcp.warning.time_budget_retries", seconds=95) in out
+
+
+def test_without_a_budget_the_worst_case_does_retry(backend, monkeypatch):
+    """Control: the same input without a budget does split the cut chunk and regroup."""
+    _calls, clock, _state = backend
+    clock["calls"] = []
+    _out, elapsed = _worst_case(monkeypatch, clock, None)
+    assert clock["calls"].count("MAP:") >= 7 and "GRP:" in clock["calls"]
+    assert elapsed > 120

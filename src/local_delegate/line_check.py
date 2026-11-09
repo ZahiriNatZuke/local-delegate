@@ -374,32 +374,6 @@ def _denies(sentence: str) -> bool:
     return any(not _NOT_ONLY.match(text, m.end()) for m in _NEGATION.finditer(text))
 
 
-#: #598: the words that deny that something happens or exists: narrower than `_NEGATION`, which
-#: also takes «sin», «nada» or «without» («sin duplicados», «no hace nada más») and would flag
-#: almost any cut answer. Case-sensitive for `none`, so Python's `None` in prose is not one.
-_DENIAL = re.compile(
-    r"(?i:\b(?:no|ni|nunca|jam[a\xe1]s|ning[u\xfa]n[oa]?|tampoco|not|never|neither|nor|"
-    r"no\s+longer|nothing)\b|n't\b)|\bnone\b"
-)
-#: Inline code (`name`): a `not x` or `None` there is code, not a denial.
-_INLINE_CODE = re.compile(r"`[^`\n]*`")
-
-
-def denies_something(answer: str) -> bool:
-    """#598: whether some sentence of the prose of `answer` denies something.
-
-    Over every sentence outside fenced and inline code, with `_DENIAL` and the exceptions of
-    #553 (not «no solo…» nor «sin embargo»). Used only when part of the output was cut: then «no
-    se observan escrituras» may come from the lost notes, not from the code.
-    """
-    prose = _INLINE_CODE.sub(" ", _without_fences(answer))
-    for sentence in _SENTENCE_END.split(prose):
-        text = _CONNECTOR.sub(" ", sentence)
-        if any(not _NOT_ONLY.match(text, m.end()) for m in _DENIAL.finditer(text)):
-            return True
-    return False
-
-
 @dataclass(frozen=True)
 class Citation:
     start: int

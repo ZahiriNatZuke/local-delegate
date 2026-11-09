@@ -16,7 +16,8 @@ Two failures of the chunked (map/reduce) path, both in `src/local_delegate/serve
 
 - **REQ-001** — In `local_explain_code` chunked WITH a question, a regroup step cut by `length`
   that cannot be split (the split would not halve its group) is retried ONCE with twice its output
-  cap when the widened output still shrinks the group (`2 × cut ≤ REGROUP_MIN_SHRINK × group`) and
+  cap — within `CHUNK_MAX_TOKENS` and the room the prompt leaves in the model's context — when
+  the widened output still shrinks the group (`2 × cut ≤ REGROUP_MIN_SHRINK × group`) and
   the retry budget of #497 allows one more call; the cut output is replaced by the retry. A context
   overflow of that retry keeps the cut output and does not fail the operation. Other tools and
   explain without a question keep today's behaviour (flag `widen_cut_regroup`, off by default).
@@ -27,17 +28,22 @@ Two failures of the chunked (map/reduce) path, both in `src/local_delegate/serve
   are named apart, so the notice adds up to the `length` steps of the log.
   - Request: "#598: … acepta regroup cortados por max_tokens tras el reintento"
   - Verify: test `tests/test_explain_regroup_cut.py`
-- **REQ-003** — In `local_explain_code` chunked, when a cut stays in the result and the model's
-  prose holds a sentence that denies something («no hay», «no se observa», «never»), a warning says
-  that the denial may come from the lost notes and must be checked against the file. Without a cut,
-  the answer is unchanged byte for byte.
+- **REQ-003** — The note-combining tail of REQ-002 says expressly that a statement that something
+  does NOT happen may come from the cut. (Revised after the independent review: the first design, a
+  program that detected denials in the answer, flagged ordinary conditionals and missed «None of the
+  functions write»; it was removed.)
   - Request: "#598: … y saca una conclusión negativa que contradice el fichero"
   - Verify: test `tests/test_explain_regroup_cut.py`
 - **REQ-004** — A chunked `local_commit_msg` stops its map before a chunk when the time since the
   tool call started plus twice the slowest chunk after the first would pass
   `server.COMMIT_TIME_BUDGET_S` (95 s; the client cancels at ~120 s); the reduce drafts the message
   from the chunks read and the whole inventory. With fewer than two chunks read it never stops,
-  and outside a tool call (no cancellation token: a measurement script) there is no budget.
+  and outside a tool call (no cancellation token: a measurement script) there is no budget. The
+  estimate is per backend call (the slowest after the first), and it is also checked before a
+  split retry of a cut chunk (#455), before a regroup level of the reduce and before the widened
+  regroup retry: when they do not fit, the cut output is kept, or the reduce gets the notes that
+  fit it, and the answer says so (`time_budget_retries`). Worst case (a chunk split twice near the
+  end plus a regroup) stays under 110 s.
   - Request: "#596: local_commit_msg con un diff de ~125 KB supera los 120 s de la tool y acaba cancelado"
   - Verify: test `tests/test_commit_large_diff_budget.py`
 - **REQ-005** — When the map stopped, the answer carries a warning with the parts and chars read
@@ -55,10 +61,10 @@ Two failures of the chunked (map/reduce) path, both in `src/local_delegate/serve
 - **When** the regroup is retried with twice the cap and answers `stop`
 - **Then** the log row has that step `retried`, no truncation notice is added and `truncated_out` is false
 
-### Scenario: cut kept and negative claim (#598)
+### Scenario: cut kept (#598)
 
-- **Given** a regroup still cut after the widened retry, and an answer «No se observan escrituras»
-- **Then** the answer carries the truncation notice naming one combining step and the negative-claim warning
+- **Given** a regroup still cut after the widened retry
+- **Then** the answer carries the truncation notice naming the combining steps and saying a «does not happen» may come from the cut
 
 ### Scenario: 125 KB diff (#596)
 

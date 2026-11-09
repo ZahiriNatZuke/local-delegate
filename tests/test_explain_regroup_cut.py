@@ -3,9 +3,9 @@
 `local_explain_code` on a ~177 000 character module had a regroup step cut after the split retry
 of #455/#497 (the split could not halve its group, so the cut output was kept), and the answer
 denied writes the file does make. Now that step is retried once with twice the cap while that
-still shrinks the group; a cut that stays is named as a note-combining step in the notice, and a
-negative statement of the explanation gets a warning. The backend is faked (`_run_chat`): no
-network, log in tmp.
+still shrinks the group and the backend takes the wider cap; a cut that stays is named as a
+note-combining step in the notice, which says a statement that something does not happen may come
+from the cut. The backend is faked (`_run_chat`): no network, log in tmp.
 """
 
 from __future__ import annotations
@@ -15,7 +15,7 @@ from pathlib import Path
 
 import pytest
 
-from local_delegate import config, i18n, line_check, server
+from local_delegate import config, i18n, server
 
 
 def _ok(text: str, finish: str = "stop"):
@@ -208,70 +208,26 @@ def test_explain_with_a_question_widens_a_cut_regroup(backend, tmp_path):
     assert any(c["max_tokens"] == regroup_cap * server.REGROUP_WIDEN_FACTOR for c in calls)
 
 
-# --- The negative statement of a chunked explanation ---------------------------------------------
+# --- (m) the widened cap within what the backend accepts ---------------------------------------
 
 
-def _big_code() -> str:
-    body = "".join(f"    x_{j} = compute_{j}(a, b)  # step {j}\n" for j in range(300))
-    return "".join(f"def part_{i}():\n{body}\n" for i in range(4))[:48_000]
-
-
-def _explain(state, reduce_text: str, reduce_finish: str, question: str | None = None) -> str:
-    def answer(call):
-        if call["user"].startswith("Toma notas"):
-            return _ok("- part (línea 1): nota")
-        return _ok(reduce_text, reduce_finish)
-
-    state["answer"] = answer
-    return server.local_explain_code(code=_big_code(), question=question)
-
-
-NEGATIVE = "El módulo calcula valores. No se observan escrituras de ficheros."
-
-
-def test_a_cut_answer_that_denies_gets_the_warning(backend):
-    """Mutant `main`: no warning; the assert on `negative_unreliable` fails."""
-    _calls, state = backend
-    out = _explain(state, NEGATIVE, "length")
-    assert (
-        i18n.t("mcp.warning.output_truncated_calls", truncated=1, calls=5).split(" en ")[0] in out
+def test_the_widened_cap_stays_within_the_chunk_cap_and_the_context(monkeypatch):
+    monkeypatch.setattr(config, "CHUNK_MAX_TOKENS", 2048)
+    monkeypatch.setattr(server.llamaswap_config, "model_context_size", lambda m: (8192, False))
+    assert server._widened_cap("m", 764, 4_000) == 1528  # twice the cap
+    assert server._widened_cap("m", 1_500, 4_000) == 2048  # the chunk cap
+    # A prompt that leaves less room in the context than twice the cap.
+    room = 8192 - server.math.ceil(
+        28_000 * config.REASONING_CONTEXT_MARGIN / config.CHARS_PER_TOKEN
     )
-    assert i18n.t("mcp.explain.negative_unreliable") in out
+    assert server._widened_cap("m", 764, 28_000) == min(1528, room)
 
 
-def test_with_a_question_a_cut_answer_that_denies_gets_the_warning(backend):
-    """The issue's case: a question about what the code writes, a cut, and a denial."""
-    _calls, state = backend
-    out = _explain(state, NEGATIVE, "length", question="¿Qué ficheros escribe?")
-    assert i18n.t("mcp.explain.negative_unreliable") in out
-
-
-def test_without_a_cut_the_negative_answer_is_unchanged(backend):
-    _calls, state = backend
-    out = _explain(state, NEGATIVE, "stop")
-    assert i18n.t("mcp.explain.negative_unreliable") not in out
-    assert out.startswith(NEGATIVE)
-
-
-def test_a_cut_answer_that_denies_nothing_gets_no_warning(backend):
-    _calls, state = backend
-    out = _explain(state, "El módulo calcula valores en cuatro partes.", "length")
-    assert server.WARNING_MARKER in out  # guard: the truncation notice is there
-    assert i18n.t("mcp.explain.negative_unreliable") not in out
-
-
-@pytest.mark.parametrize(
-    ("answer", "denies"),
-    [
-        ("No se observan escrituras.", True),
-        ("The function never writes the file.", True),
-        ("No solo lee el fichero, también lo valida.", False),
-        ("Sin embargo, escribe el fichero.", False),
-        ("Escribe el fichero.\n```\nif not x: pass\n```", False),
-        ("Devuelve None si falla y escribe sin duplicados.", False),
-        ("Comprueba `if not path` y escribe el fichero.", False),
-        ("Nothing is written to disk.", True),
-    ],
-)
-def test_denies_something(answer, denies):
-    assert line_check.denies_something(answer) is denies
+def test_no_widened_retry_when_the_backend_would_not_take_a_wider_cap(backend, monkeypatch):
+    """Mutant «2 × cap always»: the call with twice the cap is made; the assert fails."""
+    calls, state = backend
+    monkeypatch.setattr(config, "CHUNK_MAX_TOKENS", REGROUP_CAP)  # no room above the cap
+    state["answer"] = _answer("stop")
+    _map_reduce()
+    regroup_caps = {c["max_tokens"] for c in calls if c["user"].startswith("GRP:")}
+    assert regroup_caps == {REGROUP_CAP}

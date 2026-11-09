@@ -13,7 +13,7 @@
 | --- | --- | --- | --- |
 | REQ-001 | yes | yes | any failure of the optional widened retry now keeps the cut output (B-09/A4) |
 | REQ-002 | yes | yes | tail moved right after the main sentence, regroup steps only (B-02/A3) |
-| REQ-003 | yes | yes | narrower denial words and inline code excluded (A2/B-04); case with a question tested (A5) |
+| REQ-003 | yes | yes | round 2: the denial detector was removed (independent review); the combining tail says a «does NOT happen» may come from the cut |
 | REQ-004 | yes | yes | no budget outside a tool call (A1) |
 | REQ-005 | yes | yes | map/reduce receipt counts the parts read (B-01); exact warning and receipt asserted (B-05) |
 
@@ -32,6 +32,14 @@
 | B-06 | widened tests go through `_chat_map_reduce` with `local_summarize` | — | baja | suspected | accepted: the explain path is covered by `test_explain_with_a_question_widens_a_cut_regroup` and the question+denial test |
 | B-07 | residual time risks (#455 splits inside a chunk, regroup in reduce, wait > 95 s before chunk 2) | — | note | suspected | accepted and recorded in verification.md |
 | B-08/A6 | «límite de la tool (95 s)» wording; CHANGELOG absolute | baja | baja | confirmed | fixed wording; wiki goes with the release |
+
+## Independent review, round 2 (coordinator)
+
+| ID | Finding | Status | Resolution |
+| --- | --- | --- | --- |
+| j | the time budget did not cover split retries nor the regroup of the reduce (worst case > 150 s) | confirmed | fixed: per-call estimate checked before each split retry, regroup level and widened retry; worst-case test with a fake clock |
+| k+l | the denial detector flagged ordinary conditionals and missed «None of the functions write» | confirmed | removed with its tests and key; the combining tail says it instead |
+| m | the widened cap could exceed what the backend accepts | confirmed | fixed: `min(2 × cap, CHUNK_MAX_TOKENS, context room)`; no retry when that is not above the cap |
 
 ## Required follow-up
 

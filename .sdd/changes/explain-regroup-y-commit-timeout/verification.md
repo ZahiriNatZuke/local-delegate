@@ -12,10 +12,10 @@
 
 | Requirement | Check performed | Result | Evidence |
 | --- | --- | --- | --- |
-| REQ-001 | `test_a_cut_regroup_that_cannot_split_is_retried_wider`, `test_a_widened_retry_that_overflows_keeps_the_cut_output`, `test_without_the_flag_the_cut_regroup_is_kept_as_before`, `test_explain_with_a_question_widens_a_cut_regroup` | pass | 182 passed (affected files); mutants M1 (`truncated_out` assert) and M5 (`any(max_tokens == 2×cap)` assert) fail as expected |
+| REQ-001 | `test_a_cut_regroup_that_cannot_split_is_retried_wider`, `test_a_widened_retry_that_overflows_keeps_the_cut_output`, `test_without_the_flag_the_cut_regroup_is_kept_as_before`, `test_explain_with_a_question_widens_a_cut_regroup` | pass | 182 passed (affected files); mutants M1 (`truncated_out` assert) and M5 (`any(max_tokens == 2×cap)` assert) fail as expected; M10 (cap not bounded) fails `test_no_widened_retry_when_the_backend_would_not_take_a_wider_cap` |
 | REQ-002 | `test_a_regroup_cut_again_is_named_as_a_combining_step` | pass | mutant M2 fails on the `combine_cut` assert |
-| REQ-003 | `test_a_cut_answer_that_denies_gets_the_warning`, `test_without_a_cut_the_negative_answer_is_unchanged`, `test_a_cut_answer_that_denies_nothing_gets_no_warning`, `test_denies_something[*]` | pass | mutant M3 fails on the `negative_unreliable` assert |
-| REQ-004 | `test_the_issue_diff_stops_the_map_in_time_and_says_so`, `test_the_first_chunk_alone_never_stops_the_map`, `test_the_estimate_skips_the_first_chunk` | pass | mutant M4 fails on `clock - start <= 120` (148 fake seconds) |
+| REQ-003 | `test_a_regroup_cut_again_is_named_as_a_combining_step` (the tail, with the «does NOT happen» sentence, right after the main one) | pass | mutant M2 fails on that assert; the denial detector of round 1 was removed with its tests |
+| REQ-004 | `test_the_issue_diff_stops_the_map_in_time_and_says_so`, `test_the_worst_case_stays_well_under_the_client_limit`, `test_without_a_budget_the_worst_case_does_retry`, `test_outside_a_tool_call_every_chunk_is_read`, `_map_time_left` units | pass | mutants M4 (`<= 120`), M8 (split retry without the clock) and M9 (regroup without the clock) fail on `elapsed <= 110` |
 | REQ-005 | same issue test (warning, receipt, `truncated_in`), `test_with_time_left_the_prompts_are_unchanged`, `tests/test_corpus.py`, `tests/test_map_reduce.py` | pass | corpus `techo-commit-156k` and `test_a_diff_that_does_not_fit_goes_in_whole_without_truncating` green without changes |
 
 ## Commands
@@ -25,7 +25,7 @@ Without a declaration, list what was run. Never invent a command. -->
 
 | Command | Run | Result | Evidence |
 | --- | --- | --- | --- |
-| `pytest -q -n 2 tests` (via `pesado.sh`) | full suite | pass | 6715 passed, 29 skipped in 368 s |
+| `pytest -q -n 2 tests` (via `pesado.sh`) | full suite, round 2 | pass | 6738 passed, 29 skipped; the one failure (an unclassified name in a new test) fixed and rechecked |
 | `ruff check src tests` and `ruff format --check` | changed files | pass | All checks passed |
 
 ## Quality checks
@@ -44,8 +44,9 @@ Without a declaration, list what was run. Never invent a command. -->
 - #598 is gated to explain with a question; the other chunked tools keep today's regroup.
 - The issue's count complaint («1 de 17» with 2 cut regroups) was already covered by #487: the
   split retry is named apart («aparte, 1 llamadas cortadas se repitieron…»).
-- Residual time risks (judge B, B-07): a chunk split by #455 or overflowing costs ~3× the
-  estimate after the check (worst case ~123 s); a regroup inside the reduce is not estimated; a
-  wait over 95 s before the second chunk cannot be stopped (two chunks are needed to estimate).
+- Round 2 (independent review): split retries, regroup levels and the widened retry check the
+  clock too; worst case modelled under 110 s. Still open: a wait over 95 s before the second
+  backend call cannot be stopped (two calls are needed to estimate), and a context-overflow split
+  is not checked (without it the operation fails anyway).
 - No live check against the real backend (tests fake it); the behaviour on the 125 KB diff is
   modelled with the issue's measured pace.
