@@ -724,9 +724,6 @@ PROMPT_BOUNDARIES: dict[str, frozenset[str]] = {
             "local_commit_msg",
         }
     ),
-    # #586: el `system` de `local_extract` pide null para lo que la entrada no trae y prohibe
-    # rellenar una clave con el dato de otra clave o de otra fila (antes solo el map decia null).
-    "0.50.0": frozenset({"local_extract"}),
 }
 _PROMPT_BOUNDARY_FIELDS = frozenset({"system", "max_tokens"})
 # Campos de mas que una tool cambio a proposito en esa version. B2f: la llamada unica del rol `long`
