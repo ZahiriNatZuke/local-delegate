@@ -396,12 +396,19 @@ def cmd_install(args: argparse.Namespace) -> int:
 
 def cmd_recompute_cost(args: argparse.Namespace) -> int:
     """`recompute-cost` (coste-api-y-cuota, REQ-070): escribe solo en el directorio de logs."""
-    from . import config, recompute
+    from . import config, json_state, recompute
 
     reset = args.reset_calibration
     claude_dir = Path(args.claude_dir) if args.claude_dir else Path.home() / ".claude"
     try:
         summary = recompute.run(claude_dir, config.LOG_DIR, reset=reset)
+    except recompute.BusyError:
+        print(t("cli.recompute_cost.busy", seconds=i18n.format_number(recompute.LOCK_TIMEOUT_S)))
+        return 1
+    except json_state.UnreadableStateError as e:
+        # Nada se reescribió: no es «no se pudo escribir», y el mensaje lo dice.
+        print(t("cli.recompute_cost.cannot_read", name=e.filename, reason=e.strerror))
+        return 1
     except OSError as e:
         print(t("cli.recompute_cost.cannot_write", reason=e.strerror))
         return 1

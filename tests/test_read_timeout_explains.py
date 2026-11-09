@@ -164,13 +164,30 @@ def test_a_model_ready_only_in_the_deadline_probe_is_ready_at_the_end(monkeypatc
     the deadline's probe. Still not «it was loaded» (review of #572, judge 1).
 
     Positive control (before the review fix): the busy text, «it was loaded».
+
+    Deterministic (it failed with 3 queries on the Windows CI of #605 and #619): (1) the send runs
+    with no operation trace, as a send of a real operation finds its own fresh one. A trace left
+    current by an earlier test that never sent keeps its log sample unclaimed, and the send here
+    would claim it and query `/running` a third time. (2) The send times out once the watch and the
+    probe have both sampled, not after a fixed sleep a loaded runner can outrun.
     """
     monkeypatch.setattr(concurrency, "BACKEND_WAIT_RESAMPLE_S", 30.0)  # one watch sample only
     monkeypatch.setattr(server, "_probe_delay", lambda: 0.3)
     running = backend_mock.get(RUNNING).mock(side_effect=_starting_for_the_first_watch_sample())
-    backend_mock.post(CHAT).mock(side_effect=_timeout_after(0.6))
 
-    result = _send_in_slot()
+    def timeout_after_both_samples(_request):
+        deadline = time.monotonic() + 5.0  # a cap, so a broken watch or probe cannot hang
+        while running.call_count < 2 and time.monotonic() < deadline:
+            time.sleep(0.01)
+        raise httpx2.ReadTimeout("timed out")
+
+    backend_mock.post(CHAT).mock(side_effect=timeout_after_both_samples)
+
+    token = concurrency._CURRENT.set(None)  # (1): no trace of an earlier test
+    try:
+        result = _send_in_slot()
+    finally:
+        concurrency._CURRENT.reset(token)
 
     assert running.call_count == 2  # guard: the watch saw `starting`, the probe saw `ready`
     assert result.read_timeout_cause == "busy"
