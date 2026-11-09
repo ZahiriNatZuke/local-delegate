@@ -1085,6 +1085,11 @@
           "reason": "dato congelado de corpus o caso: nombre de campo de la revisión del PR #609 (#594), en español a propósito, para comprobar que «cada» pide varios sitios y no es copia"
         },
         {
+          "name": "estado_tarea",
+          "file": "tests/test_extract_no_fill.py",
+          "reason": "dato congelado de corpus o caso: nombre de campo de la revisión del cambio extract-prompt-sin-relleno (#586), en español a propósito, para comprobar que una casilla de Markdown sin marcar no se toma por una lista vacía"
+        },
+        {
           "name": "nonce-neutro",
           "file": "scripts/clean_watcher_fixtures.py",
           "reason": "dato congelado de corpus o caso: valor neutro (`NEUTRAL_NONCE`) que el limpiador ya escribió en las copias de `tests/fixtures/vigilante/*.html`; cambiarlo obligaría a reescribir esas copias (ola A10a-1)"

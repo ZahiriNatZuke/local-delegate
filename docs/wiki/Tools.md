@@ -147,6 +147,12 @@ Dos cosas que conviene saber y solo estaban en el código:
   con aviso. Una cifra menor se respeta. No se recuenta si el JSON ya trae un número cuyo nombre
   nombra la lista (`total_comments`, `meta.file_count`) o un total genérico (`total_count`,
   `total`, `count`), si la lista está anidada o si dos claves encajan.
+- **Sin dato, null; nunca el dato de otra clave o fila** (#586). Todas las llamadas de
+  `local_extract` (la única, cada trozo y el paso final) piden `null` para lo que la entrada no
+  trae, sin inventarlo ni copiarlo de otra clave o de otra fila de una tabla; resumir, contar,
+  clasificar o deducir lo que el contenido permite (un `false` porque no lo menciona) sigue valiendo. Si el modelo escribe
+  una lista vacía como el texto `"[]"`, vuelve como `[]` (`"[ ]"`, la casilla de Markdown, no se toca) y el texto queda en
+  `_local_delegate.decoded_keys`.
 - **Números de línea con `path`** (desde la 0.49.0, #568). Si un campo pide líneas por su nombre
   (`sections_with_lines`, `start_line`, `heading_line`, `lineas`…; no `location` ni una cantidad
   como `total_lines`), el modelo ve cada línea como `N| línea` con su número real, también en cada

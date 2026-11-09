@@ -456,6 +456,53 @@ def citations(answer: str, question_names: list[str], total_lines: int) -> list[
     return out
 
 
+#: #616: what binds another name to a cited one, so a line that uses that name holds the citation
+#: (`const TOOL = 'local_summarize'` and then `call(SERVER, TOOL)`). The whole line, stripped, is
+#: the binding: an optional `export`/`const`/`let`/`var`/`final`/`static`, the name, a short type
+#: annotation, `=` and the value, quoted or not, with nothing after it but `;`. So a comparison,
+#: `+=`, a longer expression (`x = f(name)`), a named argument (`name="value",`) or a statement
+#: before it (`if ready: x = name`) binds nothing. Anchored at both ends: linear in the line.
+_BINDING = (
+    r"(?:(?:export|const|let|var|final|static)\s+)*("
+    + _WORD
+    + r")\s*(?::[^=:\n]{1,40})?=\s*(['\"`]?){name}\2\s*;?"
+)
+#: `from m import name as alias`, `import { name as alias }`: only on a line with `import`.
+_IMPORT_AS = r"(?<![\w$.]){name}\s+as\s+(" + _WORD + r")(?![\w$])"
+_IMPORT = re.compile(r"(?<![\w$.])import(?![\w$])")
+#: Aliases kept per name: a name bound a dozen times is not worth widening a check for.
+MAX_ALIASES = 5
+
+
+def _is_distinct(alias: str) -> bool:
+    """An alias with an unmistakable identifier shape: snake_case or UPPER_CASE with a `_`, or
+    camelCase. A plain lowercase word (`tool`, `path`, `name`) is everywhere in a file (`for tool
+    in registry`), so as an alias it would confirm almost any citation."""
+    return _is_code_like(alias) and bool(_SNAKE.fullmatch(alias) or _CAMEL.fullmatch(alias))
+
+
+def aliases(lines: list[str], name: str) -> list[str]:
+    """The names `lines` bind to `name` (one level, unmistakable, at most `MAX_ALIASES`)."""
+    escaped = re.escape(name)
+    binding = re.compile(_BINDING.replace("{name}", escaped))
+    import_as = re.compile(_IMPORT_AS.replace("{name}", escaped))
+    out: list[str] = []
+    for line in lines:
+        if name not in line:
+            continue
+        text = line.strip()
+        whole = binding.fullmatch(text)
+        found = [whole.group(1)] if whole else []
+        if _IMPORT.search(text):
+            found += [m.group(1) for m in import_as.finditer(text)]
+        for alias in found:
+            if alias != name and _is_distinct(alias) and alias not in out:
+                out.append(alias)
+                if len(out) == MAX_ALIASES:
+                    return out
+    return out
+
+
 @dataclass
 class LineCheck:
     checked: list[Citation] = field(default_factory=list)
@@ -479,14 +526,22 @@ def check(answer: str, question: str, content: str, truncated: bool = False) -> 
         answer = answer.rstrip("\n").rpartition("\n")[0]
     result = LineCheck()
     patterns: dict[str, re.Pattern[str]] = {}
+    bound: dict[str, list[str]] = {}
     for citation in citations(answer, question_names, len(lines)):
         result.checked.append(citation)
         low = max(citation.start - TOLERANCE, 1)
         window = lines[low - 1 : min(citation.end + TOLERANCE, len(lines))]
+        # #616: the names of the citation, and what the file binds to them (never to the plain
+        # words, which only confirm).
+        names = [*citation.names]
+        for name in citation.names:
+            if name not in bound:
+                bound[name] = aliases(lines, name)
+            names += bound[name]
         hit = any(
             patterns.setdefault(name, _whole_word(name)).search(line)
             for line in window
-            for name in (*citation.names, *citation.words)
+            for name in (*names, *citation.words)
         )
         if not hit:
             result.mismatched.append(citation)

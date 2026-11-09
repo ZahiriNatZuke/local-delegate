@@ -1,0 +1,118 @@
+{
+  "schemaVersion": 1,
+  "slug": "extract-prompt-sin-relleno",
+  "title": "local_extract: el prompt pide null y prohíbe rellenar con otra clave o fila",
+  "mode": "lite",
+  "traceability": "strict",
+  "status": "result-review",
+  "createdAt": "2026-11-09T12:53:03.369Z",
+  "updatedAt": "2026-11-09T13:37:15.560Z",
+  "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-11-09T12:53:38.145Z",
+      "evidence": "Autorrevisión estricta; decisiones del orquestador (cambio de prompt, tests autorizados, en vivo en la prueba conjunta). Nota: el borrador de código se hizo antes de abrir este SDD, mientras se esperaba el CI del #609; se revisó contra este spec antes de seguir.",
+      "actor": "user"
+    },
+    "plan": {
+      "status": "approved",
+      "updatedAt": "2026-11-09T12:53:38.146Z",
+      "evidence": "Autorrevisión estricta; decisiones del orquestador (cambio de prompt, tests autorizados, en vivo en la prueba conjunta). Nota: el borrador de código se hizo antes de abrir este SDD, mientras se esperaba el CI del #609; se revisó contra este spec antes de seguir.",
+      "actor": "user"
+    },
+    "quality": {
+      "status": "approved",
+      "updatedAt": "2026-11-09T13:17:41.710Z",
+      "evidence": "suite completa 6756 passed/29 skipped; ruff check y format en verde; mutantes de la cláusula y de la decodificación fallan por su assert",
+      "actor": "user"
+    },
+    "conformance": {
+      "status": "approved",
+      "updatedAt": "2026-11-09T13:37:15.560Z",
+      "evidence": "revisión standard con dos jueces (review.md): F1-F5 corregidos, F6 aceptado; suite 6757 passed",
+      "actor": "user"
+    },
+    "memory": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-11-09T12:53:03.369Z",
+      "reason": "SDD change created"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "specifying",
+      "at": "2026-11-09T12:53:03.608Z",
+      "reason": "brief, issues y código inspeccionados"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-11-09T12:53:38.145Z",
+      "evidence": "Autorrevisión estricta; decisiones del orquestador (cambio de prompt, tests autorizados, en vivo en la prueba conjunta). Nota: el borrador de código se hizo antes de abrir este SDD, mientras se esperaba el CI del #609; se revisó contra este spec antes de seguir.",
+      "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-11-09T12:53:38.146Z",
+      "evidence": "Autorrevisión estricta; decisiones del orquestador (cambio de prompt, tests autorizados, en vivo en la prueba conjunta). Nota: el borrador de código se hizo antes de abrir este SDD, mientras se esperaba el CI del #609; se revisó contra este spec antes de seguir.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-11-09T12:53:38.447Z",
+      "reason": "spec aprobado"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "implementing",
+      "at": "2026-11-09T12:53:38.725Z",
+      "reason": "plan aprobado"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-11-09T13:17:04.785Z",
+      "reason": "implementación y tests"
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-11-09T13:17:41.710Z",
+      "evidence": "suite completa 6756 passed/29 skipped; ruff check y format en verde; mutantes de la cláusula y de la decodificación fallan por su assert",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "verifying",
+      "to": "result-review",
+      "at": "2026-11-09T13:17:41.948Z",
+      "reason": "quality aprobada"
+    },
+    {
+      "type": "gate",
+      "gate": "conformance",
+      "status": "approved",
+      "at": "2026-11-09T13:37:15.560Z",
+      "evidence": "revisión standard con dos jueces (review.md): F1-F5 corregidos, F6 aceptado; suite 6757 passed",
+      "actor": "user"
+    }
+  ]
+}
