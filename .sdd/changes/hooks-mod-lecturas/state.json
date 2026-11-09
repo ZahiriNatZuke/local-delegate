@@ -1,0 +1,118 @@
+{
+  "schemaVersion": 1,
+  "slug": "hooks-mod-lecturas",
+  "title": "Hooks, mod y caché: lecturas sin MCP, prefiltro multilínea y fallo pasajero",
+  "mode": "lite",
+  "traceability": "strict",
+  "status": "result-review",
+  "createdAt": "2026-11-09T10:45:58.966Z",
+  "updatedAt": "2026-11-09T11:58:10.635Z",
+  "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-11-09T10:47:33.632Z",
+      "evidence": "Autorrevision estricta (personal-sdd-review): 4 REQ observables con test; senal de #595 medida en transcripts reales (deferred_tools_delta en principal y subagentes; attribution.py:113-128 para la ruta del subagente); limite de tools fijadas documentado; no toca record() de telemetria; tests existentes intactos (test_load_never_raises y test_cache_is_used condicionan la forma de load/_read_document); hook_hashes_after.json queda para la release.",
+      "actor": "agent-hooks-mod"
+    },
+    "plan": {
+      "status": "approved",
+      "updatedAt": "2026-11-09T10:47:33.632Z",
+      "evidence": "Autorrevision estricta (personal-sdd-review): 4 REQ observables con test; senal de #595 medida en transcripts reales (deferred_tools_delta en principal y subagentes; attribution.py:113-128 para la ruta del subagente); limite de tools fijadas documentado; no toca record() de telemetria; tests existentes intactos (test_load_never_raises y test_cache_is_used condicionan la forma de load/_read_document); hook_hashes_after.json queda para la release.",
+      "actor": "agent-hooks-mod"
+    },
+    "quality": {
+      "status": "approved",
+      "updatedAt": "2026-11-09T11:55:09.523Z",
+      "evidence": "Suite 6646 passed/30 skipped; 4 fallos explicados: 2 test_hook_boundaries requieren bump_version --boundaries (release), 1 test_install_english por el nombre del worktree, 1 nombres corregido. 936 tests del area en verde; plugin test 155/0; ruff limpio; controles positivos de los 4 REQ fallan sin el fix por su assert.",
+      "actor": "agent-hooks-mod"
+    },
+    "conformance": {
+      "status": "approved",
+      "updatedAt": "2026-11-09T11:58:10.635Z",
+      "evidence": "Dos jueces (conforms-with-notes); F1 y F2 arreglados con test y mutante; F3-F5 aceptados y anotados en review.md",
+      "actor": "agent-hooks-mod"
+    },
+    "memory": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-11-09T10:45:58.966Z",
+      "reason": "SDD change created"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "specifying",
+      "at": "2026-11-09T10:47:33.388Z",
+      "reason": "brief con causas medidas en el codigo y en transcripts reales"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-11-09T10:47:33.632Z",
+      "evidence": "Autorrevision estricta (personal-sdd-review): 4 REQ observables con test; senal de #595 medida en transcripts reales (deferred_tools_delta en principal y subagentes; attribution.py:113-128 para la ruta del subagente); limite de tools fijadas documentado; no toca record() de telemetria; tests existentes intactos (test_load_never_raises y test_cache_is_used condicionan la forma de load/_read_document); hook_hashes_after.json queda para la release.",
+      "actor": "agent-hooks-mod"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-11-09T10:47:33.632Z",
+      "evidence": "Autorrevision estricta (personal-sdd-review): 4 REQ observables con test; senal de #595 medida en transcripts reales (deferred_tools_delta en principal y subagentes; attribution.py:113-128 para la ruta del subagente); limite de tools fijadas documentado; no toca record() de telemetria; tests existentes intactos (test_load_never_raises y test_cache_is_used condicionan la forma de load/_read_document); hook_hashes_after.json queda para la release.",
+      "actor": "agent-hooks-mod"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-11-09T10:47:43.062Z",
+      "reason": "spec aprobada"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "implementing",
+      "at": "2026-11-09T10:47:43.296Z",
+      "reason": "plan aprobado"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-11-09T11:55:01.156Z",
+      "reason": "implementado y probado"
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-11-09T11:55:09.523Z",
+      "evidence": "Suite 6646 passed/30 skipped; 4 fallos explicados: 2 test_hook_boundaries requieren bump_version --boundaries (release), 1 test_install_english por el nombre del worktree, 1 nombres corregido. 936 tests del area en verde; plugin test 155/0; ruff limpio; controles positivos de los 4 REQ fallan sin el fix por su assert.",
+      "actor": "agent-hooks-mod"
+    },
+    {
+      "type": "transition",
+      "from": "verifying",
+      "to": "result-review",
+      "at": "2026-11-09T11:55:09.888Z",
+      "reason": "quality aprobada"
+    },
+    {
+      "type": "gate",
+      "gate": "conformance",
+      "status": "approved",
+      "at": "2026-11-09T11:58:10.635Z",
+      "evidence": "Dos jueces (conforms-with-notes); F1 y F2 arreglados con test y mutante; F3-F5 aceptados y anotados en review.md",
+      "actor": "agent-hooks-mod"
+    }
+  ]
+}

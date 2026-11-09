@@ -21,6 +21,15 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 - **`local_summarize` con `focus` ya no avisa de que falta el enfoque cuando el resumen le dedica una sección (#593).**
   Un título del resumen que lleva el término cuenta como mención si debajo tiene contenido propio;
   un título copiado sin nada debajo, o solo con «(sin datos)», sigue sin contar.
+- Los hooks de `Read` y de shell ya no sugieren ni exigen una tool `local_*` cuando la sesión no
+  tiene el MCP `local-delegate`: si el transcript dice que esas tools no están, dejan pasar la
+  lectura y lo anotan como `mcp_absent`; ante la duda, avisan como antes (#595).
+- El mod de lectura ya no deja pasar sin mirar un comando de varias líneas o con `$(…)`, comillas
+  invertidas o `(…)` que empieza por `cd`, `ls` o `echo`: ahora lo clasifica, y la lectura entera de
+  un fichero grande de prosa recibe su resumen o su aviso.
+- Un fallo pasajero al leer `test-windows.json` o `backend-params.json` (un antivirus con el fichero
+  abierto) ya no se queda en caché hasta que el fichero cambie: la siguiente llamada lo vuelve a
+  leer, y las pruebas marcadas y los parámetros del backend vuelven solos.
 
 ## [0.49.0] - 2026-11-04
 
