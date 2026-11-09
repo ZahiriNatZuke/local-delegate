@@ -186,7 +186,10 @@ def measure(
     windows = test_windows.load(Path(log_dir))
     # Las delegaciones se buscan desde el comienzo y sin final: una sesión del último día puede
     # delegar después del corte, y sigue siendo una sesión de este periodo.
-    ids, excluded = model_decided_ids(rows, windows, since, _END_OF_TIME)
+    ids, _ = model_decided_ids(rows, windows, since, _END_OF_TIME)
+    # Las exclusiones, en cambio, son las del periodo: sin final, el periodo base contaba las filas
+    # del mod de después de instalarlo (#597).
+    _, excluded = model_decided_ids(rows, windows, since, until)
     total = 0
     hit = 0
     found_ids: set[str] = set()

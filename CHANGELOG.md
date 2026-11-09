@@ -25,6 +25,12 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 - Un fallo pasajero al leer `test-windows.json` o `backend-params.json` (un antivirus con el fichero
   abierto) ya no se queda en caché hasta que el fichero cambie: la siguiente llamada lo vuelve a
   leer, y las pruebas marcadas y los parámetros del backend vuelven solos.
+- **La medición de adopción del plugin ya no cuenta como exclusiones del periodo base las filas de
+  después (#597).** `scripts/measure_plugin_adoption.py` sacaba `excluded_rows` de la búsqueda de
+  delegaciones, que no tiene final a propósito, y el periodo base mostraba `plugin: 146` antes de
+  que existiera el plugin. Ahora el desglose cuenta solo las filas de `[since, until)`; el
+  porcentaje y las delegaciones tardías de una sesión del periodo no cambian. El periodo «después»
+  tampoco cuenta ya las filas de pasados sus 14 días.
 
 ## [0.49.0] - 2026-11-04
 
