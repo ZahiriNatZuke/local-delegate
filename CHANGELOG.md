@@ -78,6 +78,11 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   deducir lo que el contenido permite; antes solo lo decían los trozos. Una lista
   vacía que el modelo escribía como el texto `"[]"` vuelve como `[]` (el texto queda en
   `_local_delegate.decoded_keys`) (#586).
+- **El mod de lectura ya no vuelve a resumir un fichero cuyo texto no ha cambiado (#608).**
+  Mientras Claude Code siga abierto reutiliza el resumen que ya hizo, también desde un subagente,
+  y lo registra en la telemetría de hooks como `summary_reused`: sin delegación nueva, sin fila en
+  el log de uso y sin nota de bloqueo, así que ni el panel ni la medición de adopción lo cuentan
+  como ahorro nuevo. Si el texto cambia, aunque sea con el mismo tamaño, se vuelve a resumir.
 
 ## [0.49.0] - 2026-11-04
 
