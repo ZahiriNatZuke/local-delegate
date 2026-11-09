@@ -366,3 +366,28 @@ export async function heartbeat($, fields = {}) {
     return null
   }
 }
+
+// The backend's VISIBLE state (REQ-028 of the web panel, issue #612 for the band): one slow
+// probe is not «down». `web/metrics.py` serves this very block in the panel (without `export`),
+// so the panel and the band decide the same from the same probes. Keep it plain ES: no imports.
+// backend-view:start
+export function initialView(){
+  return {status:'checking', available:false, ref:null, lastGood:null, failures:0, last:null};
+}
+
+// Estado VISIBLE del backend (REQ-028), lo que pintan el badge y las filas. Un sondeo bueno lo
+// deja disponible al instante; un fallo tras uno bueno conserva lo que se pintaba (y el sondeo
+// bueno como referencia de las filas); el SEGUNDO fallo seguido lo pasa a caído. Sin ningún
+// sondeo bueno todavía, el primer fallo es «comprobando».
+export function visibleState(prev, bj){
+  const THRESHOLD = 2;   // fallos seguidos antes de «caído»
+  const p = prev || initialView();
+  if(bj && bj.available) return {status:'connected', available:true, ref:bj, lastGood:bj, failures:0, last:bj};
+  const failures = (p.failures||0) + 1;
+  if(failures < THRESHOLD && p.lastGood)
+    return {status:'connected', available:true, ref:p.lastGood, lastGood:p.lastGood, failures, last:bj};
+  if(failures < THRESHOLD)
+    return {status:'checking', available:false, ref:bj, lastGood:null, failures, last:bj};
+  return {status:'down', available:false, ref:bj, lastGood:p.lastGood, failures, last:bj};
+}
+// backend-view:end
