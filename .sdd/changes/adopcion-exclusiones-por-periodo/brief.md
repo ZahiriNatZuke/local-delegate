@@ -40,3 +40,4 @@ stopped and what remains. -->
 - L1 2026-11-09 Original request, verbatim:
 
   > Issue #597: la medición de adopción del plugin cuenta las exclusiones (excluded_rows) desde el periodo base hasta hoy y no hasta el fin del periodo («plugin: 146» antes de que existiera el plugin).
+- L2 2026-11-09 Implementado, revisado por jueces y verificado; falta mezclar el PR y cerrar.

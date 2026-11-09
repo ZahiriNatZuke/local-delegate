@@ -2,24 +2,23 @@
 
 ## Current state
 
-- SDD status:
-- Last completed gate:
-- Current revision:
+- SDD status: verifying (puertas quality y conformance aprobadas; memory y cierre los hace el orquestador tras mezclar)
+- Last completed gate: conformance
+- Current revision: rama `fix/adopcion-exclusiones-por-periodo`
 
 ## What changed
 
-- Summarize completed work without reproducing the full Git history.
+- `measure()` saca `excluded_rows` de una segunda pasada acotada a `[since, until)`; los ids siguen sin final.
 
 ## Decisions
 
-- Record decisions that a future session cannot reliably derive from code alone.
+- Segunda llamada a `model_decided_ids` en vez de cambiar su contrato: la función queda igual y las filas ya están en memoria.
 
 ## Next action
 
-- State the single best next step and any prerequisite context.
+- Mezclar el PR y cerrar el SDD (puerta memory + `closed`).
 
 ## Memory
 
-- Canonical note:
-- Indexes updated:
-
+- Canonical note: ninguna nueva (cambio pequeño; la jornada del día la recoge el orquestador)
+- Indexes updated: no

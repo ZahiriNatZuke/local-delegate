@@ -12,7 +12,8 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   después (#597).** `scripts/measure_plugin_adoption.py` sacaba `excluded_rows` de la búsqueda de
   delegaciones, que no tiene final a propósito, y el periodo base mostraba `plugin: 146` antes de
   que existiera el plugin. Ahora el desglose cuenta solo las filas de `[since, until)`; el
-  porcentaje y las delegaciones tardías de una sesión del periodo no cambian.
+  porcentaje y las delegaciones tardías de una sesión del periodo no cambian. El periodo «después»
+  tampoco cuenta ya las filas de pasados sus 14 días.
 
 ## [0.49.0] - 2026-11-04
 

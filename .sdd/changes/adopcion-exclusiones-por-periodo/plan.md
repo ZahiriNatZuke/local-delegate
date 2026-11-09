@@ -8,15 +8,15 @@ memory, so it costs one extra pass, and the function keeps its contract.
 
 ## Ordered tasks
 
-- [ ] T1 — Regression test first, verify it fails on `main` by the `excluded_rows` assert (REQ-001, REQ-002)
+- [x] T1 — Regression test first, verify it fails on `main` by the `excluded_rows` assert (REQ-001, REQ-002)
   - Files or modules: tests/test_measure_plugin_adoption.py
   - Verification: pytest on the new test, before and after the fix
   - Depends on: none
-- [ ] T2 — Bound `excluded_rows` to `[since, until)` in `measure()` (REQ-001, REQ-002)
+- [x] T2 — Bound `excluded_rows` to `[since, until)` in `measure()` (REQ-001, REQ-002)
   - Files or modules: scripts/measure_plugin_adoption.py
   - Verification: new test green
   - Depends on: T1
-- [ ] T3 — Run the script's tests and the full suite; CHANGELOG line with #597 (REQ-003)
+- [x] T3 — Run the script's tests and the full suite; CHANGELOG line with #597 (REQ-003)
   - Files or modules: CHANGELOG.md
   - Verification: pytest
   - Depends on: T2

@@ -2,31 +2,28 @@
 
 ## Review level
 
-<!-- Level: quick (1 judge), standard (2 judges) or deep (2 judges + security reviewer + compatibility).
-Minimum: standard for lite, deep for standard. The diff may raise the level, never lower it.
-Judges: the judge names separated by commas or semicolons; their count must reach the level's minimum,
-for example "Judges: result-reviewer-1, result-reviewer-2". -->
-
-- Level: TBD
-- Judges: TBD
-- Security reviewer: TBD
-- Verdict: TBD
+- Level: standard
+- Judges: result-reviewer-A, result-reviewer-B
+- Security reviewer: no — script de medición local, sin entrada externa
+- Verdict: conforms-with-notes
 
 ## Specification comparison
 
 | Requirement | Implemented | Verified | Notes |
 | --- | --- | --- | --- |
-| REQ-001 | | | |
+| REQ-001 | yes | yes | `measure_plugin_adoption.py:192`, intervalo semiabierto |
+| REQ-002 | yes | yes | `:189` sigue con `_END_OF_TIME`; guarda en el test |
+| REQ-003 | yes | yes | tests existentes sin tocar; suite completa |
 
 ## Findings
 
-<!-- Status: confirmed (both judges), suspected (one judge), escalated (judges contradict; the user
-decides and the decision goes in Resolution). -->
-
 | ID | Finding | Judge A | Judge B | Status | Resolution |
 | --- | --- | --- | --- | --- | --- |
-| TBD | | | | | |
+| F1 | verification.md y handoff.md vacíos | yes | no | suspected | rellenados |
+| F2 | CHANGELOG no nombra el periodo «después» | no | yes | suspected | añadido |
+| F3 | doble pasada sobre las filas (lineal, en memoria) | no | yes | suspected | aceptado: coste despreciable |
+| F4 | sin test para filas sin `ts` | yes | no | suspected | aceptado: sin cambio de comportamiento |
 
 ## Required follow-up
 
-- Identify work that must be completed before closure.
+- Ninguno.

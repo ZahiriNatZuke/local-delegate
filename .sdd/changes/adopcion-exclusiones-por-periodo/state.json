@@ -4,9 +4,9 @@
   "title": "La medicion de adopcion del plugin acota las exclusiones a su periodo",
   "mode": "lite",
   "traceability": "strict",
-  "status": "implementing",
+  "status": "result-review",
   "createdAt": "2026-11-09T10:42:17.958Z",
-  "updatedAt": "2026-11-09T10:43:43.213Z",
+  "updatedAt": "2026-11-09T12:17:32.889Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -21,16 +21,16 @@
       "actor": "user"
     },
     "quality": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-11-09T12:17:32.381Z",
+      "evidence": "Suite completa local en Windows -n 2: 6699 passed, 29 skipped; ruff y secretos en pre-commit; control positivo documentado.",
+      "actor": "user"
     },
     "conformance": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-11-09T12:17:32.889Z",
+      "evidence": "Dos jueces independientes aprueban; hallazgos menores resueltos (CHANGELOG) o aceptados (doble pasada, filas sin ts); sdd check verde.",
+      "actor": "user"
     },
     "memory": {
       "status": "pending",
@@ -83,6 +83,36 @@
       "to": "implementing",
       "at": "2026-11-09T10:43:43.213Z",
       "reason": "plan aprobado"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-11-09T12:11:10.810Z",
+      "reason": "test nuevo y del modulo en verde"
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-11-09T12:17:32.381Z",
+      "evidence": "Suite completa local en Windows -n 2: 6699 passed, 29 skipped; ruff y secretos en pre-commit; control positivo documentado.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "verifying",
+      "to": "result-review",
+      "at": "2026-11-09T12:17:32.624Z",
+      "reason": "jueces hechos"
+    },
+    {
+      "type": "gate",
+      "gate": "conformance",
+      "status": "approved",
+      "at": "2026-11-09T12:17:32.889Z",
+      "evidence": "Dos jueces independientes aprueban; hallazgos menores resueltos (CHANGELOG) o aceptados (doble pasada, filas sin ts); sdd check verde.",
+      "actor": "user"
     }
   ]
 }
