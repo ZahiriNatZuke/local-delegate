@@ -6,6 +6,14 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Corregido
+
+- **La medición de adopción del plugin ya no cuenta como exclusiones del periodo base las filas de
+  después (#597).** `scripts/measure_plugin_adoption.py` sacaba `excluded_rows` de la búsqueda de
+  delegaciones, que no tiene final a propósito, y el periodo base mostraba `plugin: 146` antes de
+  que existiera el plugin. Ahora el desglose cuenta solo las filas de `[since, until)`; el
+  porcentaje y las delegaciones tardías de una sesión del periodo no cambian.
+
 ## [0.49.0] - 2026-11-04
 
 Más fiable bajo carga y con datos dudosos. `local_extract` puede dar números de línea reales

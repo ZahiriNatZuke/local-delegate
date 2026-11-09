@@ -1,0 +1,88 @@
+{
+  "schemaVersion": 1,
+  "slug": "adopcion-exclusiones-por-periodo",
+  "title": "La medicion de adopcion del plugin acota las exclusiones a su periodo",
+  "mode": "lite",
+  "traceability": "strict",
+  "status": "implementing",
+  "createdAt": "2026-11-09T10:42:17.958Z",
+  "updatedAt": "2026-11-09T10:43:43.213Z",
+  "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-11-09T10:43:37.313Z",
+      "evidence": "Autorrevision estricta (personal-sdd-review): 3 requisitos observables con verificacion nombrada; causa verificada leyendo measure_plugin_adoption.py:189 (ids y exclusiones salen de la misma llamada con _END_OF_TIME) y :220; plan de 3 tareas, cada REQ cubierto; el final abierto de los ids se preserva con una guarda; sin dependencias ni cambio de claves de salida. Sin hallazgos bloqueantes.",
+      "actor": "user"
+    },
+    "plan": {
+      "status": "approved",
+      "updatedAt": "2026-11-09T10:43:37.314Z",
+      "evidence": "Autorrevision estricta (personal-sdd-review): 3 requisitos observables con verificacion nombrada; causa verificada leyendo measure_plugin_adoption.py:189 (ids y exclusiones salen de la misma llamada con _END_OF_TIME) y :220; plan de 3 tareas, cada REQ cubierto; el final abierto de los ids se preserva con una guarda; sin dependencias ni cambio de claves de salida. Sin hallazgos bloqueantes.",
+      "actor": "user"
+    },
+    "quality": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "conformance": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "memory": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-11-09T10:42:17.958Z",
+      "reason": "SDD change created"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "specifying",
+      "at": "2026-11-09T10:43:31.232Z",
+      "reason": "brief con causa verificada en measure_plugin_adoption.py:189/220"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-11-09T10:43:37.313Z",
+      "evidence": "Autorrevision estricta (personal-sdd-review): 3 requisitos observables con verificacion nombrada; causa verificada leyendo measure_plugin_adoption.py:189 (ids y exclusiones salen de la misma llamada con _END_OF_TIME) y :220; plan de 3 tareas, cada REQ cubierto; el final abierto de los ids se preserva con una guarda; sin dependencias ni cambio de claves de salida. Sin hallazgos bloqueantes.",
+      "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-11-09T10:43:37.314Z",
+      "evidence": "Autorrevision estricta (personal-sdd-review): 3 requisitos observables con verificacion nombrada; causa verificada leyendo measure_plugin_adoption.py:189 (ids y exclusiones salen de la misma llamada con _END_OF_TIME) y :220; plan de 3 tareas, cada REQ cubierto; el final abierto de los ids se preserva con una guarda; sin dependencias ni cambio de claves de salida. Sin hallazgos bloqueantes.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-11-09T10:43:43.001Z",
+      "reason": "spec aprobada"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "implementing",
+      "at": "2026-11-09T10:43:43.213Z",
+      "reason": "plan aprobado"
+    }
+  ]
+}
