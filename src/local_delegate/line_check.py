@@ -474,8 +474,15 @@ _IMPORT = re.compile(r"(?<![\w$.])import(?![\w$])")
 MAX_ALIASES = 5
 
 
+def _is_distinct(alias: str) -> bool:
+    """An alias with an unmistakable identifier shape: snake_case or UPPER_CASE with a `_`, or
+    camelCase. A plain lowercase word (`tool`, `path`, `name`) is everywhere in a file (`for tool
+    in registry`), so as an alias it would confirm almost any citation."""
+    return _is_code_like(alias) and bool(_SNAKE.fullmatch(alias) or _CAMEL.fullmatch(alias))
+
+
 def aliases(lines: list[str], name: str) -> list[str]:
-    """The names `lines` bind to `name` (one level, code-like, at most `MAX_ALIASES`)."""
+    """The names `lines` bind to `name` (one level, unmistakable, at most `MAX_ALIASES`)."""
     escaped = re.escape(name)
     binding = re.compile(_BINDING.replace("{name}", escaped))
     import_as = re.compile(_IMPORT_AS.replace("{name}", escaped))
@@ -489,11 +496,10 @@ def aliases(lines: list[str], name: str) -> list[str]:
         if _IMPORT.search(text):
             found += [m.group(1) for m in import_as.finditer(text)]
         for alias in found:
-            if alias != name and _is_code_like(alias) and alias not in out:
+            if alias != name and _is_distinct(alias) and alias not in out:
                 out.append(alias)
                 if len(out) == MAX_ALIASES:
                     return out
-    return out
     return out
 
 

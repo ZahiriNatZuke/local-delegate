@@ -370,11 +370,11 @@ def test_the_colon_form_is_linear():
 # --- #616: a citation that names what the line does through an alias or a constant ------------
 
 BOUND_JS = """const SERVER = 'local-delegate'
-const TOOL = 'local_summarize'
+const SUMMARY_TOOL = 'local_summarize'
 
 async function summarize($, path) {
   try {
-    const result = await $.mcp.call(SERVER, TOOL, { path })
+    const result = await $.mcp.call(SERVER, SUMMARY_TOOL, { path })
     return result
   } catch {
     return null
@@ -385,14 +385,14 @@ function other() {
   return 42
 }
 """
-BOUND_PY = """from helpers import read_summary as fetch
+BOUND_PY = """from helpers import read_summary as fetch_summary
 
 SUMMARY_TOOL: str = "local_summarize"
 
 
 def run(client):
     client.call(SUMMARY_TOOL)
-    return fetch(client)
+    return fetch_summary(client)
 """
 
 
@@ -413,39 +413,50 @@ def test_a_citation_through_an_alias_holds(question, answer_text, content):
 
 
 def test_an_alias_does_not_cover_a_wrong_citation():
-    """Line 14 holds neither `local_summarize` nor `TOOL`: it still warns, next to a right one."""
+    """Line 14 holds neither `local_summarize` nor `SUMMARY_TOOL`: it still warns, next to a right
+    one. And a plain lowercase word is never an alias: with `tool = 'local_summarize'`, a loop
+    `for tool in registry` calls nothing, and its citation still warns (as before #616)."""
     text = "`local_summarize` se invoca en la línea 6 y también en la línea 14."
     assert _warned("¿Dónde se llama a `local_summarize`?", text, BOUND_JS) == ["14"]
+    plain_word = "tool = 'local_summarize'\n\n\n\nfor tool in registry:\n    pass\n"
+    text = "`local_summarize` se invoca en la línea 5."
+    assert _warned("¿Dónde se llama a `local_summarize`?", text, plain_word) == ["5"]
 
 
 @pytest.mark.parametrize(
     "binding",
     [
-        "if (MODE == 'local_summarize') {}",
-        "if (MODE != 'local_summarize') {}",
-        "MODE = pick('local_summarize')",
-        "MODE = 'local_summarize' + suffix",
-        "MODE <= local_summarize",
+        "if (TOOL_MODE == 'local_summarize') {}",
+        "if (TOOL_MODE != 'local_summarize') {}",
+        "TOOL_MODE = pick('local_summarize')",
+        "TOOL_MODE = 'local_summarize' + suffix",
+        "TOOL_MODE <= local_summarize",
     ],
 )
 def test_a_comparison_or_a_call_is_not_an_alias(binding):
-    """Only a whole value binds a name: a comparison or a longer expression does not, so `MODE`
+    """Only a whole value binds a name: a comparison or a longer expression does not, so `TOOL_MODE`
     on another line does not confirm a citation of `local_summarize`. Guard: with a plain
-    `MODE = 'local_summarize'` the same citation holds."""
-    lines = [binding, "", "", "", "run(MODE)", ""]
+    `TOOL_MODE = 'local_summarize'` the same citation holds."""
+    lines = [binding, "", "", "", "run(TOOL_MODE)", ""]
     content = "\n".join(lines) + "\n"
     text = "`local_summarize` se usa en la línea 5."
     assert _warned("¿Dónde se usa `local_summarize`?", text, content) == ["5"]
-    plain = content.replace(binding, "MODE = 'local_summarize'")
+    plain = content.replace(binding, "TOOL_MODE = 'local_summarize'")
     assert _warned("¿Dónde se usa `local_summarize`?", text, plain) == []
 
 
 @pytest.mark.parametrize(
     ("binding", "use"),
     [
-        ('    name="local_summarize",', "print(name)"),  # a named argument of a multi-line call
-        ("if ready: MODE = 'local_summarize'", "run(ready)"),  # a statement before the binding
-        ("except local_summarize as error:", "log(error)"),  # `as` outside an import
+        (
+            '    summary_tool="local_summarize",',
+            "print(summary_tool)",
+        ),  # a named argument of a multi-line call
+        (
+            "if is_ready: TOOL_MODE = 'local_summarize'",
+            "run(is_ready)",
+        ),  # a statement before the binding
+        ("except local_summarize as load_error:", "log(load_error)"),  # `as` outside an import
     ],
 )
 def test_a_name_bound_mid_statement_is_not_an_alias(binding, use):

@@ -30,3 +30,7 @@
 ## Required follow-up
 
 - Ninguno.
+
+## Revisión posterior (orquestador)
+
+- F7: un alias en minúscula suelta (`tool = '…'`) confirmaba una cita a `for tool in registry`, que en `main` sí avisaba. Arreglado: el alias debe ser snake_case o MAYÚSCULAS con `_`, o camelCase (`_is_distinct`); caso añadido a `test_an_alias_does_not_cover_a_wrong_citation` (mutante con `_is_code_like`: `[] == ['5']`). Quitado un `return out` repetido.
