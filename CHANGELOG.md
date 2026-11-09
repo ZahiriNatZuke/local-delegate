@@ -8,6 +8,11 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ### Corregido
 
+- **`local_lint_summary` ya no bloquea el daemon con un log que tiene líneas largas sin espacios.**
+  La línea de progreso de `python -m unittest` (un punto por test) hacía que la búsqueda de
+  ficheros del inventario tardara un tiempo cuadrático, con la CPU tomada: 8 000 puntos costaban
+  6 s y 20 000, unos 40. Ahora la búsqueda es lineal y encuentra exactamente los mismos ficheros;
+  también la de contadores de hallazgos en las claves de un informe JSON.
 - **`local_summarize` con `focus` ya no avisa de que falta el enfoque cuando el resumen le dedica una sección (#593).**
   Un título del resumen que lleva el término cuenta como mención si debajo tiene contenido propio;
   un título copiado sin nada debajo, o solo con «(sin datos)», sigue sin contar.
