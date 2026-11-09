@@ -780,7 +780,7 @@
     },
     {
       "file": "src/local_delegate/server.py",
-      "text": " Si el contenido no trae el dato de una clave, pon null: no lo deduzcas ni lo inventes, y no la rellenes con el dato de otra clave ni de otra fila o elemento.",
+      "text": " Si el contenido no trae el dato de una clave, pon null en vez de suponerlo, y no la rellenes con el dato de otra clave ni de otra fila de una tabla o lista. Resumir, contar o tomar lo que el contenido sí dice, aunque vaya dentro de una ruta o de un nombre, está permitido.",
       "kind": "verbatim",
       "reason": "prompt del modelo local (#586, `_EXTRACT_NO_FILL_CLAUSE` de `local_extract`): no es texto de interfaz y su idioma lo decide REQ-028 (los prompts no se traducen); frontera declarada en `PROMPT_BOUNDARIES` (0.50.0)"
     },

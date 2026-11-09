@@ -12,13 +12,13 @@
 | REQ-001 | tests/test_extract_no_fill.py (llamada única, numerada, map y reduce) | pass | mutante sin la cláusula hace fallar los 3 tests y los 6 de cuerpos de extract |
 | REQ-002 | tests/test_corpus.py (corpus F2 y afinidad: `local_extract` aparece como frontera declarada, sin errores) | pass | suite completa |
 | REQ-003 | tests/test_request_body_compat.py con `_CHANGED_SYSTEM_SUFFIX` | pass | mutante sin la cláusula hace fallar los 6 casos `extract_schema*` |
-| REQ-004 | tests/test_extract_no_fill.py (tres formas de lista vacía en texto a `[]`; `"[1]"`, `"{}"`, `"none"`, `""`, `"x"` no) | pass | mutante sin decodificar hace fallar los 3 casos |
+| REQ-004 | tests/test_extract_no_fill.py (tres formas de lista vacía en texto a `[]`; `"[1]"`, `"{}"`, `"none"`, `""`, `"x"` no) | pass | mutante sin decodificar hace fallar los 4 casos; sin quitar el prefijo falla el del prefijo |
 
 ## Commands
 
 | Command | Run | Result | Evidence |
 | --- | --- | --- | --- |
-| uv run --locked pytest (equivalente: `.venv` + `PYTHONPATH=src` + `-n 2`, con `pesado.sh`) | sí | pass | 6756 passed, 29 skipped |
+| uv run --locked pytest (equivalente: `.venv` + `PYTHONPATH=src` + `-n 2`, con `pesado.sh`) | sí | pass | 6757 passed, 29 skipped (tras la revisión) |
 | ruff check / ruff format --check (src tests scripts) | sí | pass | All checks passed; 370 files already formatted |
 
 ## Quality checks

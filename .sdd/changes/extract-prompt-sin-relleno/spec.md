@@ -41,7 +41,9 @@ schema obligó a escribir como la cadena `"[]"` vuelve como `[]`.
 
 ## Edge cases and failure behavior
 
-- `"[]"` en un campo de recuento: lo corrige `_recount_lists` (#591) como antes.
+- `"[]"` en un campo de recuento (`number_of_comments`) vuelve como `[]`, no como 0: `_recount_lists` (#591)
+  no lo corrige, igual que antes no corregía el texto `"[]"`. Riesgo aceptado (revisión, juez A).
+- Con la entrada numerada (#568), un `"12| []"` copiado con el prefijo también se decodifica.
 - Entrada troceada: la regla va también en el map y en el reduce.
 
 ## Non-functional requirements

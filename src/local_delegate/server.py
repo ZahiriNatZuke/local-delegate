@@ -7440,17 +7440,22 @@ def _is_no_data_marker(value: Any) -> bool:
 _EMPTY_LIST_TEXT = re.compile(r"\[\s*\]")
 
 
-def _decode_empty_lists(data: dict, fields: list[str]) -> dict[str, str]:
+def _decode_empty_lists(
+    data: dict, fields: list[str], strip_prefix: Callable[[Any], Any] | None = None
+) -> dict[str, str]:
     """Turn, in place, each requested key whose value is, whole, the text `"[]"` into `[]`.
 
-    Returns {key: original text}, in request order, for `_local_delegate.decoded_keys`.
+    `strip_prefix` (numbered input, #568) drops a copied `12| ` before looking, as in
+    `_null_placeholders`. Returns {key: original text}, in request order, for
+    `_local_delegate.decoded_keys`.
     """
     found: dict[str, str] = {}
     for name in dict.fromkeys(fields):
-        value = data.get(name)
+        original = data.get(name)
+        value = strip_prefix(original) if strip_prefix is not None else original
         is_text = name != _EXTRACT_META_KEY and isinstance(value, str)
         if is_text and _EMPTY_LIST_TEXT.fullmatch(value.strip()):
-            found[name] = value
+            found[name] = original
             data[name] = []
     return found
 
@@ -7582,8 +7587,10 @@ _MARKDOWN_SUFFIXES = frozenset({".md", ".markdown", ".mdx"})
 #: #586: the model filled a key the input has no data for with an inference ("positive" with no
 #: review), with another key's content (the PR body as its comments) or with another table row.
 _EXTRACT_NO_FILL_CLAUSE = (
-    " Si el contenido no trae el dato de una clave, pon null: no lo deduzcas ni lo inventes, y no "
-    "la rellenes con el dato de otra clave ni de otra fila o elemento."
+    " Si el contenido no trae el dato de una clave, pon null en vez de suponerlo, y no la "
+    "rellenes con el dato de otra clave ni de otra fila de una tabla o lista. Resumir, "
+    "contar o tomar lo que el contenido sí dice, aunque vaya dentro de una ruta o de un "
+    "nombre, está permitido."
 )
 
 _EXTRACT_LINES_CLAUSE = (
@@ -7930,11 +7937,10 @@ def local_extract(
     # #586: a "no data" marker is null (and counts as missing); a count of a JSON input's list is
     # the program's, not the model's.
     total_lines = len(content.split("\n")) - (1 if content.endswith("\n") else 0)
-    placeholders = _null_placeholders(
-        data, fields, (lambda v: _strip_extract_prefixes(v, total_lines)) if numbered else None
-    )
+    strip_prefix = (lambda v: _strip_extract_prefixes(v, total_lines)) if numbered else None
+    placeholders = _null_placeholders(data, fields, strip_prefix)
     # #586: `"[]"` is an empty list the schema made the model write as text.
-    decoded = _decode_empty_lists(data, fields)
+    decoded = _decode_empty_lists(data, fields, strip_prefix)
     recounted = _recount_lists(data, fields, content)
     for name in recounted:
         if name in placeholders:

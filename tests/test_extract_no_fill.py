@@ -16,8 +16,10 @@ import pytest
 from local_delegate import config, i18n, server
 
 RULE = (
-    "Si el contenido no trae el dato de una clave, pon null: no lo deduzcas ni lo inventes, y no "
-    "la rellenes con el dato de otra clave ni de otra fila o elemento."
+    "Si el contenido no trae el dato de una clave, pon null en vez de suponerlo, y no la "
+    "rellenes con el dato de otra clave ni de otra fila de una tabla o lista. Resumir, "
+    "contar o tomar lo que el contenido sí dice, aunque vaya dentro de una ruta o de un "
+    "nombre, está permitido."
 )
 
 
@@ -98,3 +100,14 @@ def test_other_texts_are_not_decoded(backend, value):
     data = server.local_extract(fields=["k"], text="texto")
     assert data.get("k") != []
     assert "decoded_keys" not in data.get("_local_delegate", {})
+
+
+def test_an_empty_list_with_a_copied_line_prefix_is_an_empty_list(backend, tmp_path):
+    """With numbered input (#568) the model may copy the `N| ` of a line before the value."""
+    _calls, state = backend
+    path = tmp_path / "doc.md"
+    path.write_text("# Título\n\nSin comentarios.\n", encoding="utf-8")
+    state["answer"] = lambda call: _ok(json.dumps({"intro_heading_line": 1, "comments": "3| []"}))
+    data = server.local_extract(fields=["intro_heading_line", "comments"], path=str(path))
+    assert data["comments"] == []
+    assert data["_local_delegate"]["decoded_keys"] == {"comments": "3| []"}
