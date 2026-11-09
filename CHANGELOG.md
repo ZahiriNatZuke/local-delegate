@@ -6,6 +6,12 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Corregido
+
+- **`local_summarize` con `focus` ya no avisa de que falta el enfoque cuando el resumen le dedica una sección (#593).**
+  Un título del resumen que lleva el término cuenta como mención si debajo tiene contenido propio;
+  un título copiado sin nada debajo, o solo con «(sin datos)», sigue sin contar.
+
 ## [0.49.0] - 2026-11-04
 
 Más fiable bajo carga y con datos dudosos. `local_extract` puede dar números de línea reales
