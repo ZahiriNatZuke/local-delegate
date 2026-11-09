@@ -1,0 +1,119 @@
+{
+  "schemaVersion": 1,
+  "slug": "explain-regroup-y-commit-timeout",
+  "title": "Regroup cortado en explain_code y diff grande en commit_msg (#598, #596)",
+  "mode": "lite",
+  "traceability": "strict",
+  "status": "verifying",
+  "createdAt": "2026-11-09T10:44:02.927Z",
+  "updatedAt": "2026-11-09T12:11:13.210Z",
+  "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-11-09T12:11:05.807Z",
+      "evidence": "Re-aprobado tras revisión: #596 pasa a presupuesto de tiempo (el recorte rompía corpus y test_map_reduce); #598 acotado a explain con pregunta (hash de #504)",
+      "actor": "user"
+    },
+    "plan": {
+      "status": "approved",
+      "updatedAt": "2026-11-09T12:11:05.807Z",
+      "evidence": "Re-aprobado tras revisión: #596 pasa a presupuesto de tiempo (el recorte rompía corpus y test_map_reduce); #598 acotado a explain con pregunta (hash de #504)",
+      "actor": "user"
+    },
+    "quality": {
+      "status": "approved",
+      "updatedAt": "2026-11-09T12:11:13.210Z",
+      "evidence": "pytest -n 2 suite completa: 6715 passed, 29 skipped; ruff check/format verdes; 5 mutantes fallan por su assert; sdd check verde",
+      "actor": "user"
+    },
+    "conformance": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "memory": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-11-09T10:44:02.927Z",
+      "reason": "SDD change created"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "specifying",
+      "at": "2026-11-09T10:45:54.579Z",
+      "reason": "issues leídos y código inspeccionado"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-11-09T10:46:02.869Z",
+      "evidence": "Autorrevisión adversarial (personal-sdd-review): requisitos verificables con test; hallazgo del plan (desborde de contexto en el reintento ampliado) incorporado; sin opción ni env nuevos para mantener lite",
+      "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-11-09T10:46:02.871Z",
+      "evidence": "Autorrevisión adversarial (personal-sdd-review): requisitos verificables con test; hallazgo del plan (desborde de contexto en el reintento ampliado) incorporado; sin opción ni env nuevos para mantener lite",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-11-09T12:11:05.466Z",
+      "reason": "spec revisada tras la primera corrida (diseño de #596 cambiado a presupuesto de tiempo)"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-11-09T12:11:05.807Z",
+      "evidence": "Re-aprobado tras revisión: #596 pasa a presupuesto de tiempo (el recorte rompía corpus y test_map_reduce); #598 acotado a explain con pregunta (hash de #504)",
+      "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-11-09T12:11:05.807Z",
+      "evidence": "Re-aprobado tras revisión: #596 pasa a presupuesto de tiempo (el recorte rompía corpus y test_map_reduce); #598 acotado a explain con pregunta (hash de #504)",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "implementing",
+      "at": "2026-11-09T12:11:06.152Z",
+      "reason": "puertas spec y plan"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-11-09T12:11:06.462Z",
+      "reason": "T1-T4 hechas"
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-11-09T12:11:13.210Z",
+      "evidence": "pytest -n 2 suite completa: 6715 passed, 29 skipped; ruff check/format verdes; 5 mutantes fallan por su assert; sdd check verde",
+      "actor": "user"
+    }
+  ]
+}

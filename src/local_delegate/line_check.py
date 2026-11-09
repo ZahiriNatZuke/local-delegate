@@ -374,6 +374,17 @@ def _denies(sentence: str) -> bool:
     return any(not _NOT_ONLY.match(text, m.end()) for m in _NEGATION.finditer(text))
 
 
+def denies_something(answer: str) -> bool:
+    """#598: whether some sentence of the prose of `answer` denies something.
+
+    The same negation test as #538's (`_denies`: not «no solo…» nor «sin embargo»), over every
+    sentence outside fenced code. Used only when part of the output was cut: then «no se observan
+    escrituras» may come from the lost notes, not from the code.
+    """
+    sentences = _SENTENCE_END.split(_without_fences(answer))
+    return any(_denies(s) for s in sentences if s.strip())
+
+
 @dataclass(frozen=True)
 class Citation:
     start: int

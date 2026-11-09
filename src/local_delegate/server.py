@@ -5235,6 +5235,48 @@ REGROUP_MIN_SHRINK = 0.8
 MAP_REDUCE_RETRY_CALLS_PER_PIECE = 4
 
 
+def _monotonic() -> float:
+    """#596: the clock of the map's time budget (one name, so a test can drive it)."""
+    return time.monotonic()
+
+
+def _call_started() -> float:
+    """#596: when the tool call started (its cancellation token), or now outside a call."""
+    token = cancellation.current()
+    return token.started if token is not None else _monotonic()
+
+
+def _map_time_left(budget_s: float, piece_seconds: list[float], started: float) -> bool:
+    """#596: whether the next map chunk and the reduce still fit `budget_s` seconds of the call.
+
+    Each chunk is estimated by the slowest of the chunks read after the first: the first also pays
+    the model load and the wait for the turn, which do not repeat. With fewer than two chunks read
+    there is no estimate yet and the map goes on. The reduce is estimated like one more chunk.
+    """
+    if len(piece_seconds) < 2:
+        return True
+    per_piece = max(piece_seconds[1:])
+    return _monotonic() - started + 2 * per_piece <= budget_s
+
+
+def _pieces_chars(pieces: list) -> int:
+    """#596: the characters of `pieces` (text, or the `.text` of a section piece)."""
+    return sum(len(p if isinstance(p, str) else getattr(p, "text", "")) for p in pieces)
+
+
+#: #598: the cap multiplier of the one retry of a cut regroup step that a split cannot halve.
+REGROUP_WIDEN_FACTOR = 2
+
+
+def _regroup_widen_shrinks(group_chars: int, cut_chars: int) -> bool:
+    """#598: whether a retry with `REGROUP_WIDEN_FACTOR` times the cap still shrinks the group.
+
+    In the worst case the wider output is cut too, at `REGROUP_WIDEN_FACTOR × cut_chars`; it must
+    still leave at most `REGROUP_MIN_SHRINK` of the group, or the level stops converging (#497).
+    """
+    return REGROUP_WIDEN_FACTOR * cut_chars <= group_chars * REGROUP_MIN_SHRINK
+
+
 def _regroup_split_shrinks(group_chars: int, cut_chars: int, parts: int) -> bool:
     """#497: whether splitting a cut regroup step can still halve its group.
 
@@ -5313,6 +5355,27 @@ def _truncated_calls_notice(truncated: int, calls: int, retried: int = 0) -> str
     return notice
 
 
+def _combine_cut_notice(steps: list[dict], widened: int = 0) -> str:
+    """#598: the tail of the truncation notice for the cuts left in steps that combine notes.
+
+    A cut map partial loses part of one chunk; a cut regroup or reduce loses the notes of whole
+    chunks, so an answer built on it may deny what those notes said. `widened` counts the cut
+    regroup steps redone with a wider cap (#598), named apart like the split retries of #487.
+    Empty when there is neither.
+    """
+    combine = sum(
+        1
+        for s in steps
+        if s.get("kind") in ("regroup", "reduce")
+        and s.get("finish_reason") == "length"
+        and not s.get("retried")
+    )
+    notice = i18n.t("mcp.warning.combine_cut", count=combine) if combine else ""
+    if widened:
+        notice += i18n.t("mcp.warning.widened_calls", widened=widened)
+    return notice
+
+
 def _dump_chunk_notes(
     folder: str, tool: str, entry_id: int, steps: list[dict], texts: list[str]
 ) -> None:
@@ -5369,6 +5432,9 @@ def _chat_map_reduce(
     report: dict | None = None,
     max_tokens_for: Callable[[int], int] | None = None,
     final_max_tokens_for: Callable[[int], int] | None = None,
+    time_budget_s: float | None = None,
+    time_report: dict | None = None,
+    widen_cut_regroup: bool = False,
 ) -> str:
     """Resume un documento que no cabe en el modelo: resume por trozos y luego los resúmenes.
 
@@ -5400,6 +5466,12 @@ def _chat_map_reduce(
     reduce) for a tool that needs its own (lint, B2d-2). `final_max_tokens_for(words)`, when
     given, replaces it only in the steps that combine partials (reduce and regroup): the map keeps
     `max_tokens_for` (lint, B2e).
+
+    #596: with `time_budget_s`, the map stops before a chunk that would leave no time for itself
+    and the reduce within that many seconds of the tool call (`_map_time_left`); the reduce works
+    on the chunks read, and the answer says how many were (`time_report` gets the figures).
+    Without it, every chunk is read, as always. #598: `widen_cut_regroup` turns on the widened
+    retry of a cut regroup step and the note-combining tail of the truncation notice.
     """
     down = _backend_down_text()
     if down is not None:
@@ -5418,6 +5490,10 @@ def _chat_map_reduce(
     truncated_calls = 0  # llamadas que acabaron por `length`: un parcial cortado ya perdió material
     # #487: calls cut by `length` and replaced by their split retry (`retried` in `steps`).
     retried_calls = 0
+    # #598: cut regroup steps redone with a wider cap (`retried` in `steps` too), named apart.
+    widened_calls = 0
+    # #596: chunks read before the time budget ran out; `None` while every chunk is read.
+    time_cut: int | None = None
     # #497: the regroup stopped before the reduce (a level that did not shrink, or three levels):
     # the result is the regrouped notes joined, not one combined answer.
     unreduced = False
@@ -5623,9 +5699,9 @@ def _chat_map_reduce(
         shrinking and the next one regroups the same again (65 calls and 18 minutes for a 48 000
         character file). The cut output is kept instead, and counted as truncated.
         """
-        out = _one(
-            regroup_system, build_user(group.strip()), _final_tokens(partial_words), "regroup"
-        )
+        nonlocal failed, widened_calls, truncated_calls, raw_chars
+        cap = _final_tokens(partial_words)
+        out = _one(regroup_system, build_user(group.strip()), cap, "regroup")
         if out is None:
             return None
         if _last_cut() and depth < 2 and len(group) > config.CHUNK_MIN_CHARS:
@@ -5643,6 +5719,30 @@ def _chat_map_reduce(
                         return None
                     outputs.extend(sub)
                 return outputs
+        if (
+            widen_cut_regroup
+            and _last_cut()
+            and _regroup_widen_shrinks(len(group), len(out))
+            and _retry_fits(1)
+        ):
+            # #598: a cut group that a split cannot halve was kept cut, and the answer built on
+            # it denied what the lost notes said. One retry with twice the cap, only while that
+            # still shrinks the group (#497's rule), replaces it; cut again, it is kept as before.
+            cut_step = steps[-1]
+            wide = _one(
+                regroup_system, build_user(group.strip()), cap * REGROUP_WIDEN_FACTOR, "regroup"
+            )
+            if wide is None:
+                if not _is_context_overflow(failed):
+                    return None
+                failed = None  # the wider cap did not fit: the cut output stays, as before
+                return [out]
+            # The cut step is the one redone: it stops counting as truncated (#487's bookkeeping).
+            cut_step["retried"] = True
+            truncated_calls -= 1
+            raw_chars -= cut_step["chars_out"]
+            widened_calls += 1
+            return [wide]
         return [out]
 
     entry_id = _inflight_start(
@@ -5655,10 +5755,17 @@ def _chat_map_reduce(
     current = _CurrentModel(model, role, explicit, entry_id, op, role_params=role_params)
     try:
         summaries: list[str] = []
+        piece_seconds: list[float] = []
+        call_started = _call_started()
         for index, piece in enumerate(pieces, start=1):
+            if time_budget_s and not _map_time_left(time_budget_s, piece_seconds, call_started):
+                time_cut = index - 1
+                break
             _inflight_progress(entry_id, index)
             current.chunk = index
+            piece_started = _monotonic()
             outs = _map_piece(piece)
+            piece_seconds.append(_monotonic() - piece_started)
             if outs is None:
                 break
             summaries.extend(outs)
@@ -5754,12 +5861,24 @@ def _chat_map_reduce(
         if report is None:
             if truncated_calls:
                 notice = _truncated_calls_notice(truncated_calls, calls, retried_calls)
+                if widen_cut_regroup:
+                    notice += _combine_cut_notice(steps, widened_calls)
                 notice += _truncated_pieces_notice(
                     _truncated_piece_entries(content, truncated_pieces)
                 )
                 text += f"\n\n{WARNING_MARKER}{notice}]"
             if unreduced:
                 notice = i18n.t("mcp.warning.regroup_stopped", calls=calls)
+                text += f"\n\n{WARNING_MARKER}{notice}]"
+            if time_cut is not None:
+                notice = i18n.t(
+                    "mcp.warning.time_budget",
+                    seconds=_machine(round(time_budget_s or 0)),
+                    read=time_cut,
+                    total=len(pieces),
+                    chars=_machine(_pieces_chars(pieces[:time_cut])),
+                    total_chars=_machine(len(content)),
+                )
                 text += f"\n\n{WARNING_MARKER}{notice}]"
             text += current.notice(len(pieces) > 1)
 
@@ -5776,7 +5895,8 @@ def _chat_map_reduce(
         finish_reason=finish_reason,
         tokens_in=tokens_in,
         tokens_out=tokens_out,
-        truncated_in=False,  # el sentido de todo esto es que ya no se trunca
+        # El sentido de todo esto es que ya no se trunca; salvo #596: el tiempo dejó trozos sin leer.
+        truncated_in=ok and time_cut is not None,
         truncated_out=ok and (truncated_calls > 0 or unreduced),
         raw_len=raw_len,
         path=path if source == "path" else None,
@@ -5791,6 +5911,10 @@ def _chat_map_reduce(
     )
     if dump_dir:
         _dump_chunk_notes(dump_dir, tool, entry_id, steps, step_texts)
+    if time_report is not None and ok and time_cut is not None:
+        time_report.update(
+            read=time_cut, pieces=len(pieces), chars=_pieces_chars(pieces[:time_cut])
+        )
     if report is not None:
         report.update(
             truncated_calls=truncated_calls if ok else 0,
@@ -5872,6 +5996,11 @@ COMMIT_LANGUAGE_DIFF = "diff"
 _COMMIT_BODY_BULLETS = "2 a 6"
 COMMIT_MAX_TOKENS = 700
 COMMIT_REDUCE_MAX_WORDS = 250
+#: #596: seconds of the tool call a chunked `local_commit_msg` gives its map and reduce. A 125 KB
+#: diff took 124 s (7 chunks in series plus the model load) and the client cancelled the tool at
+#: 120 s; past this the map stops and the message is drafted from the chunks read and the whole
+#: inventory, with a warning. A margin under the 120 s for the estimate's error.
+COMMIT_TIME_BUDGET_S = 95.0
 
 
 # --- Commit language from the repository's own history (#461) ---------------------------------
@@ -8294,6 +8423,7 @@ def local_commit_msg(
                 f"{joined}"
             )
 
+        time_report: dict = {}
         commit_message = _chat_map_reduce(
             config.MODEL_CODE,
             map_system,
@@ -8311,11 +8441,23 @@ def local_commit_msg(
             build_reduce=_build_reduce,
             raw_len=raw_len,
             path=path,
+            time_budget_s=COMMIT_TIME_BUDGET_S,
+            time_report=time_report,
         )
         if not commit_message.startswith(ERROR_PREFIX):
-            commit_message += "\n\n" + i18n.t(
-                "mcp.receipt.commit_scope", files=len(files), chars=_machine(len(content))
-            )
+            if time_report:
+                # #596: not every chunk was read: the receipt does not claim the whole diff.
+                scope = i18n.t(
+                    "mcp.receipt.commit_scope_partial",
+                    files=len(files),
+                    kept=_machine(time_report["chars"]),
+                    chars=_machine(len(content)),
+                )
+            else:
+                scope = i18n.t(
+                    "mcp.receipt.commit_scope", files=len(files), chars=_machine(len(content))
+                )
+            commit_message += "\n\n" + scope
             commit_message = _with_commit_language_notice(commit_message, path)
         return commit_message
 
@@ -8687,10 +8829,16 @@ def local_explain_code(
             # the diff's index). A plain explanation of a file keeps its output byte for byte
             # (frozen by `test_without_a_question_the_prompts_are_unchanged`). With the feedback
             # on, the receipt already says the parts and passes, so the notice is left out.
+            # #598: a negative conclusion built on cut notes contradicted the file. Judged on the
+            # model's prose only, before the program adds its own lines («no aparece…»).
+            negative = truncated and line_check.denies_something(answer)
             if (question or diff_ranges) and not config.FEEDBACK_ENABLED:
                 answer = f"{answer.rstrip()}\n\n{chunked_notice}"
             if finish is not None:
                 answer = finish(answer, truncated)
+            if negative:
+                warning = i18n.t("mcp.explain.negative_unreliable")
+                answer = f"{answer.rstrip()}\n\n{WARNING_MARKER}{warning}]"
             if diff_ranges:
                 # The whole index only when the question asks for files or lines; otherwise a
                 # short one that says how to get the rest.
@@ -8722,6 +8870,9 @@ def local_explain_code(
             pieces=pieces,
             tokens_for=_explain_map_max_tokens,
             postprocess=_postprocess,
+            # #598: only with a question, where an inventory answer denied what cut notes held;
+            # without one, #504 keeps every prompt and the answer byte for byte.
+            widen_cut_regroup=bool(question),
         )
 
     return _chat(
