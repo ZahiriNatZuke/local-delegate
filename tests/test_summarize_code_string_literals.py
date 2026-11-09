@@ -259,22 +259,30 @@ def test_a_real_markdown_document_is_not_warned(monkeypatch, tmp_path):
 def test_the_scan_is_linear_on_a_long_line_of_literals():
     """Copying the line up to each backtick made it quadratic: 1.2 MB of `x=`a`;` on one line
     took 9.4 s and 2.4 MB 73 s. The test compares how the time grows instead of a fixed number
-    of seconds, which a slow CI runner can miss: four times the input costs about four times as
-    much when linear and about sixteen when quadratic. Best of three runs per size."""
+    of seconds: four times the input costs about four times as much when linear and about
+    sixteen when quadratic. A busy CI runner can slow one measurement, so the two sizes are
+    timed alternately (best of five each) and a round that lands under the bound is enough out
+    of three; a quadratic scan misses it in every round."""
     import time
 
-    def best(text: str) -> float:
-        runs = []
-        for _ in range(3):
-            start = time.perf_counter()
-            sections.string_literal_headings("## a\n\ntext\n", text, kind="code")
-            runs.append(time.perf_counter() - start)
-        return min(runs)
+    def timed(text: str) -> float:
+        start = time.perf_counter()
+        sections.string_literal_headings("## a\n\ntext\n", text, kind="code")
+        return time.perf_counter() - start
 
     for unit in ("x=`a`;", '"a`"', "f(`a`, '`', \"`\");"):
-        small = unit * (200_000 // len(unit))
-        small_time, big_time = best(small), best(small * 4)
-        assert big_time < 9 * small_time + 0.05, (unit, small_time, big_time)
+        small = unit * (500_000 // len(unit))
+        big = small * 4
+        rounds = []
+        for _ in range(3):
+            small_times, big_times = [], []
+            for _ in range(5):
+                small_times.append(timed(small))
+                big_times.append(timed(big))
+            rounds.append((min(small_times), min(big_times)))
+            if rounds[-1][1] < 9 * rounds[-1][0]:
+                break
+        assert rounds[-1][1] < 9 * rounds[-1][0], (unit, rounds)
 
 
 PY_MODULE_DOCSTRING = '''\
