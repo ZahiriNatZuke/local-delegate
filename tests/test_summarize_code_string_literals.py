@@ -258,14 +258,23 @@ def test_a_real_markdown_document_is_not_warned(monkeypatch, tmp_path):
 
 def test_the_scan_is_linear_on_a_long_line_of_literals():
     """Copying the line up to each backtick made it quadratic: 1.2 MB of `x=`a`;` on one line
-    took 9.4 s and 2.4 MB 73 s. Linear, 2 MB take well under a second; the cap is generous."""
+    took 9.4 s and 2.4 MB 73 s. The test compares how the time grows instead of a fixed number
+    of seconds, which a slow CI runner can miss: four times the input costs about four times as
+    much when linear and about sixteen when quadratic. Best of three runs per size."""
     import time
 
+    def best(text: str) -> float:
+        runs = []
+        for _ in range(3):
+            start = time.perf_counter()
+            sections.string_literal_headings("## a\n\ntext\n", text, kind="code")
+            runs.append(time.perf_counter() - start)
+        return min(runs)
+
     for unit in ("x=`a`;", '"a`"', "f(`a`, '`', \"`\");"):
-        text = unit * (2_000_000 // len(unit))
-        start = time.perf_counter()
-        sections.string_literal_headings("## a\n\ntext\n", text, kind="code")
-        assert time.perf_counter() - start < 2.0, unit
+        small = unit * (200_000 // len(unit))
+        small_time, big_time = best(small), best(small * 4)
+        assert big_time < 9 * small_time + 0.05, (unit, small_time, big_time)
 
 
 PY_MODULE_DOCSTRING = '''\

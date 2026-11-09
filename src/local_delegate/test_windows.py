@@ -193,30 +193,37 @@ def _window_from(entry: object) -> Window | None:
 
 def _read_raw(path: Path) -> tuple[list | None, str | None, bool]:
     """(entradas crudas, motivo si el fichero entero es ilegible, existe)."""
+    return _read_raw_checked(path)[:3]
+
+
+def _read_raw_checked(path: Path) -> tuple[list | None, str | None, bool, bool]:
+    """Como `_read_raw`, y además si el fallo es pasajero: un `OSError` al leer (un antivirus o el
+    indexador con el fichero abierto sin compartir) no dice nada del contenido y no se cachea."""
     try:
         text = path.read_text(encoding="utf-8")
     except FileNotFoundError:
-        return [], None, False
+        return [], None, False, False
     except OSError as exc:
         return (
             None,
             i18n.t("cli.test_window.error.unreadable_file", error=exc.__class__.__name__),
+            True,
             True,
         )
     try:
         data = json.loads(text)
     except ValueError as exc:
         line = getattr(exc, "lineno", "?")
-        return None, i18n.t("cli.test_window.error.broken_json", line=line), True
+        return None, i18n.t("cli.test_window.error.broken_json", line=line), True, False
     if not isinstance(data, dict):
-        return None, i18n.t("cli.test_window.error.not_object"), True
+        return None, i18n.t("cli.test_window.error.not_object"), True, False
     if data.get("version") != VERSION:
         version = repr(data.get("version"))
-        return None, i18n.t("cli.test_window.error.unknown_version", version=version), True
+        return None, i18n.t("cli.test_window.error.unknown_version", version=version), True, False
     entries = data.get("windows")
     if not isinstance(entries, list):
-        return None, i18n.t("cli.test_window.error.no_windows_list"), True
-    return entries, None, True
+        return None, i18n.t("cli.test_window.error.no_windows_list"), True, False
+    return entries, None, True, False
 
 
 def _parse(entries: list | None, error: str | None, exists: bool) -> Windows:
@@ -253,7 +260,11 @@ def load(log_dir: Path) -> Windows:
         cached = _CACHE.get(key)
         if cached and cached[0] == st.st_mtime_ns and cached[1] == st.st_size:
             return cached[2]
-        result = _parse(*_read_raw(path))
+        entries, error, exists, transient = _read_raw_checked(path)
+        result = _parse(entries, error, exists)
+        if transient:
+            # Sin cachear: con la misma huella, la siguiente llamada lo vuelve a intentar.
+            return result
         _CACHE[key] = (st.st_mtime_ns, st.st_size, result)
         return result
     except Exception as exc:  # observar nunca rompe una tool ni el panel

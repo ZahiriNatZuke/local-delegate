@@ -1,0 +1,132 @@
+{
+  "schemaVersion": 1,
+  "slug": "telemetria-escritura-concurrente",
+  "title": "Las escrituras concurrentes a la telemetria no pierden ni corrompen lineas",
+  "mode": "standard",
+  "traceability": "strict",
+  "status": "result-review",
+  "createdAt": "2026-11-09T10:58:01.355Z",
+  "updatedAt": "2026-11-09T11:59:16.869Z",
+  "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-11-09T10:59:49.534Z",
+      "evidence": "Autorrevision estricta: 9 requisitos observables con test o cmd nombrados; research con repro medida en esta PC (6x300: 1515-1616 validas de 1800, 1-3 corruptas, tres corridas) y tabla de lectores con fichero:linea; alcance acotado (mod/read.js fuera, con motivo: otro dueno hoy y API sin append); firmas publicas preservadas (REQ-009).",
+      "actor": "user"
+    },
+    "plan": {
+      "status": "approved",
+      "updatedAt": "2026-11-09T11:00:23.940Z",
+      "evidence": "Revision adversarial en plan-review.md (no independiente, declarado): F1 corregido (solo se reintenta con errno de ocupado), F2/F3 verificados en esta PC, F4 limita la discriminacion a Windows y lo dice, F5-F7 limites aceptados. Cada REQ con tarea y verificacion. Sin bloqueantes.",
+      "actor": "user"
+    },
+    "quality": {
+      "status": "approved",
+      "updatedAt": "2026-11-09T11:59:05.241Z",
+      "evidence": "Suite completa local en Windows (-n 2) verde salvo el detector de nombres por palabras del test nuevo, corregido y repetido en verde; ruff check/format en los ficheros tocados; control positivo documentado en verification.md (cada test nuevo falla en main por su assert).",
+      "actor": "user"
+    },
+    "conformance": {
+      "status": "approved",
+      "updatedAt": "2026-11-09T11:59:16.869Z",
+      "evidence": "Revision por niveles en review.md: dos jueces independientes (y revisor de seguridad en el standard); hallazgos resueltos o aceptados con motivo; sdd check verde.",
+      "actor": "user"
+    },
+    "memory": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-11-09T10:58:01.355Z",
+      "reason": "SDD change created"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "researching",
+      "at": "2026-11-09T10:59:43.394Z",
+      "reason": "repro y lectura de escritores y lectores"
+    },
+    {
+      "type": "transition",
+      "from": "researching",
+      "to": "specifying",
+      "at": "2026-11-09T10:59:49.304Z",
+      "reason": "research.md con repro medido y tabla de lectores"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-11-09T10:59:49.534Z",
+      "evidence": "Autorrevision estricta: 9 requisitos observables con test o cmd nombrados; research con repro medida en esta PC (6x300: 1515-1616 validas de 1800, 1-3 corruptas, tres corridas) y tabla de lectores con fichero:linea; alcance acotado (mod/read.js fuera, con motivo: otro dueno hoy y API sin append); firmas publicas preservadas (REQ-009).",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-11-09T10:59:49.755Z",
+      "reason": "spec aprobada"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "plan-review",
+      "at": "2026-11-09T11:00:23.738Z",
+      "reason": "plan escrito"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-11-09T11:00:23.940Z",
+      "evidence": "Revision adversarial en plan-review.md (no independiente, declarado): F1 corregido (solo se reintenta con errno de ocupado), F2/F3 verificados en esta PC, F4 limita la discriminacion a Windows y lo dice, F5-F7 limites aceptados. Cada REQ con tarea y verificacion. Sin bloqueantes.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "plan-review",
+      "to": "implementing",
+      "at": "2026-11-09T11:00:24.170Z",
+      "reason": "plan aprobado"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-11-09T11:59:04.751Z",
+      "reason": "implementado; suite y tests nuevos en verde"
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-11-09T11:59:05.241Z",
+      "evidence": "Suite completa local en Windows (-n 2) verde salvo el detector de nombres por palabras del test nuevo, corregido y repetido en verde; ruff check/format en los ficheros tocados; control positivo documentado en verification.md (cada test nuevo falla en main por su assert).",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "verifying",
+      "to": "result-review",
+      "at": "2026-11-09T11:59:16.621Z",
+      "reason": "revision de jueces hecha"
+    },
+    {
+      "type": "gate",
+      "gate": "conformance",
+      "status": "approved",
+      "at": "2026-11-09T11:59:16.869Z",
+      "evidence": "Revision por niveles en review.md: dos jueces independientes (y revisor de seguridad en el standard); hallazgos resueltos o aceptados con motivo; sdd check verde.",
+      "actor": "user"
+    }
+  ]
+}
