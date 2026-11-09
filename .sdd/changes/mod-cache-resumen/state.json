@@ -4,9 +4,9 @@
   "title": "El mod de lectura reutiliza el resumen de un fichero sin cambios (#608)",
   "mode": "lite",
   "traceability": "strict",
-  "status": "result-review",
+  "status": "closing",
   "createdAt": "2026-11-09T12:07:13.648Z",
-  "updatedAt": "2026-11-09T12:51:27.597Z",
+  "updatedAt": "2026-11-09T13:29:29.623Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -27,10 +27,10 @@
       "actor": "user"
     },
     "conformance": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-11-09T13:29:29.379Z",
+      "evidence": "Dos jueces (conforms-with-notes); F1-F5 arreglados con tests y controles positivos; F6-F7 aceptados; suite 6625 passed, plugin test 162/0",
+      "actor": "user"
     },
     "memory": {
       "status": "pending",
@@ -105,6 +105,21 @@
       "to": "result-review",
       "at": "2026-11-09T12:51:27.597Z",
       "reason": "quality aprobada"
+    },
+    {
+      "type": "gate",
+      "gate": "conformance",
+      "status": "approved",
+      "at": "2026-11-09T13:29:29.379Z",
+      "evidence": "Dos jueces (conforms-with-notes); F1-F5 arreglados con tests y controles positivos; F6-F7 aceptados; suite 6625 passed, plugin test 162/0",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "result-review",
+      "to": "closing",
+      "at": "2026-11-09T13:29:29.623Z",
+      "reason": "conformance aprobada"
     }
   ]
 }

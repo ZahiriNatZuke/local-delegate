@@ -858,7 +858,12 @@ async function readFileText($, path) {
 /** The summary kept for `key` when it was made from exactly `text`, else null. */
 function readCachedSummary(key, text) {
   const kept = text === null ? undefined : READ_STATE.summaries.get(key)
-  if (!kept || kept.text !== text) {
+  if (!kept) {
+    return null
+  }
+  if (kept.text !== text) {
+    // The file changed: that summary can never be reused, so it does not hold its place.
+    readForgetSummary(key)
     return null
   }
   // The most recently used goes last, so the oldest is the first to go.
@@ -894,7 +899,9 @@ function readKeepSummary(key, text, summary) {
  * `local_summarize`, kept only when the file read the same before and after it. Null when it fails.
  */
 async function readSummaryOf($, key, path) {
-  const before = await readFileText($, path)
+  const read = await readFileText($, path)
+  // Over the per-file cap it is never kept: no second read of a file that large.
+  const before = read !== null && read.length <= READ_SUMMARY_CACHE_FILE_CHARS ? read : null
   const kept = readCachedSummary(key, before)
   if (kept !== null) {
     return { text: kept, reused: true }

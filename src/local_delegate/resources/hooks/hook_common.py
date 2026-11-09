@@ -230,6 +230,9 @@ MOD_DECISIONS: dict[str, tuple[bool, bool, str]] = {
     "warned": (True, False, "unclassifiable"),  # via no clasificable: solo aviso
     "not_prose": (False, False, "not_prose"),  # grande pero no prosa (codigo, datos): pasa literal
 }
+#: Decisiones sin nota de bloqueo (`record_block`): no hay delegacion detras que la recoja, y una
+#: nota suelta se la quedaria la siguiente delegacion de la misma ruta en `BLOCK_WINDOW_S` (#608).
+MOD_NO_BLOCK_NOTE = frozenset({"summary_reused"})
 _MOD_DECISION_NAME = re.compile(r"^[a-z_]{1,32}$")
 
 

@@ -28,6 +28,7 @@ import sys
 
 import read_classifier
 from hook_common import (
+    MOD_NO_BLOCK_NOTE,
     already_recorded,
     backend_available,
     backend_down,
@@ -166,7 +167,7 @@ def record_decision(entry: dict) -> None:
         if isinstance(entry.get("bytes"), int):
             fields["size_kb"] = round(entry["bytes"] / 1024, 1)
         fields["path_sha"] = path_digest(path)
-    if fields.get("blocked") and path:
+    if fields.get("blocked") and path and fields["decision"] not in MOD_NO_BLOCK_NOTE:
         fields["id"] = record_id or new_id()
         record_block(fields["id"], path)
     elif record_id:

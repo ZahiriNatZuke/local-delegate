@@ -717,10 +717,13 @@ def test_record_read_keeps_unknown_decisions(tmp_path):
     assert "blocked" not in event
 
 
-def test_record_read_counts_a_reused_summary_as_a_replaced_read(tmp_path):
+@pytest.mark.parametrize("via", ["read_whole", "shell_cat"])
+def test_record_read_counts_a_reused_summary_as_a_replaced_read(tmp_path, via):
     """Issue #608: un resumen reutilizado sustituye la lectura igual que uno nuevo (la serie de P-4
-    no lo pierde), pero con su propia `decision`, sin delegación detrás."""
+    no lo pierde), pero con su propia `decision`, sin delegación detrás: por eso no deja nota de
+    bloqueo, que la siguiente delegación de la misma ruta se quedaría como «aceptada»."""
     lines = {}
+    notes = {}
     for decision in ("auto_summarized", "summary_reused"):
         base = tmp_path / decision
         env = {**_sandbox(base), "LD_HOOK_READ_ENABLED": "1", "LD_HOOK_READ_BLOCK": "1"}
@@ -731,7 +734,7 @@ def test_record_read_counts_a_reused_summary_as_a_replaced_read(tmp_path):
             "scope": "whole",
             "bytes": prose.stat().st_size,
             "range": None,
-            "via": "read_whole",
+            "via": via,
             "read_switch": "on",
             "decision": decision,
             "session_id": "s-test",
@@ -739,6 +742,10 @@ def test_record_read_counts_a_reused_summary_as_a_replaced_read(tmp_path):
         run = _hook(["record-read"], json.dumps(entry).encode("utf-8"), env)
         assert (run.returncode, run.stdout) == (0, b"")
         [lines[decision]] = _telemetry(base)
+        notes[decision] = _block_notes(base)
+    # Guard: the same line with a new summary does leave its note, so the empty one is the fix's.
+    assert [n["id"] for n in notes["auto_summarized"]] == [lines["auto_summarized"]["id"]]
+    assert notes["summary_reused"] == []
     reused = lines["summary_reused"]
     assert (reused["decision"], reused["reason"], reused["suggested"], reused.get("blocked")) == (
         "summary_reused",

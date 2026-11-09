@@ -1339,3 +1339,45 @@ test('the_summary_cache_is_bounded', async () => {
   await call(after, { tool: 'Read', file_path: BIG })
   expect(after.mcpCalls).toHaveLength(1)
 })
+
+test('a_reused_summary_is_the_last_to_go', async () => {
+  const names = Array.from({ length: 17 }, (_, i) => `C:/work/docs/g${i}.md`)
+  const files: Record<string, string> = {}
+  const sizes: Record<string, number> = {}
+  for (const name of names) {
+    files[name] = HUNDRED_LINES
+    sizes[name] = BIG_BYTES
+  }
+  const env = makeEnv({ classify: byInput, files, sizes })
+  for (const name of names.slice(0, 16)) {
+    await call(env, { tool: 'Read', file_path: name })
+  }
+  await call(env, { tool: 'Read', file_path: names[0] }) // reused: now the most recent
+  expect(env.mcpCalls).toHaveLength(16)
+  await call(env, { tool: 'Read', file_path: names[16] }) // the 17th: the least recent goes
+  expect(env.mcpCalls).toHaveLength(17)
+  await call(env, { tool: 'Read', file_path: names[0] })
+  expect(env.mcpCalls).toHaveLength(17)
+  await call(env, { tool: 'Read', file_path: names[1] })
+  expect(env.mcpCalls).toHaveLength(18)
+})
+
+test('the_summary_cache_caps_its_characters', async () => {
+  // Five files under the per-file cap that together pass the total one (4 M characters).
+  const names = Array.from({ length: 5 }, (_, i) => `C:/work/docs/h${i}.md`)
+  const files: Record<string, string> = {}
+  const sizes: Record<string, number> = {}
+  names.forEach((name, i) => {
+    files[name] = `${i}`.repeat(900 * 1024)
+    sizes[name] = BIG_BYTES
+  })
+  const env = makeEnv({ classify: byInput, files, sizes })
+  for (const name of names) {
+    await call(env, { tool: 'Read', file_path: name })
+  }
+  expect(env.mcpCalls).toHaveLength(5)
+  await call(env, { tool: 'Read', file_path: names[4] }) // the newest: kept
+  expect(env.mcpCalls).toHaveLength(5)
+  await call(env, { tool: 'Read', file_path: names[0] }) // the oldest: dropped for room
+  expect(env.mcpCalls).toHaveLength(6)
+})
