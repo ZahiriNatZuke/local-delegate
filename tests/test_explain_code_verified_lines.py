@@ -365,3 +365,115 @@ def test_the_colon_form_is_linear():
     start = time.perf_counter()
     line_check.citations(text, ["focus"], total_lines=365)
     assert time.perf_counter() - start < 1.0
+
+
+# --- #616: a citation that names what the line does through an alias or a constant ------------
+
+BOUND_JS = """const SERVER = 'local-delegate'
+const SUMMARY_TOOL = 'local_summarize'
+
+async function summarize($, path) {
+  try {
+    const result = await $.mcp.call(SERVER, SUMMARY_TOOL, { path })
+    return result
+  } catch {
+    return null
+  }
+}
+
+function other() {
+  return 42
+}
+"""
+BOUND_PY = """from helpers import read_summary as fetch_summary
+
+SUMMARY_TOOL: str = "local_summarize"
+
+
+def run(client):
+    client.call(SUMMARY_TOOL)
+    return fetch_summary(client)
+"""
+
+
+@pytest.mark.parametrize(
+    ("question", "answer_text", "content"),
+    [
+        # The #616 case: the call passes the constant, not the literal.
+        ("¿Dónde se llama a `local_summarize`?", "`local_summarize` se invoca en la línea 6.", BOUND_JS),
+        # A typed constant in Python, with double quotes.
+        ("Where is `local_summarize` called?", "`local_summarize` is called at line 7.", BOUND_PY),
+        # An `import … as` alias.
+        ("Where is `read_summary` used?", "`read_summary` is used at line 8.", BOUND_PY),
+    ],
+)  # fmt: skip
+def test_a_citation_through_an_alias_holds(question, answer_text, content):
+    """Mutant «no aliases»: each of these warns (the line holds the alias, never the name)."""
+    assert _warned(question, answer_text, content) == []
+
+
+def test_an_alias_does_not_cover_a_wrong_citation():
+    """Line 14 holds neither `local_summarize` nor `SUMMARY_TOOL`: it still warns, next to a right
+    one. And a plain lowercase word is never an alias: with `tool = 'local_summarize'`, a loop
+    `for tool in registry` calls nothing, and its citation still warns (as before #616)."""
+    text = "`local_summarize` se invoca en la línea 6 y también en la línea 14."
+    assert _warned("¿Dónde se llama a `local_summarize`?", text, BOUND_JS) == ["14"]
+    plain_word = "tool = 'local_summarize'\n\n\n\nfor tool in registry:\n    pass\n"
+    text = "`local_summarize` se invoca en la línea 5."
+    assert _warned("¿Dónde se llama a `local_summarize`?", text, plain_word) == ["5"]
+
+
+@pytest.mark.parametrize(
+    "binding",
+    [
+        "if (TOOL_MODE == 'local_summarize') {}",
+        "if (TOOL_MODE != 'local_summarize') {}",
+        "TOOL_MODE = pick('local_summarize')",
+        "TOOL_MODE = 'local_summarize' + suffix",
+        "TOOL_MODE <= local_summarize",
+    ],
+)
+def test_a_comparison_or_a_call_is_not_an_alias(binding):
+    """Only a whole value binds a name: a comparison or a longer expression does not, so `TOOL_MODE`
+    on another line does not confirm a citation of `local_summarize`. Guard: with a plain
+    `TOOL_MODE = 'local_summarize'` the same citation holds."""
+    lines = [binding, "", "", "", "run(TOOL_MODE)", ""]
+    content = "\n".join(lines) + "\n"
+    text = "`local_summarize` se usa en la línea 5."
+    assert _warned("¿Dónde se usa `local_summarize`?", text, content) == ["5"]
+    plain = content.replace(binding, "TOOL_MODE = 'local_summarize'")
+    assert _warned("¿Dónde se usa `local_summarize`?", text, plain) == []
+
+
+@pytest.mark.parametrize(
+    ("binding", "use"),
+    [
+        (
+            '    summary_tool="local_summarize",',
+            "print(summary_tool)",
+        ),  # a named argument of a multi-line call
+        (
+            "if is_ready: TOOL_MODE = 'local_summarize'",
+            "run(is_ready)",
+        ),  # a statement before the binding
+        ("except local_summarize as load_error:", "log(load_error)"),  # `as` outside an import
+    ],
+)
+def test_a_name_bound_mid_statement_is_not_an_alias(binding, use):
+    """None of these binds the word on the left, so a line using it does not confirm a citation."""
+    content = f"{binding}\n\n\n\n{use}\n\n"
+    text = "`local_summarize` se usa en la línea 5."
+    assert _warned("¿Dónde se usa `local_summarize`?", text, content) == ["5"]
+
+
+def test_the_alias_search_is_linear():
+    """Long lines that hold the name, so the binding patterns do run on them."""
+    content = (
+        "TOOL = local_summarize" + " " * 50_000 + "x\n"
+        + "a = " + "local_summarize " * 5_000 + "\n"
+        + "from m import " + "local_summarize as " * 5_000 + "\n"
+        + "call(TOOL)\n"
+    )  # fmt: skip
+    start = time.perf_counter()
+    line_check.check("`local_summarize` en la línea 4.", "¿`local_summarize`?", content)
+    assert time.perf_counter() - start < 1.0

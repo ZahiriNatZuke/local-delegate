@@ -1,0 +1,125 @@
+{
+  "schemaVersion": 1,
+  "slug": "cita-alias",
+  "title": "El verificador de citas acepta un alias o una constante del nombre citado (#616)",
+  "mode": "lite",
+  "traceability": "strict",
+  "status": "closing",
+  "createdAt": "2026-11-09T13:44:18.957Z",
+  "updatedAt": "2026-11-09T14:12:24.198Z",
+  "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-11-09T13:44:50.950Z",
+      "evidence": "spec con REQ-001..004 verificables, apoyada en el issue #616 y line_check.py:467",
+      "actor": "user"
+    },
+    "plan": {
+      "status": "approved",
+      "updatedAt": "2026-11-09T13:44:51.438Z",
+      "evidence": "Autorevisión: alias de un nivel, solo para nombres code-like, el valor como expresión entera; no crea alias con comparaciones; sin hallazgos bloqueantes",
+      "actor": "user"
+    },
+    "quality": {
+      "status": "approved",
+      "updatedAt": "2026-11-09T14:12:23.554Z",
+      "evidence": "pytest 6689 passed/30 skipped; ruff check+format ok; sdd check verde",
+      "actor": "user"
+    },
+    "conformance": {
+      "status": "approved",
+      "updatedAt": "2026-11-09T14:12:23.986Z",
+      "evidence": "Dos jueces conforms-with-notes; F1-F6 arreglados con tests y mutantes",
+      "actor": "user"
+    },
+    "memory": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-11-09T13:44:18.957Z",
+      "reason": "SDD change created"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "specifying",
+      "at": "2026-11-09T13:44:50.684Z",
+      "reason": "issue #616 y line_check.check leídos"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-11-09T13:44:50.950Z",
+      "evidence": "spec con REQ-001..004 verificables, apoyada en el issue #616 y line_check.py:467",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-11-09T13:44:51.204Z",
+      "reason": "spec aprobada"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-11-09T13:44:51.438Z",
+      "evidence": "Autorevisión: alias de un nivel, solo para nombres code-like, el valor como expresión entera; no crea alias con comparaciones; sin hallazgos bloqueantes",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "implementing",
+      "at": "2026-11-09T13:44:51.669Z",
+      "reason": "spec y plan aprobados"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-11-09T14:12:23.340Z",
+      "reason": "implementado y probado"
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-11-09T14:12:23.554Z",
+      "evidence": "pytest 6689 passed/30 skipped; ruff check+format ok; sdd check verde",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "verifying",
+      "to": "result-review",
+      "at": "2026-11-09T14:12:23.763Z",
+      "reason": "quality aprobada"
+    },
+    {
+      "type": "gate",
+      "gate": "conformance",
+      "status": "approved",
+      "at": "2026-11-09T14:12:23.986Z",
+      "evidence": "Dos jueces conforms-with-notes; F1-F6 arreglados con tests y mutantes",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "result-review",
+      "to": "closing",
+      "at": "2026-11-09T14:12:24.198Z",
+      "reason": "conformance aprobada"
+    }
+  ]
+}
