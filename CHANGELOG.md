@@ -11,8 +11,9 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 - **`local_summarize` da más margen al resumen de una entrada grande con el `max_words` por defecto (#580).**
   Con más de 16 000 caracteres el modelo escribe bastante más que las palabras pedidas, y el tope
   de 3·w+64 tokens (514 con 150) lo cortaba a menudo. Ahora el tope crece con la entrada a partir de
-  ahí (884 tokens para 23 400 caracteres); si aun así se corta, sigue acabando en la última frase
-  completa y con aviso.
+  ahí (884 tokens para 23 400 caracteres), sin pasar de `LOCAL_DELEGATE_CHUNK_MAX_TOKENS` ni de
+  lo que el contexto del modelo deja tras la entrada; también en el resumen por secciones. Si aun
+  así se corta, sigue acabando en la última frase completa y con aviso.
 - **`local_lint_summary` ya no bloquea el daemon con un log que tiene líneas largas sin espacios.**
   La línea de progreso de `python -m unittest` (un punto por test) hacía que la búsqueda de
   ficheros del inventario tardara un tiempo cuadrático, con la CPU tomada: 8 000 puntos costaban

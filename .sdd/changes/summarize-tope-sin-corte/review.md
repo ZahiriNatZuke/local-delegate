@@ -22,7 +22,8 @@
 | --- | --- | --- | --- | --- | --- |
 | F1 | Small margin just above 16 K (564 at 17 K) | found | - | suspected | accepted: no default-sized cut below 16 K in the log; the notice covers the rest; recorded |
 | F2 | CHANGELOG overpromised («ya no corta», «siempre») | found | found | confirmed | reworded («da más margen», «a menudo») |
-| F3 | Worst case of a runaway answer longer (2 114 at 48 K) | found | - | suspected | accepted, recorded in verification.md |
+| F3 | Worst case of a runaway answer longer (2 114 at 48 K) | found | - | suspected | fixed after the PR review: ceiling `CHUNK_MAX_TOKENS` and context left (REQ-005) |
+| F6 | PR review: no ceiling; structured single call without the widening | PR | PR | confirmed | REQ-005 and REQ-006, 4 tests |
 | F4 | No test with `path=` and accents (chars vs bytes) | - | found | suspected | added `test_the_cap_counts_characters_not_bytes_of_a_file` |
 | F5 | verification.md and plan tasks pending | - | found | confirmed | filled |
 

@@ -17,6 +17,10 @@ last sentence (`trim_cut`, #581) stays as the fallback.
   - Files or modules: src/local_delegate/server.py, CHANGELOG.md
   - Verification: new and existing summarize tests; full suite
   - Depends on: T1
+- [x] T4 — Ceiling and the structured single call, after the review of #615 (REQ-005, REQ-006)
+  - Files or modules: src/local_delegate/server.py (`_big_input_extra`, `_single_call_cap`), tests
+  - Verification: the 4 new tests fail on 04341ab7 (2114, 9714, 884, no helper); area tests green
+  - Depends on: T2
 - [x] T3 — Live rerun recipe (REQ-004)
   - Files or modules: scratchpad/live/rerun_580.md (outside the repo)
   - Verification: review

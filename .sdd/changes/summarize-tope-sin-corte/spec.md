@@ -10,7 +10,7 @@ complete sentence with the notice.
 
 - **REQ-001** — For an input of more than 16 000 characters the single call asks
   `3w + 64 + (chars - 16 000) // 20` output tokens (884 for the 23 409-char case with 150 words,
-  2 114 at the `long` role's 48 000); at 16 000 characters or fewer it asks `3w + 64` as today.
+  2 114 at the `long` role's 48 000 before the ceiling of REQ-005); at 16 000 characters or fewer it asks `3w + 64` as today.
   - Request: "el 31 % de las llamadas del mod de lectura acaba en `finish_reason: length` … con entradas de 20 K caracteres o más"
   - Verify: test tests/test_summarize_big_input_cap.py
 - **REQ-002** — A fake backend that answers `length` with a cut sentence: the output ends at the last
@@ -18,11 +18,21 @@ complete sentence with the notice.
   on a big input as on a small one.
   - Request: "El resumen no debe acabar a mitad de frase sin avisar."
   - Verify: test tests/test_summarize_big_input_cap.py
-- **REQ-003** — The map/reduce, the structured path and the other tools keep their caps; existing
+- **REQ-003** — The map/reduce (flat and structured) and the other tools keep their caps; existing
   tests (`test_summarize_word_budget.py`, `test_request_body_compat.py`, `test_structured_summary.py`)
   pass unchanged.
   - Request: "derived: sin regresiones (brief); #610 touches the map/reduce"
   - Verify: test tests/test_summarize_word_budget.py tests/test_request_body_compat.py tests/test_structured_summary.py
+- **REQ-005** — The widening has a ceiling: `min(CHUNK_MAX_TOKENS, n_ctx − prompt)`, the prompt
+  estimated as in `_reasoning_fits`, `n_ctx` only when read from the llama-swap config (its 8 192
+  fallback is a guess, and a remote backend has no config); never below the usual cap. 48 000
+  characters ask 2 048, not 2 114; a `MAX_CHARS_LONG` of 200 000 asks 2 048, not 9 714.
+  - Request: "derived: review of #615 (β), «Falta un techo»"
+  - Verify: test tests/test_summarize_big_input_cap.py
+- **REQ-006** — With `LOCAL_DELEGATE_STRUCTURED_SUMMARY` on, the structured single call gets the same
+  widening on top of its own cap (which grows with the sections, not with the size).
+  - Request: "derived: review of #615 (α)"
+  - Verify: test tests/test_summarize_big_input_cap.py
 - **REQ-004** — A live rerun recipe for the release test: the exact call, a ~23 K-char `.md` of the
   repo and the criterion of «bien».
   - Request: "deja en `scratchpad/live/rerun_580.md` la llamada exacta … y el criterio de «bien»"
