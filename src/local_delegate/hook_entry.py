@@ -257,8 +257,10 @@ def _log_failure(name: str, exc: BaseException, entry: object = None) -> None:
         if isinstance(entry, dict):
             line["decision"] = _failure_name(entry.get("decision"))
             line["via"] = _failure_name(entry.get("via"))
-        with target.open("a", encoding="utf-8") as stream:
-            stream.write(json.dumps(line) + "\n")
+        # Locked single-write append: several hooks can fail at once (telemetria-escritura-concurrente).
+        from .resources.hooks import hook_common
+
+        hook_common.append_line(target, json.dumps(line))
     except Exception:
         # un hook nunca lanza; perder la línea es el mal menor
         pass

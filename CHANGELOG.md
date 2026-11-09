@@ -37,6 +37,34 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   que existiera el plugin. Ahora el desglose cuenta solo las filas de `[since, until)`; el
   porcentaje y las delegaciones tardías de una sesión del periodo no cambian. El periodo «después»
   tampoco cuenta ya las filas de pasados sus 14 días.
+- **`recompute-cost` ya no reescribe el relleno de atribución ni `cost-aggregates.json` con menos
+  de lo que tenían.** Si el fichero existe y no se pudo leer (un antivirus o un indexador que lo
+  tiene abierto un instante), lo reintenta; si sigue sin poder, se para sin reescribirlo y lo dice
+  («no se pudo leer…»), en vez de tomarlo por vacío y perder lo que ya no se puede reconstruir. Uno
+  dañado se guarda aparte (`<nombre>.damaged-<fecha>`) antes de reemplazarlo, y el resumen lo
+  cuenta. Dos `recompute-cost` a la vez ya no se pisan: el segundo espera al primero.
+- **La telemetría de los hooks ya no pierde ni parte líneas cuando escriben varios a la vez.** Cada
+  hook, los hilos del daemon y el CLI añaden su línea bajo un cerrojo de fichero (en Windows
+  `msvcrt.locking`, en macOS y Linux `flock`) y de una sola escritura. Antes, en Windows, seis
+  procesos con 300 líneas cada uno perdían entre el 10 y el 16 % y dejaban líneas partidas. Pasa
+  lo mismo con el log de fallos de los hooks y con las notas de bloqueo, donde dos bloqueos a la vez
+  ya no se quitan la nota el uno al otro. En el camino del mod, una decisión que llega a la vez por
+  dos vías se escribe una sola vez. Si la línea anterior quedó partida, la nueva ya no se le pega
+  detrás, y el panel y la medición de adopción se saltan un trozo de línea que sea JSON válido sin
+  ser un evento, en vez de fallar. El cerrojo espera como mucho un segundo: un hook no se cuelga por
+  la telemetría.
+- `local_extract`: un campo que pide la línea de un título y recibe el esquema de encabezados entero
+  ya no sale en silencio: se recorta al encabezado que nombra solo si no hay duda (nombre en
+  singular y un único encabezado); si la hay, se deja como vino. Los dos casos van en
+  `_local_delegate.outline_copies`, con aviso. «Título: línea 1» sobre un encabezado ya no se marca
+  como línea dudosa (#594).
+- `local_explain_code` troceado con una pregunta ya no da por bueno un paso de combinar notas cortado por `max_tokens` que no se puede partir: lo repite una vez con más margen de salida (el doble, dentro de lo que acepta el backend); si sigue cortado, el aviso dice que fue al combinar notas y que una afirmación de que algo no ocurre puede deberse al corte (#598).
+- `local_commit_msg` con un diff muy grande se queda dentro del límite de tiempo de la tool en vez de acabar cancelado: si leer todas sus partes no cabe en un presupuesto de 95 s (el cliente corta hacia los 120 s), deja de leer partes (y de repetir trozos cortados o reagrupar notas cuando no da tiempo), redacta el mensaje con lo leído y el inventario completo de archivos, y avisa de cuánto se leyó (#596).
+- **La banda del mod ya no marca el backend como CAÍDO por un solo sondeo lento** (#612). Aplica la
+  misma regla que el panel web, con el mismo código: un fallo tras un sondeo bueno conserva lo que
+  se veía y solo el segundo fallo seguido es caído. Tras un fallo, el sondeo siguiente llega al
+  segundo y no a los 30, así que un pico suelto apenas se nota; con la caída ya confirmada, vuelve a
+  mirar cada 30 s.
 
 ## [0.49.0] - 2026-11-04
 

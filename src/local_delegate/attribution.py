@@ -27,7 +27,7 @@ from collections.abc import Callable, Iterable
 from pathlib import Path
 from typing import Any
 
-from . import clients, legacy_names, pricing
+from . import clients, json_state, legacy_names, pricing
 from .resources.hooks import hook_common
 
 #: Una nota de más de diez minutos ya no cuenta (REQ-003).
@@ -340,14 +340,41 @@ def _load_entries(path: Path) -> dict[str, dict] | None:
         data = json.loads(text)
     except ValueError:
         return {}
+    return _entries_of(data) or {}
+
+
+def _entries_of(data: object) -> dict[str, dict] | None:
+    """Las entradas de un relleno ya parseado, en el formato nuevo; `None` si no tiene la forma."""
     entries = legacy_names.read_key(data, "entries", "entradas") if isinstance(data, dict) else None
     if not isinstance(entries, dict):
-        return {}
+        return None
     return {
         k: legacy_names.normalize("attribution", v)
         for k, v in entries.items()
         if isinstance(v, dict)
     }
+
+
+def _entries_before_merge(
+    path: Path, on_damaged: Callable[[Path], None] | None, *, set_aside: bool = True
+) -> dict[str, dict] | None:
+    """Como `_load_entries`, pero para fundir y reescribir: no toma «no se pudo leer» por vacío.
+
+    `None` si no existe. Si existe y no se lee tras los reintentos, lanza
+    `json_state.UnreadableStateError` y no se escribe nada. Si está dañado, se guarda una copia
+    (`json_state.set_aside`) y cuenta como vacío, como hasta ahora.
+    """
+    previous = json_state.read_before_merge(path)
+    if not previous.exists:
+        return None
+    entries = None if previous.damaged else _entries_of(previous.data)
+    if entries is None:
+        if set_aside:  # el viejo no se reemplaza nunca: no hace falta copia
+            copy = json_state.set_aside(path)
+            if on_damaged is not None:
+                on_damaged(copy)
+        return {}
+    return entries
 
 
 def read_backfill(log_dir: Path, month: str) -> dict[str, dict]:
@@ -367,7 +394,13 @@ def _rank(entry: dict) -> int:
     return MATCH_RANK.get(str(entry.get("match")), -1)
 
 
-def write_backfill(log_dir: Path, month: str, entries: dict[str, dict]) -> dict[str, dict]:
+def write_backfill(
+    log_dir: Path,
+    month: str,
+    entries: dict[str, dict],
+    *,
+    on_damaged: Callable[[Path], None] | None = None,
+) -> dict[str, dict]:
     """Funde `entries` con lo que ya hay y lo escribe de forma atómica. Devuelve el resultado.
 
     Una entrada existente no se borra nunca, y solo la sustituye otra de cruce MEJOR
@@ -375,8 +408,16 @@ def write_backfill(log_dir: Path, month: str, entries: dict[str, dict]) -> dict[
     `attribution-AAAAMM.json`, «lo que ya hay» es el `atribucion-AAAAMM.json` viejo: el nuevo se
     siembra desde él, con la misma regla, y el viejo queda intacto (REQ-006). Se escribe siempre
     en el formato nuevo, también si `entries` llega con claves o valores viejos.
+
+    «Lo que ya hay» se lee sin tomar un fallo por vacío: si el fichero existe y no se puede leer
+    (un antivirus que lo tiene abierto más de lo que duran los reintentos), lanza
+    `json_state.UnreadableStateError` y el fichero queda como estaba. Uno dañado se copia aparte
+    antes de reemplazarlo y se avisa a `on_damaged` con la ruta de la copia.
     """
-    merged = read_backfill(log_dir, month)
+    merged = _entries_before_merge(backfill_path(log_dir, month), on_damaged)
+    if merged is None:
+        legacy = legacy_backfill_path(log_dir, month)
+        merged = _entries_before_merge(legacy, on_damaged, set_aside=False) or {}
     for key, new_entry in entries.items():
         new_entry = legacy_names.normalize("attribution", new_entry)
         old_entry = merged.get(key)
