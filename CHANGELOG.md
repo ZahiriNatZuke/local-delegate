@@ -37,6 +37,16 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   («no se pudo leer…»), en vez de tomarlo por vacío y perder lo que ya no se puede reconstruir. Uno
   dañado se guarda aparte (`<nombre>.damaged-<fecha>`) antes de reemplazarlo, y el resumen lo
   cuenta. Dos `recompute-cost` a la vez ya no se pisan: el segundo espera al primero.
+- **La telemetría de los hooks ya no pierde ni parte líneas cuando escriben varios a la vez.** Cada
+  hook, los hilos del daemon y el CLI añaden su línea bajo un cerrojo de fichero (en Windows
+  `msvcrt.locking`, en macOS y Linux `flock`) y de una sola escritura. Antes, en Windows, seis
+  procesos con 300 líneas cada uno perdían entre el 10 y el 16 % y dejaban líneas partidas. Pasa
+  lo mismo con el log de fallos de los hooks y con las notas de bloqueo, donde dos bloqueos a la vez
+  ya no se quitan la nota el uno al otro. En el camino del mod, una decisión que llega a la vez por
+  dos vías se escribe una sola vez. Si la línea anterior quedó partida, la nueva ya no se le pega
+  detrás, y el panel y la medición de adopción se saltan un trozo de línea que sea JSON válido sin
+  ser un evento, en vez de fallar. El cerrojo espera como mucho un segundo: un hook no se cuelga por
+  la telemetría.
 
 ## [0.49.0] - 2026-11-04
 
