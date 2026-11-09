@@ -7,7 +7,6 @@ del fichero falla con `PermissionError` las primeras N veces y luego se suelta. 
 from __future__ import annotations
 
 import json
-import pathlib
 from pathlib import Path
 
 import pytest
@@ -30,7 +29,7 @@ def _no_wait(monkeypatch):
 
 def _locked(monkeypatch, name: str, times: int | None) -> dict:
     """La apertura de `name` falla `times` veces (`None`: siempre). Devuelve el contador."""
-    real_open = pathlib.Path.open
+    real_open = Path.open
     seen = {"failed": 0}
 
     def fake_open(self, *args, **kwargs):
@@ -39,7 +38,7 @@ def _locked(monkeypatch, name: str, times: int | None) -> dict:
             raise PermissionError(13, "The process cannot access the file", str(self))
         return real_open(self, *args, **kwargs)
 
-    monkeypatch.setattr(pathlib.Path, "open", fake_open)
+    monkeypatch.setattr(Path, "open", fake_open)
     return seen
 
 
@@ -216,9 +215,9 @@ def test_a_failing_stat_does_not_seed_from_the_old_aggregates(tmp_path, monkeypa
     claude, log = _world(tmp_path)
     _aggregates_with_history(log)
     (log / recompute.OLD_FILE_NAME).write_text(json.dumps({"version": 1}), encoding="utf-8")
-    real_exists = pathlib.Path.exists
+    real_exists = Path.exists
     monkeypatch.setattr(
-        pathlib.Path,
+        Path,
         "exists",
         lambda self, *a, **k: (
             False if self.name == recompute.FILE_NAME else real_exists(self, *a, **k)
