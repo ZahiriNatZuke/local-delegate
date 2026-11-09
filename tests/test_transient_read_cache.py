@@ -138,22 +138,22 @@ def test_backend_params_broken_file_stays_cached(monkeypatch):
 def _exclusive_lock(path: Path):
     """Abre `path` sin compartir (`share=0`), como un antivirus; devuelve el handle."""
     import ctypes
-    from ctypes import wintypes
+    import ctypes.wintypes
 
     kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
-    kernel32.CreateFileW.restype = wintypes.HANDLE
+    kernel32.CreateFileW.restype = ctypes.wintypes.HANDLE
     kernel32.CreateFileW.argtypes = [
-        wintypes.LPCWSTR,
-        wintypes.DWORD,
-        wintypes.DWORD,
-        wintypes.LPVOID,
-        wintypes.DWORD,
-        wintypes.DWORD,
-        wintypes.HANDLE,
+        ctypes.wintypes.LPCWSTR,
+        ctypes.wintypes.DWORD,
+        ctypes.wintypes.DWORD,
+        ctypes.wintypes.LPVOID,
+        ctypes.wintypes.DWORD,
+        ctypes.wintypes.DWORD,
+        ctypes.wintypes.HANDLE,
     ]
     generic_read, open_existing = 0x80000000, 3
     handle = kernel32.CreateFileW(str(path), generic_read, 0, None, open_existing, 0, None)
-    assert handle not in (None, wintypes.HANDLE(-1).value), ctypes.get_last_error()
+    assert handle not in (None, ctypes.wintypes.HANDLE(-1).value), ctypes.get_last_error()
     return kernel32, handle
 
 
