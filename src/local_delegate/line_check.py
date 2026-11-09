@@ -16,7 +16,6 @@ question) and how to word the result (`i18n`).
 
 from __future__ import annotations
 
-import json
 import re
 import unicodedata
 from dataclasses import dataclass, field
@@ -588,15 +587,20 @@ _LOCATION_NAME_WORDS = (
         }
     )
 )  # fmt: skip
-#: #594: the singular words that make a field ask for ONE place; with a plural
-#: (`tools_with_lines`, `sections_with_lines`) it asks for several and is never cut.
+#: #594: the singular words that make a field ask for ONE place.
 _ONE_PLACE_WORDS = frozenset(
-    {"line", "linea", "heading", "title", "titulo", "section", "seccion", "encabezado"}
-)
+    {
+        "line", "linea", "heading", "title", "titulo", "section", "seccion", "encabezado",
+        "header", "cabecera", "chapter", "capitulo", "apartado",
+    }
+)  # fmt: skip
+#: With one of these the field asks for several places (`tools_with_lines`, `capitulos_con_linea`,
+#: `line_of_each_heading`): the whole outline is its answer, never a copy.
 _SEVERAL_PLACES_WORDS = frozenset(
     {
         "lines", "lineas", "headings", "titles", "titulos", "sections", "secciones",
-        "encabezados", "linenos",
+        "encabezados", "linenos", "headers", "cabeceras", "chapters", "capitulos", "apartados",
+        "each", "every", "all", "cada", "todos", "todas",
     }
 )  # fmt: skip
 #: The `#` marks (and blanks) in front of an outline heading.
@@ -619,12 +623,14 @@ def outline_copy(
 ) -> tuple[bool, tuple[int, str] | None]:
     """#594: whether `value` is the whole outline put in a field that names ONE heading.
 
-    The field must ask for one place (a singular `line`, `heading`, `section`..., no plural: never
-    `sections_with_lines` or `tools_with_lines`, which ask for several) and name something besides
-    how to locate it (`<x>_section_heading_line`), and the value must cite
-    `OUTLINE_COPY_MIN`+ heading lines and at least half of the outline. Returns (copied, target):
-    the target is the heading whose words hold (or, from 4 letters, start with) every word the
-    field names, the one with the fewest other words; None when none does or two tie for it.
+    The field must ask for one place (a singular `line`, `heading`, `section`...; a plural or
+    `each`/`cada` asks for several: `sections_with_lines`, `capitulos_con_linea`) and name
+    something besides how to locate it (`<x>_section_heading_line`), and the value must cite
+    `OUTLINE_COPY_MIN`+ heading lines and at least half of the outline. Returns (copied, target).
+    The target, the line to cut the value to, is given only without doubt: the subject is singular
+    (no word of it ends in `s`: `tools_section_line` and `pasos_heading_line` may ask for several)
+    and exactly one heading holds every word of it as a whole word, the one with the fewest other
+    words. Otherwise None: the value is left as it came, with a warning.
     """
     names = _name_words(field_name)
     if names & _SEVERAL_PLACES_WORDS or not names & _ONE_PLACE_WORDS:
@@ -636,120 +642,17 @@ def outline_copy(
     cited = {start for _, spans in _items(value) for start, _ in spans} & heading_lines
     if len(cited) < OUTLINE_COPY_MIN or 2 * len(cited) < len(outline):
         return False, None
+    if any(word.endswith("s") for word in subject):
+        return True, None
     candidates = []
     for number, heading in outline:
         words = _name_words(heading_text(heading))
-        # A word of the field matches a heading word equal to it or, with 4+ letters, one it
-        # starts (`intro_heading_line` -> «Introducción»).
-        matched = {h for h in words for w in subject if h == w or (len(w) >= 4 and h.startswith(w))}
-        if all(any(h == w or (len(w) >= 4 and h.startswith(w)) for h in words) for w in subject):
-            candidates.append((len(words - matched), number, heading_text(heading)))
+        if subject <= words:
+            candidates.append((len(words - subject), number, heading_text(heading)))
     candidates.sort()
     if not candidates or (len(candidates) > 1 and candidates[0][0] == candidates[1][0]):
         return True, None
     return True, (candidates[0][1], candidates[0][2])
-
-
-# --- #586: words of an extracted value that the input does not hold ---------------------------
-#: A longer value is free text (a summary paraphrases): it is not checked word by word.
-GROUNDED_MAX_WORDS = 8
-#: Only words of letters this long are checked, as the premises of `unsupported_premises`: a
-#: shorter one is often a normalized answer (`none`, `yes`, `Mac`), and a number is reformatted
-#: (`1.000`, `2026-11-04`, `127.0.0.1`), so neither proves the value was made up.
-GROUNDED_MIN_LETTERS = PREMISE_STEM_LEN
-_VALUE_WORD = re.compile(r"\w+")
-#: Words a model adds to join what it copied: they prove nothing either way.
-_FILLER_WORDS = frozenset(
-    {
-        "about", "which", "their", "there", "other", "where", "while", "entre", "sobre",
-        "desde", "hasta", "donde", "otros", "otras", "tiene", "tienen",
-        # Normalized answers that need not be in the input: "none of them", "never".
-        "ninguno", "ninguna", "ningunos", "ningunas", "nothing", "nunca", "never", "false",
-    }
-)  # fmt: skip
-
-
-def _json_strings(content: str) -> list[str]:
-    """The strings and keys of `content` if it is JSON, decoded; [] for anything else."""
-    text = content.lstrip("\ufeff \t\r\n")
-    if text[:1] not in ("{", "["):
-        return []
-    try:
-        parsed = json.loads(text)
-    except (ValueError, RecursionError):
-        return []
-    out: list[str] = []
-    stack = [parsed]
-    while stack:
-        item = stack.pop()
-        if isinstance(item, str):
-            out.append(item)
-        elif isinstance(item, list):
-            stack.extend(item)
-        elif isinstance(item, dict):
-            out.extend(k for k in item if isinstance(k, str))
-            stack.extend(item.values())
-    return out
-
-
-class Grounding:
-    """The input of `local_extract`, folded once, to check the words of its extracted values."""
-
-    def __init__(self, content: str) -> None:
-        self._content = content
-        self._folded: str | None = None
-        self._words: set[str] = set()
-
-    @property
-    def folded(self) -> str:
-        """The input folded, on the first word to check: most extractions have none."""
-        if self._folded is None:
-            # A JSON input also gives its decoded strings and keys: an escaped accent and a
-            # `\n` glued to a word (`\narreglo`) are escapes, not the words.
-            decoded = "\n".join(_json_strings(self._content))
-            self._folded = _fold(f"{self._content}\n{decoded}" if decoded else self._content)
-            self._words = set(_VALUE_WORD.findall(self._folded))
-        return self._folded
-
-    @property
-    def words(self) -> set[str]:
-        _ = self.folded  # folds on first use
-        return self._words
-
-    def _held(self, word: str) -> bool:
-        if word in self.words:
-            return True
-        for suffix in ("es", "s"):
-            if word.endswith(suffix) and word[: -len(suffix)] in self.words:
-                return True
-        # Inside the input: `github` in `github.com`, a script written without blanks.
-        return word in self.folded
-
-    def missing(self, value: object) -> list[str]:
-        """The checked words of a short string (or list of them) that the input does not hold.
-
-        [] for anything else: numbers, booleans, objects, null, or a text of more than
-        `GROUNDED_MAX_WORDS` words.
-        """
-        if isinstance(value, list):
-            if not all(v is None or isinstance(v, str) for v in value):
-                return []
-            texts = [v for v in value if isinstance(v, str)]
-        elif isinstance(value, str):
-            texts = [value]
-        else:
-            return []
-        out: list[str] = []
-        for text in texts:
-            words = _VALUE_WORD.findall(_fold(text))
-            if len(words) > GROUNDED_MAX_WORDS:
-                continue
-            for word in words:
-                if len(word) < GROUNDED_MIN_LETTERS or not word.isalpha() or word in _FILLER_WORDS:
-                    continue
-                if not self._held(word) and word not in out:
-                    out.append(word)
-        return out
 
 
 #: #582: words of a question that ask for the files of a diff or their lines, compared without
@@ -1044,6 +947,7 @@ def check_values(value: object, content: str) -> list[Citation]:
     total = len(lines)
     mismatched: list[Citation] = []
     seen: set[tuple[_Span, tuple[str, ...]]] = set()
+    headings: set[int] | None = None  # #594: computed on the first generic citation
     for text, spans in _items(value):
         words = _words(text)
         folded_words = [_fold(w) for w in words]
@@ -1060,11 +964,14 @@ def check_values(value: object, content: str) -> list[Citation]:
             low = max(start - TOLERANCE, 1)
             window_lines = lines[low - 1 : min(end + TOLERANCE, total)]
             window = _fold("\n".join(window_lines))
-            # #594: «Título: línea 1» names no heading, it says the line is one: an ATX heading
-            # holds it, as the word itself still does (the `title:` of a front matter).
-            generic = all(w in _GENERIC_HEADING_WORDS for w in folded_words)
-            if generic and any(_ATX_HEADING.match(line) for line in window_lines):
-                continue
+            # #594: «Título: línea 1» names no heading, it says the line is one: a heading of the
+            # outline (outside fenced code) on the cited lines holds it, as the word itself still
+            # does around them (the `title:` of a front matter).
+            if all(w in _GENERIC_HEADING_WORDS for w in folded_words):
+                if headings is None:
+                    headings = {number for number, _ in markdown_outline(content)}
+                if any(start <= number <= end for number in headings):
+                    continue
             if not any(w in window for w in folded_words):
                 mismatched.append(citation)
     return mismatched

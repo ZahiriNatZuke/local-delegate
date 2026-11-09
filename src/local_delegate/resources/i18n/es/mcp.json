@@ -209,7 +209,6 @@
   "mcp.warning.extract_lines_unverified": "líneas citadas que no contienen lo que el valor nombra, o fuera del fichero; no te fíes de esos números: {lines}",
   "mcp.warning.extract_placeholder_keys": "el modelo puso un marcador de «sin dato» (como N/A) en estas claves, se devuelven a null (los valores van en `placeholder_keys`): {fields}",
   "mcp.warning.extract_recounted_keys": "el programa contó la lista del JSON de entrada y corrigió la cifra del modelo (detalle en `recounted_keys`): {pairs}",
-  "mcp.warning.extract_ungrounded_keys": "valores con palabras que no aparecen en la entrada; pueden estar deducidos, traducidos o inventados: compruébalos (detalle en `ungrounded_keys`): {pairs}",
   "mcp.warning.extract_outline_copies": "el modelo copió el esquema de encabezados entero en un campo que pide un solo título (detalle en `outline_copies`): {pairs}",
   "mcp.warning.extract_outline_kept": "sin un título único, se deja como vino",
   "mcp.warning.lint_invented_files": "el resumen nombra ficheros que no aparecen en la entrada y pueden ser inventados: {files}",

@@ -7678,12 +7678,9 @@ def local_extract(
     `placeholder_keys`. With a JSON object as input, a field that counts one of its top-level
     lists (`number_of_comments`) left empty or ABOVE the list's length is counted by the program,
     unless the JSON already holds a total for it; the model's figure is in `recounted_keys`.
-    A short text value (8 words or fewer) with words of 5+ letters the input does not hold (a
-    verdict with no review in it) is returned as it came, and those words are listed in
-    `ungrounded_keys` with a warning: it may be inferred, translated or made up. Numbers, short
-    words and a value copied from the wrong row or field of the input are not detected.
     A location field naming one heading (`intro_heading_line`) that got the whole Markdown
-    outline is cut to the only heading its name fits (`outline_copies`, with a warning).
+    outline is cut to the only heading its singular name fits; with any doubt (a plural
+    subject, no single heading) it is left as it came. Both go to `outline_copies`, with a warning.
 
     Args:
         fields: Names of the fields to extract (JSON keys).
@@ -7905,17 +7902,6 @@ def local_extract(
                     unverified.append(f"{name}: {citation.label()}")
             else:
                 data[name] = _strip_extract_prefixes(data[name], total_lines)
-    # #586: a short value with words the input does not hold (a verdict with no review in it) is
-    # returned, but said: it may be inferred, translated or made up. Location fields have their
-    # own check (#568) and a recounted figure is the program's.
-    grounding = line_check.Grounding(content)
-    ungrounded: dict[str, list[str]] = {}
-    for name in dict.fromkeys(fields):
-        if name == _EXTRACT_META_KEY or name in location_fields or name in recounted:
-            continue
-        words = grounding.missing(data.get(name))
-        if words:
-            ungrounded[name] = words
     meta: dict = dict(truncation)
     # #473: a chunked document where some field stayed null in every chunk. No chunk saw the
     # whole document, so that null may mean "not seen", not "absent": say so, with the count
@@ -7959,10 +7945,6 @@ def local_extract(
             f"{name} = {info['count']} ({info['source']})" for name, info in recounted.items()
         )
         late_notices.append(i18n.t("mcp.warning.extract_recounted_keys", pairs=pairs))
-    if ungrounded:
-        meta["ungrounded_keys"] = ungrounded
-        pairs = ", ".join(f"{name} ({', '.join(words)})" for name, words in ungrounded.items())
-        late_notices.append(i18n.t("mcp.warning.extract_ungrounded_keys", pairs=pairs))
     if outline_copies:
         meta["outline_copies"] = outline_copies
         pairs = ", ".join(

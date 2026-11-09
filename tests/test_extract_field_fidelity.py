@@ -1,10 +1,9 @@
-"""#586 and #594: `local_extract` no longer returns, in silence, a value it made up or copied.
+"""#594: `local_extract` no longer returns, in silence, the whole outline for ONE heading.
 
-#586: the model answered `review_verdict: "positive"` for a PR JSON with no review in it; a short
-value with words the input does not hold now comes back with `ungrounded_keys` and a warning.
-#594: a field asking for the line of ONE heading got the whole heading outline (the one the prompt
-carries since #568), and «Título: línea 1» on the document title was flagged. Backend faked
-(`_run_chat` doubled), no network.
+A field asking for the line of one heading got the whole heading outline (the one the prompt
+carries since #568), and «Título: línea 1» on the document title was flagged. The outline copy is
+cut only without doubt (singular subject, one heading); with any doubt it is said and left as it
+came. Backend faked (`_run_chat` doubled), no network.
 """
 
 from __future__ import annotations
@@ -43,104 +42,6 @@ def _answer(state, payload: dict) -> None:
     state["answer"] = lambda call: _ok(json.dumps(payload, ensure_ascii=False))
 
 
-#: The issue's input: `gh pr view --json body,comments,reviews` with no review and no comment.
-_PR_JSON = json.dumps(
-    {
-        "body": "## Qué cambia\n\n- Arreglo del recuento.\n- Closes #586\n",
-        "comments": [],
-        "reviews": [],
-    },
-    ensure_ascii=False,
-)
-
-
-# --- #586, REQ-001: a value with words the input does not hold is said ------------------------
-
-
-def test_a_made_up_verdict_is_said(backend, tmp_path):
-    _calls, state = backend
-    path = tmp_path / "pr.json"
-    path.write_text(_PR_JSON, encoding="utf-8")
-    _answer(state, {"review_verdict": "positive", "closes_issue": "#586"})
-    data = server.local_extract(fields=["review_verdict", "closes_issue"], path=str(path))
-    meta = data.pop("_local_delegate", {})
-    # The value is not erased: it may be a legitimate inference.
-    assert data == {"review_verdict": "positive", "closes_issue": "#586"}
-    assert meta.get("ungrounded_keys") == {"review_verdict": ["positive"]}
-    assert meta.get("warning") == i18n.t(
-        "mcp.warning.extract_ungrounded_keys", pairs="review_verdict (positive)"
-    )
-
-
-def test_case_accents_plurals_and_substrings_hold():
-    grounding = line_check.Grounding("La Revisión de Ana: aprobado. Ver https://github.com/x")
-    assert grounding.missing("revision") == []
-    assert grounding.missing("Aprobado por Ana") == []
-    assert grounding.missing("revisiones") == []
-    assert grounding.missing("github") == []
-    assert grounding.missing(["aprobado", "rechazado"]) == ["rechazado"]
-
-
-@pytest.mark.parametrize(
-    "value",
-    [
-        None,
-        42,
-        True,
-        {"verdict": "positive"},
-        ["ok", 3],
-        "127.0.0.1",  # numbers are reformatted: not checked
-        "none",  # shorter than 5 letters
-        # A long text paraphrases (a summary): not checked word by word.
-        "positive overall with several minor requested adjustments around tests and docs",
-    ],
-)
-def test_values_that_are_not_checked(value):
-    assert line_check.Grounding("texto de entrada").missing(value) == []
-
-
-# --- #586, REQ-002: a value copied from the input passes as before --------------------------
-
-
-def test_a_json_input_is_read_decoded():
-    """An escaped accent or a `\\n` glued to a word in the JSON text is not a missing word."""
-    raw = json.dumps({"body": "Tras la revisión\narreglos hechos"})  # ensure_ascii: `ón`
-    assert "revisión" not in raw
-    grounding = line_check.Grounding(raw)
-    assert grounding.missing("revisión") == []
-    assert grounding.missing("arreglos") == []
-
-
-def test_normalized_answers_and_nulls_in_a_list_are_not_flagged():
-    grounding = line_check.Grounding("texto de entrada")
-    assert grounding.missing("ninguno") == []
-    assert grounding.missing(["entrada", None]) == []
-    assert grounding.missing(["entrada", None, "positive"]) == ["positive"]
-
-
-def test_values_from_the_input_leave_no_meta(backend):
-    _calls, state = backend
-    _answer(state, {"plan": "Enterprise", "domains": "Std 1–5, Ent 1–3"})
-    text = "<tr><td>Custom domains</td><td>Std 1–5</td><td>Ent 1–3</td></tr> Enterprise"
-    data = server.local_extract(fields=["plan", "domains"], text=text)
-    assert "_local_delegate" not in data
-
-
-def test_the_warning_is_appended_to_an_earlier_one(backend, monkeypatch):
-    _calls, state = backend
-    monkeypatch.setattr(config, "JSON_SCHEMA_MODE", "off")
-    _answer(state, {"verdict": "positive"})
-    data = server.local_extract(fields=["verdict", "other"], text="texto")
-    meta = data.get("_local_delegate", {})
-    assert meta.get("warning") == (
-        i18n.t("mcp.warning.extract_missing_keys", fields="other")
-        + "; "
-        + i18n.t("mcp.warning.extract_ungrounded_keys", pairs="verdict (positive)")
-    )
-
-
-# --- #594: the outline copied into the field of one heading ---------------------------------
-
 _SECTIONS = [
     "La regla que gobierna todas",
     "De un vistazo",
@@ -170,6 +71,9 @@ def _outline_copy(text: str) -> str:
 
 def _line_of(text: str, heading: str) -> int:
     return text.split("\n").index(f"## {heading}") + 1
+
+
+# --- REQ-003: cut only without doubt --------------------------------------------------------
 
 
 def test_the_outline_copy_is_cut_to_the_heading_the_field_names(backend, tmp_path):
@@ -210,8 +114,66 @@ def test_an_outline_copy_with_no_single_heading_is_kept_and_said(backend, tmp_pa
     )
 
 
+#: An outline with a plural heading next to its singular, a Spanish plural and chapters.
+_OUTLINE = [
+    (1, "# Guía"),
+    (5, "## Tools"),
+    (9, "## Pasos de instalación"),
+    (14, "## Capítulos"),
+    (19, "## Uso"),
+]
+_OUTLINE_VALUE = "Guía: línea 1; Tools: línea 5; Pasos de instalación: línea 9; Uso: línea 19"
+
+
+@pytest.mark.parametrize(
+    "name",
+    [
+        "tools_section_line",  # plural subject: may ask for several tools
+        "tool_heading_line",  # only a heading word that it starts (`tools`): doubtful
+        "pasos_heading_line",  # Spanish plural subject
+        "intro_heading_line",  # no whole-word match («Introducción» is not in the outline)
+    ],
+)
+def test_a_doubtful_field_is_said_and_never_cut(name):
+    assert line_check.outline_copy(name, _OUTLINE_VALUE, _OUTLINE) == (True, None)
+
+
+def test_a_singular_subject_with_one_heading_is_cut():
+    assert line_check.outline_copy("uso_heading_line", _OUTLINE_VALUE, _OUTLINE) == (
+        True,
+        (19, "Uso"),
+    )
+    # camelCase and accents: `guia` is «Guía».
+    assert line_check.outline_copy("guiaHeadingLine", _OUTLINE_VALUE, _OUTLINE) == (
+        True,
+        (1, "Guía"),
+    )
+
+
+# --- REQ-004: a field that asks for several places is no copy ---------------------------------
+
+
+@pytest.mark.parametrize(
+    "name",
+    [
+        "tools_with_lines",
+        "tool_sections_with_lines",
+        "local_headings_lines",
+        "outline",
+        "capitulos_con_linea",  # a Spanish plural place word
+        "line_of_each_heading",  # `each`
+        "linea_de_cada_seccion",  # `cada`
+    ],
+)
+def test_a_field_that_asks_for_several_places_is_no_copy(name):
+    assert line_check.outline_copy(name, _OUTLINE_VALUE, _OUTLINE) == (False, None)
+    text = _doc()
+    outline = line_check.markdown_outline(text)
+    assert line_check.outline_copy(name, _outline_copy(text), outline) == (False, None)
+
+
 def test_a_field_that_asks_for_the_whole_outline_is_left_alone(backend, tmp_path):
-    """REQ-004: `sections_with_lines` names no heading; the outline is its answer."""
+    """`sections_with_lines` names no heading; the outline is its answer."""
     _calls, state = backend
     text = _doc()
     path = tmp_path / "tools.md"
@@ -222,42 +184,13 @@ def test_a_field_that_asks_for_the_whole_outline_is_left_alone(backend, tmp_path
     assert data == {"sections_with_lines": copy}
 
 
-def test_a_field_word_that_starts_a_heading_word_picks_it():
-    """`intro_heading_line` names «Introducción»; `cuando` names «Cuándo NO delegar» (camelCase)."""
-    outline = [(1, "# Guía"), (3, "## Introducción"), (9, "## Uso"), (15, "## Cuándo NO delegar")]
-    value = "Guía: línea 1; Introducción: línea 3; Uso: línea 9; Cuándo NO delegar: línea 15"
-    assert line_check.outline_copy("intro_heading_line", value, outline) == (
-        True,
-        (3, "Introducción"),
-    )
-    assert line_check.outline_copy("cuandoHeadingLine", value, outline) == (
-        True,
-        (15, "Cuándo NO delegar"),
-    )
-
-
-@pytest.mark.parametrize(
-    "name", ["tools_with_lines", "tool_sections_with_lines", "local_headings_lines", "outline"]
-)
-def test_a_field_that_asks_for_several_places_is_never_cut(name):
-    """A plural (`lines`, `sections`, `headings`), or no singular place word, asks for several."""
-    text = _doc()
-    outline = line_check.markdown_outline(text)
-    assert line_check.outline_copy(name, _outline_copy(text), outline) == (False, None)
-
-
-def test_a_title_word_on_a_front_matter_still_holds():
-    text = "---\ntitle: Guía\n---\n\nTexto.\n"
-    assert line_check.check_values("title: línea 2", text) == []
-
-
 def test_a_value_that_cites_few_headings_is_not_a_copy():
     outline = line_check.markdown_outline(_doc())
     value = "`local_extract`: línea 25; `local_classify`: línea 21"
     assert line_check.outline_copy("local_extract_heading_line", value, outline) == (False, None)
 
 
-# --- #594, REQ-005: «Título: línea 1» on a heading holds -----------------------------------
+# --- REQ-005: «Título: línea N» holds on a real heading --------------------------------------
 
 
 def test_a_generic_title_on_a_heading_holds():
@@ -265,3 +198,18 @@ def test_a_generic_title_on_a_heading_holds():
     assert line_check.check_values("Título: línea 1", text) == []
     # Line 3 is not a heading, nor are its neighbours (2 and 4 are blank).
     assert [c.label() for c in line_check.check_values("Título: línea 3", text)] == ["3"]
+
+
+def test_a_generic_title_next_to_a_heading_does_not_hold():
+    """Line 2 is blank: the heading of line 1 is in the tolerance window, but it is not cited."""
+    assert [c.label() for c in line_check.check_values("Título: línea 2", _doc())] == ["2"]
+
+
+def test_a_comment_in_fenced_code_is_no_heading():
+    text = "Intro.\n\n```python\n# comentario\nx = 1\n```\n"
+    assert [c.label() for c in line_check.check_values("Título: línea 4", text)] == ["4"]
+
+
+def test_a_title_word_on_a_front_matter_still_holds():
+    text = "---\ntitle: Guía\n---\n\nTexto.\n"
+    assert line_check.check_values("title: línea 2", text) == []

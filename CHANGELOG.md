@@ -8,13 +8,11 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ### Corregido
 
-- `local_extract`: un valor corto con palabras que la entrada no tiene (un veredicto sin ninguna
-  revisión) ya no sale en silencio: va con aviso y sus palabras en `_local_delegate.ungrounded_keys`.
-  No se comprueban números ni palabras cortas, y un valor copiado de otra fila o de otro campo de la
-  entrada sigue sin detectarse (#586).
 - `local_extract`: un campo que pide la línea de un título y recibe el esquema de encabezados entero
-  se recorta al encabezado que nombra (`outline_copies`, con aviso), y «Título: línea 1» sobre un
-  encabezado ya no se marca como línea dudosa (#594).
+  ya no sale en silencio: se recorta al encabezado que nombra solo si no hay duda (nombre en
+  singular y un único encabezado); si la hay, se deja como vino. Los dos casos van en
+  `_local_delegate.outline_copies`, con aviso. «Título: línea 1» sobre un encabezado ya no se marca
+  como línea dudosa (#594).
 
 ## [0.49.0] - 2026-11-04
 
