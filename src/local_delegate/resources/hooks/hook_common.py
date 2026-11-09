@@ -924,6 +924,83 @@ def backend_down(environ: Mapping[str, str] | None = None) -> bool:
         return False
 
 
+# --- Las tools local_* no estan en la sesion (issue #595) ---------------------------------------
+#
+# La entrada de un hook no dice que servidores MCP tiene la sesion. El transcript si: Claude Code
+# escribe un adjunto `deferred_tools_delta` con las tools diferidas que se anaden (`addedNames`) y
+# quitan (`removedNames`), y los servidores que aun conectan (`pendingMcpServers`). Es un formato
+# interno, asi que solo cuenta como prueba de AUSENCIA cuando todo cuadra; ante cualquier duda, False
+# y el hook avisa como siempre. Limite: una tool fijada por el mod (`pinned_tools`) no sale como
+# diferida; si se fijaran todas, solo un `tool_use` de una de ellas diria que estan.
+
+#: Lo que lleva el nombre de cualquier tool del servidor, con o sin prefijo de plugin.
+LOCAL_TOOL_MARK = "local-delegate__local_"
+#: Por encima de este tamano el transcript no se mira (el hook no puede tardar).
+TRANSCRIPT_MAX_BYTES = 32 * 1024 * 1024
+_DELTA_MARK = b'"deferred_tools_delta"'
+_LOCAL_TOOL_USE = re.compile(rb'"name"\s*:\s*"mcp__[^"]*local-delegate__local_[a-z0-9_]+"')
+_AGENT_ID = re.compile(r"^[A-Za-z0-9_-]{1,128}$")
+
+
+def _session_transcript(payload: Mapping) -> Path | None:
+    """El transcript de quien llama: el del subagente si lo hay. La entrada de un subagente trae el
+    `transcript_path` del principal; el suyo es `<sesion>/subagents/agent-<agent_id>.jsonl`."""
+    raw = payload.get("transcript_path")
+    if not isinstance(raw, str) or not raw.strip():
+        return None
+    main = Path(raw.strip())
+    agent = payload.get("agent_id")
+    if isinstance(agent, str) and agent.strip():
+        if not _AGENT_ID.match(agent.strip()):
+            return None
+        own = main.with_suffix("") / "subagents" / f"agent-{agent.strip()}.jsonl"
+        if own.is_file():
+            return own
+    return main
+
+
+def local_tools_absent(payload: object) -> bool:
+    """¿Dice el transcript que esta sesion NO tiene las tools `local_*`? True solo con al menos un
+    `deferred_tools_delta` legible, ninguna tool del servidor en el conjunto neto de diferidas,
+    ningun servidor `local-delegate` pendiente en el ultimo y ningun `tool_use` de una de sus tools."""
+    try:
+        if not isinstance(payload, Mapping):
+            return False
+        path = _session_transcript(payload)
+        if path is None or path.stat().st_size > TRANSCRIPT_MAX_BYTES:
+            return False
+        data = path.read_bytes()
+        if _LOCAL_TOOL_USE.search(data):
+            return False
+        deferred: set[str] = set()
+        pending: list = []
+        seen = False
+        start = data.find(_DELTA_MARK)
+        while start != -1:
+            line_start = data.rfind(b"\n", 0, start) + 1
+            line_end = data.find(b"\n", start)
+            line_end = len(data) if line_end == -1 else line_end
+            start = data.find(_DELTA_MARK, line_end)
+            try:
+                event = json.loads(data[line_start:line_end])
+            except ValueError:
+                continue
+            delta = event.get("attachment") if isinstance(event, dict) else None
+            if not isinstance(delta, dict) or delta.get("type") != "deferred_tools_delta":
+                continue
+            seen = True
+            deferred |= {n for n in delta.get("addedNames") or [] if isinstance(n, str)}
+            deferred -= {n for n in delta.get("removedNames") or [] if isinstance(n, str)}
+            pending = delta.get("pendingMcpServers") or []
+        if not seen:
+            return False
+        if any("local-delegate" in str(server) for server in pending):
+            return False
+        return not any(LOCAL_TOOL_MARK in name for name in deferred)
+    except (OSError, ValueError, TypeError, AttributeError, RecursionError):
+        return False
+
+
 # --- Cruce entre el bloqueo y la delegacion que venga despues -----------------------------------
 #
 # El hook y el servidor MCP son procesos distintos que escriben en ficheros distintos, asi que
