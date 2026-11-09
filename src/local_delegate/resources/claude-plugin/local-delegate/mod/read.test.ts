@@ -750,6 +750,28 @@ test('echo_is_harmless_unless_it_writes', async () => {
   expect(classifyRuns(env)).toHaveLength(1)
 })
 
+test('a_second_line_or_a_substitution_reaches_the_classifier', async () => {
+  // A harmless first word does not make the rest harmless: these read `docs/big.md`, and the shell
+  // hook steps aside for the mod, so a drop here would let the whole file through unseen.
+  const env = makeEnv({ classify: byInput })
+  const reads = [
+    'cd docs\ncat big.md',
+    'ls\r\ncat docs/big.md',
+    'echo $(cat docs/big.md)',
+    'echo `cat docs/big.md`',
+    'echo (Get-Content docs/big.md)',
+  ]
+  for (const [i, command] of reads.entries()) {
+    await call(env, { tool: 'Bash', command })
+    expect(classifyRuns(env)).toHaveLength(i + 1)
+    expect(classifyRuns(env)[i].stdin.tool_input).toEqual({ command })
+  }
+  // Control: one line without those characters is still dropped without a process.
+  await call(env, { tool: 'Bash', command: 'cd docs' })
+  await call(env, { tool: 'Bash', command: 'echo docs/big.md' })
+  expect(classifyRuns(env)).toHaveLength(reads.length)
+})
+
 test('guarded_file_reaches_the_classifier', async () => {
   // A guarded file named without a prose extension the list knows (a list saved under another
   // config): the call still goes to the classifier, which sees the write.
