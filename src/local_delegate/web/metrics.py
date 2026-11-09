@@ -141,9 +141,10 @@ def _read_file_cached(path) -> list[dict]:
                     # Formato nuevo aunque la fila sea vieja (REQ-006): todo lo que sale de
                     # aquí (/api/events, /api/stats, «En curso») ya habla con claves en inglés.
                     row = json.loads(line)
-                    rows.append(
-                        legacy_names.normalize("usage", row) if isinstance(row, dict) else row
-                    )
+                    # Un trozo de una línea partida puede ser JSON válido sin ser una fila (`123`):
+                    # se aparta aquí, porque quien lee las filas hace `row.get(...)`.
+                    if isinstance(row, dict):
+                        rows.append(legacy_names.normalize("usage", row))
                 except json.JSONDecodeError:
                     continue
     except OSError:

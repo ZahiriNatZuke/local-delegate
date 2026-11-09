@@ -1,0 +1,118 @@
+{
+  "schemaVersion": 1,
+  "slug": "recompute-cost-sin-perdida",
+  "title": "recompute-cost no pierde el relleno ni los agregados si la lectura previa falla",
+  "mode": "lite",
+  "traceability": "strict",
+  "status": "result-review",
+  "createdAt": "2026-11-09T10:44:54.748Z",
+  "updatedAt": "2026-11-09T11:59:16.332Z",
+  "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-11-09T10:47:26.575Z",
+      "evidence": "Autorrevision estricta (personal-sdd-review): 7 requisitos observables con test nombrado; causa confirmada leyendo attribution._load_entries/write_backfill y recompute._load/read_aggregates/run; plan con 6 tareas que cubren todos los REQ; riesgos revisados: los lectores tolerantes del panel no cambian (REQ-007), test_a_damaged_new_file_does_not_seed_again se respeta copiando (no moviendo) el danado, nombres .lock/.damaged-* no casan con *.json del test de idempotencia, filelock ya es dependencia. Sin bloqueantes.",
+      "actor": "user"
+    },
+    "plan": {
+      "status": "approved",
+      "updatedAt": "2026-11-09T10:47:26.575Z",
+      "evidence": "Autorrevision estricta (personal-sdd-review): 7 requisitos observables con test nombrado; causa confirmada leyendo attribution._load_entries/write_backfill y recompute._load/read_aggregates/run; plan con 6 tareas que cubren todos los REQ; riesgos revisados: los lectores tolerantes del panel no cambian (REQ-007), test_a_damaged_new_file_does_not_seed_again se respeta copiando (no moviendo) el danado, nombres .lock/.damaged-* no casan con *.json del test de idempotencia, filelock ya es dependencia. Sin bloqueantes.",
+      "actor": "user"
+    },
+    "quality": {
+      "status": "approved",
+      "updatedAt": "2026-11-09T11:59:04.016Z",
+      "evidence": "Suite completa local en Windows (-n 2) verde salvo el detector de nombres por palabras del test nuevo, corregido y repetido en verde; ruff check/format en los ficheros tocados; control positivo documentado en verification.md (cada test nuevo falla en main por su assert).",
+      "actor": "user"
+    },
+    "conformance": {
+      "status": "approved",
+      "updatedAt": "2026-11-09T11:59:16.332Z",
+      "evidence": "Revision por niveles en review.md: dos jueces independientes (y revisor de seguridad en el standard); hallazgos resueltos o aceptados con motivo; sdd check verde.",
+      "actor": "user"
+    },
+    "memory": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-11-09T10:44:54.748Z",
+      "reason": "SDD change created"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "specifying",
+      "at": "2026-11-09T10:47:26.352Z",
+      "reason": "brief con causa verificada (attribution.py:327-350, 370; recompute.py:50-60, 281)"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-11-09T10:47:26.575Z",
+      "evidence": "Autorrevision estricta (personal-sdd-review): 7 requisitos observables con test nombrado; causa confirmada leyendo attribution._load_entries/write_backfill y recompute._load/read_aggregates/run; plan con 6 tareas que cubren todos los REQ; riesgos revisados: los lectores tolerantes del panel no cambian (REQ-007), test_a_damaged_new_file_does_not_seed_again se respeta copiando (no moviendo) el danado, nombres .lock/.damaged-* no casan con *.json del test de idempotencia, filelock ya es dependencia. Sin bloqueantes.",
+      "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-11-09T10:47:26.575Z",
+      "evidence": "Autorrevision estricta (personal-sdd-review): 7 requisitos observables con test nombrado; causa confirmada leyendo attribution._load_entries/write_backfill y recompute._load/read_aggregates/run; plan con 6 tareas que cubren todos los REQ; riesgos revisados: los lectores tolerantes del panel no cambian (REQ-007), test_a_damaged_new_file_does_not_seed_again se respeta copiando (no moviendo) el danado, nombres .lock/.damaged-* no casan con *.json del test de idempotencia, filelock ya es dependencia. Sin bloqueantes.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-11-09T10:47:26.805Z",
+      "reason": "spec aprobada"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "implementing",
+      "at": "2026-11-09T10:47:27.046Z",
+      "reason": "plan aprobado"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-11-09T11:59:03.516Z",
+      "reason": "implementado; suite y tests nuevos en verde"
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-11-09T11:59:04.016Z",
+      "evidence": "Suite completa local en Windows (-n 2) verde salvo el detector de nombres por palabras del test nuevo, corregido y repetido en verde; ruff check/format en los ficheros tocados; control positivo documentado en verification.md (cada test nuevo falla en main por su assert).",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "verifying",
+      "to": "result-review",
+      "at": "2026-11-09T11:59:16.079Z",
+      "reason": "revision de jueces hecha"
+    },
+    {
+      "type": "gate",
+      "gate": "conformance",
+      "status": "approved",
+      "at": "2026-11-09T11:59:16.332Z",
+      "evidence": "Revision por niveles en review.md: dos jueces independientes (y revisor de seguridad en el standard); hallazgos resueltos o aceptados con motivo; sdd check verde.",
+      "actor": "user"
+    }
+  ]
+}

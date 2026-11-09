@@ -153,6 +153,13 @@ Dos cosas que conviene saber y solo estaban en el código:
   trozo, y en un Markdown recibe el esquema de encabezados con su línea. Las líneas citadas se
   comprueban contra el fichero: las que no casan van en `_local_delegate.lines_unverified` con aviso.
   Al trocear, esos campos los une el programa en orden. Sin un campo así, o con `text=`, nada cambia.
+  Si un campo pide UN título (`local_extract_section_heading_line`) y el modelo copia el esquema
+  entero, el programa lo recorta al encabezado que nombra, pero solo sin duda: el nombre va en
+  singular y un único encabezado tiene todas sus palabras. Con duda (`tools_section_line`,
+  `pasos_heading_line`, ningún encabezado o varios) lo deja como vino. Los dos casos van en
+  `_local_delegate.outline_copies`, con aviso (#594). Un campo que pide varios sitios
+  (`sections_with_lines`, `capitulos_con_linea`, `line_of_each_heading`) no se toca. «Título:
+  línea 1» sobre un encabezado ya no cuenta como línea dudosa.
 
 ## `local_boilerplate`
 
