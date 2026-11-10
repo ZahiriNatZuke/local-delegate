@@ -26,12 +26,11 @@ from types import SimpleNamespace
 import pytest
 from fastapi.testclient import TestClient
 
-import local_delegate
 from local_delegate import attribution, config, hook_entry, token_source
 from local_delegate.resources.hooks import hook_common as package_common
 from local_delegate.web import metrics
 
-HOOKS = Path(local_delegate.__file__).parent / "resources" / "hooks"
+HOOKS = Path(config.__file__).parent / "resources" / "hooks"
 SESSION = "0b9c3f9e-1d2a-4c5b-8e7f-123456789abc"
 REPO_DIR = "D--work-local-delegate"
 OTHER_DIR = "D--work-shop"

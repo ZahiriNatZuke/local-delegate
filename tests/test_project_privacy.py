@@ -41,7 +41,6 @@ from test_transcripts import (
     write_log,
 )
 
-import local_delegate
 from local_delegate import attribution, clients, config, hook_entry, recompute, server
 from local_delegate.resources.hooks import hook_common as package_common
 from local_delegate.web import metrics
@@ -55,7 +54,7 @@ SELF_DIR = f"D--work-{LIST_MARKER}"
 OTHER_DIR = f"D--work-{NAME_MARKER}"
 S_SELF = "5a5a5a5a-1b1b-4c2c-8d3d-0e4e5f6a7b8c"
 S_OTHER = "6b6b6b6b-2c2c-4d3d-9e4e-1f5a6b7c8d9e"
-HOOKS = Path(local_delegate.__file__).parent / "resources" / "hooks"
+HOOKS = Path(config.__file__).parent / "resources" / "hooks"
 CACHES = ("_SALTS", "_SELF_ENTRIES", "_SESSION_TRANSCRIPTS")
 HEX16 = re.compile(r"^[0-9a-f]{16}$")
 OLD_MONTH = "202610"
