@@ -142,6 +142,51 @@ Un mutante de la primera pasada también sobrevivió, el 3: el caso «fuera de l
 menos profundo que un transcript real y lo rechazaba la comprobación de longitud, no la de prefijo.
 Se corrigió el test (misma profundidad) y el mutante muere.
 
+## T5 — Panel: propio repo fuera por defecto y tres columnas
+
+Hecho en la rama `feat/usage-log-project-t5` (PR contra `feat/usage-log-project`). Ficheros: los
+que asigna el plan (`web/metrics.py` sin tocar `/api/hook/*`, los dos `panel.json`,
+`scripts/dev/capture_dashboard.py`) y los dos tests nuevos. `tests/panel_server.py` se usa tal cual.
+
+- API: `_usage_rows` aparta primero las pruebas y después el propio repo
+  (`attribution.project_kind`); `/api/stats` y `/api/events` traen `excluded_self`,
+  `self_in_range` y `unknown_project`; con `session=` el filtro no se aplica; el coste recibe las
+  filas sin `self` salvo con `include_self=1` o `session=`; `/api/hooks` aparta `project_kind: self`
+  y trae los dos contadores (también con la telemetría apagada). El total y cada fila de
+  `by_client` traen `main_calls`, `subagent_calls`, `mod_calls` y `unknown_caller_calls` con
+  `attribution.caller_column`; `mod_calls` de arriba sigue igual.
+- Panel: interruptor «Propio repo» junto a «Pruebas», con el número de lo apartado al lado y su ⓘ
+  (sección `dlgSelf`); estado en `localStorage` (`ld-self`); `buildQuery` gana el cuarto parámetro
+  opcional `includeSelf`. «Quién delegó» gana las columnas Hilo principal, Subagentes y Mod, y
+  «Sin dato» solo si alguna fila la tiene. Las columnas nuevas van detrás de «Reparto» para que
+  «Tokens netos» siga siendo la cuarta (la lee `test_dashboard_ui.py`); el «N del mod» que antes
+  iba tras las delegaciones pasa a `title` de la celda del mod (lo sigue leyendo
+  `test_dashboard_states.py::test_mod_calls_shown_apart`, sin tocar).
+- Capturas en claro y oscuro, apagado y encendido, con un log sintético y el panel servido desde
+  el worktree en un puerto libre (sin backend): controles, tarjeta «Quién delegó» y diálogo. Viven
+  en el scratchpad de la sesión (`captures/t5-*.png`), fuera del repo.
+
+### Mutantes de T5 (30 a 42)
+
+Cada uno solo, con `PYTHONDONTWRITEBYTECODE=1` y `web/metrics.py` restaurado byte a byte después;
+control previo: los 33 tests nuevos en verde. Mueren los 13.
+
+| N.º | Mutante | Muere | Aserción que dispara |
+| ---: | --- | --- | --- |
+| 30 | `/api/events` no aplica el filtro | sí | `test_stats_and_events_leave_out_the_own_repo_with_the_same_set`: `events.meta.count == stats.total.calls` (4 ≠ 2) |
+| 31 | `excluded_self` cuenta también las pruebas ya apartadas | sí | `test_shown_plus_both_excluded_counts_is_the_whole_range`: `mostradas + excluded_tests + excluded_self == 6` (da 7) |
+| 32 | `unknown_project` cuenta también las `other` | sí | `test_unknown_project_counts_only_the_rows_without_a_kind`: `== 1` (da 2) |
+| 33 | `include_self=1` se ignora | sí | `test_include_self_returns_every_row`: `total.calls == 4` (da 2) |
+| 34 | `self_in_range` no cuenta las que son prueba | sí | `test_self_in_range_counts_the_self_row_that_is_a_test`: `== 3` (da 2) |
+| 35 | el filtro se aplica también con `session=` | sí | `test_a_session_of_the_own_repo_keeps_its_figures`: `total.calls == 1` (da 0) |
+| 36 | el coste recibe las filas sin filtrar | sí | `test_the_cost_follows_the_own_repo_switch_and_not_the_tests_one`: `off.estimate < on.estimate` (iguales) |
+| 37 | `/api/hooks` no filtra | sí | `test_hooks_leave_out_the_self_events_by_default`: `total == 2` (da 3) |
+| 38 | `/api/hooks` aparta los eventos sin campo | sí | `test_hooks_keep_the_events_without_the_field`: `total == 2` (da 0) |
+| 39 | `/api/hooks` ignora `include_self=1` | sí | `test_hooks_with_include_self_count_the_self_event`: `total == 3` (da 2) |
+| 40 | `buildQuery` no añade el parámetro | sí | `test_the_three_requests_carry_include_self_together[True]`: `include_self=1` en la query común |
+| 41 | el estado del interruptor no se guarda | sí | `test_the_own_repo_switch_requests_all_three_and_is_remembered`: tras recargar sigue encendido (sale apagado) |
+| 42 | una columna no se cuenta | sí | `test_the_four_caller_columns_add_up_to_calls`: la suma de las cuatro es `calls` (5 ≠ 6) |
+
 ## T8 y T9 — Proyecto en la telemetría de hooks, en la línea del mod y en `local_status`
 
 Rama `feat/usage-log-project-t8-t9`, desde `feat/usage-log-project`.
@@ -205,6 +250,8 @@ Without a declaration, list what was run. Never invent a command. -->
 | `pytest` de los ficheros existentes más cercanos (transcripts, recompute ×3, attribution, hook_common, quota, density, valuation, filtro de sesión del panel; hook_boundaries, hook_legacy_names, f1_conformance, no_uncatalogued_text, correlation, clients) | sí | pass | 136 y 150 passed |
 | `pytest -n 2` suite completa | ver PR | — | la primera corrida la paró Claude Code por falta de memoria de la máquina (no por el cambio); resultado en el PR |
 | `ruff check .` y `ruff format --check .` | sí | pass | «All checks passed!» y «461 files already formatted» |
+| T5: `pytest -n 2` de los dos ficheros nuevos y los del panel e i18n (metrics, dashboard js/states/cost/ui, hooks_telemetry_api, capture, session_filter, panel_escaping, panel_xss_ui, no_uncatalogued_text, detect_spanish_names, i18n_parity, language ×2, response_language, clients, aborted_delegations, tool_contract, site, backend_view_shared, density) | sí | pass | 661 passed, 1 skipped (tras renombrar tres identificadores que el guardián de nombres no conocía) |
+| T5: `ruff check` y `ruff format --check` de los ficheros tocados | sí | pass | sin hallazgos |
 
 ## Quality checks
 
@@ -226,6 +273,10 @@ Without a declaration, list what was run. Never invent a command. -->
   en vez de añadirlos al léxico.
 - `transcripts.read` gana un parámetro opcional `log_dir` (la sal y la lista del log que se
   rellena), y `recompute` se lo pasa; sin él, usa el `LOG_DIR` del proceso.
+- T5: «N del mod» deja de ir como sufijo de las delegaciones y pasa al `title` de la celda de la
+  columna Mod, porque la columna lo dice ya; el texto del catálogo no cambia. Para T10: los textos
+  nuevos del panel están en `panel.self.*`, `panel.info.self`, `panel.dialog.self.title` y
+  `panel.clients.col.{main,subagent,mod,unknown}`; el léxico no necesitó palabras nuevas.
 - `hook_common` expone, además de `project_identity` y `project_of_session`, las piezas que usa el
   relleno: `project_directory`, `project_fields`, `project_salt`, `self_project_entries`,
   `normalize_project_name` y `projects_root`.
