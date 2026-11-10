@@ -26,6 +26,7 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from . import pricing
+from .resources.hooks import hook_common
 
 TOOL_PREFIX = "mcp__local-delegate__"
 
@@ -66,6 +67,8 @@ class Delegation:
     bench: bool
     mid: str | None
     ts_res: datetime | None = None
+    #: The name of its project directory (`hook_common.project_directory`), only in memory.
+    project: str | None = None
 
 
 @dataclass
@@ -87,6 +90,11 @@ class Index:
     rejections: dict[tuple[str, object], datetime] = field(default_factory=dict)
     #: (sesión, startTime) → (orden, modelUsage) de la ÚLTIMA línea `cost-state` por posición.
     costs: dict[tuple[object, object], tuple[int, dict]] = field(default_factory=dict)
+    #: Session key (`hook_common.session_key`) → name of the one project directory that holds its
+    #: main transcript, or `None` if the session is in more than one (D14). Only in memory.
+    session_projects: dict[str, str | None] = field(default_factory=dict)
+    #: Project directory name → its `caller_project` and `caller_project_kind`.
+    project_fields: dict[str, dict] = field(default_factory=dict)
     files: int = 0
     unreadable_files: int = 0
     corrupt_lines: int = 0
@@ -134,7 +142,15 @@ def _quota_limits(value: object) -> list:
     return [value] if isinstance(value, dict) else []
 
 
-def _read_line(index: Index, r: dict, name: str, thread: Thread, bench: bool, order: list[int]):
+def _read_line(
+    index: Index,
+    r: dict,
+    name: str,
+    thread: Thread,
+    bench: bool,
+    order: list[int],
+    project: str | None = None,
+):
     entry_type = r.get("type")
     if entry_type == "system" and r.get("subtype") == "compact_boundary":
         t = parse_instant(r.get("timestamp"))
@@ -181,6 +197,7 @@ def _read_line(index: Index, r: dict, name: str, thread: Thread, bench: bool, or
                 path=raw_path if isinstance(raw_path, str) and raw_path else None,
                 bench=bench,
                 mid=mid,
+                project=project,
             )
     elif entry_type == "user":
         message = r.get("message") if isinstance(r.get("message"), dict) else {}
@@ -193,9 +210,44 @@ def _read_line(index: Index, r: dict, name: str, thread: Thread, bench: bool, or
                 d.ts_res = parse_instant(r.get("timestamp"))
 
 
-def read(root: Path) -> Index:
+def _project_of_file(index: Index, file: Path, root: Path, log_dir: Path | None) -> str | None:
+    """The project directory of a transcript, with its fields computed once per directory.
+
+    The rule is `hook_common`'s, the same as at call time. If it fails, the file has no project:
+    observing never stops the command.
+    """
+    try:
+        project = hook_common.project_directory(file, root)
+        if project is not None and project not in index.project_fields:
+            index.project_fields[project] = hook_common.project_fields(project, directory=log_dir)
+    except Exception:
+        return None
+    return project
+
+
+def _index_session(index: Index, file: Path, parts: tuple[str, ...], project: str | None) -> None:
+    """Session key → project directory, from a MAIN transcript (`<project>/<session>.jsonl`).
+
+    A key seen in two directories is ambiguous (`None`, D14): the order of the walk would choose.
+    """
+    if project is None or len(parts) != 2:
+        return
+    key = hook_common.session_key(file.stem)
+    if key is None:
+        return
+    if key in index.session_projects and index.session_projects[key] != project:
+        index.session_projects[key] = None
+    else:
+        index.session_projects.setdefault(key, project)
+
+
+def read(root: Path, *, log_dir: Path | None = None) -> Index:
     """Recorre `raiz/**/*.jsonl` (en orden de ruta) y devuelve el índice. Nunca lanza por un
-    fichero o una línea: los cuenta."""
+    fichero o una línea: los cuenta.
+
+    `log_dir` is where the project salt and the list of own projects live (by default, the
+    process's `LOG_DIR`, `hook_common.log_dir()`).
+    """
     index = Index()
     root = Path(root)
     if not root.is_dir():
@@ -208,6 +260,8 @@ def read(root: Path) -> Index:
         name = str(file)
         thread = index.threads.setdefault(name, Thread(kind=kind))
         index.files += 1
+        project = _project_of_file(index, file, root, log_dir)
+        _index_session(index, file, parts, project)
         try:
             with file.open(encoding="utf-8", errors="replace") as stream:
                 for line in stream:
@@ -219,7 +273,7 @@ def read(root: Path) -> Index:
                         index.corrupt_lines += 1
                         continue
                     if isinstance(r, dict):
-                        _read_line(index, r, name, thread, bench, order)
+                        _read_line(index, r, name, thread, bench, order, project)
         except OSError:
             index.unreadable_files += 1
     for thread in index.threads.values():
@@ -287,8 +341,34 @@ def _supports_effort(model: str) -> bool:
     return True if e is None else bool(e.get("supports_effort", True))
 
 
-def entry_for(index: Index, d: Delegation, match_kind: str) -> dict:
-    """La entrada del relleno de una línea casada (REQ-005): sin rutas, ids de sesión ni texto."""
+def _decided_project(index: Index, cross: str | None, session_key: object) -> str | None:
+    """The project of a log line: the one of its cross and the one of its session key (D10, D14).
+
+    With a key whose session is in more than one directory, or a cross and a key in different
+    projects, there is none: a project without certainty is worse than `unknown`. A key whose
+    transcript is gone leaves the cross's.
+    """
+    if isinstance(session_key, str) and session_key in index.session_projects:
+        by_key = index.session_projects[session_key]
+        if by_key is None or (cross is not None and cross != by_key):
+            return None
+        return by_key
+    return cross
+
+
+def _add_project(entry: dict, index: Index, project: str | None) -> dict:
+    """`entry` with the project fields of `project` (a hash and a kind, never the name)."""
+    if project is not None:
+        entry.update(index.project_fields.get(project) or {})
+    return entry
+
+
+def entry_for(index: Index, d: Delegation, match_kind: str, *, session_key: object = None) -> dict:
+    """La entrada del relleno de una línea casada (REQ-005): sin rutas, ids de sesión ni texto.
+
+    Every real cross carries the project of its transcript (REQ-007), reconciled with the line's
+    `caller_session_key` (REQ-031).
+    """
     n, cad = n_and_expiries(index, d)
     model = pricing.normalize_id(d.model) if d.model else None
     effort = d.effort
@@ -300,7 +380,15 @@ def entry_for(index: Index, d: Delegation, match_kind: str) -> dict:
     entry["caller_kind"] = d.kind
     if effort:
         entry["caller_effort"] = effort
-    return entry
+    return _add_project(entry, index, _decided_project(index, d.project, session_key))
+
+
+def _uncrossed_entry(index: Index, match_kind: str, session_key: object) -> dict:
+    """The entry of a line without a cross (`ambiguous`, `no_match`): with the project of its
+    session key when there is one, as for the mod's rows, whose `tool_use` is never in the
+    transcript (REQ-031). The `match` stays the same."""
+    entry: dict = {"match": match_kind, "bench": False}
+    return _add_project(entry, index, _decided_project(index, None, session_key))
 
 
 def _by_tool(index: Index) -> dict[str, list[tuple[str, Delegation]]]:
@@ -333,13 +421,14 @@ def match_lines(
         t = parse_instant(row.get("ts"))
         if t is None or t < since or not needs_backfill(row):
             continue
+        session_key = row.get("caller_session_key")
         tool_use_id = row.get("tool_use_id")
         if isinstance(tool_use_id, str) and tool_use_id:
             d = index.delegations.get(tool_use_id)
             result[key] = (
-                entry_for(index, d, "exact")
+                entry_for(index, d, "exact", session_key=session_key)
                 if d is not None
-                else {"match": "no_match", "bench": False}
+                else _uncrossed_entry(index, "no_match", session_key)
             )
             continue
         candidates = []
@@ -348,15 +437,15 @@ def match_lines(
             if d.ts_use - MARGIN_BEFORE <= t <= end + MARGIN_AFTER:
                 candidates.append(d)
         if len(candidates) == 1:
-            result[key] = entry_for(index, candidates[0], "window")
+            result[key] = entry_for(index, candidates[0], "window", session_key=session_key)
         elif len(candidates) > 1:
             same_path = [d for d in candidates if _same_path(d.path, row.get("path"))]
             if len(same_path) == 1:
-                result[key] = entry_for(index, same_path[0], "window+path")
+                result[key] = entry_for(index, same_path[0], "window+path", session_key=session_key)
             else:
-                result[key] = {"match": "ambiguous", "bench": False}
+                result[key] = _uncrossed_entry(index, "ambiguous", session_key)
         else:
-            result[key] = {"match": "no_match", "bench": False}
+            result[key] = _uncrossed_entry(index, "no_match", session_key)
     return result
 
 
