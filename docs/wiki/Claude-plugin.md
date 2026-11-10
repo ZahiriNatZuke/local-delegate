@@ -138,6 +138,13 @@ desde un subagente, sin delegación nueva: la telemetría de hooks lo anota como
 deja fila en el log de uso ni nota de bloqueo, así que el panel y la medición de adopción no lo
 cuentan como ahorro nuevo. Si el texto cambia, aunque sea con el mismo tamaño, se vuelve a resumir.
 
+**Llamada pasada a segundo plano y líneas al momento (desde la 0.51.0, #631).** Si `local_summarize`
+tarda más de 2 min, Claude Code la pasa a segundo plano y contesta con un aviso suyo («MCP tool … is
+still running after 120s…») sin marca de error. El mod lo trata como un resumen que falló: la
+lectura pasa literal y la telemetría la anota como `summary_failed`. Y el total de líneas que dan la
+cabecera del resumen y la cuenta del 80 % se lee del fichero en el momento, no de la primera lectura
+de la sesión: un fichero que creció ya no sale con su tamaño viejo.
+
 **Comandos compuestos (desde la 0.50.0, #595).** Un comando de varias líneas o con `$(…)`, comillas
 invertidas o `(…)` ya no pasa sin mirar porque empiece por `cd`, `ls` o `echo`: se clasifica como
 los demás.

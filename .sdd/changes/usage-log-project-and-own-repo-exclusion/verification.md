@@ -21,11 +21,23 @@
 | REQ-023 | `tests/test_usage_log_project.py::test_a_note_of_an_older_hook_is_enough` | pass | mutante 65 muere |
 | REQ-031 | `tests/test_backfill_project.py` (fila del mod, `match` intacto, cruce y clave distintos, sesión en dos directorios, sin clave, sesión perdida) | pass | mutantes 24 a 27 mueren |
 | REQ-005 | `tests/test_project_privacy.py` (de punta a punta: fila, relleno, evento de hook, línea del mod, `local_status`, `/api/stats`, `/api/events`, `/api/hooks`) | pass | mutantes 16 y 16a (y tres variantes de 16a) mueren (T11, abajo) |
-| REQ-015 | Capturas del panel en claro y oscuro con los datos de la copia de T1, interruptor apagado y encendido | pass | T11, «Capturas» |
-| REQ-022 | Suite completa con `-n 2` | ver «Commands» | T11 |
-| REQ-024 | `tests/test_no_uncatalogued_text.py`, `tests/test_i18n_parity.py`, `tests/test_detect_spanish_names.py` sin excepciones nuevas | pass | mutante 66 muere; `tests/data/uncatalogued_exceptions.json` y `scripts/data/spanish_lexicon.json` sin tocar en T10/T11 |
+| REQ-009 | `tests/test_metrics_own_repo.py`: `/api/stats` y `/api/events` apartan lo `self` con el mismo conjunto; `excluded_self`, `self_in_range` y `unknown_project` | pass | mutantes 30 a 34 mueren (T5) |
+| REQ-010 | `tests/test_metrics_own_repo.py::test_a_session_of_the_own_repo_keeps_its_figures` | pass | mutante 35 muere (T5); en vivo, la sesión del repo da 31 llamadas con `excluded_self` 0 |
+| REQ-011 | `tests/test_metrics_own_repo.py::test_the_cost_follows_the_own_repo_switch_and_not_the_tests_one` | pass | mutante 36 muere (T5) |
+| REQ-012 | `tests/test_metrics_own_repo.py`: `/api/hooks` aparta `project_kind: self`, conserva los eventos sin campo y cuenta todo con `include_self=1` | pass | mutantes 37 a 39 mueren (T5) |
+| REQ-013 | `tests/test_dashboard_own_repo.py`: `buildQuery` con node e interruptor «Propio repo» en navegador, recordado tras recargar | pass | mutantes 40 y 41 mueren (T5); capturas de T5 y T11 |
+| REQ-014 | `tests/test_metrics_own_repo.py::test_the_four_caller_columns_add_up_to_calls` | pass | mutante 42 muere (T5) |
+| REQ-015 | Capturas del panel en claro y oscuro con los datos de la copia de T1, interruptor apagado y encendido | pass | T11, «Capturas»; las 14 capturas siguen fuera del repo, en el directorio temporal de la sesión, y en el cierre se miraron de nuevo «Quién delegó» en oscuro apagado (Hilo principal 0, Subagentes 108, Mod 91, Sin dato 12) y los controles en claro encendido, legibles |
+| REQ-016 | `tests/test_hook_project.py` (22 tests: cada hook con `transcript_path`, sin él con `cwd`, `record_read` por CLI y por `POST /api/hook/record-read`, sal y raíz del proceso, tope de 50 ms, caché) | pass | mutantes 43 a 50 mueren (T8); en vivo, la telemetría del mod lleva los mismos hashes y `project_kind` que las filas |
+| REQ-017 | `tests/test_measure_adoption_own_repo.py` (filtro de hooks y de filas, eventos viejos por sesión, `--include-self`) | pass | mutantes 51 a 54 mueren (T6); cifras sobre la instantánea en «T6 y T7» |
+| REQ-018 | `tests/test_measure_adoption_own_repo.py` (`delegations_by_caller` con el mod primero, `delegations_by_project_kind` con lo desconocido aparte) | pass | mutantes 55 y 56 mueren (T6) |
+| REQ-019 | `tests/test_measure_plugin_adoption_own_repo.py`: `pct` 0,0 por defecto y 50,0 con `--include-self` | pass | mutantes 57 y 58 mueren (T7) |
+| REQ-020 | `tests/test_measure_plugin_adoption_own_repo.py`: columnas de subagentes y mod, `pct` solo del hilo principal | pass | mutantes 59 a 61 mueren (T7) |
+| REQ-021 | `tests/test_status_own_repo.py` (línea del propio repo con las cifras de hoy intactas; sin `self`, sin línea) | pass | mutantes 62 a 64 mueren (T9) |
+| REQ-022 | Suite completa con `-n 2` y CI del PR #637 | pass | T11: 7.021 passed, 31 skipped y 1 fallo del entorno del worktree (ver «Commands»); CI del PR #637: 22 checks en verde, mezclado en `main` (`a19817e6`) |
+| REQ-024 | `tests/test_no_uncatalogued_text.py`, `tests/test_i18n_parity.py`, `tests/test_detect_spanish_names.py` sin excepciones nuevas | pass | panel y `local_status`: catalogados en `es` y `en`, guardianes en verde, mutante 66 muere, `tests/data/uncatalogued_exceptions.json` sin tocar. Los scripts de medición quedan fuera por la enmienda de REQ-024 (2026-11-10): la revisión vio que `scripts/measure_adoption.py` imprime sus líneas nuevas solo en español y fuera del catálogo, como el resto del script ya hacía, y que la ayuda de `measure_plugin_adoption.py` va en inglés. Riesgo residual anotado; catalogar los scripts es un cambio aparte |
 | REQ-025 | Revisión de CHANGELOG, README, `Savings-and-metrics.md` y `Configuration.md` contra la lista de REQ-025 | pass | T10, tabla de cobertura |
-| REQ-026 | Prueba en vivo con el daemon instalado | pendiente | la hace la sesión principal; pasos y cifras esperadas en «Prueba en vivo (REQ-026), preparada» |
+| REQ-026 | Prueba en vivo con el daemon instalado, ventana `w-20261110T190517Z` | pass | «Prueba en vivo (REQ-026), resultado»: 32 filas con hash de 16 hex y sin rutas, 31 `self` y 1 `other`; `excluded_self` 31 y `total.calls` 1 por defecto, 32 con `include_self=1`; por sesión, sin apartar |
 | REQ-027 | Tabla antes/después sobre una copia nueva de la instantánea de T1, mismo `now` y mismo rango | pass | T11, «Tabla antes/después»: criterios (a) a (d) se cumplen |
 | REQ-028 | Tabla de mutantes completa: 1 a 66 | pass | todos mueren salvo el 14, equivalente por diseño (ya anotado) |
 | REQ-029 | `docs/wiki/Savings-and-metrics.md`, «Los medidores»: el corte del 2026-12-14 con las dos cifras junto al comando | pass | T10 |
@@ -481,6 +493,28 @@ cada una de las dos sesiones (la del repo y la del otro directorio: las dos `tot
 `excluded_self == 0`) y se anota por qué. La instantánea de T1 y sus copias (`t1/`, `t11/snap`) se
 borran después de la prueba en vivo, cuando la sesión principal dé la tabla por buena.
 
+### Prueba en vivo (REQ-026), resultado
+
+Hecha por la sesión principal el 2026-11-10 entre las 16:05 y las 16:16 (hora de Uruguay), dentro
+de la ventana de prueba `w-20261110T190517Z`, con el daemon instalado desde la rama local de
+integración de los PR #637, #643, #645 y #646 (la fila lleva `v: 0.50.0`, la versión del árbol
+antes del salto a 0.51.0). En la misma ventana corrió la prueba en vivo de
+`extract-cross-fill-and-routing`, así que hubo más de una delegación por sesión: los pasos 4 y 5
+se leen con las cifras de toda la ventana, no con «1 y 1». Fuente: el fichero mensual del log de
+uso del daemon y la telemetría de hooks del cliente, leídos en local; aquí solo recuentos y hashes.
+
+| Paso | Qué | Esperado | Medido | Resultado |
+| --- | --- | --- | --- | --- |
+| 3 | Filas de la ventana | cada una con `caller_project` de 16 hex, sin `/` ni `\` | 32 filas (28 `local_extract`, 2 `local_summarize`, 2 `local_commit_msg`), las 32 con hash de 16 hex, 0 con separador de ruta | pass |
+| 3 | Tipos y hashes distintos | `self` y `other`, dos hashes | 31 `self` (`5a02a38722301d29`) y 1 `other` (`775723032f23392d`, una sesión `claude -p` abierta desde otro directorio); 2 hashes distintos | pass |
+| 4 | `metrics.stats(from=INICIO, include_tests=1)` | lo `self` apartado | `excluded_self` 31, `total.calls` 1 | pass |
+| 4 | … con `include_self=1` | todo cuenta | `total.calls` 32 | pass |
+| 5 | `session=` de la sesión del repo | no aparta | 31 llamadas, `excluded_self` 0 | pass |
+| 5 | `session=` de la otra sesión | no aparta | 1 llamada, `excluded_self` 0 | pass |
+| — | Sin `include_tests` | la ventana aparta todo | las 32 apartadas como prueba | pass |
+| 6 | Telemetría del mod en la ventana | mismo `project` y `project_kind` que las filas | 50 eventos desde las 16:05:16 (hora de Uruguay); llevan los mismos hashes y `project_kind` (`self`/`other`) que las filas del paso 3 | pass |
+| 7 | Cierre | ventana parada, nada en marcha | `test-window list`: ventana cerrada a las 16:16:39, 32 filas, etiqueta `live-2026-11-10` | pass |
+
 ## Commands
 
 <!-- One row per command declared in .sdd/project.json (test, lint, typecheck, build, format, ...).
@@ -502,10 +536,10 @@ Without a declaration, list what was run. Never invent a command. -->
 
 ## Quality checks
 
-- [ ] Project-native tests pass.
-- [ ] Lint, formatting, type checking, and build checks pass where applicable.
-- [ ] Secret scanning passes.
-- [ ] No unrelated changes are present.
+- [x] Project-native tests pass (T11 en local, salvo el fallo del entorno del worktree; CI del PR #637 en verde).
+- [x] Lint, formatting, type checking, and build checks pass where applicable (`ruff` en «Commands»; CI del PR #637).
+- [x] Secret scanning passes (checks de escaneo de secretos del PR #637 en verde).
+- [x] No unrelated changes are present (33 ficheros del diff de `a19817e6`, todos de la lista del plan o de las desviaciones anotadas).
 
 ## Deviations and residual risk
 
@@ -516,7 +550,8 @@ Without a declaration, list what was run. Never invent a command. -->
   `listdir`, `resolving`, `salted`, `salts`, `scandir`, `sealed`, `subdirectories`,
   `subdirectory`, `substring`, `symlinks`, `uncrossed`, `unsalted`, `walked`, `won`,
   `worktrees`). Se añadieron a `en`, solo añadiendo líneas, para dejar el CI en verde; T10 añade
-  las suyas encima. Tres ids de prueba con letras repetidas (`aaaaaaaa…`) se cambiaron por dígitos
+  las suyas encima. En el diff mezclado (`a19817e6`) son 29: a esas 23 se suman `caches`, `iter`,
+  `mods`, `nowhere`, `payloads` y `road`. Tres ids de prueba con letras repetidas (`aaaaaaaa…`) se cambiaron por dígitos
   en vez de añadirlos al léxico.
 - `transcripts.read` gana un parámetro opcional `log_dir` (la sal y la lista del log que se
   rellena), y `recompute` se lo pasa; sin él, usa el `LOG_DIR` del proceso.
@@ -551,6 +586,11 @@ Without a declaration, list what was run. Never invent a command. -->
   `main` después de abrir la rama; la comprobación correcta es contra la base común
   (`origin/main...HEAD`), y da vacío.
 - **T11, la instantánea no se borra todavía**: queda para después de la prueba en vivo, por si la
-  sesión principal quiere repetir alguna cifra.
+  sesión principal quiere repetir alguna cifra. Al cierre (2026-11-10) las copias `t1/` y `t11/`
+  siguen en el directorio temporal de la sesión, fuera del repo: borrarlas es lo último de T11 y
+  queda para la sesión principal.
+- **Prueba en vivo con otra prueba en la misma ventana**: la ventana compartida con la de
+  `extract-cross-fill-and-routing` dio 31 filas `self` en vez de 1; el criterio se cumple igual,
+  porque lo que se comprueba es que todo lo `self` se aparta y lo `other` queda.
 - **T6/T7, léxico**: no hizo falta tocar `scripts/data/spanish_lexicon.json`; dos palabras nuevas
   sin clasificar (`callers`, `puts`) se evitaron renombrando una variable y un test.

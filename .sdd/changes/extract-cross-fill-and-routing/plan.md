@@ -44,29 +44,29 @@ y de una en una.
   - Files or modules: `.sdd/changes/extract-cross-fill-and-routing/holdout/`, `gate/`, `outputs/gate-*.json` y la sección «Puerta (T1)» de `verification.md`
   - Verification: hecha el 2026-11-10. Enrutado pasa (0 de 8 cruces, 0 de 44 claves falladas, ni `error` ni `raw`, mediana 2,944 s, `extraer-toml-2k` sin tabla); mínimo de campos 1 (7 de 8 claves solas cruzan); aviso falla (1 aviso en falso en cada pasada, `c01/price`). Ver «Puerta (T1)» más abajo
   - Depends on: none
-- [ ] T2 — Fixtures de los casos para la suite (REQ-008, REQ-012)
+- [x] T2 — Fixtures de los casos para la suite (REQ-008, REQ-012)
   - Files or modules: `tests/fixtures/extract_table_routing/` (nuevo: copia de los 17 ficheros de `cases/` y de `cases.json`, y un `README` de una línea con el origen)
   - Verification: un recuento por programa da 26 casos y 130 claves, 16 de los 22 pequeños con tabla según `cases.json`; ningún dato real; el sdist no arrastra nada de `.sdd`
   - Depends on: T1
-- [ ] T3 — `table_detect.has_table` (REQ-007, REQ-008, REQ-009, REQ-010)
+- [x] T3 — `table_detect.has_table` (REQ-007, REQ-008, REQ-009, REQ-010)
   - Files or modules: `src/local_delegate/table_detect.py` (nuevo), `tests/test_table_detect.py` (nuevo)
   - Verification: 16 de 22 casos pequeños dan tabla y 6 no; mayúsculas, `<track>`, `<tablet>`, tubería sin separadora; `False` fijado en CSV, TSV, GFM sin tuberías externas, `|-|-|` y `<div>`; cinco entradas hostiles de 1 000 000 de caracteres bajo 1 s; importar el módulo en un proceso aparte sin que cargue `local_delegate.server`; la fuente congelada de `extraer-toml-2k` no da tabla
   - Depends on: T2
 - [-] T4 — Marcadores en `no_data.py` y `cross_fill` con topes y presupuesto (los requisitos del aviso, ahora en «Non-goals» de la spec; su rediseño queda en el issue de seguimiento de REQ-039) dropped: la puerta del aviso falló (1 aviso en falso en cada pasada del conjunto a ciegas, `c01/price`; `verification.md`, «Puerta (T1)»); el aviso vuelve a diseño en un cambio SDD nuevo con su propia puerta (spec, «Puertas» y D11)
-- [ ] T5 — Cableado del enrutado en `local_extract` (REQ-011, REQ-012, REQ-013, REQ-014, REQ-015, REQ-016, REQ-017, REQ-018, REQ-019, REQ-031)
+- [x] T5 — Cableado del enrutado en `local_extract` (REQ-011, REQ-012, REQ-013, REQ-014, REQ-015, REQ-016, REQ-017, REQ-018, REQ-019, REQ-031)
   - Files or modules: `src/local_delegate/server.py` (`local_extract` y su docstring; el paso del motivo por la entrada en vuelo o el token hasta `_log_event` y `_log_stopped`), `src/local_delegate/config.py` (el interruptor), `src/local_delegate/resources/i18n/es/mcp.json`, `src/local_delegate/resources/i18n/en/mcp.json`, `tests/test_extract_table_routing.py` (nuevo; incluye el docstring)
   - Verification: tests de rol por `text` y `path`, un solo campo, interruptor, las otras tres tools, `role_reason` en respuesta (también de error) y en filas de un log temporal (camino bueno, plazo agotado, `queue_saturated`, excepción), prompt idéntico byte a byte, parámetros del rol `long` aplicados, respaldo al modelo de `code`. Si la entrada en vuelo lleva el motivo, el panel y `local_status` siguen leyendo el fichero en vuelo. Un solo commit
   - Depends on: T3
   - [-] Commit del aviso (los requisitos del aviso, ahora en «Non-goals» de la spec) dropped: misma razón que T4 (`verification.md`, «Puerta (T1)»)
-- [ ] T6 — Documentación, los tres sitios de una release y guardián de superficies (REQ-032, REQ-033)
+- [x] T6 — Documentación, los tres sitios de una release y guardián de superficies (REQ-032, REQ-033)
   - Files or modules: `CHANGELOG.md`, `README.md` (`:170`, `:262` y fila nueva de la variable), `docs/wiki/Tools.md` (`:24` y la sección `local_extract`, `:106-167`), `docs/wiki/Configuration.md` (`:43`, `:461` y la sección `local_extract`, `:584-617`), `docs/wiki/Architecture.md` (`:37-41`), `docs/wiki/Savings-and-metrics.md` (campo del log, junto a `routing`, `:156-164`), `docs/recipes/claude-code-integration.md` (`:61`, que hoy dice «mecánico»), `scripts/data/spanish_lexicon.json` y `tests/data/uncatalogued_exceptions.json` (solo entradas añadidas, y solo si un guardián las pide), `tests/test_extract_table_routing_docs.py` (nuevo)
   - Verification: el guardián busca los nombres en cada fichero de la lista y la clave de texto en los dos idiomas; entra en verde porque T5 ya está; lectura de las cifras contra «Coste» y «Límites» de la spec, con las de la puerta
   - Depends on: T5
-- [ ] T7 — Integración y verificación de conjunto (REQ-034, REQ-035, REQ-036, REQ-037, REQ-038)
+- [x] T7 — Integración y verificación de conjunto (REQ-034, REQ-035, REQ-036, REQ-037, REQ-038)
   - Files or modules: `.sdd/changes/extract-cross-fill-and-routing/verification.md`, `.sdd/changes/extract-cross-fill-and-routing/outputs/live-*.json` (nuevos)
   - Verification: suite completa; `git diff --name-status main...HEAD -- tests` con solo altas; superficies sin cambio; mutantes; prueba en vivo por el daemon; tabla antes/después; `personal-harness sdd check extract-cross-fill-and-routing` en verde antes de las puertas `quality` y `conformance`
   - Depends on: T6
-- [ ] T8 — Cierre del #586, issue de seguimiento y tarjetas (REQ-039)
+- [x] T8 — Cierre del #586, issue de seguimiento y tarjetas (REQ-039)
   - Files or modules: comentario de cierre en el issue público, issue público de seguimiento nuevo (los dos sin rutas ni contenido privado; se busca antes un duplicado), tarjetas del tablero del proyecto (buscar antes de crear), `.sdd/changes/extract-cross-fill-and-routing/handoff.md`
   - Verification: la primera línea del comentario dice que el caso de 33 KB y el aviso de cruce quedan fuera; el issue de seguimiento trae ese caso con su criterio de reapertura, el aviso con el fallo de `c01`, y `c20` y `c19`; tarjetas del seguimiento y del #630; puerta `memory` y estado `closed`. Si la prueba en vivo no pasó, el #586 sigue abierto y solo se comenta el resultado
   - Depends on: T7

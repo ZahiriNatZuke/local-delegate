@@ -64,3 +64,10 @@ stopped and what remains. -->
   `hook_common`; la búsqueda tiene tope de 50 ms y caché por `session_id`; `self-projects.json`
   casa por tramos entre guiones en vez de por subcadena, normaliza en ASCII las dos partes, tiene
   tope de 64 KiB y entra en el test de privacidad. Quedan pendientes las puertas `spec` y `plan`.
+- L6 2026-11-10 Cierre. T1 a T11 hechas y mezcladas en `main` con el PR #637; prueba en vivo
+  (REQ-026) pasada en la ventana `w-20261110T190517Z`, de 16:05 a 16:16 (hora de Uruguay).
+  Revisión de resultado de nivel `deep` (dos jueces y revisor de seguridad, `review.md`):
+  `does-not-conform` por un solo bloqueante, REQ-024 en los scripts de medición (textos nuevos
+  sin catalogar ni en dos idiomas); pide decidir entre catalogarlos o enmendar REQ-024. Ningún otro
+  hallazgo bloquea; los de seguimiento están en `review.md`. Queda: esa decisión, borrar las copias
+  de la instantánea de T1 y las puertas `quality`, `conformance` y `memory`.

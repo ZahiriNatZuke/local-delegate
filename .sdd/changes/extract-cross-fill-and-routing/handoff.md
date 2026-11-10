@@ -2,15 +2,17 @@
 
 ## Current state
 
-- SDD status: `implementing` (la transición la anota la sesión coordinadora).
+- SDD status: `implementing`; la sesión coordinadora pasa a `verifying` y aprueba `quality`,
+  `conformance` y `memory` con la CLI.
 - Last completed gate: `plan`.
-- Current revision: rama `feat/extract-table-routing`, PR en borrador contra `main` («Refs #586»).
+- Current revision: PR #643 mezclado en `main` (`da15a6f6`), dentro de la release 0.51.0 (PR #653).
 
 ## What changed
 
-- T2, T3, T5 y T6 hechas, un commit firmado por tarea; T7 hecha salvo la prueba en vivo (los
-  mutantes, la tabla antes/después sin backend y la suite están en `verification.md`).
-- T4 y el commit del aviso, `[-]` (D11).
+- T1, T2, T3, T5, T6, T7 y T8 hechas; T4 y el commit del aviso, `[-]` (D11).
+- Prueba en vivo (REQ-038) pasada el 2026-11-10 (`verification.md`, «Prueba en vivo (REQ-038),
+  resultado»); #586 cerrado con el comentario de abajo y seguimiento público #650; revisión de
+  resultado en `review.md`.
 
 ## Decisions
 
@@ -23,11 +25,10 @@
 
 ## Next action
 
-1. La prueba en vivo de T7 (pasos, llamadas y cifras en `verification.md`, «Prueba en vivo»), por la
-   sesión principal, con el daemon reinstalado desde la rama.
-2. Si pasa: T8 con los borradores de abajo (buscar antes duplicados en el repo y en el tablero),
-   quitar el borrador del PR y mezclar. Si no pasa: el #586 sigue abierto y solo se comenta el
-   resultado.
+- Puertas y estado `closed`. En el tablero, la tarjeta «mandar al rol long las tablas y los extract
+  con muchos campos parecidos (#586)» sigue en «Por hacer»: pasarla a «Hecho» (la parte de muchos
+  campos no se hace, D1) y dejar la del aviso enlazada al #650.
+- Los borradores de abajo ya se publicaron (#586 y #650); quedan como registro.
 
 ### Borrador del comentario de cierre del #586 (T8, REQ-039)
 

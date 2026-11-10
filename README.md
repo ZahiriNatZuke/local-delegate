@@ -165,13 +165,13 @@ al contexto de Claude, y de ahí sale el ahorro.
 
 | Tool | Qué hace | Rol de modelo (default) |
 |---|---|---|
-| `local_summarize` | Resume texto o archivo; `focus` opcional para decir qué conservar (p. ej. «cifras de configuración») | mecánico / largo (auto) |
+| `local_summarize` | Resume texto o archivo; `focus` opcional para decir qué conservar (p. ej. «cifras de configuración»); avisa si el resumen trae siglas, palabras o cifras que la entrada no tiene | mecánico / largo (auto) |
 | `local_classify` | Devuelve UNA etiqueta de una lista | mecánico |
 | `local_extract` | Extrae campos → **objeto validado** con exactamente las claves pedidas (las que falten o vengan como «N/A», `null`), no una cadena que haya que parsear; con `path`, números de línea reales para un campo que los pida; una entrada pequeña con tabla va al modelo largo y `_local_delegate.role_reason` lo dice | mecánico / largo (auto; también con tabla) |
 | `local_boilerplate` | Genera código desde una spec y lo **escribe en `target`**; devuelve solo un recibo | código |
 | `local_delegate` | Escape genérico texto→texto | mecánico (o el que pases) |
-| `local_lint_summary` | Resume logs de lint/tests/CI | mecánico / largo (auto) |
-| `local_commit_msg` | Mensaje de commit desde un diff; con `path` toma el idioma del repo y avisa si no pudo; con un diff enorme acaba a tiempo con lo leído y lo avisa | código |
+| `local_lint_summary` | Resume logs de lint/tests/CI; con pytest parte de los fallos reales del log y avisa si el resumen no cuadra con ellos | mecánico / largo (auto) |
+| `local_commit_msg` | Mensaje de commit desde un diff; con `path` toma el idioma del repo y avisa si no pudo; con un diff enorme acaba a tiempo con lo leído y lo avisa; troceado, avisa y lista las condiciones cambiadas para revisarlo | código |
 | `local_translate` | Traduce texto o archivo | mecánico / largo (auto) |
 | `local_explain_code` | Explica código en prosa; con `path` y pregunta avisa de líneas citadas dudosas y de una premisa que el código no sostiene, aunque la respuesta la sitúe junto a código real | código |
 | `local_describe_image` | Describe una imagen o responde una pregunta sobre ella (imagen→texto) | visión |
@@ -458,7 +458,9 @@ El plugin trae además un **mod**, que corre dentro de Claude Code sin gastar tu
   80 % del hilo principal), en un fichero corto (200 líneas o menos y menos de 32 KB) y cuando el
   rango empieza después de la última línea. Desde la 0.50.0 reutiliza el resumen de un fichero
   cuyo texto no cambió (`summary_reused` en la telemetría, sin contar como ahorro nuevo), y los
-  hooks dejan pasar la lectura cuando la sesión no tiene el MCP.
+  hooks dejan pasar la lectura cuando la sesión no tiene el MCP. Desde la 0.51.0, si Claude Code
+  pasa el resumen a segundo plano, la lectura va literal en vez de entregar su aviso como resumen,
+  y la cabecera cuenta las líneas que el fichero tiene en ese momento.
 - Tras actualizar, abre una sesión nueva de Claude Code: los mods se cargan al empezar la sesión.
 
 En Windows, `install --desktop` añade el chat de **Claude Desktop**: escribe una entrada que lanza
