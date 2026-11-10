@@ -162,6 +162,7 @@
   "mcp.status.language.warning": "  warning: {detail}",
   "mcp.status.log.events": "  events: {events} ({calls} backend calls) — context saved: ~{net} net tokens (gross ~{gross})",
   "mcp.status.log.path": "Log (current month): {path}",
+  "mcp.status.log.own_repo": "  from this repo (local-delegate): {n} of those events",
   "mcp.status.log.tests_out": " ({n} test events left out)",
   "mcp.status.low_memory": "  WARNING: <2 GB free",
   "mcp.status.models": "  exposed models: {models}",
