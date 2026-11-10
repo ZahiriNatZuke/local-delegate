@@ -116,8 +116,11 @@ el `tool_use_id`, el agente (`agent_id`, `agent_type`), el esfuerzo (`effort.lev
 del hook, nunca la variable `CLAUDE_EFFORT`, que se hereda del proceso padre) y la ruta del
 transcript. El servidor busca esa nota por `tool_use_id` al escribir la línea del log de uso y
 guarda quién pidió la delegación: `caller_kind` (`main` o `subagent`), `caller_agent_type`,
-`caller_effort` y `caller_model`, que saca de la cola del transcript que señala la nota. El log no
-guarda el id de sesión ni nada más del transcript.
+`caller_effort` y `caller_model`, que saca de la cola del transcript que señala la nota, y desde
+qué proyecto: `caller_project` (hash con sal del directorio de proyecto, nunca el nombre) y
+`caller_project_kind` (`self` u `other`, ver
+[El propio repo](../wiki/Savings-and-metrics.md#el-propio-repo)). El log no guarda el id de sesión
+ni nada más del transcript.
 
 Con eso el panel puede valorar cada delegación con el precio del modelo que la pidió (ver
 [Savings & metrics](../wiki/Savings-and-metrics.md#coste-equivalente-a-precio-de-api)). Si la
@@ -200,7 +203,8 @@ actual porque bajo `uvx` vive en un entorno efímero que desaparece al terminar 
 > la siguiente medición sepa a qué atribuir la diferencia.
 
 La telemetría solo guarda timestamp, evento, categoría, tamaño/banda, la **extensión** del archivo,
-el motivo del descarte y si hubo sugerencia. Nunca guarda prompts, comandos o paths. La extensión
+el motivo del descarte, si hubo sugerencia y el proyecto de la sesión con hash y su tipo
+(`project` y `project_kind`). Nunca guarda prompts, comandos o paths. La extensión
 se acota a 12 caracteres alfanuméricos y se descarta si no lo es, para que una extensión
 propietaria y larga no diga por la puerta de atrás lo que la ausencia del path calla. Los hooks siguen siendo **opt-in**: el paquete no los activa
 por su cuenta, solo `local-delegate install` los registra cuando tú lo pides.
