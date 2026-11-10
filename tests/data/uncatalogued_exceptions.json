@@ -1149,6 +1149,60 @@
       "text": "{}{}{}Estas son notas EN ORDEN sobre los fragmentos de un mismo diff unificado. El índice de arriba es COMPLETO y sus líneas son exactas; las notas pueden no cubrirlo entero. Los números de línea son del parche, no de las cabeceras @@: consérvalos, y si se pregunta dónde está algo, responde con «ruta: líneas». {}:\n\n{}",
       "kind": "verbatim",
       "reason": "prompt del modelo local (#582): lectura de un diff troceado en `local_explain_code` (líneas del parche frente a cabeceras @@, una nota por fichero, índice por programa); no es texto de interfaz y su idioma lo decide REQ-028, como el resto de cláusulas del prompt"
+    },
+    {
+      "file": "src/local_delegate/server.py",
+      "text": "Condiciones cambiadas, copiadas tal cual del diff (- antes, + después):",
+      "kind": "verbatim",
+      "reason": "prompt del modelo local (#636): el paso que redacta el mensaje de un `local_commit_msg` troceado recibe las condiciones cambiadas copiadas del diff y el tipo que marca el propio diff; no es texto de interfaz y su idioma lo decide REQ-028, como el resto del prompt (los avisos para personas van por `i18n.t`)"
+    },
+    {
+      "file": "src/local_delegate/server.py",
+      "text": "(y {count} cambios de condición más, omitidos por espacio)",
+      "kind": "verbatim",
+      "reason": "prompt del modelo local (#636): el paso que redacta el mensaje de un `local_commit_msg` troceado recibe las condiciones cambiadas copiadas del diff y el tipo que marca el propio diff; no es texto de interfaz y su idioma lo decide REQ-028, como el resto del prompt (los avisos para personas van por `i18n.t`)"
+    },
+    {
+      "file": "src/local_delegate/server.py",
+      "text": "añadido",
+      "kind": "machine_name",
+      "reason": "nombre de una sección de CHANGELOG que se compara con el encabezado del diff (#636) para deducir el tipo del commit; es un dato de entrada, no salida"
+    },
+    {
+      "file": "src/local_delegate/server.py",
+      "text": "la rama es «{detail}»",
+      "kind": "verbatim",
+      "reason": "prompt del modelo local (#636): el paso que redacta el mensaje de un `local_commit_msg` troceado recibe las condiciones cambiadas copiadas del diff y el tipo que marca el propio diff; no es texto de interfaz y su idioma lo decide REQ-028, como el resto del prompt (los avisos para personas van por `i18n.t`)"
+    },
+    {
+      "file": "src/local_delegate/server.py",
+      "text": "el diff solo toca tests",
+      "kind": "verbatim",
+      "reason": "prompt del modelo local (#636): el paso que redacta el mensaje de un `local_commit_msg` troceado recibe las condiciones cambiadas copiadas del diff y el tipo que marca el propio diff; no es texto de interfaz y su idioma lo decide REQ-028, como el resto del prompt (los avisos para personas van por `i18n.t`)"
+    },
+    {
+      "file": "src/local_delegate/server.py",
+      "text": "el diff solo toca documentación",
+      "kind": "verbatim",
+      "reason": "prompt del modelo local (#636): el paso que redacta el mensaje de un `local_commit_msg` troceado recibe las condiciones cambiadas copiadas del diff y el tipo que marca el propio diff; no es texto de interfaz y su idioma lo decide REQ-028, como el resto del prompt (los avisos para personas van por `i18n.t`)"
+    },
+    {
+      "file": "src/local_delegate/server.py",
+      "text": "el CHANGELOG añade su entrada en «{detail}»",
+      "kind": "verbatim",
+      "reason": "prompt del modelo local (#636): el paso que redacta el mensaje de un `local_commit_msg` troceado recibe las condiciones cambiadas copiadas del diff y el tipo que marca el propio diff; no es texto de interfaz y su idioma lo decide REQ-028, como el resto del prompt (los avisos para personas van por `i18n.t`)"
+    },
+    {
+      "file": "src/local_delegate/server.py",
+      "text": "{}\n\nEl sentido del mensaje sale de esas líneas: lo que hacen las + (el después) frente a las - (el antes); si una nota dice otra cosa, mandan las líneas.\n\n",
+      "kind": "verbatim",
+      "reason": "prompt del modelo local (#636): el paso que redacta el mensaje de un `local_commit_msg` troceado recibe las condiciones cambiadas copiadas del diff y el tipo que marca el propio diff; no es texto de interfaz y su idioma lo decide REQ-028, como el resto del prompt (los avisos para personas van por `i18n.t`)"
+    },
+    {
+      "file": "src/local_delegate/server.py",
+      "text": "Según el propio diff, el tipo: {} ({}). Úsalo en la primera línea.\n\n",
+      "kind": "verbatim",
+      "reason": "prompt del modelo local (#636): el paso que redacta el mensaje de un `local_commit_msg` troceado recibe las condiciones cambiadas copiadas del diff y el tipo que marca el propio diff; no es texto de interfaz y su idioma lo decide REQ-028, como el resto del prompt (los avisos para personas van por `i18n.t`)"
     }
   ]
 }
