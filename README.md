@@ -421,15 +421,17 @@ El plugin trae además un **mod**, que corre dentro de Claude Code sin gastar tu
   que el modelo no tenga que buscarlas con ToolSearch.
 - Pone sobre el prompt una banda con el estado de local-delegate en la sesión: en la terminal,
   una barra de una fila con fondo y una etiqueta de estado (` ● LISTO `, ` ◐ DELEGANDO `,
-  ` ○ CAÍDO `), el modelo, la tool en curso con su trozo (`7/9`) y lo que lleva (`3 min 16 s`), las delegaciones y el ahorro de la
+  ` ◔ CARGANDO `, ` ○ CAÍDO `), el modelo, la tool en curso con su trozo (`7/9`) y lo que lleva (`3 min 16 s`), las delegaciones y el ahorro de la
   sesión y el modo de lectura (opción `status_style`: `bar` o `line`, una raya sobre una línea);
   en Claude Desktop, una sola línea de texto en dos tonos, sin píldora ni enlace. Desde la 0.45.0,
   con varias delegaciones a la vez nombra primero la que procesa el backend y, si todas esperan, la
   más antigua con su espera (`en cola · 4 min 0 s`). Una delegación que espera a que llama-swap
   cambie de modelo dice ` ◐ ESPERANDO BACKEND ` con el modelo que pidió, no el cargado. Se
   refresca sola cada segundo mientras hay una delegación en curso. Desde la 0.50.0 un solo sondeo
-  lento no la pone en ` ○ CAÍDO `: como el panel, hace falta un segundo fallo seguido. La cuota de
-  Claude no va aquí: es de la status line.
+  lento no la pone en ` ○ CAÍDO `: como el panel, hace falta un segundo fallo seguido. Mientras
+  llama-swap arranca un modelo dice ` ◔ CARGANDO ` con ese modelo, aunque `/v1/models` no responda
+  a tiempo (#628): ` ○ CAÍDO ` queda para un backend que no responde. La cuota de Claude no va
+  aquí: es de la status line.
 - Desde la 0.41, el **mod de lectura** (encendido por defecto, opción `read_mod_enabled`) resume
   con `local_summarize` la prosa grande que se lee entera y entrega el resumen como resultado de
   la propia tool; con diálogo pregunta antes. Tras un resumen, escribir en ese fichero se rechaza
