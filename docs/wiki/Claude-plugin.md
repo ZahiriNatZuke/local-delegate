@@ -96,6 +96,14 @@ lanza el proceso a la vez: espera a la siguiente llamada, que la reintenta con e
 si ese intento también falla queda el rastro. Así una línea que el daemon escribió tarde no sale
 dos veces (prueba en vivo del 2026-10-23).
 
+La línea de una decisión lleva además `project` y `project_kind`, el proyecto con hash de la sesión
+y su tipo (ver [El propio repo](Savings-and-metrics.md#el-propio-repo)). El mod no los manda: los
+resuelve `record-read` con el `session_id` que ya trae, buscando el único transcript
+`<raíz de proyectos>/*/<id>.jsonl` del proceso que escribe (el daemon o el de respaldo), nunca la
+raíz ni el `LOG_DIR` del entorno que manda el mod. Un id sin forma de UUID, una sesión que no se
+encuentra o que está en dos directorios, o una búsqueda que pasa de 50 ms dejan la línea sin los
+dos campos, sin error. El mod no cambia, y la respuesta de `hook classify` tampoco.
+
 Desde la 0.50.0 (#605) cada línea de telemetría (de los hooks, de los hilos del daemon o del CLI) se
 añade bajo un cerrojo de fichero (`msvcrt.locking` en Windows, `flock` en macOS y Linux) y de una
 sola escritura; igual el log de fallos de los hooks y las notas de bloqueo. Antes, con varios
