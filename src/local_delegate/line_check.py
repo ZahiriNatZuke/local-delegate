@@ -1227,7 +1227,19 @@ def _is_bound_key(key: str) -> bool:
     return _fold(key) in _BOUND_KEYS or is_location_field(key)
 
 
-def check_values(value: object, content: str) -> list[Citation]:
+def _section_heading(outline: list[tuple[int, str]], line: int) -> tuple[int, str] | None:
+    """#633: the outline heading of the section `line` falls in (the last one at or before it)."""
+    found = None
+    for number, heading in outline:
+        if number > line:
+            break
+        found = (number, heading)
+    return found
+
+
+def check_values(
+    value: object, content: str, outline: list[tuple[int, str]] | None = None
+) -> list[Citation]:
     """#568: the line citations of an extracted location value that do not hold in `content`.
 
     Each item of the value (a line of a string, an element of a list, an object with line keys,
@@ -1235,6 +1247,8 @@ def check_values(value: object, content: str) -> list[Citation]:
     `120-160`, `{"start": 120, "end": 160}`). A span outside the file never holds; one inside
     holds if its lines, or one around them (`TOLERANCE`), contain, ignoring case and accents, a
     word the item names. An item that names nothing is checked only against the file length.
+    #633: with the Markdown `outline`, the heading of the section a span starts in holds it too:
+    «Tareas: líneas 24-63» cites the body of `## Tareas`, which starts after its blank line.
     """
     lines = content.split("\n")
     if lines and lines[-1] == "":
@@ -1267,9 +1281,39 @@ def check_values(value: object, content: str) -> list[Citation]:
                     headings = {number for number, _ in markdown_outline(content)}
                 if any(start <= number <= end for number in headings):
                     continue
-            if not any(w in window for w in folded_words):
-                mismatched.append(citation)
+            if any(w in window for w in folded_words):
+                continue
+            section = _section_heading(outline, start) if outline else None
+            if section and any(w in _fold(heading_text(section[1])) for w in folded_words):
+                continue
+            mismatched.append(citation)
     return mismatched
+
+
+#: #633: a subject word that names one block whose range is the answer (`tabla_de_mutantes`).
+_BLOCK_WORDS = frozenset({"tabla", "table", "bloque", "block", "diagrama", "diagram"})
+
+
+def section_only(field_name: str, value: object, outline: list[tuple[int, str]]) -> bool:
+    """#633: whether a field that asks for items got only the ranges of the sections holding them.
+
+    The field asks for items when what it names, besides how to locate it, has a plural word and
+    no block word (`tareas_con_lineas`, `requisitos_candidatos_con_lineas`; not
+    `estrategia_de_verificacion_con_lineas`, `tabla_de_mutantes_con_lineas` nor
+    `secciones_con_lineas`). The value is only sections when every span it cites is a range that
+    starts at a heading of `outline` or just after it (its blank line, `TOLERANCE` more).
+    """
+    subject = _name_words(field_name) - _LOCATION_NAME_WORDS
+    if subject & _BLOCK_WORDS or not any(word.endswith("s") for word in subject):
+        return False
+    spans = [span for _, item_spans in _items(value) for span in item_spans]
+    if not spans or not outline:
+        return False
+    for start, end in spans:
+        section = _section_heading(outline, start)
+        if end <= start or section is None or start - section[0] > 2 + TOLERANCE:
+            return False
+    return True
 
 
 #: #594: the words of a citation that say "a heading" without naming one (`Título: línea 1`).
