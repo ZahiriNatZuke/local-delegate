@@ -91,13 +91,35 @@ _PREFIX_FORM = re.compile(r"(?m)^\s*(\d{1,6})\|")
 _SLASH_LIST = re.compile(r"(?<![\w/])(\d{2,6}(?:/\d{2,6}){2,})(?![\w/])")
 _RANGE = re.compile(r"(\d{1,6})(?:\s*[-–]\s*(\d{1,6}))?")
 #: #627: where a sentence of an answer line ends, so a citation is checked against its own
-#: sentence and not against the whole paragraph: `.`, `!`, `?` or `;` before a space. Never the
-#: point of the "l. 12" citation form.
-_ANSWER_SENTENCE_END = re.compile(r"(?:(?<!\b[lL])\.|[!?;])(?=\s)")
+#: sentence and not against the whole paragraph: `.`, `!` or `?` followed by a space and then
+#: something that is not a lowercase letter. So an abbreviation ("p. ej. los de ayer") and a `;`
+#: do not cut the sentence that names the identifier off its citation, and the point of the
+#: "l. 12" citation form never ends one.
+_ANSWER_SENTENCE_END = re.compile(r"(?:(?<!\b[lL])\.|[!?])(?=\s+[^\sa-z\xdf-\xf6\xf8-\xff])")
+#: #627: a name the file writes right before `(` (a call or a definition), for the word before
+#: the parenthesis of a citation: «measure (línea 152)» names `measure` when the file has
+#: `measure(`. With no space between them, as code writes a call: the prose of a comment or a
+#: docstring («las filas de prueba (como …)») leaves one, and must not name `prueba`.
+_FILE_CALLED = re.compile(r"(?<![\w$])(" + _WORD + r")\(")
+#: #627: file extensions that are also common attribute names (`worker_pool.lock`,
+#: `process_env.env`): with a code-like stem they are an attribute, not a file (`uv.lock`, `.env`).
+_ATTRIBUTE_EXTENSIONS = frozenset({"lock", "env"})
+#: #627: where the clause after a citation in parentheses ends, so what follows it goes to that
+#: citation or to the next one: a `,`, `;` or `:`, or a conjunction («(línea 165) y `x` …»).
+_CLAUSE_BREAK = re.compile(r"[,;:]|(?<!\w)(?:y|e|o|u|and|or|but|pero)(?!\w)")
 
 
 def _is_code_like(word: str) -> bool:
     return len(word) >= MIN_IDENTIFIER_LEN and word.lower() not in _COMMON
+
+
+def _is_file_name(parts: list[str], called: bool) -> bool:
+    if called or len(parts) < 2 or parts[-1].lower() not in _FILE_EXTENSIONS:
+        return False
+    if parts[-1].lower() in _ATTRIBUTE_EXTENSIONS:
+        stem = parts[-2]
+        return not (_SNAKE.fullmatch(stem) or _CAMEL.fullmatch(stem))
+    return True
 
 
 def identifiers(text: str) -> list[str]:
@@ -106,14 +128,17 @@ def identifiers(text: str) -> list[str]:
     Code-like means: between backticks, followed by `(`, camelCase or snake_case; plain words of
     the language ("handlers", "the") never count, and short or common ones neither. A backticked
     file name (`App.tsx`) gives nothing: its extension is not an identifier, and neither is its
-    stem (#627: `measure_adoption.py` gave `measure_adoption`, the file itself).
+    stem (#627: `measure_adoption.py` gave `measure_adoption`, the file itself). A call is never
+    a file (`user_data.json()`), nor an attribute with a code-like stem and an extension that is
+    also an attribute name (`worker_pool.lock`, `process_env.env`).
     """
     found: list[tuple[int, str]] = []
     files: list[tuple[int, int]] = []  # in order and without overlap, as `finditer` gives them
     for m in _BACKTICKED.finditer(text):
-        inner = m.group(1).strip().rstrip("()").strip()
+        raw = m.group(1).strip()
+        inner = raw.rstrip("()").strip()
         parts = re.split(r"[.:#]", inner) if inner else [""]
-        if len(parts) > 1 and parts[-1].lower() in _FILE_EXTENSIONS:
+        if _is_file_name(parts, called=raw.endswith("()")):
             files.append(m.span())
             continue
         if re.fullmatch(_WORD, parts[-1]):
@@ -439,46 +464,118 @@ def _spans(
     return spans
 
 
-def _own_text(
-    text_line: str, start: int, end: int, sentence_starts: list[int], citation_ends: list[int]
-) -> tuple[int, int, int]:
+@dataclass(frozen=True)
+class _Marks:
+    """Sorted offsets of an answer line, for `_own_text` to find its bounds by bisection (#627:
+    scanning the sentence for each citation was quadratic in a long sentence)."""
+
+    sentence_starts: list[int]
+    opens: list[int]
+    closes: list[int]
+    citation_starts: list[int]
+    citation_ends: list[int]
+
+
+def _marks(text_line: str, spans: list[tuple[int, int, tuple[int, int]]]) -> _Marks:
+    return _Marks(
+        sentence_starts=[0, *(m.end() for m in _ANSWER_SENTENCE_END.finditer(text_line))],
+        opens=[at for at, char in enumerate(text_line) if char == "("],
+        closes=[at for at, char in enumerate(text_line) if char == ")"],
+        citation_starts=sorted({start for start, _, _ in spans}),
+        citation_ends=sorted({end for _, end, _ in spans}),
+    )
+
+
+def _next(sorted_offsets: list[int], at: int) -> int | None:
+    """The first offset of `sorted_offsets` at or after `at`."""
+    index = bisect.bisect_left(sorted_offsets, at)
+    return sorted_offsets[index] if index < len(sorted_offsets) else None
+
+
+def _previous(sorted_offsets: list[int], at: int) -> int | None:
+    """The last offset of `sorted_offsets` before `at`."""
+    index = bisect.bisect_left(sorted_offsets, at) - 1
+    return sorted_offsets[index] if index >= 0 else None
+
+
+def _own_text(text_line: str, start: int, end: int, marks: _Marks) -> tuple[int, int, int]:
     """The part of `text_line` the citation at `start`-`end` belongs to, as offsets (#627), and
     the offset of the parenthesis that opens the citation (-1 without one).
 
     Its sentence. And inside the sentence, for a citation in parentheses («reúne los ficheros
-    (línea 64)»), only what the parentheses annotate: the text since the citation before them,
-    up to their close. So «`usage_logs` reúne los ficheros (línea 64) y descarta las pruebas
-    (línea 165)» gives 165 no name, and «... (línea 64) y `test_reason` las descarta (línea 170)»
-    gives 170 its own. A citation in the running text («está en la línea 64 y en la 170») keeps
-    the whole sentence: nothing says where what it refers to begins.
+    (línea 64)»), only its clause: what its parentheses annotate since the citation before it,
+    and what follows them up to the first clause break (`_CLAUSE_BREAK`) or the next citation.
+    So «El filtro de pruebas (línea 165) usa `test_reason`, y el de ventanas (línea 162) usa
+    `windows.find`» gives 165 `test_reason` and 162 `find`; «Descarta las pruebas (línea 165) y
+    `usage_logs` reúne los ficheros (línea 64)» gives `usage_logs` to 64 alone, and 165 no name.
+    A citation in the running text («está en la línea 64 y en la 170») keeps the whole sentence:
+    nothing says where what it refers to begins.
     """
-    at = bisect.bisect_right(sentence_starts, start) - 1
-    low = sentence_starts[at]
-    high = sentence_starts[at + 1] if at + 1 < len(sentence_starts) else len(text_line)
-    opened = text_line.rfind("(", low, start)
-    if opened < 0 or ")" in text_line[opened:start]:
-        return low, high, -1
-    closed = text_line.find(")", end, high)
-    if closed < 0 or "(" in text_line[end:closed]:
-        return low, high, -1
-    before = bisect.bisect_right(citation_ends, opened) - 1
-    return max(low, citation_ends[before] if before >= 0 else low), closed + 1, opened
+    at = bisect.bisect_right(marks.sentence_starts, start) - 1
+    low = marks.sentence_starts[at]
+    high = marks.sentence_starts[at + 1] if at + 1 < len(marks.sentence_starts) else len(text_line)
+    whole = (low, high, -1)
+    opened = _previous(marks.opens, start)
+    if opened is None or opened < low:
+        return whole
+    closed_before = _next(marks.closes, opened)
+    if closed_before is not None and closed_before < start:
+        return whole
+    closed = _next(marks.closes, end)
+    if closed is None or closed >= high:
+        return whole
+    opened_after = _next(marks.opens, end)
+    if opened_after is not None and opened_after < closed:
+        return whole
+    previous_end = _previous(marks.citation_ends, opened + 1)
+    own_low = low
+    if previous_end is not None and previous_end > low:
+        # What follows the citation before, up to its first clause break, is that citation's.
+        cut = _CLAUSE_BREAK.search(text_line, previous_end, opened)
+        own_low = cut.start() if cut else previous_end
+    own_high = high
+    next_start = _next(marks.citation_starts, closed)
+    if next_start is not None and next_start < high:
+        own_high = next_start
+        next_open = _previous(marks.opens, next_start)
+        if next_open is not None and next_open > closed:
+            own_high = next_open  # the parenthesis of the next citation is not ours
+    cut = _CLAUSE_BREAK.search(text_line, closed, own_high)
+    return own_low, cut.start() if cut else own_high, opened
 
 
-def citations(answer: str, question_names: list[str], total_lines: int) -> list[Citation]:
+def _word_before(text_line: str, at: int) -> str:
+    """The word just before offset `at`, past the spaces («measure (» gives `measure`)."""
+    end = at
+    while end > 0 and text_line[end - 1].isspace():
+        end -= 1
+    begin = end
+    while begin > 0 and (text_line[begin - 1].isalnum() or text_line[begin - 1] in "_$"):
+        begin -= 1
+    word = text_line[begin:end]
+    return word if re.fullmatch(_WORD, word) else ""
+
+
+def citations(
+    answer: str,
+    question_names: list[str],
+    total_lines: int,
+    file_called: frozenset[str] = frozenset(),
+) -> list[Citation]:
     """The line citations of `answer`, each with what it can be checked against.
 
     That is the code-like identifiers of the text the citation belongs to (`_own_text`: its
-    sentence, or what its parentheses annotate) plus the ones of the question (`names`), and the
-    plain words and numbers of that text (`words`). A citation with no code-like name to check
-    against is left out: it is neither right nor wrong.
+    sentence, or the text around its parentheses) plus the ones of the question (`names`), and
+    the plain words and numbers of that text (`words`). A citation with no code-like name to
+    check against is left out: it is neither right nor wrong.
 
     #627: the names were those of the whole answer line. A model writes a paragraph in one line,
     so a citation in prose («los logs de uso (línea 65)») was checked against the identifiers
     the paragraph named for other lines, found none of them on its own and was reported, although
-    it named nothing that could be missing. And the word before a citation in parentheses is not
-    a call («los ficheros (línea 64)» does not name `ficheros`), which made every such sentence
-    look like it named code.
+    it named nothing that could be missing. And the word before a citation in parentheses read
+    as a call («los ficheros (línea 64)» named `ficheros`), which made every such sentence look
+    like it named code: now that word is a name only if the file writes it right before a `(`
+    itself (`file_called`: «measure (línea 152)» names `measure` in a file with `def measure(`).
     """
     out: list[Citation] = []
     seen: set[tuple[int, int]] = set()
@@ -491,15 +588,16 @@ def citations(answer: str, question_names: list[str], total_lines: int) -> list[
         if not spans:
             continue
         cited = {str(n) for *_, span in spans for n in span}  # a cited number confirms nothing
-        sentence_starts = [0, *(m.end() for m in _ANSWER_SENTENCE_END.finditer(text_line))]
-        citation_ends = sorted({end for _, end, _ in spans})
-        owned = [
-            _own_text(text_line, start, end, sentence_starts, citation_ends)
-            for start, end, _ in spans
-        ]
+        marks = _marks(text_line, spans)
+        owned = [_own_text(text_line, start, end, marks) for start, end, _ in spans]
         # Without the parentheses that open a citation: `identifiers` would read a call there.
-        opening = {opened for *_, opened in owned if opened >= 0}
-        prose = "".join(" " if at in opening else char for at, char in enumerate(text_line))
+        opening = sorted({opened for *_, opened in owned if opened >= 0})
+        if opening:
+            kept = set(opening)
+            prose = "".join(" " if at in kept else char for at, char in enumerate(text_line))
+        else:
+            prose = text_line
+        before_paren = {at: _word_before(text_line, at) for at in opening}
         against: dict[tuple[int, int], tuple[tuple[str, ...], tuple[str, ...]]] = {}
         for (_start, _end, span), (low, high, _opened) in zip(spans, owned, strict=True):
             if span[0] < 1 or span in seen:
@@ -507,7 +605,16 @@ def citations(answer: str, question_names: list[str], total_lines: int) -> list[
             own = (low, high)
             if own not in against:
                 text = text_line[low:high]
-                names = tuple(dict.fromkeys([*identifiers(prose[low:high]), *question_names]))
+                called = [
+                    word
+                    for at in opening[
+                        bisect.bisect_left(opening, low) : bisect.bisect_left(opening, high)
+                    ]
+                    if (word := before_paren[at]) in file_called and _is_code_like(word)
+                ]
+                names = tuple(
+                    dict.fromkeys([*identifiers(prose[low:high]), *called, *question_names])
+                )
                 words = tuple(
                     dict.fromkeys(
                         w
@@ -598,7 +705,8 @@ def check(answer: str, question: str, content: str, truncated: bool = False) -> 
     result = LineCheck()
     patterns: dict[str, re.Pattern[str]] = {}
     bound: dict[str, list[str]] = {}
-    for citation in citations(answer, question_names, len(lines)):
+    file_called = frozenset(m.group(1) for m in _FILE_CALLED.finditer(content))
+    for citation in citations(answer, question_names, len(lines), file_called):
         result.checked.append(citation)
         low = max(citation.start - TOLERANCE, 1)
         window = lines[low - 1 : min(citation.end + TOLERANCE, len(lines))]

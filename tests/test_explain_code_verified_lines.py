@@ -611,6 +611,97 @@ def test_the_stem_of_a_backticked_file_name_is_not_an_identifier():
 
 
 def test_the_point_of_the_short_citation_form_does_not_end_a_sentence():
-    """«l. 64» is one citation, not the end of a sentence and a loose number."""
+    """«l. 64» is one citation, not the end of a sentence and a loose number. Mutant «no guard
+    for `l.`»: the citation after «l.» starts a sentence of its own, without `usage_logs`."""
     assert _warned(ADOPTION_QUESTION, "`usage_logs` se define en l. 170.", ADOPTION) == ["170"]
     assert _warned(ADOPTION_QUESTION, "`usage_logs` se define en l. 64.", ADOPTION) == []
+    assert _warned(ADOPTION_QUESTION, "En l. 170 se define `usage_logs`.", ADOPTION) == ["170"]
+
+
+def test_a_sentence_of_prose_after_a_named_one_is_not_checked_against_it():
+    """Mutant «no sentences» (the whole line again): 165 is checked against `usage_logs`."""
+    text = "`usage_logs` está en la línea 64. Las filas de prueba se descartan en la línea 165."
+    assert _warned(ADOPTION_QUESTION, text, ADOPTION) == []
+    assert _warned(ADOPTION_QUESTION, text.replace("64", "74"), ADOPTION) == ["74"]  # guard
+
+
+@pytest.mark.parametrize(
+    "answer_text",
+    [
+        "`usage_logs` lista los ficheros de uso; se define en la línea 74.",
+        "`usage_logs` reúne los ficheros (p. ej. los de ayer) y se define en la línea 74.",
+        "`usage_logs` reúne los ficheros, i.e. los de uso, y se define en la línea 74.",
+    ],
+)
+def test_a_semicolon_or_an_abbreviation_does_not_cut_the_name_off_its_citation(answer_text):
+    """Mutants «`;` ends a sentence» and «any point before a space ends one»: 74 is left with
+    no name and stops warning. Guard: on the right line it holds."""
+    assert _warned(ADOPTION_QUESTION, answer_text, ADOPTION) == ["74"]
+    assert _warned(ADOPTION_QUESTION, answer_text.replace("74", "64"), ADOPTION) == []
+
+
+ISSUE_CLAUSES = (
+    "El filtro de pruebas (línea 165) usa `attribution.test_reason`, y el de ventanas "
+    "(línea 162) usa `windows.find`."
+)
+
+
+def test_a_name_after_the_parenthesis_belongs_to_that_citation():
+    """The review case: what follows «(línea 165)» up to the comma is 165's, and what follows
+    «(línea 162)» is 162's. Mutant «the own text ends at the `)`»: 165 is not checked and 162,
+    right, is checked against nothing of its own and warns."""
+    assert _warned(ADOPTION_QUESTION, ISSUE_CLAUSES, ADOPTION) == []
+    assert _warned(ADOPTION_QUESTION, ISSUE_CLAUSES.replace("165", "175"), ADOPTION) == ["175"]
+    assert _warned(ADOPTION_QUESTION, ISSUE_CLAUSES.replace("162", "152"), ADOPTION) == ["152"]
+
+
+def test_a_name_after_a_clause_break_belongs_to_the_next_citation():
+    """Mutant «no clause break»: `usage_logs`, between «(línea 165)» and «(línea 64)», goes to
+    165 too, and 165, right, warns."""
+    text = "Descarta las filas de prueba (línea 165) y `usage_logs` reúne los ficheros (línea 64)."
+    assert _warned(ADOPTION_QUESTION, text, ADOPTION) == []
+    assert _warned(ADOPTION_QUESTION, text.replace("64", "74"), ADOPTION) == ["74"]  # guard
+
+
+CALLS = """def measure(path):
+    # las filas de prueba (como las de ayer) no cuentan
+    rows = read(path)
+    return rows
+
+
+def read(path):
+    return open(path).read()
+"""
+
+
+def test_a_word_the_file_calls_names_the_citation_after_it():
+    """«measure (línea 1)» names `measure` because the file writes `measure(`; «las filas de
+    prueba (línea 3)» names nothing although a comment of the file writes «prueba (»: a call
+    has no space before its parenthesis. Mutants «no called words» and «a space is a call too»."""
+    question = "¿Qué hace el fichero?"
+    assert _warned(question, "La función measure (línea 1) llama a read (línea 3).", CALLS) == []
+    assert _warned(question, "La función measure (línea 5) llama a read (línea 3).", CALLS) == ["5"]
+    assert line_check.citations("Las filas de prueba (línea 3).", [], 8) == []
+    assert _warned(question, "Descarta las filas de prueba (línea 5).", CALLS) == []
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        ("`user_data.json()`", ["json", "user_data"]),
+        ("`worker_pool.lock`", ["lock", "worker_pool"]),
+        ("`process_env.env`", ["env", "process_env"]),
+        ("`uv.lock`, `Cargo.lock`, `.env` y `measure_adoption.py`", []),
+    ],
+)
+def test_a_call_or_an_attribute_is_not_a_file_name(text, expected):
+    """Mutant «every known extension is a file»: the first three give nothing."""
+    assert sorted(line_check.identifiers(text)) == sorted(expected)
+
+
+def test_the_own_text_of_a_long_answer_is_linear():
+    """Scanning the sentence for each citation was quadratic: 256 000 characters took 1,3 s."""
+    text = " ".join(f"`usage_logs` en la línea {n % 299 + 1} y" for n in range(8_000))
+    start = time.perf_counter()
+    line_check.check(text, ADOPTION_QUESTION, ADOPTION)
+    assert time.perf_counter() - start < 2.0
