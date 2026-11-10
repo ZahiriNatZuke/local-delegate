@@ -34,6 +34,24 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   «Caído» queda para un backend que no responde: apagado, sin ruta, sin DNS o con la credencial
   rechazada, `/running` no se pide y la banda pasa a ` ○ CAÍDO ` en los mismos dos sondeos que
   antes. `available` sigue diciendo solo si `/v1/models` respondió con su lista.
+- **`local_explain_code` ya no da por falsa una cita de línea correcta descrita en prosa (#627).**
+  Con `path` y `question`, una respuesta en párrafos («los logs de uso (línea 65)») llevaba el
+  aviso «no te fíes de esos números» sobre líneas buenas: cada cita se comprobaba contra los
+  identificadores de todo el párrafo, es decir, los que nombraban las demás citas. Ahora cada cita
+  se comprueba contra lo que nombra su frase (una frase acaba en `.`, `!` o `?` seguidos de algo
+  que no empieza en minúscula, así que ni un `;` ni «p. ej.» la cortan). Una cita entre paréntesis
+  se comprueba contra su cláusula: lo que anotan sus paréntesis y lo que les sigue hasta la
+  primera coma, `;`, `:` o conjunción («El filtro de pruebas (línea 165) usa `test_reason`, y el de
+  ventanas (línea 162) usa `windows.find`»). Una cita que no nombra ningún identificador de código,
+  con una pregunta que tampoco nombra ninguno, queda sin comprobar: ni buena ni mala. La palabra
+  que precede a una cita entre paréntesis solo cuenta como nombre si el fichero la escribe pegada a
+  un `(`, como una llamada («measure (línea 152)» con `def measure(`; no «los ficheros (línea 64)»
+  ni una palabra que solo sale en un comentario). Y el nombre de un fichero entre comillas
+  invertidas (`measure_adoption.py`) ya no da un identificador, aunque sí una llamada
+  (`user_data.json()`) o un atributo (`worker_pool.lock`). Una cita que nombra un identificador que
+  no está en su línea sigue saliendo en el aviso cuando ese nombre está en su frase o en su
+  cláusula; ya no sale si el nombre está en otra frase («`hook_side` decide el tramo. Lo hace en la
+  línea 118.»), y los identificadores de la pregunta se siguen comprobando en todas las citas.
 
 ## [0.50.0] - 2026-11-09
 
