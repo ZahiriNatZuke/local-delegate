@@ -216,6 +216,7 @@
   "mcp.warning.extract_recounted_keys": "the program counted the list of the input JSON and corrected the model's figure (detail in `recounted_keys`): {pairs}",
   "mcp.warning.extract_outline_copies": "the model copied the whole heading outline into a field that asks for one heading (detail in `outline_copies`): {pairs}",
   "mcp.warning.extract_outline_kept": "no single heading fits, left as it came",
+  "mcp.warning.extract_role_reason_table": "the input carries a table, so it went to the long-context model, which keeps rows apart better but is slower and may have to load; `LOCAL_DELEGATE_EXTRACT_TABLE_LONG=0` turns this off",
   "mcp.warning.lint_invented_files": "the summary names files that do not appear in the input and may be made up: {files}",
   "mcp.warning.sections_not_summarized": "{n} sections not summarized because of the word limit or the model",
   "mcp.warning.sections_not_summarized_one": "1 section not summarized because of the word limit or the model",
