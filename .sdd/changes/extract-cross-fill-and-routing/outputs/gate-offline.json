@@ -1,0 +1,456 @@
+{
+ "detector_sha256": "0b940737e792a6787ef96c02f64227046225ca08446f621b77fab67a359a18d7",
+ "long_cell_chars": 60,
+ "pass1": {
+  "cases": 24,
+  "pairs": 115,
+  "non_null_values": 113,
+  "languages": [
+   "en",
+   "es"
+  ],
+  "flags": [
+   {
+    "case": "c01",
+    "key": "price",
+    "row": "Noise level (dB)",
+    "other_key": "noise_level",
+    "value": "39"
+   }
+  ],
+  "per_case": {
+   "c01": {
+    "format": "html",
+    "language": "en",
+    "keys": 5,
+    "has_table": true,
+    "flags_on_expected": [
+     "price"
+    ],
+    "control_flagged": [
+     "capacity",
+     "cord_length",
+     "price"
+    ]
+   },
+   "c02": {
+    "format": "markdown",
+    "language": "es",
+    "keys": 4,
+    "has_table": true,
+    "flags_on_expected": [],
+    "control_flagged": [
+     "datos",
+     "minutos"
+    ]
+   },
+   "c03": {
+    "format": "html",
+    "language": "es",
+    "keys": 5,
+    "has_table": true,
+    "flags_on_expected": [],
+    "control_flagged": []
+   },
+   "c04": {
+    "format": "markdown",
+    "language": "en",
+    "keys": 5,
+    "has_table": true,
+    "flags_on_expected": [],
+    "control_flagged": [
+     "size"
+    ]
+   },
+   "c05": {
+    "format": "html",
+    "language": "en",
+    "keys": 4,
+    "has_table": true,
+    "flags_on_expected": [],
+    "control_flagged": [
+     "return_policy",
+     "warranty"
+    ]
+   },
+   "c06": {
+    "format": "markdown",
+    "language": "es",
+    "keys": 4,
+    "has_table": true,
+    "flags_on_expected": [],
+    "control_flagged": [
+     "atencion_cliente",
+     "plazo_devolucion"
+    ]
+   },
+   "c07": {
+    "format": "html",
+    "language": "en",
+    "keys": 4,
+    "has_table": true,
+    "flags_on_expected": [],
+    "control_flagged": []
+   },
+   "c08": {
+    "format": "markdown",
+    "language": "en",
+    "keys": 5,
+    "has_table": false,
+    "flags_on_expected": [],
+    "control_flagged": []
+   },
+   "c09": {
+    "format": "html",
+    "language": "es",
+    "keys": 5,
+    "has_table": true,
+    "flags_on_expected": [],
+    "control_flagged": [
+     "colores"
+    ]
+   },
+   "c10": {
+    "format": "markdown",
+    "language": "es",
+    "keys": 5,
+    "has_table": true,
+    "flags_on_expected": [],
+    "control_flagged": []
+   },
+   "c11": {
+    "format": "html",
+    "language": "en",
+    "keys": 5,
+    "has_table": true,
+    "flags_on_expected": [],
+    "control_flagged": [
+     "team_annual_price",
+     "team_monthly_price"
+    ]
+   },
+   "c12": {
+    "format": "markdown",
+    "language": "es",
+    "keys": 5,
+    "has_table": true,
+    "flags_on_expected": [],
+    "control_flagged": [
+     "precio_envio"
+    ]
+   },
+   "c13": {
+    "format": "html",
+    "language": "es",
+    "keys": 5,
+    "has_table": true,
+    "flags_on_expected": [],
+    "control_flagged": [
+     "brisa_llamadas_internacionales",
+     "ciclon_llamadas_internacionales"
+    ]
+   },
+   "c14": {
+    "format": "markdown",
+    "language": "en",
+    "keys": 5,
+    "has_table": true,
+    "flags_on_expected": [],
+    "control_flagged": [
+     "active_users_q1"
+    ]
+   },
+   "c15": {
+    "format": "json",
+    "language": "en",
+    "keys": 5,
+    "has_table": false,
+    "flags_on_expected": [],
+    "control_flagged": [
+     "care_instructions",
+     "known_issues"
+    ]
+   },
+   "c16": {
+    "format": "json",
+    "language": "es",
+    "keys": 5,
+    "has_table": false,
+    "flags_on_expected": [],
+    "control_flagged": [
+     "nota_cliente",
+     "respuesta_soporte"
+    ]
+   },
+   "c17": {
+    "format": "label_lines",
+    "language": "en",
+    "keys": 4,
+    "has_table": false,
+    "flags_on_expected": [],
+    "control_flagged": [
+     "goal",
+     "next_step"
+    ]
+   },
+   "c18": {
+    "format": "label_lines",
+    "language": "es",
+    "keys": 5,
+    "has_table": false,
+    "flags_on_expected": [],
+    "control_flagged": [
+     "problema_conocido",
+     "solucion_temporal"
+    ]
+   },
+   "c19": {
+    "format": "csv",
+    "language": "en",
+    "keys": 6,
+    "has_table": false,
+    "flags_on_expected": [],
+    "control_flagged": []
+   },
+   "c20": {
+    "format": "csv",
+    "language": "es",
+    "keys": 5,
+    "has_table": false,
+    "flags_on_expected": [],
+    "control_flagged": []
+   },
+   "c21": {
+    "format": "tsv",
+    "language": "en",
+    "keys": 5,
+    "has_table": false,
+    "flags_on_expected": [],
+    "control_flagged": []
+   },
+   "c22": {
+    "format": "markdown",
+    "language": "en",
+    "keys": 5,
+    "has_table": true,
+    "flags_on_expected": [],
+    "control_flagged": [
+     "seeds_amount"
+    ]
+   },
+   "c23": {
+    "format": "html",
+    "language": "es",
+    "keys": 5,
+    "has_table": true,
+    "flags_on_expected": [],
+    "control_flagged": []
+   },
+   "c24": {
+    "format": "markdown_list",
+    "language": "en",
+    "keys": 4,
+    "has_table": false,
+    "flags_on_expected": [],
+    "control_flagged": [
+     "fixed",
+     "new_feature"
+    ]
+   }
+  }
+ },
+ "positive_control_on_crossed_answers": {
+  "crossed_keys": 49,
+  "flagged": 27,
+  "missed": [
+   "c03/plan_actual",
+   "c03/plan_sugerido",
+   "c04/primary_color",
+   "c07/batteries",
+   "c07/accessories",
+   "c08/company_count",
+   "c08/city_count",
+   "c09/luces_traseras",
+   "c10/boton",
+   "c10/sensor",
+   "c12/precio_envio_urgente",
+   "c14/active_paying_users_q1",
+   "c19/basic_storage",
+   "c19/basic_plus_storage",
+   "c19/basic_plus_support",
+   "c20/stock_camiseta_l",
+   "c20/precio_rebajado_pantalon_m",
+   "c21/north_2_toner",
+   "c21/south_1_speed",
+   "c23/vela_s_battery_life",
+   "c23/vela_m_battery_life",
+   "c23/vela_s_ports"
+  ],
+  "extra_flags": [
+   "c01/price"
+  ]
+ },
+ "quotas": {
+  "csv_shared_words": {
+   "cases": [
+    "c19",
+    "c20"
+   ],
+   "case_count": 2,
+   "entries": 2,
+   "minimum": null,
+   "meets_minimum": null,
+   "problems": []
+  },
+  "json_prose": {
+   "cases": [
+    "c15",
+    "c16"
+   ],
+   "case_count": 2,
+   "entries": 2,
+   "minimum": 2,
+   "meets_minimum": true,
+   "problems": []
+  },
+  "label_sentence_lines": {
+   "cases": [
+    "c17",
+    "c18"
+   ],
+   "case_count": 2,
+   "entries": 2,
+   "minimum": 2,
+   "meets_minimum": true,
+   "problems": []
+  },
+  "long_cell_short_word": {
+   "cases": [
+    "c05",
+    "c06"
+   ],
+   "case_count": 2,
+   "entries": 2,
+   "minimum": 2,
+   "meets_minimum": true,
+   "problems": []
+  },
+  "plural_es_es": {
+   "cases": [
+    "c09",
+    "c10"
+   ],
+   "case_count": 2,
+   "entries": 9,
+   "minimum": 2,
+   "meets_minimum": true,
+   "problems": []
+  },
+  "plural_ies_en": {
+   "cases": [
+    "c07",
+    "c08"
+   ],
+   "case_count": 2,
+   "entries": 7,
+   "minimum": 2,
+   "meets_minimum": true,
+   "problems": []
+  },
+  "repeated_number_synonym_label": {
+   "cases": [
+    "c01",
+    "c02"
+   ],
+   "case_count": 2,
+   "entries": 2,
+   "minimum": 2,
+   "meets_minimum": true,
+   "problems": []
+  },
+  "similar_keys_table": {
+   "cases": [
+    "c11",
+    "c12",
+    "c13",
+    "c14"
+   ],
+   "case_count": 4,
+   "entries": 4,
+   "minimum": 4,
+   "meets_minimum": true,
+   "problems": []
+  },
+  "substring_of_other_key_row": {
+   "cases": [
+    "c03",
+    "c04"
+   ],
+   "case_count": 2,
+   "entries": 4,
+   "minimum": 2,
+   "meets_minimum": true,
+   "problems": []
+  }
+ },
+ "quotas_missing": [],
+ "long_cell_lengths": {
+  "c05/return_policy": 79,
+  "c06/condiciones_envio": 81
+ },
+ "sanity_recorded_runs": {
+  "g3-extract": {
+   "flagged_now": [
+    "01-pricing-table-en/licensed_user_limits",
+    "06-limits-table-es/limite_usuarios_con_licencia",
+    "12-capabilities-repeated-en/ip_allowlist",
+    "23-managed-service-es-near-miss/puestos_adicionales"
+   ],
+   "recorded_tp_fp": [
+    "01-pricing-table-en/licensed_user_limits",
+    "06-limits-table-es/limite_usuarios_con_licencia",
+    "12-capabilities-repeated-en/ip_allowlist",
+    "23-managed-service-es-near-miss/puestos_adicionales"
+   ],
+   "identical": true
+  },
+  "g3-proxy": {
+   "flagged_now": [
+    "01-pricing-table-en/licensed_user_limits",
+    "06-limits-table-es/limite_usuarios_con_licencia"
+   ],
+   "recorded_tp_fp": [
+    "01-pricing-table-en/licensed_user_limits",
+    "06-limits-table-es/limite_usuarios_con_licencia"
+   ],
+   "identical": true
+  },
+  "g4-proxy": {
+   "flagged_now": [],
+   "recorded_tp_fp": [],
+   "identical": true
+  },
+  "g4-extract": {
+   "flagged_now": [],
+   "recorded_tp_fp": [],
+   "identical": true
+  }
+ },
+ "req007_has_table": {
+  "boilerplate-156.txt": false,
+  "clasificar-53.txt": false,
+  "commit-diff-19k.diff": false,
+  "delegar-56.txt": false,
+  "explicar-install-20k.py.txt": false,
+  "explicar-metrics-15k.py.txt": false,
+  "extraer-toml-2k.toml": false,
+  "extraer-uvlock-48k.lock": false,
+  "lint-9k.txt": false,
+  "resumen-changelog-7k.md": false,
+  "resumen-md-10k.md": true,
+  "resumen-md-2k.md": false,
+  "techo-commit-156k.diff": true,
+  "techo-resumen-103k.py.txt": false,
+  "traducir-42.txt": false
+ }
+}

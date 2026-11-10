@@ -21,7 +21,7 @@ MCP**, no donde está el modelo. Ver [Backend remoto](Remote-backend.md).
 |---|---|---|---|
 | [`local_summarize`](#local_summarize) | Resume texto o archivo | mecánico / largo (auto) | **map-reduce** |
 | [`local_classify`](#local_classify) | Devuelve UNA etiqueta de una lista | mecánico | trunca |
-| [`local_extract`](#local_extract) | Extrae campos → objeto ya validado | mecánico / largo (auto) | **map-reduce** (con schema) |
+| [`local_extract`](#local_extract) | Extrae campos → objeto ya validado | mecánico / largo (auto; una tabla pequeña, largo) | **map-reduce** (con schema) |
 | [`local_boilerplate`](#local_boilerplate) | Genera código y lo **escribe en disco** | código | (la spec es corta) |
 | [`local_delegate`](#local_delegate) | Escape genérico texto→texto | mecánico, o el que pases | **trozo a trozo** |
 | [`local_lint_summary`](#local_lint_summary) | Resume salida de lint/tests/CI | mecánico / largo (auto) | **map-reduce** |
@@ -165,6 +165,31 @@ Dos cosas que conviene saber y solo estaban en el código:
   `_local_delegate.outline_copies`, con aviso (#594). Un campo que pide varios sitios
   (`sections_with_lines`, `capitulos_con_linea`, `line_of_each_heading`) no se toca. «Título:
   línea 1» sobre un encabezado ya no cuenta como línea dudosa.
+- **Una entrada pequeña con tabla va al modelo largo** (#586). Por debajo de
+  `LOCAL_DELEGATE_LONG_INPUT_CHARS`, si la entrada trae una etiqueta `<table` o `<tr` (seguida de
+  blanco, `>` o `/`) o una línea con dos o más `|` seguida de su línea separadora (con `--`), la
+  llamada va al rol `long`, también con un solo campo. Motivo: el modelo mecánico contestaba con el
+  valor de otra fila en 8 de las 16 tablas pequeñas medidas (y en 7 de 8 claves pedidas solas);
+  medido por la propia tool, el largo no cruzó en ninguna de esas 8 (0 de 8 casos) ni falló
+  ninguna de las 44 claves de las limpias. La respuesta lo dice en `_local_delegate.role_reason`
+  (`{"role": "long", "reason": "table", "notice": …}`), también en una respuesta con
+  `error`/`raw`; no lo lleva si la entrada ya iba a `long` por tamaño y no toca `warning`. La fila
+  del log de uso lleva `role_reason: "table"`. El prompt es el mismo; la llamada usa los
+  parámetros del rol `long` y su respaldo.
+  - **Lo que cuesta**: mediana de inferencia de 2,944 s con el modelo largo frente a 0,84 s con el
+    mecánico; de 10 a 13 s más si el modelo largo no estaba cargado (p90 histórico de la espera con
+    cambio de modelo: 31,9 s), y la siguiente llamada mecánica paga la vuelta (unos 5 s). Si el
+    modelo largo falla, responde el de `code`, el de carga más cara. Mientras el backend cambia de
+    modelo, los demás clientes que lo comparten lo ven arrancando.
+  - **Cómo se apaga**: `LOCAL_DELEGATE_EXTRACT_TABLE_LONG=0` en el entorno del servidor, que la
+    lee al arrancar.
+  - **Lo que no ve**: CSV, TSV, una tabla GFM sin tuberías externas (`Seats | Domains`, un solo
+    `|` por línea), el separador `|-|-|` y las rejillas de `<div>` siguen en el modelo mecánico y
+    pueden cruzar. Del lado de subir de más: un `<tr` en una cadena de un JSON, un bloque de código
+    o un diff también sube.
+  - **Lo que queda fuera**: el caso que abrió el #586 (33 KB, ya iba a `long`, el valor de una fila
+    que nadie pidió) no queda arreglado, y no hay aviso de valor cruzado (su detector dio un aviso
+    en falso en la prueba y vuelve a diseño). Un cruce que quede sale en silencio.
 
 ## `local_boilerplate`
 

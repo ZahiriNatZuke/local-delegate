@@ -15,6 +15,7 @@ from __future__ import annotations
 import ast
 import base64
 import contextvars
+import functools
 import itertools
 import json
 import math
@@ -65,6 +66,7 @@ from . import (
     questions,
     remote_turn,
     sections,
+    table_detect,
     test_windows,
     topology,
     turn,
@@ -1360,6 +1362,7 @@ def _log_event(
     slot_wait_ms: int | None = None,
     exception_type: str | None = None,
     concurrency_trace: dict | None = None,
+    role_reason: str | None = None,
 ) -> None:
     """Escribe una línea JSONL en el log activo (rotado por mes o fijo). Nunca rompe una tool.
 
@@ -1565,6 +1568,11 @@ def _log_event(
         # ninguna y con una espera de backend de 3 s o más en la primera llamada (tuvo que cargar).
         if routing is not None:
             rec["routing"] = routing
+        # #586: why the role is not the one the size gives (`"table"`): passed by `_log_stopped`
+        # from the call's token, or read from the operation in course (`local_extract`).
+        reason = role_reason if role_reason is not None else _ROLE_REASON.get()
+        if reason:
+            rec["role_reason"] = reason
         if affinity_foreign_flight is not None:
             rec["affinity_foreign_flight"] = int(affinity_foreign_flight)
         if affinity_failed:
@@ -2187,6 +2195,9 @@ def _log_stopped(token: cancellation.Token, **fields: Any) -> None:
         turn_wait_ms=token.turn_wait_ms,
         slot_wait_ms=token.slot_wait_ms,
         concurrency_trace=trace,
+        # #586: from the token, not from the operation: the middleware writes this row on the
+        # event loop, outside the tool's thread and its context.
+        role_reason=getattr(token, "role_reason", None),
         **fields,
     )
 
@@ -8330,7 +8341,58 @@ def _extract_location_shortcut(
     return shortcut
 
 
+#: #586: why the operation in course has a role other than its size's (`"table"`), or `None`.
+#: `_log_event` reads it for the rows the operation writes from its own thread; the rows the
+#: middleware writes for a stopped call take it from the call's token (`_log_stopped`).
+_ROLE_REASON: contextvars.ContextVar[str | None] = contextvars.ContextVar(
+    "local_delegate_role_reason", default=None
+)
+
+#: #586, decision D12: how many fields a small input with a table must ask for to go to `long`.
+#: Measured with one field asked alone, 7 of the 8 keys that crossed rows crossed again: 1.
+_TABLE_LONG_MIN_FIELDS = 1
+
+#: #586: the value of `role_reason` when the table rule raised the role.
+_ROLE_REASON_TABLE = "table"
+
+
+def _extract_role(probe_len: int, content: str, fields: list[str]) -> tuple[str, str, str | None]:
+    """(role, model, reason) of a `local_extract` call: by size, or `long` for a small table.
+
+    `_role_for_size` stays as it is (four tools share it); only extract wraps it. The reason is
+    `None` when the size alone decided: above the threshold an input is already `long`.
+    """
+    role, model = _role_for_size(probe_len)
+    if (
+        role == "mechanical"
+        and config.EXTRACT_TABLE_LONG
+        and len(fields) >= _TABLE_LONG_MIN_FIELDS
+        and table_detect.has_table(content)
+    ):
+        return "long", config.models_by_role()["long"], _ROLE_REASON_TABLE
+    return role, model, None
+
+
+def _role_reason_scope(fn: Callable[..., Any]) -> Callable[..., Any]:
+    """`fn` run inside its own `_ROLE_REASON` scope, so the reason never leaks to the next call.
+
+    `functools.wraps`: the SDK builds the tool's schema from the signature, which follows
+    `__wrapped__`, and `inspect.getsource` reaches the body the same way.
+    """
+
+    @functools.wraps(fn)
+    def wrapper(*args: Any, **kwargs: Any) -> Any:
+        scope = _ROLE_REASON.set(None)
+        try:
+            return fn(*args, **kwargs)
+        finally:
+            _ROLE_REASON.reset(scope)
+
+    return wrapper
+
+
 @mcp.tool(annotations=_annotations(TOOL_TITLES["local_extract"]))
+@_role_reason_scope
 def local_extract(
     fields: list[str],
     text: str | None = None,
@@ -8367,6 +8429,12 @@ def local_extract(
     A location field naming one heading (`intro_heading_line`) that got the whole Markdown
     outline is cut to the only heading its singular name fits; with any doubt (a plural
     subject, no single heading) it is left as it came. Both go to `outline_copies`, with a warning.
+    A small input that carries a table (an HTML `<table`/`<tr` tag, or a Markdown table with its
+    separator line) goes to the long-context model too, even with one field: the mechanical one
+    answered with the value of another row. Then `_local_delegate.role_reason` says so
+    (`{"role": "long", "reason": "table", "notice": ...}`), also on an `error` answer, and the
+    call is slower and may have to load that model. CSV, TSV and `<div>` grids are not seen.
+    `LOCAL_DELEGATE_EXTRACT_TABLE_LONG=0` turns this off.
 
     Args:
         fields: Names of the fields to extract (JSON keys).
@@ -8378,9 +8446,21 @@ def local_extract(
         raise InputError(i18n.t("mcp.input.fields_required"))
     probe = path and Path(path).is_file()
     probe_len = Path(path).stat().st_size if probe else len(text or "")
-    role, model = _role_for_size(probe_len)
     # Entera (B2c): lo que no cabe en una llamada se trocea en vez de truncarse.
     content, _truncated_in, raw_len = _read_input(text, path, _NO_TRUNCATE)
+    # #586: the role is decided after reading, because the table rule needs the content.
+    role, model, role_reason = _extract_role(probe_len, content, fields)
+    role_meta: dict = {}
+    if role_reason is not None:
+        _ROLE_REASON.set(role_reason)
+        token = cancellation.current()
+        if token is not None:
+            token.role_reason = role_reason
+        role_meta["role_reason"] = {
+            "role": role,
+            "reason": role_reason,
+            "notice": i18n.t("mcp.warning.extract_role_reason_table"),
+        }
     max_chars = config.max_chars_for_role(role)
     key_list = ", ".join(f'"{f}"' for f in fields)
     system = _guard(f"un objeto JSON válido con exactamente estas claves: {{{key_list}}}")
@@ -8529,11 +8609,12 @@ def local_extract(
             # El modelo devolvió algo que no es JSON, o el backend falló y `result` trae el aviso
             # de error. Degradar con la carga cruda es mejor que lanzar: quien llama ve qué pasó
             # en vez de recibir una excepción de protocolo.
+            # #586: whoever waited for the long model and got an error hears why it went there.
             error = {"error": i18n.t("mcp.extract.not_json"), "raw": result}
-            return {"_local_delegate": {**error, **truncation}}
+            return {"_local_delegate": {**error, **truncation, **role_meta}}
     if not isinstance(data, dict):
         error = {"error": i18n.t("mcp.extract.not_object"), "raw": result}
-        return {"_local_delegate": {**error, **truncation}}
+        return {"_local_delegate": {**error, **truncation, **role_meta}}
 
     if location_partials:
         # The location values are joined by program, never left to the reduce (#568).
@@ -8589,6 +8670,8 @@ def local_extract(
             else:
                 data[name] = _strip_extract_prefixes(data[name], total_lines)
     meta: dict = dict(truncation)
+    # #586: its own key, never `warning`: going to `long` is not a failure (as `chunked.notice`).
+    meta.update(role_meta)
     # #473: a chunked document where some field stayed null in every chunk. No chunk saw the
     # whole document, so that null may mean "not seen", not "absent": say so, with the count
     # of chunks and the fields, instead of returning it silently.
