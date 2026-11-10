@@ -85,6 +85,16 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ### Corregido
 
+- **`local_extract` ya no da por dudoso el rango correcto de un apartado, y avisa cuando un campo
+  que pide elementos solo trae ese rango (#633).** Con `path` sobre un Markdown, un campo como
+  `tareas_con_lineas` volvía como «Tareas: líneas 24-63», sin las tareas, y además salía en
+  `lines_unverified`: el rango empieza tras el título y su línea en blanco, y la palabra
+  «Tareas» solo está en el título. Ahora el título del apartado donde empieza el rango también
+  vale como prueba; si un campo pide elementos (nombre en plural que no es una tabla ni un
+  apartado: `tareas`, `requisitos`, `preguntas`) y el valor solo cita rangos de apartados enteros,
+  va en `_local_delegate.section_only_keys` con aviso: lee ese rango. El valor nunca se reescribe
+  y la instrucción del modelo no cambia (pedirle cada elemento con su línea lo dejaba sin tokens
+  a mitad de la lista y sin JSON válido).
 - **`local_commit_msg` ya no entrega sin aviso un mensaje troceado que invierte el sentido del
   cambio (#636).** Con un diff de ~27 KB en 3 partes, la condición cambiada solo estaba en una
   parte, y el paso que redacta el mensaje veía las notas de las partes y la lista de ficheros, ni

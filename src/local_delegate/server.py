@@ -8420,7 +8420,8 @@ def local_extract(
     To locate: with 'path', a field whose name asks for lines (`sections_with_lines`,
     `line_number`, `start_line`, `lineRange`; also in Spanish) makes the model see line numbers
     (and a Markdown file's headings with their lines), so it can answer for `Read` offset/limit;
-    cited lines that do not hold in the file are listed in `lines_unverified`.
+    cited lines that do not hold in the file are listed in `lines_unverified`, and a field that
+    asks for items (`tasks_with_lines`) but got only section ranges in `section_only_keys`.
     A value that is a "no data" marker ("N/A", "unknown", "-", "", also the strings "null" and
     "undefined") comes back as null, listed in `missing_keys`, with the model's text in
     `placeholder_keys`. With a JSON object as input, a field that counts one of its top-level
@@ -8645,6 +8646,7 @@ def local_extract(
     ]
     unverified: list[str] = []
     outline_copies: dict[str, int | None] = {}
+    section_only: list[str] = []
     if numbered:
         # #594: the outline the prompt carries, to tell it apart from the place one field asks for.
         outline = (
@@ -8665,8 +8667,11 @@ def local_extract(
                     outline_copies[name] = target[0] if target else None
                     if target:
                         data[name] = f"{target[1]}: {target[0]}"
-                for citation in line_check.check_values(data[name], content):
+                # #633: a range is held by its section's heading; items asked, sections given.
+                for citation in line_check.check_values(data[name], content, outline):
                     unverified.append(f"{name}: {citation.label()}")
+                if line_check.section_only(name, data[name], outline):
+                    section_only.append(name)
             else:
                 data[name] = _strip_extract_prefixes(data[name], total_lines)
     meta: dict = dict(truncation)
@@ -8721,6 +8726,11 @@ def local_extract(
             for name, line in outline_copies.items()
         )
         late_notices.append(i18n.t("mcp.warning.extract_outline_copies", pairs=pairs))
+    if section_only:
+        meta["section_only_keys"] = section_only
+        late_notices.append(
+            i18n.t("mcp.warning.extract_section_only", fields=", ".join(section_only))
+        )
     if late_notices:
         previous = meta.get("warning")
         joined = "; ".join(late_notices)
