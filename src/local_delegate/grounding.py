@@ -30,7 +30,7 @@ import bisect
 import re
 from dataclasses import dataclass, field
 
-__all__ = ["Findings", "check"]
+__all__ = ["MAX_ITEMS", "Findings", "check"]
 
 #: Items named per kind in the warning; the rest are counted out.
 MAX_ITEMS = 5
