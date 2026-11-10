@@ -477,3 +477,140 @@ def test_the_alias_search_is_linear():
     start = time.perf_counter()
     line_check.check("`local_summarize` en la línea 4.", "¿`local_summarize`?", content)
     assert time.perf_counter() - start < 1.0
+
+
+# --- #627: a citation in prose is not checked against what the rest of the paragraph names ----
+#
+# A model writes a paragraph in one line, and the names were gathered per answer line: a citation
+# that describes its line in prose («los logs de uso (línea 65)») was checked against the
+# identifiers the paragraph named for other lines, found none on its own and was reported, though
+# it named nothing that could be missing. The lines below are the ones of
+# `scripts/measure_adoption.py` at the commit of the issue.
+
+ADOPTION_LINES = {
+    54: '    return Path(dest) if dest else Path.home() / ".claude" / "hooks" / "telemetry.jsonl"',
+    64: "def usage_logs() -> list[Path]:",
+    65: '    return sorted(logs_dir().glob("usage-*.jsonl"))',
+    94: '        rows = [legacy_names.normalize("usage", e) for e in read(path, None)]',
+    119: "    return measurement_boundaries.AFTER if in_set else measurement_boundaries.BEFORE",
+    162: '        hooks = [e for e in hooks if windows.find(e.get("ts")) is None]',
+    165: "        usages = [e for e in usages if not attribution.test_reason(e)]",
+    172: '    seen = [e for e in hooks if e.get("category") in {"read", "shell"}]',
+    173: '    reads = [e for e in seen if e.get("reason") not in NOT_A_READ]',
+    180: '    delegated_ids = {e["block_id"] for e in usages if e.get("block_id")}',
+    181: '    accepted = [b for b in blocks if b.get("id") in delegated_ids]',
+    196: "    bounded = [c for c, n in bands_per_session.items() if n]",
+    197: "    worth_delegating = [c for c in bounded if c in whole_per_session]",
+    218: '            [e for e in usages if e.get("tool", "") and not e.get("block_id")]',
+}
+ADOPTION = "".join(ADOPTION_LINES.get(n, f"    step_{n} = {n}") + "\n" for n in range(1, 300))
+ADOPTION_QUESTION = (
+    "cómo decide qué sesiones y delegaciones cuenta, qué excluye y de dónde saca el proyecto y "
+    "si es hilo principal o subagente"
+)
+# The answer of `qwen36-35b-a3b` to that question on 2026-11-10: ten correct citations in three
+# paragraphs. Before #627 it warned about 65, 165 and 119.
+ADOPTION_ANSWER = (
+    "El script `measure_adoption.py` evalúa si la regla de delegación funciona cruzando datos "
+    "de dos fuentes distintas: el log de telemetría de hooks (línea 54) y los logs de uso "
+    "(línea 65). No es un hilo principal interactivo, sino una herramienta de medición "
+    "automatizada.\n"
+    "\n"
+    "Para decidir qué contar, el código filtra eventos basándose en su tipo y contexto. "
+    "Primero, normaliza nombres antiguos (línea 94) y excluye pruebas por defecto: elimina "
+    "eventos dentro de ventanas de prueba definidas en `test-windows.json` (línea 162) y filas "
+    "de uso marcadas como prueba (línea 165), aunque `--include-tests` lo permite. Solo "
+    "considera lecturas válidas aquellas con categoría `read` o `shell` y razón distinta a "
+    "`no_file` (líneas 172-173).\n"
+    "\n"
+    "La clave del análisis es el cruce de identificadores. El script identifica qué bloqueos "
+    "fueron realmente ejecutados comparando los `block_id` de los hooks con los `block_id` "
+    "presentes en los logs de uso (línea 180-181). Además, clasifica los eventos en tramos "
+    '"antes" o "después" de una política (línea 119) usando las versiones de los scripts de '
+    "hook, no la fecha, para manejar migraciones. Finalmente, calcula métricas como la tasa de "
+    "aceptación y delegaciones espontáneas (línea 217-219)."
+)
+
+
+def _labels(found: list[line_check.Citation]) -> list[str]:
+    return [c.label() for c in found]
+
+
+@pytest.mark.parametrize(
+    "answer_text",
+    [
+        # The repro of the issue: one paragraph, a citation that names an identifier of its line
+        # and another in prose about a correct line. In two sentences, and in one.
+        "`usage_logs` reúne los ficheros (línea 64). Luego descarta las de prueba (línea 165).",
+        "`usage_logs` reúne los ficheros (línea 64) y luego descarta las de prueba (línea 165).",
+        # The prose citation first: the name that follows belongs to the next citation.
+        "Descarta las filas de prueba (línea 165) y `usage_logs` reúne los ficheros (línea 64).",
+    ],
+)
+def test_a_prose_citation_is_not_checked_against_the_names_of_its_neighbours(answer_text):
+    """Mutant «names of the whole answer line again»: 165 is checked against `usage_logs` and
+    warns. Guard: the citation that does name an identifier was checked."""
+    result = line_check.check(answer_text, ADOPTION_QUESTION, ADOPTION)
+    assert _labels(result.mismatched) == []
+    assert _labels(result.checked) == ["64"]
+
+
+def test_the_answer_of_the_issue_warns_about_nothing():
+    """The ten citations are right. The ones that name an identifier are still checked (guard)."""
+    result = line_check.check(ADOPTION_ANSWER, ADOPTION_QUESTION, ADOPTION)
+    assert _labels(result.mismatched) == []
+    assert _labels(result.checked) == ["172-173", "180-181"]
+
+
+def test_the_prose_citations_of_the_issue_table_warn_about_nothing():
+    """The three citations the issue lists (65, 165, 196-197), in one paragraph that names an
+    identifier for another line."""
+    text = (
+        "`usage_logs` (línea 64) da los logs de uso de herramientas (línea 65). Se descartan las "
+        "filas del log de uso marcadas como prueba (línea 165). Al final evalúa lecturas "
+        "acotadas que merecían delegación según criterios de huella y frecuencia (líneas 196-197)."
+    )
+    result = line_check.check(text, ADOPTION_QUESTION, ADOPTION)
+    assert _labels(result.mismatched) == []
+    assert _labels(result.checked) == ["64"]
+
+
+@pytest.mark.parametrize(
+    ("answer_text", "expected"),
+    [
+        # A citation that names an identifier its line does not hold still warns: in its own
+        # sentence, in parentheses next to a right one, and in the running text of a sentence.
+        ("Los logs se listan antes. `test_reason` descarta las pruebas (línea 170).", ["170"]),
+        ("`usage_logs` los reúne (línea 64) y `test_reason` las descarta (línea 170).", ["170"]),
+        ("`usage_logs` está en la línea 64 y también en la línea 170.", ["170"]),
+        ("`usage_logs` se define en las líneas 64, 120 y 170.", ["120", "170"]),
+    ],
+)
+def test_a_citation_that_names_a_missing_identifier_still_warns(answer_text, expected):
+    """Mutant «a sentence with a prose citation is skipped whole»: these stop warning."""
+    assert _warned(ADOPTION_QUESTION, answer_text, ADOPTION) == expected
+
+
+def test_the_question_names_still_check_a_prose_citation():
+    """With an identifier in the question, a citation in prose is an answer about it (#460): it
+    is checked as before, wrong («línea 170») or right («línea 64»)."""
+    question = "¿Dónde está `usage_logs`?"
+    assert _warned(question, "Reúne los ficheros (línea 170).", ADOPTION) == ["170"]
+    assert _warned(question, "Reúne los ficheros (línea 64).", ADOPTION) == []
+
+
+def test_the_stem_of_a_backticked_file_name_is_not_an_identifier():
+    """`measure_adoption.py` is a file, and its snake_case stem is not a name the cited lines can
+    hold: it made every citation of its paragraph checkable. Guard: outside a file name the same
+    word is an identifier."""
+    assert line_check.identifiers("El script `measure_adoption.py` y `test-windows.json`.") == []
+    assert line_check.identifiers("Llama a `measure_adoption` y a fooBar.") == [
+        "measure_adoption",
+        "fooBar",
+    ]
+
+
+def test_the_point_of_the_short_citation_form_does_not_end_a_sentence():
+    """«l. 64» is one citation, not the end of a sentence and a loose number."""
+    assert _warned(ADOPTION_QUESTION, "`usage_logs` se define en l. 170.", ADOPTION) == ["170"]
+    assert _warned(ADOPTION_QUESTION, "`usage_logs` se define en l. 64.", ADOPTION) == []

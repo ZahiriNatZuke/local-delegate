@@ -6,6 +6,21 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Corregido
+
+- **`local_explain_code` ya no da por falsa una cita de línea correcta descrita en prosa (#627).**
+  Con `path` y `question`, una respuesta en párrafos («los logs de uso (línea 65)») llevaba el
+  aviso «no te fíes de esos números» sobre líneas buenas: cada cita se comprobaba contra los
+  identificadores de todo el párrafo, es decir, los que nombraban las demás citas. Ahora cada cita
+  se comprueba contra lo que nombra su frase, y una cita entre paréntesis, contra el texto que va
+  desde la cita anterior hasta su paréntesis. Una cita que no nombra ningún identificador de
+  código, con una pregunta que tampoco nombra ninguno, queda sin comprobar: ni buena ni mala.
+  Además, la palabra que precede a una cita entre paréntesis ya no se toma por una llamada
+  («los ficheros (línea 64)»), ni el nombre de un fichero entre comillas invertidas
+  (`measure_adoption.py`) por un identificador. Una cita que nombra un identificador que no está
+  en su línea sigue saliendo en el aviso, y los identificadores de la pregunta se siguen
+  comprobando en todas las citas.
+
 ## [0.50.0] - 2026-11-09
 
 Menos trabajo perdido y menos bloqueos. `local_summarize` da más margen al resumen de una entrada

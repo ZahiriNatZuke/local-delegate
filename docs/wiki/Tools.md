@@ -351,6 +351,10 @@ fichero (búsqueda exacta): 233, 270, …», con un tope de 20. La prosa del mod
 `code` o sin `question`, la salida no cambia. Desde la 0.50.0 (#616), si el fichero liga otro
 nombre al citado (`TOOL = 'local_summarize'`, `summarize_fn = readSummarize`, `import … as`), una
 línea que usa ese alias confirma la cita; una comparación o una expresión más larga no crean alias.
+«La frase que las cita» es literal (#627): una cita se comprueba contra lo que nombra su frase y los
+identificadores de la pregunta, no contra el resto del párrafo; una cita entre paréntesis, contra el
+texto que va desde la cita anterior hasta su paréntesis. Si ahí no hay ningún identificador de
+código y la pregunta tampoco nombra ninguno, la cita queda sin comprobar y no sale en el aviso.
 
 **Combinación de notas cortada (desde la 0.50.0, #598).** Troceado y con pregunta, un paso de
 combinar notas cortado por `max_tokens` que no se puede partir se repite una vez con el doble de
