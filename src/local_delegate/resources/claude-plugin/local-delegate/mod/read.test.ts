@@ -583,6 +583,39 @@ test('tool_error_lets_the_read_through', async () => {
   }
 })
 
+test('a_backgrounded_call_notice_is_not_a_summary', async () => {
+  // Issue #631: a `local_summarize` that waits past 120 s is moved to the background by Claude Code,
+  // and `$.mcp.call` resolves with the client's notice as an ordinary text block, with no error flag
+  // (the texts below are the client's own, 2.1.322). It was delivered under the summary's header.
+  const tail = `; you'll receive a notification with the result when it completes. You can keep working in the meantime. To stop it, use TaskStop with task_id "kx58owd0m". Note: it does not survive exiting this session.`
+  const notices = [
+    `MCP tool "local-delegate/local_summarize" is still running after 120s. It was moved to the background as task kx58owd0m and keeps running${tail}`,
+    `MCP tool "local-delegate/local_summarize" was moved to the background as task kx58owd0m so that a message that arrived while it was running can reach you; it was not interrupted and keeps running${tail}`,
+  ]
+  for (const notice of notices) {
+    for (const result of [{ content: [{ type: 'text', text: notice }] }, { content: [{ type: 'text', text: notice }], isError: false }]) {
+      const env = makeEnv({ classify: byInput, mcpResult: result })
+      const out = await call(env, { tool: 'Read', file_path: BIG, agentId: 'agent-1' })
+      // Guard: the summary was asked for, so what follows is what the mod did with the notice.
+      expect(env.mcpCalls).toHaveLength(1)
+      expect(out.result.file.content).toBe('REAL')
+      expect(env.nexts).toHaveLength(1)
+      expect(decisions(env)).toEqual(['summary_failed'])
+      // A real read: the file is not guarded, and the notice is not kept as the file's summary.
+      expect((await call(env, { tool: 'Write', file_path: BIG, content: 'x' })).deny).toBeUndefined()
+      env.mcpResult = summaryResult()
+      const later = await call(env, { tool: 'Read', file_path: BIG, agentId: 'agent-1' })
+      expect(env.mcpCalls).toHaveLength(2)
+      expect(later.result.file.content.endsWith(`\n\n${SUMMARY}`)).toBe(true)
+    }
+  }
+  // Guard: a summary that quotes the notice further down is still a summary.
+  const quoting = makeEnv({ classify: byInput, mcpResult: summaryResult(`## Notes\nThe client said: ${notices[0]}`) })
+  const out = await call(quoting, { tool: 'Read', file_path: BIG })
+  expect(out.result.file.content.endsWith(`The client said: ${notices[0]}`)).toBe(true)
+  expect(decisions(quoting)).toEqual(['auto_summarized'])
+})
+
 test('subagent_large_file_gets_locate_then_range_note', async () => {
   // Issue #443: inside a subagent a large file read whole, code included, still goes through, and
   // the note says to locate the lines with a `local_*` tool and read only that range.
@@ -1088,6 +1121,54 @@ test('the_summary_says_how_much_can_be_read_literally', async () => {
   const text: string = out.result.file.content
   // 100 lines: under 80 % is up to 79 of them.
   expect(text.startsWith(`read.summary.header_budget lines=79 path=${BIG} total=100`)).toBe(true)
+})
+
+// Issue #631: a 25-line file is read (small: a real read, and `Read` says `totalLines: 25`) and then
+// grows to 356 lines, large enough to be summarized. Seen live with three files of an SDD change,
+// read as templates and then filled in.
+async function grownAfterASmallRead(first: Record<string, unknown> = {}): Promise<Env> {
+  const lines = (n: number) => Array.from({ length: n }, (_, i) => `line ${i + 1}`).join('\n') + '\n'
+  let bytes = 714
+  const env = makeEnv({ classify: input => ({ ...(byInput(input) as object), bytes }), files: { [BIG]: lines(25) }, sizes: { [BIG]: 714 } })
+  const hook = env.hooks.find(h => h.event === 'tool.call').hook
+  const small = await hook(env.$, { tool_use_id: 'toolu_small', tool: 'Read', file_path: BIG, ...first }, async (seen: any) => ({
+    result: { type: 'text', file: { filePath: seen.file_path, content: lines(25), numLines: 25, startLine: 1, totalLines: 25 } },
+  }))
+  // Guard: the small file was really read and nothing was summarized, so its 25 lines were noted.
+  expect(small.result.file.totalLines).toBe(25)
+  expect(env.mcpCalls).toHaveLength(0)
+  env.files.set(BIG, lines(356))
+  env.sizes.set(BIG, BIG_BYTES)
+  bytes = BIG_BYTES
+  return env
+}
+
+test('the_header_counts_the_lines_the_file_has_now', async () => {
+  // It said «19 of its 25 lines» for the file of 356.
+  const env = await grownAfterASmallRead()
+  const out = await call(env, { tool: 'Read', file_path: BIG })
+  expect(env.mcpCalls).toHaveLength(1)
+  // 356 lines: under 80 % is up to 284 of them.
+  expect(out.result.file.content.split('\n')[0]).toBe(`read.summary.header_budget lines=284 path=${BIG} total=356`)
+})
+
+test('the_lines_of_a_summary_never_pass_for_the_lines_of_the_file', async () => {
+  // Issue #631, the other way a wrong count could come: a summarized `Read` says of itself the
+  // lines of the summary (4 here), and the next header still counts the file's 100.
+  const env = makeEnv({ classify: byInput })
+  const first = await call(env, { tool: 'Read', file_path: BIG })
+  expect(first.result.file.totalLines).toBe(4)
+  const again = await call(env, { tool: 'Read', file_path: BIG })
+  expect(again.result.file.content.split('\n')[0]).toBe(`read.summary.header_budget lines=79 path=${BIG} total=100`)
+})
+
+test('a_range_share_counts_the_lines_the_file_has_now', async () => {
+  // The same count decides a range's share: with the 10 lines read while the file was small, 20
+  // lines of 356 are not 80 % of the file (of 25, they are).
+  const env = await grownAfterASmallRead({ offset: 1, limit: 10 })
+  const out = await call(env, { tool: 'Read', file_path: BIG, offset: 11, limit: 10 })
+  expect(out.result.file.content).toBe('REAL')
+  expect(env.mcpCalls).toHaveLength(0)
 })
 
 test('a_range_summary_says_it_was_the_accumulated_share', async () => {
