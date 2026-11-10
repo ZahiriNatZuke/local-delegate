@@ -6,6 +6,33 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+## [0.51.0] - 2026-11-10
+
+Mediciones más honestas y menos respuestas equivocadas en silencio. Cada fila del log de uso guarda
+desde qué proyecto se delegó (un hash con sal, nunca el nombre), y el panel y las mediciones de
+adopción apartan por defecto el uso del propio repo, con el conmutador «Propio repo» para verlo;
+`local_extract` manda las entradas pequeñas con tabla al modelo de contexto largo (#586, sin cerrar
+el caso grande) y ya no da por dudoso el rango de un apartado; `local_summarize` avisa de datos que
+la entrada no trae; `local_commit_msg` troceado ya no invierte el sentido del cambio sin aviso;
+`local_explain_code` acepta citas de línea en prosa y avisa de una premisa sin apoyo en el código;
+`local_lint_summary` cuenta los fallos reales de pytest; un `local_extract` con error ya no consta
+como acierto; y la banda del mod distingue un modelo que carga de un backend caído.
+
+### Cómo actualizar
+
+- **En la PC y en la Mac:** ejecuta `local-delegate update` o, si instalaste con versión fija,
+  reinstala con `uv tool install --force --no-cache "local-delegate-mcp[llamaswap]==0.51.0"` (con
+  tus extras). Reinicia el daemon y haz `/mcp` en Claude Code (o abre una sesión nueva): las
+  sesiones abiertas siguen con el servidor MCP de la 0.50.0 hasta entonces. El mod de lectura y su
+  banda toman los cambios al reiniciar Claude Code.
+- **Lanza `local-delegate recompute-cost` una vez** para dar proyecto a las filas viejas que aún
+  tienen transcript; sin esa pasada, el histórico del propio repo sigue dentro de las cifras.
+- **Las cifras del panel bajan** en una máquina donde se desarrolla local-delegate: es el uso del
+  propio repo, que ahora se aparta. Para verlo, el conmutador «Propio repo» o `include_self=1`.
+- No hace falta cambiar la configuración. Opcional: `LOG_DIR/self-projects.json` para marcar otros
+  proyectos como propios, y `LOCAL_DELEGATE_EXTRACT_TABLE_LONG=0` para volver al enrutado por
+  tamaño de `local_extract`.
+
 ### Añadido
 
 - **Cada fila del log de uso guarda desde qué proyecto se pidió la delegación**:
@@ -194,6 +221,11 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   no está en su línea sigue saliendo en el aviso cuando ese nombre está en su frase o en su
   cláusula; ya no sale si el nombre está en otra frase («`hook_side` decide el tramo. Lo hace en la
   línea 118.»), y los identificadores de la pregunta se siguen comprobando en todas las citas.
+- **Tests más estables y una alerta de CodeQL menos (#626, #629, #652).** El test del plazo de
+  `questions` compara el tiempo de espera con el plazo y no con una resta; el del TTL de llama-swap
+  falso cuenta las muestras desde que llega la petición; y la regex de referencia del contador de
+  hallazgos de `lint_patterns.py` pasa al test que la usa (alerta `py/unused-global-variable`). Sin
+  cambio de comportamiento.
 
 ## [0.50.0] - 2026-11-09
 
@@ -4896,7 +4928,8 @@ los ficheros de datos. Lo que lee el usuario sigue en español.
 - Empaquetado para PyPI (`local-delegate-mcp`) ejecutable con `uvx`; `server.json` para el
   registro oficial de MCP.
 
-[Unreleased]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.50.0...HEAD
+[Unreleased]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.51.0...HEAD
+[0.51.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.50.0...v0.51.0
 [0.50.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.49.0...v0.50.0
 [0.49.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.48.0...v0.49.0
 [0.48.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.47.3...v0.48.0

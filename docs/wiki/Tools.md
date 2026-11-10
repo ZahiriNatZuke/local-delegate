@@ -361,6 +361,15 @@ no cabe en 95 s (el cliente MCP corta hacia los 120 s), deja de leer partes, y d
 cortados o reagrupar notas cuando no da tiempo, y redacta el mensaje con lo leído y el inventario
 completo de archivos. El mensaje avisa de cuánto se leyó.
 
+**Condiciones cambiadas y tipo del diff (desde la 0.51.0, #636).** En el map-reduce, el paso final
+recibe también las líneas `-`/`+` de las condiciones cambiadas, copiadas literales del diff (el
+código antes que sus tests), y el tipo que marca el propio diff: una rama `fix/…`, un diff de solo
+tests o solo documentación, o la sección del CHANGELOG donde entra la entrada (`### Corregido`,
+`### Added`…) cuando su encabezado sale en el diff. Si el mensaje trae otro tipo, se cambia y se
+avisa. Todo mensaje redactado por partes termina con un aviso que lo dice y lista esas condiciones,
+para revisarlo sin tener el diff delante. Antes, con la condición en una sola parte, el mensaje
+podía decir lo contrario de lo que hacía el cambio. Un diff que cabe en una llamada no cambia.
+
 ## `local_translate`
 
 ```python

@@ -42,11 +42,12 @@ def test_each_surface_names_the_rule(relative):
     assert not missing, f"{relative} does not name {missing}"
 
 
-def test_the_changelog_entry_is_in_the_unreleased_section():
+def test_the_changelog_entry_is_newer_than_0_50_0():
+    """The rule shipped after 0.50.0: in [Unreleased] before the release, in 0.51.0 or later after."""
     text = _read("CHANGELOG.md")
-    unreleased = text.split("## [Unreleased]", 1)[1].split("\n## [", 1)[0]
-    assert VARIABLE in unreleased and FIELD in unreleased
-    assert "#586" in unreleased
+    newer = text.split("## [Unreleased]", 1)[1].split("\n## [0.50.0]", 1)[0]
+    assert VARIABLE in newer and FIELD in newer
+    assert "#586" in newer
 
 
 def test_the_role_field_sits_next_to_routing_in_the_log_fields():
