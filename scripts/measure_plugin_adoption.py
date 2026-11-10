@@ -12,7 +12,15 @@ su `tool_use_id` aparece en el transcript principal de una sesión. No cuentan:
 - los subagentes: solo se mira el transcript principal (`<proyecto>/<sesión>.jsonl`), nunca
   `<sesión>/subagents/`, ni las filas que el relleno marcó `caller_kind: subagent`;
 - las sesiones `-p` y del SDK (`entrypoint` `sdk-cli`): solo son interactivas `cli` y
-  `claude-desktop` (la pestaña Code de Claude Desktop).
+  `claude-desktop` (la pestaña Code de Claude Desktop);
+- por defecto (`--exclude-self`), las sesiones cuyo directorio de proyecto es el propio repo
+  (`hook_common.project_kind_of`), que salen en `excluded_self_sessions`. `--include-self` las
+  cuenta: es la cifra comparable con los cortes anteriores.
+
+Aparte de `pct`, que sigue saliendo solo del hilo principal, cada periodo da las otras dos
+columnas: `with_subagent_delegation` (el `tool_use_id` aparece en un transcript de
+`<sesión>/subagents/`) y `with_mod_delegation` (una fila del mod con la `caller_session_key` de la
+sesión), y `delegations_by_caller` (`attribution.caller_column`).
 
 La base empieza el 2026-10-08 (`BASE_START`): antes faltan los `tool_use_id`. Una sesión cae en el
 periodo de su primer `timestamp`.
@@ -38,7 +46,8 @@ from collections.abc import Sequence
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
-from local_delegate import attribution, config, test_windows
+from local_delegate import attribution, config, cost, test_windows
+from local_delegate.resources.hooks import hook_common
 
 #: Desde aquí hay `tool_use_id` en el log de uso (REQ-024).
 BASE_START = datetime(2026, 10, 8, tzinfo=UTC)
@@ -56,6 +65,12 @@ TOOLU = re.compile(r"toolu_[A-Za-z0-9_]+")
 #: Cuántas líneas del principio se leen para el `entrypoint` y el primer `timestamp`.
 HEAD_LINES = 30
 _END_OF_TIME = datetime.max.replace(tzinfo=UTC)
+
+#: The columns of `delegations_by_caller`, in the order of `attribution.caller_column`.
+CALLER_COLUMNS = ("main", "subagent", "mod", "unknown")
+#: `exclusion` reasons of a row that is still a Claude Code delegation out of the tests: the
+#: mod, the subagents and the rows without `tool_use_id` count in `delegations_by_caller`.
+DELEGATION_REASONS = frozenset({None, "plugin", "subagent", "no_tool_use_id"})
 
 
 def load_rows(log_dir: Path) -> list[dict]:
@@ -124,6 +139,79 @@ def model_decided_ids(
     return ids, excluded
 
 
+def _backfilled(row: dict, field: str) -> object:
+    bf = row.get("_bf")
+    return row.get(field) or (bf.get(field) if isinstance(bf, dict) else None)
+
+
+def thread_marks(
+    rows: Sequence[dict], windows: test_windows.Windows, since: datetime, until: datetime
+) -> tuple[set[str], set[str]]:
+    """What the other two columns look for in `[since, until)`: the `tool_use_id` a subagent
+    transcript may hold (the model's rows, the subagent ones included) and the
+    `caller_session_key` of the mod's rows."""
+    subagent_ids: set[str] = set()
+    mod_keys: set[str] = set()
+    for row in rows:
+        ts = _instant(row.get("ts"))
+        if ts is None or not since <= ts < until:
+            continue
+        reason = exclusion(row, windows)
+        if reason in (None, "subagent"):
+            subagent_ids.add(row["tool_use_id"])
+        elif reason == "plugin":
+            key = _backfilled(row, "caller_session_key")
+            if isinstance(key, str) and key:
+                mod_keys.add(key)
+    return subagent_ids, mod_keys
+
+
+def delegations_by_caller(
+    rows: Sequence[dict],
+    windows: test_windows.Windows,
+    since: datetime,
+    until: datetime,
+    *,
+    include_self: bool,
+) -> dict:
+    """The Claude Code delegations of `[since, until)` out of the tests, by
+    `attribution.caller_column` over the merged row; without the repo's own unless
+    `include_self`."""
+    counts: collections.Counter = collections.Counter()
+    for row in rows:
+        ts = _instant(row.get("ts"))
+        if ts is None or not since <= ts < until:
+            continue
+        if exclusion(row, windows) not in DELEGATION_REASONS:
+            continue
+        merged = cost.merge_row(row, row.get("_bf"))
+        if not include_self and attribution.project_kind(merged) == "self":
+            continue
+        counts[attribution.caller_column(merged)] += 1
+    return {column: counts[column] for column in CALLER_COLUMNS}
+
+
+def session_kind(transcript: Path, log_dir: Path) -> str:
+    """`self` or `other`: the kind of the session's project directory (`LOG_DIR` gives the list)."""
+    return hook_common.project_kind_of(transcript.parent.name, directory=Path(log_dir))
+
+
+def _holds_any(path: Path, ids: set[str]) -> bool:
+    try:
+        text = path.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return False
+    return not ids.isdisjoint(TOOLU.findall(text))
+
+
+def subagent_delegated(transcript: Path, ids: set[str]) -> bool:
+    """Whether a transcript of `<session>/subagents/` holds one of `ids`."""
+    if not ids:
+        return False
+    folder = transcript.parent / transcript.stem / "subagents"
+    return any(_holds_any(path, ids) for path in sorted(folder.glob("*.jsonl")))
+
+
 def _head(path: Path) -> tuple[str | None, datetime | None]:
     """(`entrypoint`, primer `timestamp`) de un transcript, o `None` en lo que falte."""
     entrypoint: str | None = None
@@ -177,6 +265,7 @@ def measure(
     since: datetime | None = None,
     until: datetime | None = None,
     rows: Sequence[dict] | None = None,
+    include_self: bool = False,
 ) -> dict:
     """Las cifras de un periodo. `since` nunca baja de `BASE_START`."""
     since = max(since or BASE_START, BASE_START)
@@ -190,14 +279,26 @@ def measure(
     # Las exclusiones, en cambio, son las del periodo: sin final, el periodo base contaba las filas
     # del mod de después de instalarlo (#597).
     _, excluded = model_decided_ids(rows, windows, since, until)
+    # The other two columns look, like `ids`, from the start and with no end.
+    subagent_ids, mod_keys = thread_marks(rows, windows, since, _END_OF_TIME)
     total = 0
     hit = 0
+    subagent_hit = 0
+    mod_hit = 0
+    excluded_self = 0
     found_ids: set[str] = set()
     by_entrypoint: collections.Counter = collections.Counter()
     hit_by_entrypoint: collections.Counter = collections.Counter()
     for path, entrypoint in sessions(projects, since, until):
+        if not include_self and session_kind(path, log_dir) == "self":
+            excluded_self += 1
+            continue
         total += 1
         by_entrypoint[entrypoint] += 1
+        if subagent_delegated(path, subagent_ids):
+            subagent_hit += 1
+        if mod_keys and hook_common.session_key(path.stem) in mod_keys:
+            mod_hit += 1
         if not ids:
             continue
         try:
@@ -221,6 +322,12 @@ def measure(
         "sessions_by_entrypoint": dict(sorted(by_entrypoint.items())),
         "with_delegation_by_entrypoint": dict(sorted(hit_by_entrypoint.items())),
         "excluded_rows": dict(sorted(excluded.items())),
+        "excluded_self_sessions": excluded_self,
+        "with_subagent_delegation": subagent_hit,
+        "with_mod_delegation": mod_hit,
+        "delegations_by_caller": delegations_by_caller(
+            rows, windows, since, until, include_self=include_self
+        ),
     }
 
 
@@ -258,6 +365,20 @@ def _parse_args(argv: Sequence[str] | None) -> argparse.Namespace:
     ap.add_argument("--install", help="install instant of 0.40.0 (ISO 8601)")
     ap.add_argument("--since", help="start of the base; never before 2026-10-08")
     ap.add_argument("--now", help="the measurement's 'now' (ISO 8601); the real one by default")
+    own = ap.add_mutually_exclusive_group()
+    own.add_argument(
+        "--exclude-self",
+        dest="include_self",
+        action="store_false",
+        help="leave out the sessions of the repo's own project (the default)",
+    )
+    own.add_argument(
+        "--include-self",
+        dest="include_self",
+        action="store_true",
+        help="count them too: the figure comparable with the earlier cuts",
+    )
+    ap.set_defaults(include_self=False)
     return ap.parse_args(argv)
 
 
@@ -268,12 +389,20 @@ def main(argv: Sequence[str] | None = None) -> int:
     install = test_windows.parse_instant(args.install) if args.install else None
     rows = load_rows(args.log_dir)
     base_until = min(install, now) if install else now
-    base = measure(args.log_dir, args.projects, since=since, until=base_until, rows=rows)
+    own = {"include_self": args.include_self}
+    base = measure(args.log_dir, args.projects, since=since, until=base_until, rows=rows, **own)
     after = None
     if install is not None:
         after_until = min(install + timedelta(days=DAYS_AFTER), now)
-        after = measure(args.log_dir, args.projects, since=install, until=after_until, rows=rows)
-    report = {"base": base, "after": after, "criterion": criterion(base, after, install, now)}
+        after = measure(
+            args.log_dir, args.projects, since=install, until=after_until, rows=rows, **own
+        )
+    report = {
+        "include_self": args.include_self,
+        "base": base,
+        "after": after,
+        "criterion": criterion(base, after, install, now),
+    }
     print(json.dumps(report, indent=1))
     return 0
 

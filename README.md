@@ -250,7 +250,7 @@ cámbialos por los de tu backend.
 | `LOCAL_DELEGATE_MAX_CONCURRENT_REQUESTS` | `2` | Backpressure máximo por proceso; compartido por todos los clientes del daemon |
 | `LOCAL_DELEGATE_ASK` | `1` | Preguntar al usuario (vía `elicitation`) en vez de fallar seco: backend caído, modelo fuera del catálogo, `output_format` vacío. `0` lo desactiva |
 | `LOCAL_DELEGATE_ASK_TIMEOUT` | `30` | Segundos de espera por una respuesta; agotados, la tool sigue como si no hubiera preguntado |
-| `LOCAL_DELEGATE_LOG_DIR` | *(dir de datos de usuario)* | Directorio de los `usage-YYYYMM.jsonl` rotados por mes y del `clients.jsonl` |
+| `LOCAL_DELEGATE_LOG_DIR` | *(dir de datos de usuario)* | Directorio de los `usage-YYYYMM.jsonl` rotados por mes y del `clients.jsonl`, y de `project-salt` y `self-projects.json`. El daemon, los hooks y los scripts tienen que resolver el mismo: si la defines en el lanzador y no en el daemon, o al revés, la sal y la lista del propio repo difieren entre filas y eventos |
 | `LOCAL_DELEGATE_LOG` | *(vacío = rotación activa)* | Si se fija, ruta de un `usage.jsonl` explícito sin rotar (compatibilidad) |
 | `LOCAL_DELEGATE_MACHINE_NAME` | *(nombre corto del equipo)* | Nombre de esta máquina en el log de uso (`host`) y en la cabecera `X-Local-Delegate-Host` que va al backend; útil si dos equipos se llaman igual |
 | `LOCAL_DELEGATE_MODEL_MECHANICAL` | `gemma3-4b` | Modelo para clasificar/extraer/resumen corto |
@@ -335,6 +335,20 @@ local-delegate test-window list                               # ventanas y filas
 ```
 
 El botón **Pruebas** de la barra del panel las vuelve a enseñar; su ⓘ dice cuántas quedaron fuera.
+
+El **propio repo tampoco cuenta por defecto**: cada fila del log guarda desde qué proyecto se pidió
+la delegación (`caller_project`, un hash con la sal local de `LOG_DIR/project-salt`, nunca el
+nombre ni la ruta; y `caller_project_kind`, `self` u `other`), y cada evento de la telemetría de
+hooks, `project` y `project_kind`. El panel y los scripts de medición apartan lo de
+`local-delegate`, sus worktrees y los proyectos que listes en `LOG_DIR/self-projects.json` (reinicia
+el daemon tras editarlo); `local_status` conserva su cifra y dice aparte cuántos son. **Al actualizar, las cifras bajan** en una máquina donde se desarrolla el
+repo; la anterior sale con el botón **Propio repo** del panel, `include_self=1` en la API o
+`--include-self` en los scripts. Lanza `local-delegate recompute-cost` tras actualizar para que el
+histórico también se aparte. La tarjeta «Quién delegó» separa hilo principal, subagentes y mod.
+Quien tenga el log **y** `project-salt` puede confirmar un nombre de proyecto por fuerza bruta: no
+compartas ese fichero junto a un log. Detalle en
+[Savings & metrics](docs/wiki/Savings-and-metrics.md#el-propio-repo) y en
+[Configuration](docs/wiki/Configuration.md#proyecto-de-cada-fila-project-salt-y-self-projectsjson).
 
 El panel sale en español o en inglés según el idioma de tu navegador, y el selector `ES`/`EN` de su
 cabecera lo cambia (se recuerda en ese navegador). Ver

@@ -6,8 +6,55 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Añadido
+
+- **Cada fila del log de uso guarda desde qué proyecto se pidió la delegación**:
+  `caller_project`, 16 hexadecimales de un hash con sal del directorio de proyecto de Claude Code
+  (nunca el nombre ni la ruta), y `caller_project_kind`, `self` (el propio repo) u `other`. Salen
+  de la misma nota del hook `record-call` que los demás `caller_*`; un hook instalado de una
+  versión anterior ya sirve. Cada evento de la telemetría de hooks lleva `project` y
+  `project_kind` con la misma regla: los hooks, del `transcript_path` de su entrada; la línea del
+  mod de lectura, del `session_id` que ya manda. La respuesta de `hook classify` no cambia. El campo
+  `path` de la fila sigue en claro, como antes.
+- **La sal vive en `LOG_DIR/project-salt`**: 64 hexadecimales aleatorios, solo del usuario, creada
+  la primera vez. Quien tenga el log **y** ese fichero puede confirmar un nombre de proyecto por
+  fuerza bruta: no lo compartas junto a un log.
+- **`LOG_DIR/self-projects.json` (opcional)** añade proyectos propios: `{"names": [...]}`, con
+  nombres o, mejor, rutas completas. La coincidencia es por tramo completo del nombre del
+  directorio, no por subcadena (`app` no marca `webapp`); hasta 64 KiB; las entradas de menos de 3
+  caracteres se ignoran. **Reinicia el daemon tras editarlo**, y cuenta con que solo afecta a filas
+  nuevas. Todos los procesos (daemon, hooks, scripts) tienen que resolver el mismo `LOG_DIR`, o la
+  sal y la lista difieren entre filas y eventos.
+- **«Quién delegó» separa hilo principal, subagentes y mod.** El total de `/api/stats` y cada
+  cliente de `by_client` traen `main_calls`, `subagent_calls`, `mod_calls` y
+  `unknown_caller_calls`, que suman `calls`; la tarjeta enseña «Sin dato» solo cuando no es cero.
+  Las respuestas del panel traen además `excluded_self`, `self_in_range` y `unknown_project`.
+  `measure_adoption.py` gana `delegations_by_caller`, `delegations_by_project_kind` y `--projects`;
+  `measure_plugin_adoption.py`, `excluded_self_sessions`, `with_subagent_delegation`,
+  `with_mod_delegation` y `delegations_by_caller` (`pct` sigue saliendo solo del hilo principal).
+
 ### Cambiado
 
+- **El panel y las mediciones de adopción apartan por defecto el uso del propio repo: las cifras
+  bajan al actualizar.** Desarrollar local-delegate delega mucho, y ese uso no dice si la
+  herramienta sirve fuera del repo. Ahora el panel (KPIs, tablas, gráficos, coste equivalente y
+  tarjeta de hooks), `scripts/measure_adoption.py` y `scripts/measure_plugin_adoption.py` dejan
+  fuera, como ya hacían con las pruebas, las delegaciones y los eventos de hooks pedidos desde
+  `local-delegate`, desde un worktree suyo o desde un proyecto de `LOG_DIR/self-projects.json`. En
+  una máquina donde se desarrolla el repo, los KPI y los porcentajes bajan mucho. **Para recuperar
+  la cifra anterior**: el interruptor «Propio repo» del panel, `include_self=1` en `/api/stats`,
+  `/api/events` y `/api/hooks`, o `--include-self` en los dos scripts. La barra de estado del mod
+  (`/api/stats?session=`) cuenta su sesión entera, sea o no del propio repo, y `local_status`
+  conserva sus cifras y añade una línea con cuántos eventos del mes son del propio repo. Lo
+  desconocido (filas y eventos sin proyecto) se sigue contando. La cuota no cambia.
+- **Lanza `local-delegate recompute-cost` tras actualizar.** Las filas escritas antes no llevan
+  proyecto y cuentan como desconocidas hasta que el relleno se lo da a las que aún tienen
+  transcript, incluidas las del mod por su clave de sesión. Sin esa pasada, el histórico del propio
+  repo sigue dentro de las cifras.
+- **El corte de 90 días de la medición abierta el 2026-09-15 (2026-12-14) se saca con las dos
+  cifras** de `measure_adoption.py`: la comparable con los cortes de 14 y 30 días es la de
+  `--include-self`, porque la de por defecto mezcla eventos viejos sin transcript (se quedan) con
+  eventos recientes del propio repo (se apartan).
 - **`local_extract` manda al modelo de contexto largo una entrada pequeña que trae una tabla
   (#586).** Con una tabla HTML (`<table`/`<tr`) o Markdown (con su línea separadora) por debajo de
   `LOCAL_DELEGATE_LONG_INPUT_CHARS`, el modelo mecánico contestaba con el valor de otra fila: en 8

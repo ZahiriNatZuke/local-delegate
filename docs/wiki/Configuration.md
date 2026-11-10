@@ -282,6 +282,43 @@ fijas `LOCAL_DELEGATE_LOG`, ese archivo se usa tal cual y la rotación se desact
 | `LOCAL_DELEGATE_LOG` | *(vacío = rotación activa)* | Si se fija, ruta de un `usage.jsonl` explícito sin rotar. El dashboard igual lo lee como fuente adicional aunque uses `LOG_DIR` para el resto |
 | `LOCAL_DELEGATE_FEEDBACK` | `1` | `0` apaga la línea "leído server-side: N chars ≈ M tokens de Claude" que se anexa al resultado cuando `source=path`. En `local_extract` no se anexa al texto sino que viaja dentro de `_local_delegate` (ver abajo): pegarla rompería el JSON. En `local_describe_image` dice solo los bytes |
 
+### Proyecto de cada fila: `project-salt` y `self-projects.json`
+
+Cada fila del log lleva `caller_project` (hash con sal del directorio de proyecto de Claude Code) y
+`caller_project_kind` (`self` u `other`), y cada evento de la telemetría de hooks, `project` y
+`project_kind`. El panel y las mediciones apartan por defecto el propio repo (`self`). Qué se
+guarda, cómo se aparta y cómo volver a ver la cifra completa:
+[Savings & metrics](Savings-and-metrics.md#el-propio-repo). No hay variable de entorno nueva; hay
+dos ficheros en `LOG_DIR`:
+
+| Fichero | Qué es |
+|---|---|
+| `project-salt` | La sal del hash: 64 hexadecimales aleatorios, con permisos solo del usuario. Se crea sola la primera vez, de forma atómica y sin pisar una válida; una vacía o inválida se repara. **Quien tenga el log y este fichero puede confirmar un nombre de proyecto por fuerza bruta**: no lo compartas junto a un log. Si se borra, se crea otra y los hashes nuevos ya no casan con los viejos |
+| `self-projects.json` | Opcional. Otros proyectos que cuentan como propios, además de `local-delegate`: `{"names": ["mi-clon", "D:\\trabajo\\mi-fork"]}` |
+
+Reglas de `self-projects.json`:
+
+- **Forma**: un objeto JSON con `names`, una lista de textos (nombres o rutas). Un fichero ausente,
+  ilegible, con otra forma o de más de **64 KiB** equivale a una lista vacía, sin error. Se ignoran
+  las entradas que no son texto y las que, normalizadas, tienen menos de 3 caracteres
+  alfanuméricos.
+- **Normalización**: la entrada y el nombre del directorio de proyecto se normalizan igual: todo
+  carácter fuera de `[A-Za-z0-9]` en ASCII (también `ñ` y las vocales con tilde) pasa a `-`, y todo
+  a minúsculas (`Diseño` → `dise-o`).
+- **Coincidencia por tramos**, no por subcadena: la entrada tiene que aparecer entera, entre
+  guiones o en un extremo del nombre. `app` no marca `webapp` ni `happy`, pero sí `D--work-app`.
+  **Mejor una ruta completa** que un nombre suelto: casa con ese directorio, sus subdirectorios y
+  sus worktrees, y con nada más.
+- **Reinicia el daemon tras editarla**: cada proceso la lee una vez y la guarda, así que el daemon
+  no ve el cambio hasta que arranca de nuevo.
+- **Solo afecta a lo nuevo**: una fila o una entrada del relleno ya selladas no cambian de tipo. Lo
+  que se resuelve al medir (los eventos de hooks anteriores a este cambio, las sesiones de
+  `measure_plugin_adoption.py`) usa la lista de ese momento.
+- **Todos con el mismo `LOG_DIR`**: el daemon, el servidor stdio, los hooks, `recompute-cost` y los
+  scripts leen la sal y la lista de su `LOG_DIR`. Si `LOCAL_DELEGATE_LOG_DIR` se define en el
+  lanzador de Claude Code y no en el daemon, o al revés, la sal y la lista difieren entre filas y
+  eventos.
+
 ## Coste equivalente
 
 El equivalente a precio de API y el bloque de cuota (ver
@@ -765,7 +802,9 @@ de emergencia: leer por franjas con `offset`/`limit`, que nunca se bloquean. Lo 
 volcados de shell (`cat`, `more`, `Get-Content` y, en PowerShell, `type` y `gc`) sobre una única
 ruta; con una tubería, una redirección, comandos encadenados, un flag o `head` (diez líneas), no se
 bloquea. Qué lee cada comando lo decide un solo clasificador (`read_classifier.py`), el mismo que
-usa el mod de lectura del plugin; cada evento de telemetría lleva su `via` y su `scope`.
+usa el mod de lectura del plugin; cada evento de telemetría lleva su `via` y su `scope` y, si su
+entrada trae `transcript_path`, `project` y `project_kind` (ver
+[el proyecto de cada fila](#proyecto-de-cada-fila-project-salt-y-self-projectsjson)).
 
 Nace apagado. Estas son las formas de que no bloquee:
 
