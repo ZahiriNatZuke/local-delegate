@@ -85,6 +85,17 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ### Corregido
 
+- **`local_summarize` avisa cuando el resumen trae datos que la entrada no tiene (#630).** Con un
+  Markdown corto con tablas, el modelo mecánico expandió «SDD» como «Sistema de Diagnóstico
+  Dinámico» (el fichero no la expande) y escribió «deviações» en un resumen en español, sin aviso.
+  Ahora el servidor compara el resumen con la entrada entera, en todos los caminos, y avisa con
+  `[local-delegate warning: …]` de las siglas expandidas que la entrada no expande así, de las
+  palabras con letras ajenas al idioma del resumen que la entrada no trae y, si la entrada tiene
+  una tabla, de las cifras que no trae en ninguna grafía (`2 862` = `2862`, «tres» = `3`). El
+  resumen no se cambia. Sobre 90 resúmenes reales guardados en el repo no avisa en ninguno; sin la
+  condición de la tabla, las cifras avisaban en 36 (cuentas propias del resumen de un log). No
+  detecta una causa cambiada ni una cifra que existe en la tabla pero puesta en otra fila: eso
+  queda para el enrutado de las entradas con tablas al modelo largo, que se medirá aparte.
 - **`local_extract` ya no da por dudoso el rango correcto de un apartado, y avisa cuando un campo
   que pide elementos solo trae ese rango (#633).** Con `path` sobre un Markdown, un campo como
   `tareas_con_lineas` volvía como «Tareas: líneas 24-63», sin las tareas, y además salía en
