@@ -8,6 +8,17 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ### Corregido
 
+- **`local_commit_msg` ya no entrega sin aviso un mensaje troceado que invierte el sentido del
+  cambio (#636).** Con un diff de ~27 KB en 3 partes, la condición cambiada solo estaba en una
+  parte, y el paso que redacta el mensaje veía las notas de las partes y la lista de ficheros, ni
+  una línea literal de la condición: el mensaje decía «consultar /running en errores de red»,
+  justo el caso en que el cambio deja de consultarlo, y tipaba como `feat` un arreglo. Ahora ese
+  paso recibe las líneas `-`/`+` de las condiciones cambiadas, copiadas del diff (el código antes
+  que sus tests), y el tipo que marca el propio diff: una rama `fix/…`, un diff de solo tests o
+  solo documentación, o la sección del CHANGELOG donde entra la entrada (`### Corregido`,
+  `### Added`…), cuando el encabezado sale en el diff. Si el mensaje trae otro tipo, se cambia y se
+  avisa. Y todo mensaje redactado por partes termina con un aviso que lo dice y lista esas
+  condiciones, para revisarlo sin tener el diff delante. Un diff que cabe en una llamada no cambia.
 - **El mod de lectura ya no entrega como resumen el aviso de Claude Code de que la llamada pasó a
   segundo plano (#631).** Cuando `local_summarize` espera más de 2 min (el turno común ocupado, por
   ejemplo), Claude Code la pasa a segundo plano y contesta a quien la llamó con un texto suyo
