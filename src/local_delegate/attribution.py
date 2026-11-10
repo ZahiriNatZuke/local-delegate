@@ -57,6 +57,17 @@ DEFAULT_CLEANUP_DAYS = 30
 
 _BACKFILL_VERSION = 1
 
+#: The two project fields of a row and of a backfill entry (usage-log-project-and-own-repo-exclusion).
+PROJECT_FIELDS = ("caller_project", "caller_project_kind")
+#: The kinds a row can carry; anything else, or nothing, reads as `unknown` (REQ-022).
+PROJECT_KINDS = ("self", "other")
+#: The matches of the backfill that are a real cross with the transcript (REQ-007, REQ-008).
+REAL_MATCHES = frozenset({"exact", "window", "window+path"})
+
+# The project rules live in `hook_common`, because the hooks cannot import this package.
+project_identity = hook_common.project_identity
+project_of_session = hook_common.project_of_session
+
 
 # --- Al momento ---------------------------------------------------------------------------------
 
@@ -228,6 +239,14 @@ def resolve_call(
     key = _note_session_key(note)
     if key is not None:
         r["caller_session_key"] = key
+    # The project of the MAIN session (usage-log-project-and-own-repo-exclusion, REQ-004): the
+    # note of a subagent also carries the main transcript's path. Its own `try`: the general one
+    # of `server._log_event` would save the line but lose every `caller_*` (REQ-006).
+    try:
+        r.update(project_identity(note.get("transcript_path"), root=projects or _projects_root()))
+    except Exception:
+        # Silence on purpose: the project is observation, and observing never breaks a tool.
+        pass
 
     path = _transcript_de(note, projects or _projects_root())
     model = _find_model(path, tool_use_id, clock=clock, opener=opener) if path is not None else None
@@ -394,6 +413,30 @@ def _rank(entry: dict) -> int:
     return MATCH_RANK.get(str(entry.get("match")), -1)
 
 
+def _with_project(old_entry: dict, new_entry: dict) -> dict | None:
+    """A copy of `old_entry` with the project fields it lacks taken from `new_entry` of the same
+    rank, and no other field touched (REQ-007); `None` if there is nothing to add.
+
+    The pair goes together: the hash is only added on its own when the kinds agree, so an entry
+    never ends up with a hash of one project and the kind of another.
+    """
+    kind = new_entry.get("caller_project_kind")
+    if kind not in PROJECT_KINDS:
+        return None
+    if old_entry.get("caller_project_kind") in (None, ""):
+        added = {f: new_entry[f] for f in PROJECT_FIELDS if new_entry.get(f) not in (None, "")}
+    elif old_entry.get("caller_project_kind") == kind and old_entry.get("caller_project") in (
+        None,
+        "",
+    ):
+        added = {"caller_project": new_entry.get("caller_project")}
+        if added["caller_project"] in (None, ""):
+            return None
+    else:
+        return None
+    return {**old_entry, **added}
+
+
 def write_backfill(
     log_dir: Path,
     month: str,
@@ -423,6 +466,10 @@ def write_backfill(
         old_entry = merged.get(key)
         if old_entry is None or _rank(new_entry) > _rank(old_entry):
             merged[key] = new_entry
+        elif _rank(new_entry) == _rank(old_entry):
+            enriched = _with_project(old_entry, new_entry)
+            if enriched is not None:
+                merged[key] = enriched
     target = backfill_path(log_dir, month)
     target.parent.mkdir(parents=True, exist_ok=True)
     descriptor, temporal = tempfile.mkstemp(dir=target.parent, prefix=".", suffix=".tmp")
@@ -482,6 +529,28 @@ def is_mod_call(row: dict) -> bool:
     """
     tool_use_id = row.get("tool_use_id")
     return isinstance(tool_use_id, str) and tool_use_id.startswith(MOD_TOOL_USE_PREFIX)
+
+
+def project_kind(row: dict) -> str:
+    """`self`, `other` or `unknown`: the ONE rule of the row's project kind. A row without the
+    field (older, Codex, the chat) or with another value is `unknown`, never `self` or `other`."""
+    kind = row.get("caller_project_kind")
+    return kind if kind in PROJECT_KINDS else "unknown"
+
+
+def caller_column(row: dict) -> str:
+    """`mod`, `main`, `subagent` or `unknown`: the ONE rule of who asked (REQ-008), in this order.
+
+    `mod` first, because a mod row arrives with `caller_kind: main`. Then the row's
+    `caller_kind` only if it is real data: the row carries `caller_src` (the hook's note), or its
+    `match` is a real cross. The thread `cost.merge_row` fills in as a fallback is not data.
+    """
+    if is_mod_call(row):
+        return "mod"
+    kind = row.get("caller_kind")
+    if kind in ("main", "subagent") and (row.get("caller_src") or row.get("match") in REAL_MATCHES):
+        return kind
+    return "unknown"
 
 
 def exclusion_reason(row: dict, backfill_entry: dict | None = None) -> str | None:
