@@ -413,6 +413,30 @@
       "reason": "lista de palabras vacías es/en (#558) que se descartan del foco antes de compararlo con la entrada y el resumen: son datos, nunca salida"
     },
     {
+      "file": "src/local_delegate/grounding.py",
+      "text": "Findings",
+      "kind": "machine_name",
+      "reason": "nombre de la clase en `__all__` (#630); no es salida"
+    },
+    {
+      "file": "src/local_delegate/grounding.py",
+      "text": "abcdefghijklmnopqrstuvwxyzáéíóúüñ",
+      "kind": "verbatim",
+      "reason": "letras del español con las que se juzga si una palabra del resumen es de otro idioma (#630): son datos, nunca salida"
+    },
+    {
+      "file": "src/local_delegate/grounding.py",
+      "text": "cero uno dos tres cuatro cinco seis siete ocho nueve diez once doce trece catorce quince dieciséis diecisiete dieciocho diecinueve veinte",
+      "kind": "verbatim",
+      "reason": "números escritos con letras en español (#630), para que «tres» de la entrada valga como la cifra 3 del resumen: son datos, nunca salida"
+    },
+    {
+      "file": "src/local_delegate/grounding.py",
+      "text": "zero one two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen sixteen seventeen eighteen nineteen twenty",
+      "kind": "verbatim",
+      "reason": "números escritos con letras en inglés (#630), para que «three» de la entrada valga como la cifra 3 del resumen: son datos, nunca salida"
+    },
+    {
       "file": "src/local_delegate/server.py",
       "text": "sin información",
       "kind": "verbatim",

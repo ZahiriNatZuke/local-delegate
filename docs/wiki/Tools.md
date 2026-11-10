@@ -74,6 +74,24 @@ tokens para 23 400 caracteres con el `max_words` por defecto), sin pasar de
 resumen por secciones (#580); y un título del resumen con el término del enfoque y contenido propio
 debajo cuenta como mención, así que ya no dispara el aviso (#593).
 
+Desde la próxima versión (#630) el servidor compara el resumen con la entrada entera, por programa
+y en todos los caminos (llamada única, map-reduce y por secciones), y avisa con
+`[local-delegate warning: …]` cuando el resumen trae algo que la entrada no tiene tal cual:
+
+- una sigla expandida entre paréntesis («SDD (Sistema de Diagnóstico Dinámico)», o al revés) cuyas
+  palabras forman la sigla y que la entrada no expande así;
+- una palabra con letras que no son del idioma del resumen (`ç`, `ã`, `ê`… en un resumen en
+  español; cualquier tilde en uno en inglés) y que no sale en la entrada («deviações»);
+- solo si la entrada trae una tabla (Markdown con su línea separadora, o HTML), una cifra que la
+  entrada no trae en ninguna grafía (`2 862` = `2862`, `2,5` = `2.5`, «tres» = `3`). Fuera de las
+  tablas no se mira: un resumen cuenta por su cuenta («3 errores» de un log) y el aviso sería
+  ruido.
+
+El resumen no se cambia (una cifra puede ser un cálculo y una sigla puede estar bien expandida): el
+aviso dice qué comprobar contra la fuente. Lo que va entre comillas invertidas no se juzga. Lo que
+no ve: una causa cambiada o una cifra de la tabla puesta en otra fila, si la cifra existe en la
+entrada.
+
 ### Resumen por secciones (experimental, apagado)
 
 Con `LOCAL_DELEGATE_STRUCTURED_SUMMARY=1` y un documento Markdown que va al modelo largo, el
