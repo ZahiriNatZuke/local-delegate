@@ -12,7 +12,13 @@ from itertools import combinations
 from pathlib import Path
 
 import detector
-from detector import _bounded, _leaves, detect, is_marker, norm_value, words
+
+_bounded = detector._bounded
+_leaves = detector._leaves
+detect = detector.detect
+is_marker = detector.is_marker
+norm_value = detector.norm_value
+words = detector.words
 
 HERE = Path(__file__).parent
 RUNS = ["g3-extract", "g3-proxy", "g4-proxy", "g4-extract"]

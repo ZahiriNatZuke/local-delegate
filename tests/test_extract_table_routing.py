@@ -299,16 +299,16 @@ def test_the_good_path_row_carries_role_reason(backend, tmp_path):
     assert rows[0]["model"] == LONG
 
 
-def _run_under_token(fn) -> tuple[cancellation.Token, BaseException | None]:
+def _run_under_token(fn) -> tuple[cancellation.Token, Exception | None]:
     """Runs `fn` as a `tools/call` does: with the call's token bound, in its own context."""
     token = cancellation.Token("local_extract")
-    raised: list[BaseException] = []
+    raised: list[Exception] = []
 
     def call() -> None:
         cancellation._CURRENT.set(token)
         try:
             fn()
-        except BaseException as exc:
+        except Exception as exc:
             raised.append(exc)
 
     contextvars.copy_context().run(call)
