@@ -215,6 +215,7 @@
   "mcp.warning.extract_placeholder_keys": "the model put a \"no data\" marker (such as N/A) in these keys, returned as null (the values are in `placeholder_keys`): {fields}",
   "mcp.warning.extract_recounted_keys": "the program counted the list of the input JSON and corrected the model's figure (detail in `recounted_keys`): {pairs}",
   "mcp.warning.extract_outline_copies": "the model copied the whole heading outline into a field that asks for one heading (detail in `outline_copies`): {pairs}",
+  "mcp.warning.extract_section_only": "these fields ask for items, but the model only gave the range of the section that holds them, without the items (list in `section_only_keys`); read that range: {fields}",
   "mcp.warning.extract_outline_kept": "no single heading fits, left as it came",
   "mcp.warning.lint_invented_files": "the summary names files that do not appear in the input and may be made up: {files}",
   "mcp.warning.sections_not_summarized": "{n} sections not summarized because of the word limit or the model",

@@ -164,7 +164,11 @@ Dos cosas que conviene saber y solo estaban en el código:
   `pasos_heading_line`, ningún encabezado o varios) lo deja como vino. Los dos casos van en
   `_local_delegate.outline_copies`, con aviso (#594). Un campo que pide varios sitios
   (`sections_with_lines`, `capitulos_con_linea`, `line_of_each_heading`) no se toca. «Título:
-  línea 1» sobre un encabezado ya no cuenta como línea dudosa.
+  línea 1» sobre un encabezado ya no cuenta como línea dudosa. Un rango que empieza dentro de un
+  apartado se comprueba también contra el título de ese apartado («Tareas: líneas 24-63» bajo
+  `## Tareas`). Si un campo pide elementos (`tareas_con_lineas`, `requisitos_con_lineas`) y el
+  modelo solo da el rango del apartado que los contiene, el campo va en
+  `_local_delegate.section_only_keys` con aviso: lee ese rango (#633).
 
 ## `local_boilerplate`
 
