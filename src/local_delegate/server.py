@@ -15,6 +15,7 @@ from __future__ import annotations
 import ast
 import base64
 import contextvars
+import functools
 import itertools
 import json
 import math
@@ -7932,7 +7933,58 @@ def _extract_location_shortcut(
     return shortcut
 
 
+#: #586: why the operation in course has a role other than its size's (`"table"`), or `None`.
+#: `_log_event` reads it for the rows the operation writes from its own thread; the rows the
+#: middleware writes for a stopped call take it from the call's token (`_log_stopped`).
+_ROLE_REASON: contextvars.ContextVar[str | None] = contextvars.ContextVar(
+    "local_delegate_role_reason", default=None
+)
+
+#: #586, decision D12: how many fields a small input with a table must ask for to go to `long`.
+#: Measured with one field asked alone, 7 of the 8 keys that crossed rows crossed again: 1.
+_TABLE_LONG_MIN_FIELDS = 1
+
+#: #586: the value of `role_reason` when the table rule raised the role.
+_ROLE_REASON_TABLE = "table"
+
+
+def _extract_role(probe_len: int, content: str, fields: list[str]) -> tuple[str, str, str | None]:
+    """(role, model, reason) of a `local_extract` call: by size, or `long` for a small table.
+
+    `_role_for_size` stays as it is (four tools share it); only extract wraps it. The reason is
+    `None` when the size alone decided: above the threshold an input is already `long`.
+    """
+    role, model = _role_for_size(probe_len)
+    if (
+        role == "mechanical"
+        and config.EXTRACT_TABLE_LONG
+        and len(fields) >= _TABLE_LONG_MIN_FIELDS
+        and table_detect.has_table(content)
+    ):
+        return "long", config.models_by_role()["long"], _ROLE_REASON_TABLE
+    return role, model, None
+
+
+def _role_reason_scope(fn: Callable[..., Any]) -> Callable[..., Any]:
+    """`fn` run inside its own `_ROLE_REASON` scope, so the reason never leaks to the next call.
+
+    `functools.wraps`: the SDK builds the tool's schema from the signature, which follows
+    `__wrapped__`, and `inspect.getsource` reaches the body the same way.
+    """
+
+    @functools.wraps(fn)
+    def wrapper(*args: Any, **kwargs: Any) -> Any:
+        scope = _ROLE_REASON.set(None)
+        try:
+            return fn(*args, **kwargs)
+        finally:
+            _ROLE_REASON.reset(scope)
+
+    return wrapper
+
+
 @mcp.tool(annotations=_annotations(TOOL_TITLES["local_extract"]))
+@_role_reason_scope
 def local_extract(
     fields: list[str],
     text: str | None = None,
@@ -7981,47 +8033,6 @@ def local_extract(
         text: Source text (use this or 'path').
         path: Path to a source file (read server-side).
     """
-    scope = _ROLE_REASON.set(None)
-    try:
-        return _local_extract(fields, text, path)
-    finally:
-        _ROLE_REASON.reset(scope)
-
-
-#: #586: why the operation in course has a role other than its size's (`"table"`), or `None`.
-#: `_log_event` reads it for the rows the operation writes from its own thread; the rows the
-#: middleware writes for a stopped call take it from the call's token (`_log_stopped`).
-_ROLE_REASON: contextvars.ContextVar[str | None] = contextvars.ContextVar(
-    "local_delegate_role_reason", default=None
-)
-
-#: #586, decision D12: how many fields a small input with a table must ask for to go to `long`.
-#: Measured with one field asked alone, 7 of the 8 keys that crossed rows crossed again: 1.
-_TABLE_LONG_MIN_FIELDS = 1
-
-#: #586: the value of `role_reason` when the table rule raised the role.
-_ROLE_REASON_TABLE = "table"
-
-
-def _extract_role(probe_len: int, content: str, fields: list[str]) -> tuple[str, str, str | None]:
-    """(role, model, reason) of a `local_extract` call: by size, or `long` for a small table.
-
-    `_role_for_size` stays as it is (four tools share it); only extract wraps it. The reason is
-    `None` when the size alone decided: above the threshold an input is already `long`.
-    """
-    role, model = _role_for_size(probe_len)
-    if (
-        role == "mechanical"
-        and config.EXTRACT_TABLE_LONG
-        and len(fields) >= _TABLE_LONG_MIN_FIELDS
-        and table_detect.has_table(content)
-    ):
-        return "long", config.models_by_role()["long"], _ROLE_REASON_TABLE
-    return role, model, None
-
-
-def _local_extract(fields: list[str], text: str | None, path: str | None) -> dict[str, Any]:
-    """The body of `local_extract`, run inside its `_ROLE_REASON` scope."""
     if not any(isinstance(name, str) and name.strip() for name in fields or []):
         # Nothing to extract: fail before reading the input or calling the backend.
         raise InputError(i18n.t("mcp.input.fields_required"))
