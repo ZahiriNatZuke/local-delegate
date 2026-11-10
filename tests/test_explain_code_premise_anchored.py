@@ -19,8 +19,9 @@ from pathlib import Path
 
 import pytest
 import test_explain_code_premise as first
-from test_explain_code_premise import BACKUP_JS
-from test_explain_code_premise import QUESTION as BACKUP_QUESTION
+
+BACKUP_JS = first.BACKUP_JS
+BACKUP_QUESTION = first.QUESTION
 
 from local_delegate import config, i18n, line_check, server
 
