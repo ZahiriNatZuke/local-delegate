@@ -15,8 +15,9 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   «Tareas» solo está en el título. Ahora el título del apartado donde empieza el rango también
   vale como prueba; si un campo pide elementos (nombre en plural que no es una tabla ni un
   apartado: `tareas`, `requisitos`, `preguntas`) y el valor solo cita rangos de apartados enteros,
-  va en `_local_delegate.section_only_keys` con aviso; y la instrucción del modelo pide cada
-  elemento con su línea. El valor nunca se reescribe.
+  va en `_local_delegate.section_only_keys` con aviso: lee ese rango. El valor nunca se reescribe
+  y la instrucción del modelo no cambia (pedirle cada elemento con su línea lo dejaba sin tokens
+  a mitad de la lista y sin JSON válido).
 - **El mod de lectura ya no entrega como resumen el aviso de Claude Code de que la llamada pasó a
   segundo plano (#631).** Cuando `local_summarize` espera más de 2 min (el turno común ocupado, por
   ejemplo), Claude Code la pasa a segundo plano y contesta a quien la llamó con un texto suyo

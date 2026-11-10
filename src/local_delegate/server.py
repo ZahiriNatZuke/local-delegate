@@ -7808,8 +7808,7 @@ _EXTRACT_LINES_CLAUSE = (
     " Cada línea del contenido empieza por su número de línea en el fichero seguido de «| »; ese "
     "prefijo no es parte del texto: no lo copies en los valores. En las claves de ubicación "
     "({fields}) da esos números de línea, con lo que ubican (por ejemplo «Título: líneas "
-    "120-160»). Si la clave pide elementos (tareas, requisitos, preguntas), da cada elemento con "
-    "su línea (por ejemplo «T1: implementar X: línea 24»), no solo el rango del apartado."
+    "120-160»)."
 )
 #: The `N| ` of `_number_lines` at a line start (or `N|` ending the line, a blank file line);
 #: `12|34`, a table row, is data and stays.

@@ -6,8 +6,8 @@ the section that holds them («Tareas: líneas 24-63»), without the items, and 
 lines reported correct ranges as false: the range starts after the heading and its blank line, so
 the words it names («Tareas») are not on the cited lines. Now a range is held by the heading of the
 section it starts in, a field that asks for items and got only section ranges is reported in
-`section_only_keys` with a warning, and the prompt asks for each item with its line. Backend faked
-(`_run_chat` doubled), no network.
+`section_only_keys` with a warning. The prompt stays: asking for each item with its line ran the
+model out of tokens mid-list, with no valid JSON. Backend faked (`_run_chat` doubled), no network.
 """
 
 from __future__ import annotations
@@ -157,8 +157,9 @@ def test_the_shape_of_the_issue_is_reported_and_its_ranges_hold(backend, tmp_pat
     assert {k: data[k] for k in answer} == answer
 
 
-def test_the_prompt_asks_for_each_item_with_its_line(backend, tmp_path):
+def test_the_prompt_does_not_ask_for_each_item(backend, tmp_path):
+    """Asking for each item with its line ran the model out of tokens mid-list (live, PR #645)."""
     calls, _state = backend
     server.local_extract(fields=["tareas_con_lineas"], path=_write(tmp_path, _plan()))
     (call,) = calls
-    assert "cada elemento con su línea" in call["system"]
+    assert call["system"].endswith("(por ejemplo «Título: líneas 120-160»).")
