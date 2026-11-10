@@ -154,8 +154,52 @@ def context_of(payload: dict, script: str) -> dict:
     La hora de arranque de la sesion no se inventa aqui: con ``session_id`` en cada evento, el
     primer evento de esa sesion en el log ya dice cuando empezo, y agrupar por sesion evita mezclar
     dos politicas en la misma muestra.
+
+    Also `project` and `project_kind` (REQ-016), with the rule and from the directory of the usage
+    row: a hook takes them from the `transcript_path` of its input, never from the `cwd`; the mod's
+    line has no `transcript_path` and takes the ones `hook_entry.record_read` resolved from its
+    `session_id` (`run_with_session_project`). Without a valid source, neither field. A rule that
+    raises leaves the event without them, never without the event.
     """
-    return {"version": version_de(script), "session_id": str(payload.get("session_id") or "")}
+    context = {"version": version_de(script), "session_id": str(payload.get("session_id") or "")}
+    context.update(_event_project(payload))
+    return context
+
+
+#: The project of the mod's line (`caller_project`/`caller_project_kind` of `project_identity`), set
+#: only inside `run_with_session_project`; `context_of` reads it when its input has no
+#: `transcript_path`. Holds a hash and a kind, never a path.
+_SESSION_PROJECT: contextvars.ContextVar[Mapping[str, str] | None] = contextvars.ContextVar(
+    "local_delegate_session_project", default=None
+)
+
+
+def run_with_session_project(fields: Mapping[str, str] | None, function, *args):
+    """`function(*args)` with `fields` as the project of the events it records (the mod's line)."""
+    token = _SESSION_PROJECT.set(fields)
+    try:
+        return function(*args)
+    finally:
+        _SESSION_PROJECT.reset(token)
+
+
+def _event_project(payload: object) -> dict:
+    """`project` and `project_kind` of a hook event, or `{}`; never raises."""
+    try:
+        if isinstance(payload, dict) and "transcript_path" in payload:
+            fields: Mapping[str, str] | None = project_identity(payload.get("transcript_path"))
+        else:
+            fields = _SESSION_PROJECT.get()
+        if not fields:
+            return {}
+        event: dict = {}
+        if "caller_project" in fields:
+            event["project"] = fields["caller_project"]
+        if "caller_project_kind" in fields:
+            event["project_kind"] = fields["caller_project_kind"]
+        return event
+    except Exception:
+        return {}
 
 
 # --- Añadir una línea entre procesos (telemetria-escritura-concurrente) ---------------------------

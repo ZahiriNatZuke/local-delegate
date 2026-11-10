@@ -142,6 +142,58 @@ Un mutante de la primera pasada también sobrevivió, el 3: el caso «fuera de l
 menos profundo que un transcript real y lo rechazaba la comprobación de longitud, no la de prefijo.
 Se corrigió el test (misma profundidad) y el mutante muere.
 
+## T8 y T9 — Proyecto en la telemetría de hooks, en la línea del mod y en `local_status`
+
+Rama `feat/usage-log-project-t8-t9`, desde `feat/usage-log-project`.
+
+- **Hooks**: `context_of` añade `project` y `project_kind` desde el `transcript_path` de la entrada
+  (con `project_identity`); sin `transcript_path` toma los de la variable de contexto
+  `_SESSION_PROJECT` del `hook_common` suelto, que solo pone `run_with_session_project`. Nada sale
+  del `cwd`. Todo va en su propio `try`: una regla que lanza deja el evento sin los dos campos.
+- **Línea del mod**: `hook_entry.record_read` resuelve, dentro de `run_with_environ`,
+  `project_of_session(session_id)` (raíz de `Path.home()` del proceso, tope de 50 ms y caché de
+  T2) y `project_identity` con la sal y la lista del `LOG_DIR` del proceso, y lo pasa al
+  `hook_common` suelto. `classify_text`, `suggest_delegate_read.py`, `suggest_delegate_shell.py` y
+  el mod no cambian: la huella de los hooks (`version_de`) no se mueve.
+- **`local_status`**: cuenta, entre los eventos del mes que no son prueba, los de
+  `attribution.project_kind(rec) == "self"`, y añade la línea `mcp.status.log.own_repo` solo si no
+  es cero. Las cifras de eventos, llamadas y ahorro no cambian: el test compara la línea de eventos
+  del mismo mes con y sin los campos nuevos.
+- **Mutante 14 de T4 y `project_of_session`**: no le afecta. `project_of_session` solo devuelve
+  `<raíz>/<directorio>/<id>.jsonl`, a profundidad 2 exacta, donde «el primer directorio bajo la
+  raíz» y `parent.name` son el mismo; los ids sin forma de UUID no forman ninguna ruta.
+- **Tiempo de la búsqueda sobre la raíz real** (40 directorios, id inexistente, el peor caso porque
+  recorre todo; 20 muestras): mediana 1,15 ms, máximo 1,46 ms. Muy por debajo del tope de 50 ms.
+
+### Mutantes de T8 y T9 (REQ-028)
+
+Cada uno solo, con `PYTHONDONTWRITEBYTECODE=1`, sin `__pycache__` en `src/` y el fichero restaurado
+byte a byte (comprobado). Control: los 22 tests de `test_hook_project.py` y los 3 de
+`test_status_own_repo.py` en verde antes. Mueren los 18: los 16 del plan, con el 48 partido en dos
+(uno por cada `try`) y una variante del 49c que quita también la comprobación del final. El 49 se
+corrió además solo contra su test, para ver la aserción que nombra el plan.
+
+| N.º | Mutante | Muere | Aserción que dispara |
+| ---: | --- | --- | --- |
+| 43 | `context_of` sin proyecto | sí | `test_each_hook_event_carries_the_project_of_its_transcript`: `line["project_kind"]` (`KeyError`) |
+| 44 | `context_of` deriva el proyecto del `cwd` | sí | `test_a_hook_event_without_transcript_path_has_no_project_even_with_a_cwd`: `"project" not in line` (hook de prompt) |
+| 45 | `record_read` no resuelve por `session_id` | sí | `test_the_mods_line_carries_the_project_of_its_sessions_row`: `line["project_kind"]` (`KeyError`) |
+| 46 | `project_of_session` no valida el id | sí | `test_a_session_id_without_uuid_shape_gives_no_project_and_walks_nothing[x/../<id>]`: `"project" not in line` (el id llega al transcript del repo) |
+| 47 | `project_of_session` se queda con el primero de dos | sí | `test_a_session_in_two_directories_gives_no_project`: `"project" not in line` |
+| 48a | sin el `try` de `context_of` | sí | `test_a_rule_that_raises_leaves_the_event_without_project`: sale `RuntimeError` |
+| 48b | sin el `try` de `record_read` | sí | `test_a_search_that_raises_still_writes_the_line`: sale `RuntimeError` |
+| 49 | `log_dir()` lee el entorno de la petición | sí | con `-x`, primero `test_the_mods_line_carries_the_project_of_its_sessions_row`: el hash no es el de la fila; solo el test del plan, `test_the_salt_and_the_list_come_from_the_process_log_dir`: «a request chose where the salt goes» |
+| 49a | la raíz sale de `current_environ()` | sí | `test_the_projects_root_is_the_process_one_not_the_requests`: `'self' == 'other'` |
+| 49b | la variable se pone en la instancia del paquete | sí | `test_the_daemon_endpoint_writes_the_project_into_the_line`: `line["project_kind"]` (`KeyError`) |
+| 49c | sin el tope dentro del recorrido | sí | `test_a_slow_search_stops_at_its_budget_and_the_line_has_no_project`: «the search did not stop at its budget (0.329 s)» |
+| 49c′ | sin ningún tope (dentro y al final) | sí | el mismo test: `"project" not in line` |
+| 49d | sin caché por `session_id` | sí | `test_a_found_session_is_not_walked_again`: «the second decision of the session walked the root again» |
+| 49e | la caché guarda el «no encontrado» | sí | `test_a_session_that_shows_up_later_is_found_the_next_time`: `second["project_kind"]` (`KeyError`) |
+| 50 | `classify_text` añade `project` | sí | `test_classify_matches_the_real_cli_process` (`tests/test_hook_classify_endpoint.py:196`): `response.content == expected` |
+| 62 | `local_status` no cuenta el propio repo | sí | `test_the_line_counts_the_own_events_and_the_figures_do_not_change`: falta «del propio repo (local-delegate): 2 de esos eventos» |
+| 63 | `local_status` resta lo `self` de la cifra | sí | el mismo test: `"eventos: 4 " in text` |
+| 64 | la línea sale con recuento cero | sí | `test_without_own_events_there_is_no_line`: `SELF_ES not in text` |
+
 ## Commands
 
 <!-- One row per command declared in .sdd/project.json (test, lint, typecheck, build, format, ...).
