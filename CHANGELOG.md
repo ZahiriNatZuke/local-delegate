@@ -55,6 +55,33 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   cifras** de `measure_adoption.py`: la comparable con los cortes de 14 y 30 días es la de
   `--include-self`, porque la de por defecto mezcla eventos viejos sin transcript (se quedan) con
   eventos recientes del propio repo (se apartan).
+- **`local_extract` manda al modelo de contexto largo una entrada pequeña que trae una tabla
+  (#586).** Con una tabla HTML (`<table`/`<tr`) o Markdown (con su línea separadora) por debajo de
+  `LOCAL_DELEGATE_LONG_INPUT_CHARS`, el modelo mecánico contestaba con el valor de otra fila: en 8
+  de las 16 tablas pequeñas medidas, y también con un solo campo pedido (7 de 8 claves). El rol
+  `long` no cruzó en ninguna de esas 8 por el propio `local_extract` (0 de 8 casos, 0 de 44 claves
+  falladas en las limpias). Va también con un solo campo. La respuesta lo dice en
+  `_local_delegate.role_reason` (`{"role": "long", "reason": "table", "notice": …}`, también en
+  una respuesta de error y nunca en `warning`) y la fila del log de uso lleva
+  `role_reason: "table"`, también las de una llamada cortada (plazo propio, cola saturada,
+  excepción). El prompt no cambia; la llamada toma los parámetros y el respaldo del rol `long`.
+  - **Lo que cuesta.** Mediana de inferencia de 2,944 s medida con el modelo largo frente a 0,84 s
+    con el mecánico; de 10 a 13 s más si el modelo largo no estaba cargado, y el p90 histórico de
+    la espera con cambio de modelo es de 31,9 s. Si el modelo largo falla, el respaldo es el de su
+    cadena, el modelo de `code` (el de carga más cara), no el del mecánico. Mientras el backend
+    cambia de modelo, los demás clientes que lo comparten (otra máquina, otras sesiones) lo ven
+    arrancando, y la siguiente llamada mecánica paga la vuelta. La regla la aplica el proceso MCP
+    de cada cliente: una máquina remota con esta versión también provoca el cambio en el backend
+    compartido.
+  - **Cómo se apaga.** `LOCAL_DELEGATE_EXTRACT_TABLE_LONG=0` en el entorno del servidor (se lee al
+    arrancar; hay que reiniciarlo) devuelve el enrutado de antes, solo por tamaño.
+  - **Lo que la regla no ve.** CSV, TSV, una tabla GFM sin tuberías externas (un solo `|` por
+    línea), el separador `|-|-|` y las rejillas hechas con `<div>` se quedan en el modelo
+    mecánico y pueden cruzar. Un `<tr` dentro de un JSON, un bloque de código o un diff sí sube.
+  - **Lo que queda fuera.** El caso que abrió el #586 (una página de 33 KB, que ya iba al rol
+    `long`, con el valor de una fila que nadie pidió) **no queda arreglado**, y no hay aviso de
+    valor cruzado: el detector dio un aviso en falso en su prueba y vuelve a diseño. Un cruce que
+    quede sigue saliendo en silencio.
 
 ### Corregido
 
@@ -69,6 +96,17 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   condición de la tabla, las cifras avisaban en 36 (cuentas propias del resumen de un log). No
   detecta una causa cambiada ni una cifra que existe en la tabla pero puesta en otra fila: eso
   queda para el enrutado de las entradas con tablas al modelo largo, que se medirá aparte.
+- **`local_commit_msg` ya no entrega sin aviso un mensaje troceado que invierte el sentido del
+  cambio (#636).** Con un diff de ~27 KB en 3 partes, la condición cambiada solo estaba en una
+  parte, y el paso que redacta el mensaje veía las notas de las partes y la lista de ficheros, ni
+  una línea literal de la condición: el mensaje decía «consultar /running en errores de red»,
+  justo el caso en que el cambio deja de consultarlo, y tipaba como `feat` un arreglo. Ahora ese
+  paso recibe las líneas `-`/`+` de las condiciones cambiadas, copiadas del diff (el código antes
+  que sus tests), y el tipo que marca el propio diff: una rama `fix/…`, un diff de solo tests o
+  solo documentación, o la sección del CHANGELOG donde entra la entrada (`### Corregido`,
+  `### Added`…), cuando el encabezado sale en el diff. Si el mensaje trae otro tipo, se cambia y se
+  avisa. Y todo mensaje redactado por partes termina con un aviso que lo dice y lista esas
+  condiciones, para revisarlo sin tener el diff delante. Un diff que cabe en una llamada no cambia.
 - **`local_explain_code` avisa de una premisa de la pregunta afirmada junto a código real
   (#538).** Preguntado dónde un script «parte por hilo principal y subagente», respondió que esa
   partición se hace en `by_side` y citó las líneas de `by_side`; el script nunca habla de

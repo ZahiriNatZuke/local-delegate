@@ -1,0 +1,1840 @@
+{
+ "_run": {
+  "model": "gemma4-26b-a4b",
+  "role": "long (LOCAL_DELEGATE_LONG_INPUT_CHARS=0)",
+  "via": "server.local_extract(path=...) en un segundo proceso del paquete publicado 0.50.0, unido al turno del daemon (REQ-006)",
+  "env": {
+   "version": "0.50.0",
+   "LONG_INPUT_CHARS": 0,
+   "LOG_DIR": "<scratchpad>\\gate586\\logdir",
+   "USAGE_LOG": "<scratchpad>\\gate586\\logdir\\usage-gate586.jsonl",
+   "WEB_PORT": 9394,
+   "TURN_URL": "http://127.0.0.1:9393/",
+   "LLAMASWAP_CONFIG_set": false,
+   "remote_web_token_set": true,
+   "python": "<uv-tools>\\local-delegate-mcp\\Scripts\\pythonw.exe"
+  }
+ },
+ "validation": {
+  "env": {
+   "version": "0.50.0",
+   "LONG_INPUT_CHARS": 0,
+   "LOG_DIR": "<scratchpad>\\gate586\\logdir",
+   "USAGE_LOG": "<scratchpad>\\gate586\\logdir\\usage-gate586.jsonl",
+   "WEB_PORT": 9394,
+   "TURN_URL": "http://127.0.0.1:9393/",
+   "LLAMASWAP_CONFIG_set": false,
+   "remote_web_token_set": true,
+   "python": "<uv-tools>\\local-delegate-mcp\\Scripts\\pythonw.exe"
+  },
+  "answer": {
+   "name": "Ana",
+   "city": "Holguín"
+  },
+  "wall_s": 32.959
+ },
+ "validation_log_row": {
+  "ts": "2026-11-10T15:31:34+00:00",
+  "tool": "local_extract",
+  "model": "gemma4-26b-a4b",
+  "source": "inline",
+  "chars_in": 47,
+  "chars_out": 34,
+  "latency_ms": 32948,
+  "ok": true,
+  "backend": "local",
+  "backend_host": "127.0.0.1:9292",
+  "v": "0.50.0",
+  "host": "<host>",
+  "concurrency": {
+   "requested_model": "gemma4-26b-a4b",
+   "phases": {
+    "turn": {
+     "start": "2026-11-10T15:31:01.950+00:00",
+     "end": "2026-11-10T15:31:02.108+00:00",
+     "ms": 157,
+     "n": 1
+    },
+    "slot": {
+     "start": "2026-11-10T15:31:02.109+00:00",
+     "end": "2026-11-10T15:31:02.109+00:00",
+     "ms": 0,
+     "n": 1
+    },
+    "backend": {
+     "start": "2026-11-10T15:31:02.112+00:00",
+     "end": "2026-11-10T15:31:34.894+00:00",
+     "ms": 32781,
+     "n": 1
+    }
+   },
+   "backend_models": {
+    "gemma4-26b-a4b": "starting"
+   },
+   "backend_models_at_ms": 3000,
+   "model_swap": true
+  },
+  "finish_reason": "stop",
+  "tokens_in": 82,
+  "tokens_out": 20,
+  "raw_len": 47,
+  "chars_out_raw": 34,
+  "json_schema": "used",
+  "remote_turn": "granted",
+  "inference_ms": 6384,
+  "wait_ms": 26564,
+  "tok_s": 27.61,
+  "prefill_tok_s": 14.49
+ },
+ "summary": {
+  "cases": 16,
+  "models": [
+   "gemma4-26b-a4b"
+  ],
+  "crossed_group_cases_that_crossed": [],
+  "crossed_group_crossed_keys": 0,
+  "crossed_group_failed_keys": 0,
+  "clean_group_failed_keys": 0,
+  "clean_group_keys": 44,
+  "error_or_raw_cases": [],
+  "inference_ms_median": 2944.0,
+  "inference_ms_min": 1918,
+  "inference_ms_max": 6085,
+  "criteria": {
+   "crossed_in_at_most_1_of_8": true,
+   "clean_failed_at_most_1_of_44": true,
+   "no_error_or_raw": true,
+   "median_inference_at_most_6500_ms": true
+  }
+ },
+ "cases": [
+  {
+   "case": "01-pricing-table-en",
+   "group": "crossed_with_g3",
+   "keys": 5,
+   "correct": 5,
+   "crossed": 0,
+   "failed": 0,
+   "error_or_raw": false,
+   "inference_ms": 6085,
+   "latency_ms": 6200,
+   "model": "gemma4-26b-a4b",
+   "remote_turn": "granted",
+   "json_schema": "used",
+   "chars_in": 949,
+   "verdicts": {
+    "plans_with_monthly_price": {
+     "verdict": "correct",
+     "value": "Prices are loaded at runtime; contact sales for a quote."
+    },
+    "licensed_user_limits": {
+     "verdict": "correct",
+     "value": null
+    },
+    "custom_domain_limits": {
+     "verdict": "correct",
+     "value": "Standard: 1–5, Enterprise: 1–3 per region"
+    },
+    "storage_per_workspace": {
+     "verdict": "correct",
+     "value": "Standard: 50 GB, Enterprise: 2 TB"
+    },
+    "sso_availability": {
+     "verdict": "correct",
+     "value": "Standard: —, Enterprise: Included"
+    }
+   }
+  },
+  {
+   "case": "02-pricing-table-en-3fields",
+   "group": "crossed_with_g3",
+   "keys": 3,
+   "correct": 3,
+   "crossed": 0,
+   "failed": 0,
+   "error_or_raw": false,
+   "inference_ms": 2352,
+   "latency_ms": 2433,
+   "model": "gemma4-26b-a4b",
+   "remote_turn": "granted",
+   "json_schema": "used",
+   "chars_in": 949,
+   "verdicts": {
+    "plans_with_monthly_price": {
+     "verdict": "correct",
+     "value": "Prices are loaded at runtime; contact sales for a quote."
+    },
+    "licensed_user_limits": {
+     "verdict": "correct",
+     "value": null
+    },
+    "self_hosted_options": {
+     "verdict": "correct",
+     "value": "Available on request"
+    }
+   }
+  },
+  {
+   "case": "06-limits-table-es",
+   "group": "crossed_with_g3",
+   "keys": 5,
+   "correct": 5,
+   "crossed": 0,
+   "failed": 0,
+   "error_or_raw": false,
+   "inference_ms": 3156,
+   "latency_ms": 3234,
+   "model": "gemma4-26b-a4b",
+   "remote_turn": "granted",
+   "json_schema": "used",
+   "chars_in": 428,
+   "verdicts": {
+    "limite_usuarios_activos": {
+     "verdict": "correct",
+     "value": 75
+    },
+    "limite_usuarios_con_licencia": {
+     "verdict": "correct",
+     "value": null
+    },
+    "limite_usuarios_invitados": {
+     "verdict": "correct",
+     "value": 20
+    },
+    "limite_de_proyectos": {
+     "verdict": "correct",
+     "value": 40
+    },
+    "almacenamiento_por_proyecto": {
+     "verdict": "correct",
+     "value": "25 GB"
+    }
+   }
+  },
+  {
+   "case": "07-gateway-table-en",
+   "group": "clean_with_g3",
+   "keys": 6,
+   "correct": 6,
+   "crossed": 0,
+   "failed": 0,
+   "error_or_raw": false,
+   "inference_ms": 2945,
+   "latency_ms": 3003,
+   "model": "gemma4-26b-a4b",
+   "remote_turn": "granted",
+   "json_schema": "used",
+   "chars_in": 270,
+   "verdicts": {
+    "max_upload_size": {
+     "verdict": "correct",
+     "value": "250 MB"
+    },
+    "max_download_size": {
+     "verdict": "correct",
+     "value": "4 GB"
+    },
+    "max_request_body_size": {
+     "verdict": "correct",
+     "value": null
+    },
+    "idle_timeout": {
+     "verdict": "correct",
+     "value": "90 s"
+    },
+    "request_timeout": {
+     "verdict": "correct",
+     "value": "30 s"
+    },
+    "connect_timeout": {
+     "verdict": "correct",
+     "value": null
+    }
+   }
+  },
+  {
+   "case": "08-managed-service-es",
+   "group": "clean_with_g3",
+   "keys": 6,
+   "correct": 6,
+   "crossed": 0,
+   "failed": 0,
+   "error_or_raw": false,
+   "inference_ms": 3373,
+   "latency_ms": 3436,
+   "model": "gemma4-26b-a4b",
+   "remote_turn": "granted",
+   "json_schema": "used",
+   "chars_in": 771,
+   "verdicts": {
+    "sso_disponible": {
+     "verdict": "correct",
+     "value": "Incluido (SAML y OIDC)"
+    },
+    "frecuencia_backups": {
+     "verdict": "correct",
+     "value": "Cada 6 horas"
+    },
+    "sla_soporte": {
+     "verdict": "correct",
+     "value": "2 horas"
+    },
+    "retencion_logs": {
+     "verdict": "correct",
+     "value": "400 días"
+    },
+    "limite_llamadas_api": {
+     "verdict": "correct",
+     "value": null
+    },
+    "usuarios_con_licencia": {
+     "verdict": "correct",
+     "value": "120"
+    }
+   }
+  },
+  {
+   "case": "09-allowances-table-en",
+   "group": "clean_with_g3",
+   "keys": 6,
+   "correct": 6,
+   "crossed": 0,
+   "failed": 0,
+   "error_or_raw": false,
+   "inference_ms": 4046,
+   "latency_ms": 4132,
+   "model": "gemma4-26b-a4b",
+   "remote_turn": "granted",
+   "json_schema": "used",
+   "chars_in": 264,
+   "verdicts": {
+    "licensed_user_limits": {
+     "verdict": "correct",
+     "value": "Starter: 8, Scale: 300"
+    },
+    "storage_quota": {
+     "verdict": "correct",
+     "value": "Starter: 20 GB, Scale: 1 TB"
+    },
+    "sla_uptime": {
+     "verdict": "correct",
+     "value": "Starter: 99.5%, Scale: 99.95%"
+    },
+    "data_region": {
+     "verdict": "correct",
+     "value": "Starter: US only, Scale: US, EU or APAC"
+    },
+    "custom_domain_limits": {
+     "verdict": "correct",
+     "value": null
+    },
+    "staging_environments": {
+     "verdict": "correct",
+     "value": "Starter: 1, Scale: 12"
+    }
+   }
+  },
+  {
+   "case": "10-spec-sheet-en",
+   "group": "clean_with_g3",
+   "keys": 4,
+   "correct": 4,
+   "crossed": 0,
+   "failed": 0,
+   "error_or_raw": false,
+   "inference_ms": 1918,
+   "latency_ms": 1980,
+   "model": "gemma4-26b-a4b",
+   "remote_turn": "granted",
+   "json_schema": "used",
+   "chars_in": 417,
+   "verdicts": {
+    "weight": {
+     "verdict": "correct",
+     "value": "1.24 kg"
+    },
+    "color": {
+     "verdict": "correct",
+     "value": "Graphite"
+    },
+    "warranty": {
+     "verdict": "correct",
+     "value": "3 years"
+    },
+    "battery_life": {
+     "verdict": "correct",
+     "value": "17 hours"
+    }
+   }
+  },
+  {
+   "case": "11-ficha-suministro-es",
+   "group": "clean_with_g3",
+   "keys": 4,
+   "correct": 4,
+   "crossed": 0,
+   "failed": 0,
+   "error_or_raw": false,
+   "inference_ms": 2088,
+   "latency_ms": 2155,
+   "model": "gemma4-26b-a4b",
+   "remote_turn": "granted",
+   "json_schema": "used",
+   "chars_in": 179,
+   "verdicts": {
+    "titular": {
+     "verdict": "correct",
+     "value": "Cooperativa Arroyo Claro"
+    },
+    "fecha_de_alta": {
+     "verdict": "correct",
+     "value": "2024-03-18"
+    },
+    "ciudad": {
+     "verdict": "correct",
+     "value": "Villa Serrana"
+    },
+    "tarifa": {
+     "verdict": "correct",
+     "value": "Nocturna reducida"
+    }
+   }
+  },
+  {
+   "case": "12-capabilities-repeated-en",
+   "group": "crossed_with_g3",
+   "keys": 5,
+   "correct": 5,
+   "crossed": 0,
+   "failed": 0,
+   "error_or_raw": false,
+   "inference_ms": 2403,
+   "latency_ms": 2476,
+   "model": "gemma4-26b-a4b",
+   "remote_turn": "granted",
+   "json_schema": "used",
+   "chars_in": 583,
+   "verdicts": {
+    "audit_log": {
+     "verdict": "correct",
+     "value": "Included"
+    },
+    "single_sign_on": {
+     "verdict": "correct",
+     "value": "Included"
+    },
+    "priority_support": {
+     "verdict": "correct",
+     "value": "Included"
+    },
+    "custom_roles": {
+     "verdict": "correct",
+     "value": "Included"
+    },
+    "ip_allowlist": {
+     "verdict": "correct",
+     "value": null
+    }
+   }
+  },
+  {
+   "case": "17-plans-transposed-en",
+   "group": "clean_with_g3",
+   "keys": 6,
+   "correct": 6,
+   "crossed": 0,
+   "failed": 0,
+   "error_or_raw": false,
+   "inference_ms": 2473,
+   "latency_ms": 2552,
+   "model": "gemma4-26b-a4b",
+   "remote_turn": "granted",
+   "json_schema": "used",
+   "chars_in": 430,
+   "verdicts": {
+    "studio_seats": {
+     "verdict": "correct",
+     "value": 15
+    },
+    "studio_storage": {
+     "verdict": "correct",
+     "value": "200 GB"
+    },
+    "factory_storage": {
+     "verdict": "correct",
+     "value": "5 TB"
+    },
+    "hobby_monthly_builds": {
+     "verdict": "correct",
+     "value": 100
+    },
+    "studio_bandwidth": {
+     "verdict": "correct",
+     "value": null
+    },
+    "factory_seats": {
+     "verdict": "correct",
+     "value": 250
+    }
+   }
+  },
+  {
+   "case": "21-pricing-table-en-near-miss",
+   "group": "crossed_with_g3",
+   "keys": 5,
+   "correct": 5,
+   "crossed": 0,
+   "failed": 0,
+   "error_or_raw": false,
+   "inference_ms": 3176,
+   "latency_ms": 3242,
+   "model": "gemma4-26b-a4b",
+   "remote_turn": "granted",
+   "json_schema": "used",
+   "chars_in": 949,
+   "verdicts": {
+    "storage_per_user": {
+     "verdict": "correct",
+     "value": null
+    },
+    "api_requests_per_day": {
+     "verdict": "correct",
+     "value": null
+    },
+    "custom_domains": {
+     "verdict": "correct",
+     "value": "1–5 (Standard), 1–3 per region (Enterprise)"
+    },
+    "audit_log_retention": {
+     "verdict": "correct",
+     "value": "30 days (Standard), 365 days (Enterprise)"
+    },
+    "build_log_retention": {
+     "verdict": "correct",
+     "value": null
+    }
+   }
+  },
+  {
+   "case": "22-limits-table-es-near-miss",
+   "group": "crossed_with_g3",
+   "keys": 5,
+   "correct": 5,
+   "crossed": 0,
+   "failed": 0,
+   "error_or_raw": false,
+   "inference_ms": 2943,
+   "latency_ms": 3033,
+   "model": "gemma4-26b-a4b",
+   "remote_turn": "granted",
+   "json_schema": "used",
+   "chars_in": 428,
+   "verdicts": {
+    "limite_usuarios_activos": {
+     "verdict": "correct",
+     "value": "75"
+    },
+    "limite_de_tableros": {
+     "verdict": "correct",
+     "value": null
+    },
+    "almacenamiento_por_usuario": {
+     "verdict": "correct",
+     "value": null
+    },
+    "retencion_de_la_papelera": {
+     "verdict": "correct",
+     "value": "45 días"
+    },
+    "retencion_de_copias": {
+     "verdict": "correct",
+     "value": null
+    }
+   }
+  },
+  {
+   "case": "23-managed-service-es-near-miss",
+   "group": "crossed_with_g3",
+   "keys": 5,
+   "correct": 5,
+   "crossed": 0,
+   "failed": 0,
+   "error_or_raw": false,
+   "inference_ms": 3240,
+   "latency_ms": 3298,
+   "model": "gemma4-26b-a4b",
+   "remote_turn": "granted",
+   "json_schema": "used",
+   "chars_in": 771,
+   "verdicts": {
+    "copias_de_seguridad": {
+     "verdict": "correct",
+     "value": "Semanales / Cada 6 horas"
+    },
+    "tiempo_de_respuesta_del_soporte": {
+     "verdict": "correct",
+     "value": "48 horas / 2 horas"
+    },
+    "tiempo_de_restauracion": {
+     "verdict": "correct",
+     "value": null
+    },
+    "puestos_incluidos": {
+     "verdict": "correct",
+     "value": "5 / 120"
+    },
+    "puestos_adicionales": {
+     "verdict": "correct",
+     "value": null
+    }
+   }
+  },
+  {
+   "case": "24-allowances-table-en-near-miss",
+   "group": "clean_with_g3",
+   "keys": 6,
+   "correct": 6,
+   "crossed": 0,
+   "failed": 0,
+   "error_or_raw": false,
+   "inference_ms": 3690,
+   "latency_ms": 3781,
+   "model": "gemma4-26b-a4b",
+   "remote_turn": "granted",
+   "json_schema": "used",
+   "chars_in": 264,
+   "verdicts": {
+    "seats": {
+     "verdict": "correct",
+     "value": "Starter: 8, Scale: 300"
+    },
+    "disk_quota": {
+     "verdict": "correct",
+     "value": "Starter: 20 GB, Scale: 1 TB"
+    },
+    "bandwidth_quota": {
+     "verdict": "correct",
+     "value": null
+    },
+    "uptime_guarantee": {
+     "verdict": "correct",
+     "value": "Starter: 99.5%, Scale: 99.95%"
+    },
+    "support_response_time": {
+     "verdict": "correct",
+     "value": null
+    },
+    "sandbox_environments": {
+     "verdict": "correct",
+     "value": "Starter: 1, Scale: 12"
+    }
+   }
+  },
+  {
+   "case": "25-gateway-table-en-near-miss",
+   "group": "clean_with_g3",
+   "keys": 6,
+   "correct": 6,
+   "crossed": 0,
+   "failed": 0,
+   "error_or_raw": false,
+   "inference_ms": 2822,
+   "latency_ms": 2877,
+   "model": "gemma4-26b-a4b",
+   "remote_turn": "granted",
+   "json_schema": "used",
+   "chars_in": 270,
+   "verdicts": {
+    "max_upload_size": {
+     "verdict": "correct",
+     "value": "250 MB"
+    },
+    "max_message_size": {
+     "verdict": "correct",
+     "value": null
+    },
+    "max_concurrent_connections": {
+     "verdict": "correct",
+     "value": "1200"
+    },
+    "max_concurrent_streams": {
+     "verdict": "correct",
+     "value": null
+    },
+    "idle_timeout": {
+     "verdict": "correct",
+     "value": "90 s"
+    },
+    "connect_timeout": {
+     "verdict": "correct",
+     "value": null
+    }
+   }
+  },
+  {
+   "case": "26-plans-transposed-en-near-miss",
+   "group": "crossed_with_g3",
+   "keys": 6,
+   "correct": 6,
+   "crossed": 0,
+   "failed": 0,
+   "error_or_raw": false,
+   "inference_ms": 2404,
+   "latency_ms": 2460,
+   "model": "gemma4-26b-a4b",
+   "remote_turn": "granted",
+   "json_schema": "used",
+   "chars_in": 430,
+   "verdicts": {
+    "hobby_seats": {
+     "verdict": "correct",
+     "value": 1
+    },
+    "hobby_storage": {
+     "verdict": "correct",
+     "value": "5 GB"
+    },
+    "studio_monthly_builds": {
+     "verdict": "correct",
+     "value": 4000
+    },
+    "factory_monthly_builds": {
+     "verdict": "correct",
+     "value": 60000
+    },
+    "enterprise_seats": {
+     "verdict": "correct",
+     "value": null
+    },
+    "studio_price": {
+     "verdict": "correct",
+     "value": null
+    }
+   }
+  }
+ ],
+ "answers": {
+  "01-pricing-table-en": {
+   "answer": {
+    "plans_with_monthly_price": "Prices are loaded at runtime; contact sales for a quote.",
+    "licensed_user_limits": null,
+    "custom_domain_limits": "Standard: 1–5, Enterprise: 1–3 per region",
+    "storage_per_workspace": "Standard: 50 GB, Enterprise: 2 TB",
+    "sso_availability": "Standard: —, Enterprise: Included",
+    "_local_delegate": {
+     "read_server_side": {
+      "chars": 949,
+      "approx_tokens": 474
+     }
+    }
+   },
+   "wall_s": 6.229,
+   "start_epoch": 1794324711.9146163
+  },
+  "02-pricing-table-en-3fields": {
+   "answer": {
+    "plans_with_monthly_price": "Prices are loaded at runtime; contact sales for a quote.",
+    "licensed_user_limits": null,
+    "self_hosted_options": "Available on request",
+    "_local_delegate": {
+     "read_server_side": {
+      "chars": 949,
+      "approx_tokens": 474
+     }
+    }
+   },
+   "wall_s": 2.453,
+   "start_epoch": 1794324721.1449597
+  },
+  "06-limits-table-es": {
+   "answer": {
+    "limite_usuarios_activos": 75,
+    "limite_usuarios_con_licencia": null,
+    "limite_usuarios_invitados": 20,
+    "limite_de_proyectos": 40,
+    "almacenamiento_por_proyecto": "25 GB",
+    "_local_delegate": {
+     "read_server_side": {
+      "chars": 428,
+      "approx_tokens": 214
+     }
+    }
+   },
+   "wall_s": 3.255,
+   "start_epoch": 1794324726.599057
+  },
+  "07-gateway-table-en": {
+   "answer": {
+    "max_upload_size": "250 MB",
+    "max_download_size": "4 GB",
+    "max_request_body_size": null,
+    "idle_timeout": "90 s",
+    "request_timeout": "30 s",
+    "connect_timeout": null,
+    "_local_delegate": {
+     "read_server_side": {
+      "chars": 270,
+      "approx_tokens": 135
+     }
+    }
+   },
+   "wall_s": 3.023,
+   "start_epoch": 1794324732.8555841
+  },
+  "08-managed-service-es": {
+   "answer": {
+    "sso_disponible": "Incluido (SAML y OIDC)",
+    "frecuencia_backups": "Cada 6 horas",
+    "sla_soporte": "2 horas",
+    "retencion_logs": "400 días",
+    "limite_llamadas_api": null,
+    "usuarios_con_licencia": "120",
+    "_local_delegate": {
+     "read_server_side": {
+      "chars": 771,
+      "approx_tokens": 385
+     }
+    }
+   },
+   "wall_s": 3.457,
+   "start_epoch": 1794324738.8807652
+  },
+  "09-allowances-table-en": {
+   "answer": {
+    "licensed_user_limits": "Starter: 8, Scale: 300",
+    "storage_quota": "Starter: 20 GB, Scale: 1 TB",
+    "sla_uptime": "Starter: 99.5%, Scale: 99.95%",
+    "data_region": "Starter: US only, Scale: US, EU or APAC",
+    "custom_domain_limits": null,
+    "staging_environments": "Starter: 1, Scale: 12",
+    "_local_delegate": {
+     "read_server_side": {
+      "chars": 264,
+      "approx_tokens": 132
+     }
+    }
+   },
+   "wall_s": 4.152,
+   "start_epoch": 1794324745.3393931
+  },
+  "10-spec-sheet-en": {
+   "answer": {
+    "weight": "1.24 kg",
+    "color": "Graphite",
+    "warranty": "3 years",
+    "battery_life": "17 hours",
+    "_local_delegate": {
+     "read_server_side": {
+      "chars": 417,
+      "approx_tokens": 208
+     }
+    }
+   },
+   "wall_s": 2.0,
+   "start_epoch": 1794324752.492859
+  },
+  "11-ficha-suministro-es": {
+   "answer": {
+    "titular": "Cooperativa Arroyo Claro",
+    "fecha_de_alta": "2024-03-18",
+    "ciudad": "Villa Serrana",
+    "tarifa": "Nocturna reducida",
+    "_local_delegate": {
+     "read_server_side": {
+      "chars": 179,
+      "approx_tokens": 89
+     }
+    }
+   },
+   "wall_s": 2.175,
+   "start_epoch": 1794324757.4943726
+  },
+  "12-capabilities-repeated-en": {
+   "answer": {
+    "audit_log": "Included",
+    "single_sign_on": "Included",
+    "priority_support": "Included",
+    "custom_roles": "Included",
+    "ip_allowlist": null,
+    "_local_delegate": {
+     "missing_keys": [
+      "ip_allowlist"
+     ],
+     "placeholder_keys": {
+      "ip_allowlist": "Not found"
+     },
+     "warning": "el modelo puso un marcador de «sin dato» (como N/A) en estas claves, se devuelven a null (los valores van en `placeholder_keys`): ip_allowlist",
+     "read_server_side": {
+      "chars": 583,
+      "approx_tokens": 291
+     }
+    }
+   },
+   "wall_s": 2.499,
+   "start_epoch": 1794324762.6710002
+  },
+  "17-plans-transposed-en": {
+   "answer": {
+    "studio_seats": 15,
+    "studio_storage": "200 GB",
+    "factory_storage": "5 TB",
+    "hobby_monthly_builds": 100,
+    "studio_bandwidth": null,
+    "factory_seats": 250,
+    "_local_delegate": {
+     "read_server_side": {
+      "chars": 430,
+      "approx_tokens": 215
+     }
+    }
+   },
+   "wall_s": 2.572,
+   "start_epoch": 1794324768.1714988
+  },
+  "21-pricing-table-en-near-miss": {
+   "answer": {
+    "storage_per_user": null,
+    "api_requests_per_day": null,
+    "custom_domains": "1–5 (Standard), 1–3 per region (Enterprise)",
+    "audit_log_retention": "30 days (Standard), 365 days (Enterprise)",
+    "build_log_retention": null,
+    "_local_delegate": {
+     "read_server_side": {
+      "chars": 949,
+      "approx_tokens": 474
+     }
+    }
+   },
+   "wall_s": 3.262,
+   "start_epoch": 1794324773.744917
+  },
+  "22-limits-table-es-near-miss": {
+   "answer": {
+    "limite_usuarios_activos": "75",
+    "limite_de_tableros": null,
+    "almacenamiento_por_usuario": null,
+    "retencion_de_la_papelera": "45 días",
+    "retencion_de_copias": null,
+    "_local_delegate": {
+     "read_server_side": {
+      "chars": 428,
+      "approx_tokens": 214
+     }
+    }
+   },
+   "wall_s": 3.055,
+   "start_epoch": 1794324780.0084746
+  },
+  "23-managed-service-es-near-miss": {
+   "answer": {
+    "copias_de_seguridad": "Semanales / Cada 6 horas",
+    "tiempo_de_respuesta_del_soporte": "48 horas / 2 horas",
+    "tiempo_de_restauracion": null,
+    "puestos_incluidos": "5 / 120",
+    "puestos_adicionales": null,
+    "_local_delegate": {
+     "read_server_side": {
+      "chars": 771,
+      "approx_tokens": 385
+     }
+    }
+   },
+   "wall_s": 3.318,
+   "start_epoch": 1794324786.0644057
+  },
+  "24-allowances-table-en-near-miss": {
+   "answer": {
+    "seats": "Starter: 8, Scale: 300",
+    "disk_quota": "Starter: 20 GB, Scale: 1 TB",
+    "bandwidth_quota": null,
+    "uptime_guarantee": "Starter: 99.5%, Scale: 99.95%",
+    "support_response_time": null,
+    "sandbox_environments": "Starter: 1, Scale: 12",
+    "_local_delegate": {
+     "read_server_side": {
+      "chars": 264,
+      "approx_tokens": 132
+     }
+    }
+   },
+   "wall_s": 3.802,
+   "start_epoch": 1794324792.3837633
+  },
+  "25-gateway-table-en-near-miss": {
+   "answer": {
+    "max_upload_size": "250 MB",
+    "max_message_size": null,
+    "max_concurrent_connections": "1200",
+    "max_concurrent_streams": null,
+    "idle_timeout": "90 s",
+    "connect_timeout": null,
+    "_local_delegate": {
+     "read_server_side": {
+      "chars": 270,
+      "approx_tokens": 135
+     }
+    }
+   },
+   "wall_s": 2.897,
+   "start_epoch": 1794324799.1869063
+  },
+  "26-plans-transposed-en-near-miss": {
+   "answer": {
+    "hobby_seats": 1,
+    "hobby_storage": "5 GB",
+    "studio_monthly_builds": 4000,
+    "factory_monthly_builds": 60000,
+    "enterprise_seats": null,
+    "studio_price": null,
+    "_local_delegate": {
+     "read_server_side": {
+      "chars": 430,
+      "approx_tokens": 215
+     }
+    }
+   },
+   "wall_s": 2.481,
+   "start_epoch": 1794324805.0858724
+  }
+ },
+ "log_rows": [
+  {
+   "ts": "2026-11-10T15:31:58+00:00",
+   "tool": "local_extract",
+   "model": "gemma4-26b-a4b",
+   "source": "path",
+   "chars_in": 949,
+   "chars_out": 318,
+   "latency_ms": 6200,
+   "ok": true,
+   "backend": "local",
+   "backend_host": "127.0.0.1:9292",
+   "v": "0.50.0",
+   "host": "<host>",
+   "concurrency": {
+    "requested_model": "gemma4-26b-a4b",
+    "phases": {
+     "turn": {
+      "start": "2026-11-10T15:31:51.929+00:00",
+      "end": "2026-11-10T15:31:51.939+00:00",
+      "ms": 9,
+      "n": 1
+     },
+     "slot": {
+      "start": "2026-11-10T15:31:51.940+00:00",
+      "end": "2026-11-10T15:31:51.940+00:00",
+      "ms": 0,
+      "n": 1
+     },
+     "backend": {
+      "start": "2026-11-10T15:31:51.942+00:00",
+      "end": "2026-11-10T15:31:58.124+00:00",
+      "ms": 6181,
+      "n": 1
+     }
+    },
+    "backend_models": {
+     "gemma4-26b-a4b": "ready"
+    },
+    "backend_models_at_ms": 3000,
+    "model_swap": false
+   },
+   "finish_reason": "stop",
+   "tokens_in": 470,
+   "tokens_out": 109,
+   "raw_len": 949,
+   "chars_out_raw": 318,
+   "path": "D:\\Projects\\local-delegate\\.sdd\\changes\\extract-cross-fill-and-routing\\cases\\01-pricing-table-en.html",
+   "json_schema": "used",
+   "remote_turn": "granted",
+   "inference_ms": 6085,
+   "wait_ms": 115,
+   "tok_s": 37.38,
+   "prefill_tok_s": 148.32
+  },
+  {
+   "ts": "2026-11-10T15:32:03+00:00",
+   "tool": "local_extract",
+   "model": "gemma4-26b-a4b",
+   "source": "path",
+   "chars_in": 949,
+   "chars_out": 173,
+   "latency_ms": 2433,
+   "ok": true,
+   "backend": "local",
+   "backend_host": "127.0.0.1:9292",
+   "v": "0.50.0",
+   "host": "<host>",
+   "concurrency": {
+    "requested_model": "gemma4-26b-a4b",
+    "phases": {
+     "turn": {
+      "start": "2026-11-10T15:32:01.158+00:00",
+      "end": "2026-11-10T15:32:01.166+00:00",
+      "ms": 8,
+      "n": 1
+     },
+     "slot": {
+      "start": "2026-11-10T15:32:01.167+00:00",
+      "end": "2026-11-10T15:32:01.167+00:00",
+      "ms": 0,
+      "n": 1
+     },
+     "backend": {
+      "start": "2026-11-10T15:32:01.170+00:00",
+      "end": "2026-11-10T15:32:03.586+00:00",
+      "ms": 2416,
+      "n": 1
+     }
+    }
+   },
+   "finish_reason": "stop",
+   "tokens_in": 457,
+   "tokens_out": 58,
+   "raw_len": 949,
+   "chars_out_raw": 173,
+   "path": "D:\\Projects\\local-delegate\\.sdd\\changes\\extract-cross-fill-and-routing\\cases\\01-pricing-table-en.html",
+   "json_schema": "used",
+   "remote_turn": "granted",
+   "inference_ms": 2352,
+   "wait_ms": 81,
+   "tok_s": 40.0,
+   "prefill_tok_s": 506.86
+  },
+  {
+   "ts": "2026-11-10T15:32:09+00:00",
+   "tool": "local_extract",
+   "model": "gemma4-26b-a4b",
+   "source": "path",
+   "chars_in": 428,
+   "chars_out": 181,
+   "latency_ms": 3234,
+   "ok": true,
+   "backend": "local",
+   "backend_host": "127.0.0.1:9292",
+   "v": "0.50.0",
+   "host": "<host>",
+   "concurrency": {
+    "requested_model": "gemma4-26b-a4b",
+    "phases": {
+     "turn": {
+      "start": "2026-11-10T15:32:06.613+00:00",
+      "end": "2026-11-10T15:32:06.619+00:00",
+      "ms": 6,
+      "n": 1
+     },
+     "slot": {
+      "start": "2026-11-10T15:32:06.620+00:00",
+      "end": "2026-11-10T15:32:06.620+00:00",
+      "ms": 0,
+      "n": 1
+     },
+     "backend": {
+      "start": "2026-11-10T15:32:06.623+00:00",
+      "end": "2026-11-10T15:32:09.842+00:00",
+      "ms": 3218,
+      "n": 1
+     }
+    },
+    "backend_models": {
+     "gemma4-26b-a4b": "ready"
+    },
+    "backend_models_at_ms": 3000,
+    "model_swap": false
+   },
+   "finish_reason": "stop",
+   "tokens_in": 250,
+   "tokens_out": 87,
+   "raw_len": 428,
+   "chars_out_raw": 181,
+   "path": "D:\\Projects\\local-delegate\\.sdd\\changes\\extract-cross-fill-and-routing\\cases\\06-limits-table-es.md",
+   "json_schema": "used",
+   "remote_turn": "granted",
+   "inference_ms": 3156,
+   "wait_ms": 78,
+   "tok_s": 39.86,
+   "prefill_tok_s": 256.9
+  },
+  {
+   "ts": "2026-11-10T15:32:15+00:00",
+   "tool": "local_extract",
+   "model": "gemma4-26b-a4b",
+   "source": "path",
+   "chars_in": 270,
+   "chars_out": 179,
+   "latency_ms": 3003,
+   "ok": true,
+   "backend": "local",
+   "backend_host": "127.0.0.1:9292",
+   "v": "0.50.0",
+   "host": "<host>",
+   "concurrency": {
+    "requested_model": "gemma4-26b-a4b",
+    "phases": {
+     "turn": {
+      "start": "2026-11-10T15:32:12.868+00:00",
+      "end": "2026-11-10T15:32:12.876+00:00",
+      "ms": 8,
+      "n": 1
+     },
+     "slot": {
+      "start": "2026-11-10T15:32:12.877+00:00",
+      "end": "2026-11-10T15:32:12.877+00:00",
+      "ms": 0,
+      "n": 1
+     },
+     "backend": {
+      "start": "2026-11-10T15:32:12.880+00:00",
+      "end": "2026-11-10T15:32:15.867+00:00",
+      "ms": 2986,
+      "n": 1
+     }
+    }
+   },
+   "finish_reason": "stop",
+   "tokens_in": 185,
+   "tokens_out": 82,
+   "raw_len": 270,
+   "chars_out_raw": 179,
+   "path": "D:\\Projects\\local-delegate\\.sdd\\changes\\extract-cross-fill-and-routing\\cases\\07-gateway-table-en.md",
+   "json_schema": "used",
+   "remote_turn": "granted",
+   "inference_ms": 2945,
+   "wait_ms": 58,
+   "tok_s": 39.13,
+   "prefill_tok_s": 217.98
+  },
+  {
+   "ts": "2026-11-10T15:32:22+00:00",
+   "tool": "local_extract",
+   "model": "gemma4-26b-a4b",
+   "source": "path",
+   "chars_in": 771,
+   "chars_out": 213,
+   "latency_ms": 3436,
+   "ok": true,
+   "backend": "local",
+   "backend_host": "127.0.0.1:9292",
+   "v": "0.50.0",
+   "host": "<host>",
+   "concurrency": {
+    "requested_model": "gemma4-26b-a4b",
+    "phases": {
+     "turn": {
+      "start": "2026-11-10T15:32:18.893+00:00",
+      "end": "2026-11-10T15:32:18.902+00:00",
+      "ms": 8,
+      "n": 1
+     },
+     "slot": {
+      "start": "2026-11-10T15:32:18.903+00:00",
+      "end": "2026-11-10T15:32:18.903+00:00",
+      "ms": 0,
+      "n": 1
+     },
+     "backend": {
+      "start": "2026-11-10T15:32:18.906+00:00",
+      "end": "2026-11-10T15:32:22.325+00:00",
+      "ms": 3419,
+      "n": 1
+     }
+    },
+    "backend_models": {
+     "gemma4-26b-a4b": "ready"
+    },
+    "backend_models_at_ms": 3000,
+    "model_swap": false
+   },
+   "finish_reason": "stop",
+   "tokens_in": 392,
+   "tokens_out": 98,
+   "raw_len": 771,
+   "chars_out_raw": 213,
+   "path": "D:\\Projects\\local-delegate\\.sdd\\changes\\extract-cross-fill-and-routing\\cases\\08-managed-service-es.html",
+   "json_schema": "used",
+   "remote_turn": "granted",
+   "inference_ms": 3373,
+   "wait_ms": 63,
+   "tok_s": 40.07,
+   "prefill_tok_s": 422.58
+  },
+  {
+   "ts": "2026-11-10T15:32:29+00:00",
+   "tool": "local_extract",
+   "model": "gemma4-26b-a4b",
+   "source": "path",
+   "chars_in": 264,
+   "chars_out": 296,
+   "latency_ms": 4132,
+   "ok": true,
+   "backend": "local",
+   "backend_host": "127.0.0.1:9292",
+   "v": "0.50.0",
+   "host": "<host>",
+   "concurrency": {
+    "requested_model": "gemma4-26b-a4b",
+    "phases": {
+     "turn": {
+      "start": "2026-11-10T15:32:25.352+00:00",
+      "end": "2026-11-10T15:32:25.360+00:00",
+      "ms": 8,
+      "n": 1
+     },
+     "slot": {
+      "start": "2026-11-10T15:32:25.361+00:00",
+      "end": "2026-11-10T15:32:25.361+00:00",
+      "ms": 0,
+      "n": 1
+     },
+     "backend": {
+      "start": "2026-11-10T15:32:25.364+00:00",
+      "end": "2026-11-10T15:32:29.478+00:00",
+      "ms": 4114,
+      "n": 1
+     }
+    },
+    "backend_models": {
+     "gemma4-26b-a4b": "ready"
+    },
+    "backend_models_at_ms": 3000,
+    "model_swap": false
+   },
+   "finish_reason": "stop",
+   "tokens_in": 192,
+   "tokens_out": 128,
+   "raw_len": 264,
+   "chars_out_raw": 296,
+   "path": "D:\\Projects\\local-delegate\\.sdd\\changes\\extract-cross-fill-and-routing\\cases\\09-allowances-table-en.md",
+   "json_schema": "used",
+   "remote_turn": "granted",
+   "inference_ms": 4046,
+   "wait_ms": 86,
+   "tok_s": 39.46,
+   "prefill_tok_s": 239.43
+  },
+  {
+   "ts": "2026-11-10T15:32:34+00:00",
+   "tool": "local_extract",
+   "model": "gemma4-26b-a4b",
+   "source": "path",
+   "chars_in": 417,
+   "chars_out": 93,
+   "latency_ms": 1980,
+   "ok": true,
+   "backend": "local",
+   "backend_host": "127.0.0.1:9292",
+   "v": "0.50.0",
+   "host": "<host>",
+   "concurrency": {
+    "requested_model": "gemma4-26b-a4b",
+    "phases": {
+     "turn": {
+      "start": "2026-11-10T15:32:32.505+00:00",
+      "end": "2026-11-10T15:32:32.514+00:00",
+      "ms": 8,
+      "n": 1
+     },
+     "slot": {
+      "start": "2026-11-10T15:32:32.515+00:00",
+      "end": "2026-11-10T15:32:32.515+00:00",
+      "ms": 0,
+      "n": 1
+     },
+     "backend": {
+      "start": "2026-11-10T15:32:32.518+00:00",
+      "end": "2026-11-10T15:32:34.481+00:00",
+      "ms": 1962,
+      "n": 1
+     }
+    }
+   },
+   "finish_reason": "stop",
+   "tokens_in": 251,
+   "tokens_out": 40,
+   "raw_len": 417,
+   "chars_out_raw": 93,
+   "path": "D:\\Projects\\local-delegate\\.sdd\\changes\\extract-cross-fill-and-routing\\cases\\10-spec-sheet-en.html",
+   "json_schema": "used",
+   "remote_turn": "granted",
+   "inference_ms": 1918,
+   "wait_ms": 62,
+   "tok_s": 39.77,
+   "prefill_tok_s": 275.04
+  },
+  {
+   "ts": "2026-11-10T15:32:39+00:00",
+   "tool": "local_extract",
+   "model": "gemma4-26b-a4b",
+   "source": "path",
+   "chars_in": 179,
+   "chars_out": 128,
+   "latency_ms": 2155,
+   "ok": true,
+   "backend": "local",
+   "backend_host": "127.0.0.1:9292",
+   "v": "0.50.0",
+   "host": "<host>",
+   "concurrency": {
+    "requested_model": "gemma4-26b-a4b",
+    "phases": {
+     "turn": {
+      "start": "2026-11-10T15:32:37.507+00:00",
+      "end": "2026-11-10T15:32:37.514+00:00",
+      "ms": 7,
+      "n": 1
+     },
+     "slot": {
+      "start": "2026-11-10T15:32:37.515+00:00",
+      "end": "2026-11-10T15:32:37.515+00:00",
+      "ms": 0,
+      "n": 1
+     },
+     "backend": {
+      "start": "2026-11-10T15:32:37.518+00:00",
+      "end": "2026-11-10T15:32:39.658+00:00",
+      "ms": 2140,
+      "n": 1
+     }
+    }
+   },
+   "finish_reason": "stop",
+   "tokens_in": 142,
+   "tokens_out": 54,
+   "raw_len": 179,
+   "chars_out_raw": 128,
+   "path": "D:\\Projects\\local-delegate\\.sdd\\changes\\extract-cross-fill-and-routing\\cases\\11-ficha-suministro-es.md",
+   "json_schema": "used",
+   "remote_turn": "granted",
+   "inference_ms": 2088,
+   "wait_ms": 67,
+   "tok_s": 40.43,
+   "prefill_tok_s": 188.86
+  },
+  {
+   "ts": "2026-11-10T15:32:45+00:00",
+   "tool": "local_extract",
+   "model": "gemma4-26b-a4b",
+   "source": "path",
+   "chars_in": 583,
+   "chars_out": 156,
+   "latency_ms": 2476,
+   "ok": true,
+   "backend": "local",
+   "backend_host": "127.0.0.1:9292",
+   "v": "0.50.0",
+   "host": "<host>",
+   "concurrency": {
+    "requested_model": "gemma4-26b-a4b",
+    "phases": {
+     "turn": {
+      "start": "2026-11-10T15:32:42.686+00:00",
+      "end": "2026-11-10T15:32:42.702+00:00",
+      "ms": 16,
+      "n": 1
+     },
+     "slot": {
+      "start": "2026-11-10T15:32:42.704+00:00",
+      "end": "2026-11-10T15:32:42.704+00:00",
+      "ms": 0,
+      "n": 1
+     },
+     "backend": {
+      "start": "2026-11-10T15:32:42.708+00:00",
+      "end": "2026-11-10T15:32:45.157+00:00",
+      "ms": 2449,
+      "n": 1
+     }
+    }
+   },
+   "finish_reason": "stop",
+   "tokens_in": 315,
+   "tokens_out": 63,
+   "raw_len": 583,
+   "chars_out_raw": 156,
+   "path": "D:\\Projects\\local-delegate\\.sdd\\changes\\extract-cross-fill-and-routing\\cases\\12-capabilities-repeated-en.html",
+   "json_schema": "used",
+   "remote_turn": "granted",
+   "inference_ms": 2403,
+   "wait_ms": 73,
+   "tok_s": 39.35,
+   "prefill_tok_s": 392.88
+  },
+  {
+   "ts": "2026-11-10T15:32:50+00:00",
+   "tool": "local_extract",
+   "model": "gemma4-26b-a4b",
+   "source": "path",
+   "chars_in": 430,
+   "chars_out": 152,
+   "latency_ms": 2552,
+   "ok": true,
+   "backend": "local",
+   "backend_host": "127.0.0.1:9292",
+   "v": "0.50.0",
+   "host": "<host>",
+   "concurrency": {
+    "requested_model": "gemma4-26b-a4b",
+    "phases": {
+     "turn": {
+      "start": "2026-11-10T15:32:48.183+00:00",
+      "end": "2026-11-10T15:32:48.192+00:00",
+      "ms": 8,
+      "n": 1
+     },
+     "slot": {
+      "start": "2026-11-10T15:32:48.193+00:00",
+      "end": "2026-11-10T15:32:48.193+00:00",
+      "ms": 0,
+      "n": 1
+     },
+     "backend": {
+      "start": "2026-11-10T15:32:48.196+00:00",
+      "end": "2026-11-10T15:32:50.731+00:00",
+      "ms": 2535,
+      "n": 1
+     }
+    }
+   },
+   "finish_reason": "stop",
+   "tokens_in": 303,
+   "tokens_out": 65,
+   "raw_len": 430,
+   "chars_out_raw": 152,
+   "path": "D:\\Projects\\local-delegate\\.sdd\\changes\\extract-cross-fill-and-routing\\cases\\17-plans-transposed-en.html",
+   "json_schema": "used",
+   "remote_turn": "granted",
+   "inference_ms": 2473,
+   "wait_ms": 79,
+   "tok_s": 40.21,
+   "prefill_tok_s": 353.87,
+   "pace_rel": 1.02,
+   "slow": false
+  },
+  {
+   "ts": "2026-11-10T15:32:57+00:00",
+   "tool": "local_extract",
+   "model": "gemma4-26b-a4b",
+   "source": "path",
+   "chars_in": 949,
+   "chars_out": 230,
+   "latency_ms": 3242,
+   "ok": true,
+   "backend": "local",
+   "backend_host": "127.0.0.1:9292",
+   "v": "0.50.0",
+   "host": "<host>",
+   "concurrency": {
+    "requested_model": "gemma4-26b-a4b",
+    "phases": {
+     "turn": {
+      "start": "2026-11-10T15:32:53.758+00:00",
+      "end": "2026-11-10T15:32:53.765+00:00",
+      "ms": 6,
+      "n": 1
+     },
+     "slot": {
+      "start": "2026-11-10T15:32:53.766+00:00",
+      "end": "2026-11-10T15:32:53.766+00:00",
+      "ms": 0,
+      "n": 1
+     },
+     "backend": {
+      "start": "2026-11-10T15:32:53.769+00:00",
+      "end": "2026-11-10T15:32:56.996+00:00",
+      "ms": 3226,
+      "n": 1
+     }
+    },
+    "backend_models": {
+     "gemma4-26b-a4b": "ready"
+    },
+    "backend_models_at_ms": 3000,
+    "model_swap": false
+   },
+   "finish_reason": "stop",
+   "tokens_in": 471,
+   "tokens_out": 92,
+   "raw_len": 949,
+   "chars_out_raw": 230,
+   "path": "D:\\Projects\\local-delegate\\.sdd\\changes\\extract-cross-fill-and-routing\\cases\\01-pricing-table-en.html",
+   "json_schema": "used",
+   "remote_turn": "granted",
+   "inference_ms": 3176,
+   "wait_ms": 66,
+   "tok_s": 40.01,
+   "prefill_tok_s": 537.27,
+   "pace_rel": 1.01,
+   "slow": false
+  },
+  {
+   "ts": "2026-11-10T15:33:03+00:00",
+   "tool": "local_extract",
+   "model": "gemma4-26b-a4b",
+   "source": "path",
+   "chars_in": 428,
+   "chars_out": 177,
+   "latency_ms": 3033,
+   "ok": true,
+   "backend": "local",
+   "backend_host": "127.0.0.1:9292",
+   "v": "0.50.0",
+   "host": "<host>",
+   "concurrency": {
+    "requested_model": "gemma4-26b-a4b",
+    "phases": {
+     "turn": {
+      "start": "2026-11-10T15:33:00.022+00:00",
+      "end": "2026-11-10T15:33:00.031+00:00",
+      "ms": 8,
+      "n": 1
+     },
+     "slot": {
+      "start": "2026-11-10T15:33:00.032+00:00",
+      "end": "2026-11-10T15:33:00.032+00:00",
+      "ms": 0,
+      "n": 1
+     },
+     "backend": {
+      "start": "2026-11-10T15:33:00.035+00:00",
+      "end": "2026-11-10T15:33:03.051+00:00",
+      "ms": 3015,
+      "n": 1
+     }
+    },
+    "backend_models": {
+     "gemma4-26b-a4b": "ready"
+    },
+    "backend_models_at_ms": 3000,
+    "model_swap": false
+   },
+   "finish_reason": "stop",
+   "tokens_in": 251,
+   "tokens_out": 83,
+   "raw_len": 428,
+   "chars_out_raw": 177,
+   "path": "D:\\Projects\\local-delegate\\.sdd\\changes\\extract-cross-fill-and-routing\\cases\\06-limits-table-es.md",
+   "json_schema": "used",
+   "remote_turn": "granted",
+   "inference_ms": 2943,
+   "wait_ms": 90,
+   "tok_s": 40.33,
+   "prefill_tok_s": 283.63,
+   "pace_rel": 1.01,
+   "slow": false
+  },
+  {
+   "ts": "2026-11-10T15:33:09+00:00",
+   "tool": "local_extract",
+   "model": "gemma4-26b-a4b",
+   "source": "path",
+   "chars_in": 771,
+   "chars_out": 213,
+   "latency_ms": 3298,
+   "ok": true,
+   "backend": "local",
+   "backend_host": "127.0.0.1:9292",
+   "v": "0.50.0",
+   "host": "<host>",
+   "concurrency": {
+    "requested_model": "gemma4-26b-a4b",
+    "phases": {
+     "turn": {
+      "start": "2026-11-10T15:33:06.077+00:00",
+      "end": "2026-11-10T15:33:06.085+00:00",
+      "ms": 8,
+      "n": 1
+     },
+     "slot": {
+      "start": "2026-11-10T15:33:06.086+00:00",
+      "end": "2026-11-10T15:33:06.086+00:00",
+      "ms": 0,
+      "n": 1
+     },
+     "backend": {
+      "start": "2026-11-10T15:33:06.089+00:00",
+      "end": "2026-11-10T15:33:09.370+00:00",
+      "ms": 3281,
+      "n": 1
+     }
+    },
+    "backend_models": {
+     "gemma4-26b-a4b": "ready"
+    },
+    "backend_models_at_ms": 3000,
+    "model_swap": false
+   },
+   "finish_reason": "stop",
+   "tokens_in": 393,
+   "tokens_out": 94,
+   "raw_len": 771,
+   "chars_out_raw": 213,
+   "path": "D:\\Projects\\local-delegate\\.sdd\\changes\\extract-cross-fill-and-routing\\cases\\08-managed-service-es.html",
+   "json_schema": "used",
+   "remote_turn": "granted",
+   "inference_ms": 3240,
+   "wait_ms": 58,
+   "tok_s": 40.29,
+   "prefill_tok_s": 433.29,
+   "pace_rel": 1.01,
+   "slow": false
+  },
+  {
+   "ts": "2026-11-10T15:33:16+00:00",
+   "tool": "local_extract",
+   "model": "gemma4-26b-a4b",
+   "source": "path",
+   "chars_in": 264,
+   "chars_out": 252,
+   "latency_ms": 3781,
+   "ok": true,
+   "backend": "local",
+   "backend_host": "127.0.0.1:9292",
+   "v": "0.50.0",
+   "host": "<host>",
+   "concurrency": {
+    "requested_model": "gemma4-26b-a4b",
+    "phases": {
+     "turn": {
+      "start": "2026-11-10T15:33:12.397+00:00",
+      "end": "2026-11-10T15:33:12.407+00:00",
+      "ms": 10,
+      "n": 1
+     },
+     "slot": {
+      "start": "2026-11-10T15:33:12.408+00:00",
+      "end": "2026-11-10T15:33:12.408+00:00",
+      "ms": 0,
+      "n": 1
+     },
+     "backend": {
+      "start": "2026-11-10T15:33:12.411+00:00",
+      "end": "2026-11-10T15:33:16.173+00:00",
+      "ms": 3762,
+      "n": 1
+     }
+    },
+    "backend_models": {
+     "gemma4-26b-a4b": "ready"
+    },
+    "backend_models_at_ms": 3000,
+    "model_swap": false
+   },
+   "finish_reason": "stop",
+   "tokens_in": 189,
+   "tokens_out": 113,
+   "raw_len": 264,
+   "chars_out_raw": 252,
+   "path": "D:\\Projects\\local-delegate\\.sdd\\changes\\extract-cross-fill-and-routing\\cases\\09-allowances-table-en.md",
+   "json_schema": "used",
+   "remote_turn": "granted",
+   "inference_ms": 3690,
+   "wait_ms": 91,
+   "tok_s": 39.25,
+   "prefill_tok_s": 232.94,
+   "pace_rel": 0.98,
+   "slow": false
+  },
+  {
+   "ts": "2026-11-10T15:33:22+00:00",
+   "tool": "local_extract",
+   "model": "gemma4-26b-a4b",
+   "source": "path",
+   "chars_in": 270,
+   "chars_out": 188,
+   "latency_ms": 2877,
+   "ok": true,
+   "backend": "local",
+   "backend_host": "127.0.0.1:9292",
+   "v": "0.50.0",
+   "host": "<host>",
+   "concurrency": {
+    "requested_model": "gemma4-26b-a4b",
+    "phases": {
+     "turn": {
+      "start": "2026-11-10T15:33:19.198+00:00",
+      "end": "2026-11-10T15:33:19.207+00:00",
+      "ms": 8,
+      "n": 1
+     },
+     "slot": {
+      "start": "2026-11-10T15:33:19.207+00:00",
+      "end": "2026-11-10T15:33:19.207+00:00",
+      "ms": 0,
+      "n": 1
+     },
+     "backend": {
+      "start": "2026-11-10T15:33:19.210+00:00",
+      "end": "2026-11-10T15:33:22.071+00:00",
+      "ms": 2860,
+      "n": 1
+     }
+    }
+   },
+   "finish_reason": "stop",
+   "tokens_in": 185,
+   "tokens_out": 81,
+   "raw_len": 270,
+   "chars_out_raw": 188,
+   "path": "D:\\Projects\\local-delegate\\.sdd\\changes\\extract-cross-fill-and-routing\\cases\\07-gateway-table-en.md",
+   "json_schema": "used",
+   "remote_turn": "granted",
+   "inference_ms": 2822,
+   "wait_ms": 55,
+   "tok_s": 39.2,
+   "prefill_tok_s": 244.82,
+   "pace_rel": 0.98,
+   "slow": false
+  },
+  {
+   "ts": "2026-11-10T15:33:27+00:00",
+   "tool": "local_extract",
+   "model": "gemma4-26b-a4b",
+   "source": "path",
+   "chars_in": 430,
+   "chars_out": 155,
+   "latency_ms": 2460,
+   "ok": true,
+   "backend": "local",
+   "backend_host": "127.0.0.1:9292",
+   "v": "0.50.0",
+   "host": "<host>",
+   "concurrency": {
+    "requested_model": "gemma4-26b-a4b",
+    "phases": {
+     "turn": {
+      "start": "2026-11-10T15:33:25.099+00:00",
+      "end": "2026-11-10T15:33:25.108+00:00",
+      "ms": 8,
+      "n": 1
+     },
+     "slot": {
+      "start": "2026-11-10T15:33:25.109+00:00",
+      "end": "2026-11-10T15:33:25.109+00:00",
+      "ms": 0,
+      "n": 1
+     },
+     "backend": {
+      "start": "2026-11-10T15:33:25.111+00:00",
+      "end": "2026-11-10T15:33:27.555+00:00",
+      "ms": 2443,
+      "n": 1
+     }
+    }
+   },
+   "finish_reason": "stop",
+   "tokens_in": 306,
+   "tokens_out": 66,
+   "raw_len": 430,
+   "chars_out_raw": 155,
+   "path": "D:\\Projects\\local-delegate\\.sdd\\changes\\extract-cross-fill-and-routing\\cases\\17-plans-transposed-en.html",
+   "json_schema": "used",
+   "remote_turn": "granted",
+   "inference_ms": 2404,
+   "wait_ms": 56,
+   "tok_s": 40.87,
+   "prefill_tok_s": 387.64,
+   "pace_rel": 1.03,
+   "slow": false
+  }
+ ]
+}

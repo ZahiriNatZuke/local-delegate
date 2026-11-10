@@ -44,3 +44,7 @@ src/local_delegate/resources/hooks/*.py -text
 # rechaza la plantilla que lo lleve. Sin esto, el checkout de Windows con `core.autocrlf=true` las
 # convertiría a CRLF.
 src/local_delegate/resources/completion/** -text
+
+# Copias de los casos del SDD extract-cross-fill-and-routing (#586): el rol se decide por el tamaño
+# en bytes del fichero, y la tabla antes/después compara con las medidas de la investigación.
+tests/fixtures/extract_table_routing/** -text

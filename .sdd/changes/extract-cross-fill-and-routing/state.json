@@ -1,0 +1,102 @@
+{
+  "schemaVersion": 1,
+  "slug": "extract-cross-fill-and-routing",
+  "title": "local_extract: aviso de valor cruzado entre claves y subida al rol long en tablas (#586)",
+  "mode": "standard",
+  "traceability": "strict",
+  "status": "implementing",
+  "createdAt": "2026-11-10T12:02:04.004Z",
+  "updatedAt": "2026-11-10T14:09:22.283Z",
+  "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-11-10T14:09:21.981Z",
+      "evidence": "spec.md: 39 requisitos con criterio y método; research.md con medición en vivo (22 casos x 2 modelos); dos pasadas de revisión adversarial sin bloqueantes (plan-review-1.md); puertas separadas D10",
+      "actor": "user"
+    },
+    "plan": {
+      "status": "approved",
+      "updatedAt": "2026-11-10T14:09:22.207Z",
+      "evidence": "plan.md: 8 tareas con dueños en serie para server.py, 37 mutantes, puerta T1 por segundo proceso sin reiniciar el daemon, prueba en vivo en T7; revisión adversarial sin bloqueantes",
+      "actor": "user"
+    },
+    "quality": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "conformance": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "memory": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-11-10T12:02:04.004Z",
+      "reason": "SDD change created"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "researching",
+      "at": "2026-11-10T12:23:38.034Z",
+      "reason": "petición entendida; investigación con medición en vivo en curso"
+    },
+    {
+      "type": "transition",
+      "from": "researching",
+      "to": "specifying",
+      "at": "2026-11-10T12:43:16.329Z",
+      "reason": "research.md entregado con medición en vivo: 22 casos por modelo, detector en tres variantes, coste del cambio de modelo"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-11-10T14:09:21.981Z",
+      "evidence": "spec.md: 39 requisitos con criterio y método; research.md con medición en vivo (22 casos x 2 modelos); dos pasadas de revisión adversarial sin bloqueantes (plan-review-1.md); puertas separadas D10",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-11-10T14:09:22.054Z",
+      "reason": "spec aprobada"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "plan-review",
+      "at": "2026-11-10T14:09:22.130Z",
+      "reason": "revisión adversarial en dos pasadas (plan-review-1.md)"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-11-10T14:09:22.207Z",
+      "evidence": "plan.md: 8 tareas con dueños en serie para server.py, 37 mutantes, puerta T1 por segundo proceso sin reiniciar el daemon, prueba en vivo en T7; revisión adversarial sin bloqueantes",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "plan-review",
+      "to": "implementing",
+      "at": "2026-11-10T14:09:22.283Z",
+      "reason": "spec y plan aprobados"
+    }
+  ]
+}

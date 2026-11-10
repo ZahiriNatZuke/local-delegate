@@ -1,0 +1,35 @@
+============================= test session starts =============================
+platform linux -- pytest-8.3.2, pluggy-1.5.0
+rootdir: /srv/build/orchard
+configfile: pyproject.toml
+collected 243 items
+
+tests/test_basket.py ........................................            [ 16%]
+tests/test_ledger.py ..............F.....................F.......        [ 34%]
+tests/test_pricing.py ...................................................[ 55%]
+tests/test_shipping.py ...............F..............................F...[ 76%]
+tests/test_users.py ......................................................[100%]
+
+=================================== FAILURES ===================================
+_________________________ test_ledger_rounds_half_even _________________________
+/srv/build/orchard/.venv/lib/python3.11/site-packages/orchard/ledger.py:88: in close_period
+    return round_half_even(total, places)
+E   AssertionError: assert Decimal('10.12') == Decimal('10.13')
+_____________________ test_ledger_rejects_negative_refund ______________________
+/srv/build/orchard/.venv/lib/python3.11/site-packages/orchard/ledger.py:131: in refund
+    raise ValueError("refund above the original amount")
+E   ValueError: refund above the original amount
+______________________ test_shipping_zone_for_island_code ______________________
+tests/test_shipping.py:212: in test_shipping_zone_for_island_code
+    assert zone_for("IB-07") == "islands"
+E   AssertionError: assert 'mainland' == 'islands'
+_______________________ test_shipping_free_above_limit _________________________
+tests/test_shipping.py:340: in test_shipping_free_above_limit
+    assert quote(basket).shipping == 0
+E   assert 4.5 == 0
+=========================== short test summary info ============================
+FAILED tests/test_ledger.py::test_ledger_rounds_half_even - AssertionError
+FAILED tests/test_ledger.py::test_ledger_rejects_negative_refund - ValueError
+FAILED tests/test_shipping.py::test_shipping_zone_for_island_code - AssertionError
+FAILED tests/test_shipping.py::test_shipping_free_above_limit - assert 4.5 == 0
+======================== 4 failed, 239 passed in 14.69s ========================

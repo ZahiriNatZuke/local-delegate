@@ -15,6 +15,7 @@ from __future__ import annotations
 import ast
 import base64
 import contextvars
+import functools
 import itertools
 import json
 import math
@@ -1362,6 +1363,7 @@ def _log_event(
     slot_wait_ms: int | None = None,
     exception_type: str | None = None,
     concurrency_trace: dict | None = None,
+    role_reason: str | None = None,
 ) -> None:
     """Escribe una línea JSONL en el log activo (rotado por mes o fijo). Nunca rompe una tool.
 
@@ -1567,6 +1569,11 @@ def _log_event(
         # ninguna y con una espera de backend de 3 s o más en la primera llamada (tuvo que cargar).
         if routing is not None:
             rec["routing"] = routing
+        # #586: why the role is not the one the size gives (`"table"`): passed by `_log_stopped`
+        # from the call's token, or read from the operation in course (`local_extract`).
+        reason = role_reason if role_reason is not None else _ROLE_REASON.get()
+        if reason:
+            rec["role_reason"] = reason
         if affinity_foreign_flight is not None:
             rec["affinity_foreign_flight"] = int(affinity_foreign_flight)
         if affinity_failed:
@@ -2189,6 +2196,9 @@ def _log_stopped(token: cancellation.Token, **fields: Any) -> None:
         turn_wait_ms=token.turn_wait_ms,
         slot_wait_ms=token.slot_wait_ms,
         concurrency_trace=trace,
+        # #586: from the token, not from the operation: the middleware writes this row on the
+        # event loop, outside the tool's thread and its context.
+        role_reason=getattr(token, "role_reason", None),
         **fields,
     )
 
@@ -4674,6 +4684,289 @@ def _format_diff_facts(facts: list[_DiffFile], max_chars: int) -> str:
         files_block = _format_inventory([(f.path, f.added, f.removed) for f in facts], max_chars)
     symbols_block = _format_diff_symbols(facts, max_chars - len(files_block) - 2)
     return f"{files_block}\n\n{symbols_block}" if symbols_block else files_block
+
+
+# --- Sense and type of a chunked diff (#636) -----------------------------------------------------
+# Measured on the diff of the issue (27 KB, 3 parts): the condition lived in one part, and the reduce
+# that wrote the message saw only the notes of the parts plus the file inventory, not one literal
+# line of the condition and no hint of the type. The message said «ask /running on network
+# errors», the opposite of the change, and typed a fix as `feat`. Both facts below are read off the
+# diff without a model: the changed condition lines, copied, and the type the diff points to.
+_CONDITION = re.compile(r"\b(?:if|elif|while|unless|until|when|and|or|not)\b|&&|\|\||\?\?|[!=]==?")
+_CODE_PUNCTUATION = re.compile(r"[()\[\]{}=:?&|!]")
+_COMMENT_PREFIXES = ("#", "//", "/*", "*", "--", "<!--")
+_DOC_SUFFIXES = (".md", ".rst", ".txt", ".adoc")
+_DATA_SUFFIXES = (".json", ".lock", ".csv", ".svg")
+_CONDITION_LINE_MAX = 160
+_CONDITION_LINES_PER_CHANGE = 6
+
+
+def _is_test_path(path: str) -> bool:
+    name = path.rsplit("/", 1)[-1]
+    return (
+        path.startswith(("tests/", "test/"))
+        or "/tests/" in path
+        or "/test/" in path
+        or name.startswith("test_")
+        or ".test." in name
+        or ".spec." in name
+        or name.rsplit(".", 1)[0].endswith("_test")
+    )
+
+
+def _is_doc_path(path: str) -> bool:
+    return path.lower().endswith(_DOC_SUFFIXES) or path.startswith("docs/")
+
+
+def _is_changelog_path(path: str) -> bool:
+    return path.rsplit("/", 1)[-1].upper().startswith(("CHANGELOG", "CHANGES", "HISTORY", "NEWS"))
+
+
+def _diff_file_sections(diff: str) -> list[tuple[str, list[str]]]:
+    """`(path, lines)` of each `diff --git` section; the path is the one `_diff_facts` gives."""
+    sections: list[list[str]] = []
+    for line in diff.splitlines():
+        if line.startswith("diff --git "):
+            sections.append([])
+        if sections:
+            sections[-1].append(line)
+    out = []
+    for lines in sections:
+        facts = _diff_facts("\n".join(lines))
+        if facts:
+            out.append((facts[0].path, lines))
+    return out
+
+
+def _hunk_lines(lines: list[str]) -> Iterable[str]:
+    """The lines of a file section from its first `@@` on (headers left out)."""
+    in_hunk = False
+    for line in lines:
+        if line.startswith("@@"):
+            in_hunk = True
+        if in_hunk:
+            yield line
+
+
+def _condition_line(content: str) -> bool:
+    text = content.strip()
+    if not text or text.startswith(_COMMENT_PREFIXES):
+        return False
+    return bool(_CONDITION.search(text)) and bool(_CODE_PUNCTUATION.search(text))
+
+
+@dataclass
+class _ConditionChange:
+    """One run of `-`/`+` lines of a file that changes a condition (#636)."""
+
+    path: str
+    removed: list[str]
+    added: list[str]
+    order: int
+
+    def rank(self) -> tuple[int, int, int]:
+        # Code before its tests, and a condition changed on both sides before one only added.
+        return (int(_is_test_path(self.path)), int(not (self.removed and self.added)), self.order)
+
+    def lines(self) -> list[str]:
+        def _cut(text: str) -> str:
+            text = text.strip()
+            if len(text) > _CONDITION_LINE_MAX:
+                return text[: _CONDITION_LINE_MAX - 1] + "…"
+            return text
+
+        rows = [f"- {_cut(t)}" for t in self.removed] + [f"+ {_cut(t)}" for t in self.added]
+        return rows[:_CONDITION_LINES_PER_CHANGE]
+
+
+def _diff_condition_changes(diff: str) -> list[_ConditionChange]:
+    """The changed condition lines of the diff, code first, copied as they are (#636).
+
+    Docs and data files are left out (their prose and strings say «if» and «or» without being a
+    condition), and so are comment lines.
+    """
+    changes: list[_ConditionChange] = []
+    for path, lines in _diff_file_sections(diff):
+        if _is_doc_path(path) or path.lower().endswith(_DATA_SUFFIXES):
+            continue
+        for removed, added in _condition_runs(lines):
+            changes.append(_ConditionChange(path, removed, added, len(changes)))
+    return sorted(changes, key=_ConditionChange.rank)
+
+
+def _condition_runs(lines: list[str]) -> list[tuple[list[str], list[str]]]:
+    """`(removed, added)` condition lines of each run of `-`/`+` lines of one file section."""
+    runs: list[tuple[list[str], list[str]]] = []
+    removed: list[str] = []
+    added: list[str] = []
+    for line in [*_hunk_lines(lines), " "]:  # the trailing context line closes the last run
+        if line.startswith("-") and _condition_line(line[1:]):
+            removed.append(line[1:])
+        elif line.startswith("+") and _condition_line(line[1:]):
+            added.append(line[1:])
+        elif not line.startswith(("-", "+")):
+            if removed or added:
+                runs.append((removed, added))
+            removed, added = [], []
+    return runs
+
+
+def _format_condition_changes(
+    diff: str, max_chars: int, header: bool = True, omitted: str | None = None
+) -> str:
+    """The changed conditions within `max_chars`, grouped by file; `""` if there are none.
+
+    What does not fit is counted, not silently dropped: `omitted` (with `{count}`) says so in the
+    warning's language; without it, in the Spanish of the prompt.
+    """
+    changes = _diff_condition_changes(diff)
+    if not changes:
+        return ""
+    title = "Condiciones cambiadas, copiadas tal cual del diff (- antes, + después):"
+    rows: list[str] = [title] if header else []
+    used = sum(len(r) + 1 for r in rows)
+    omitted_note = 70
+    kept = 0
+    last_path = None
+    for change in changes:
+        block = [] if change.path == last_path else [f"  {change.path}:"]
+        block += [f"    {row}" for row in change.lines()]
+        size = sum(len(r) + 1 for r in block)
+        if used + size + omitted_note > max_chars:
+            break
+        rows += block
+        used += size
+        kept += 1
+        last_path = change.path
+    if not kept:
+        return ""
+    if kept < len(changes):
+        note = omitted or "(y {count} cambios de condición más, omitidos por espacio)"
+        rows.append(f"  {note.format(count=len(changes) - kept)}")
+    return "\n".join(rows)
+
+
+_COMMIT_TYPES = frozenset(
+    {"feat", "fix", "docs", "test", "refactor", "perf", "chore", "ci", "build", "style", "revert"}
+)
+_BRANCH_TYPE_ALIASES = {
+    "bugfix": "fix",
+    "hotfix": "fix",
+    "feature": "feat",
+    "doc": "docs",
+    "tests": "test",
+}
+_FIX_SECTIONS = frozenset(
+    {"fixed", "fixes", "bug fixes", "bugfixes", "corregido", "arreglado", "correcciones"}
+)
+_FEAT_SECTIONS = frozenset({"added", "features", "new", "añadido", "nuevo", "novedades"})
+_SECTION_HEADING = re.compile(r"^#{2,4}[ \t]+(\S.*)$")  # linear: no lazy group before `\s*$`
+
+
+def _changelog_type(lines: list[str]) -> tuple[str, str] | None:
+    """`(type, section)` when every entry a CHANGELOG section adds sits under one fix or one feat
+    heading (`### Corregido`, `### Added`…); None if mixed, elsewhere or unknown."""
+    section = ""
+    kinds: set[str] = set()
+    named = ""
+    for line in _hunk_lines(lines):
+        if line.startswith("@@"):
+            tail = line.split("@@", 2)[-1].strip()
+            if heading := _SECTION_HEADING.match(tail):
+                section = heading.group(1)
+            continue
+        text = line[1:] if line[:1] in "+- " else line
+        if heading := _SECTION_HEADING.match(text):
+            if not line.startswith("-"):
+                section = heading.group(1)
+            continue
+        if line.startswith("+") and text.strip():
+            key = section.strip().lower()
+            kind = "fix" if key in _FIX_SECTIONS else "feat" if key in _FEAT_SECTIONS else "other"
+            kinds.add(kind)
+            named = section.strip()
+    if len(kinds) == 1 and kinds <= {"fix", "feat"}:
+        return next(iter(kinds)), named
+    return None
+
+
+def _branch_type(path: str | None) -> tuple[str, str] | None:
+    """`(type, branch)` when the repo holding the diff file is on a `fix/…`-like branch."""
+    if not path:
+        return None
+    try:
+        git_dir = _git_dir_above(Path(path).expanduser().resolve().parent)
+    except (OSError, RuntimeError, ValueError):
+        return None
+    branch = git_history.head_branch(git_dir) if git_dir is not None else None
+    if not branch or "/" not in branch:
+        return None
+    prefix = branch.split("/", 1)[0].lower()
+    kind = _BRANCH_TYPE_ALIASES.get(prefix, prefix)
+    return (kind, branch) if kind in _COMMIT_TYPES else None
+
+
+def _commit_type_signal(diff: str, path: str | None) -> tuple[str, str, str] | None:
+    """`(type, reason, detail)`: the Conventional Commits type the diff itself points to (#636).
+
+    In order: a `fix/…` branch of the repo holding `path`, a diff of only tests, of only docs, and
+    the CHANGELOG section its entries are added under. None when nothing says it clearly.
+    """
+    if branch := _branch_type(path):
+        return branch[0], "branch", branch[1]
+    paths = [p for p, _ in _diff_file_sections(diff)]
+    if not paths:
+        return None
+    if all(_is_test_path(p) for p in paths):
+        return "test", "tests", ""
+    if all(_is_doc_path(p) for p in paths):
+        return "docs", "docs", ""
+    for p, lines in _diff_file_sections(diff):
+        if _is_changelog_path(p) and (found := _changelog_type(lines)):
+            return found[0], "changelog", found[1]
+    return None
+
+
+_COMMIT_TYPE_REASONS_PROMPT = {
+    "branch": "la rama es «{detail}»",
+    "tests": "el diff solo toca tests",
+    "docs": "el diff solo toca documentación",
+    "changelog": "el CHANGELOG añade su entrada en «{detail}»",
+}
+_CONVENTIONAL_HEAD = re.compile(r"^([A-Za-z]+)(\([^)\n]*\))?(!)?:[ \t]")
+
+
+def _with_commit_type(message: str, signal: tuple[str, str, str]) -> tuple[str, str | None]:
+    """`(message, old type)`: the first line's type set to the one of `signal` (#636).
+
+    Only the type word changes; scope, `!` and summary stay. A first line that is not
+    `type(scope): …` is left as it is, and so is one that already has the type.
+    """
+    match = _CONVENTIONAL_HEAD.match(message)
+    if not match or match.group(1).lower() == signal[0]:
+        return message, None
+    return signal[0] + message[match.end(1) :], match.group(1)
+
+
+def _commit_chunked_notices(
+    message: str, diff: str, signal: tuple[str, str, str] | None, old_type: str | None
+) -> str:
+    """The warnings of a chunked message: always the review one, plus the type one (#636)."""
+    omitted = i18n.t("mcp.warning.commit_conditions_omitted", count="{count}")
+    conditions = _format_condition_changes(diff, 900, header=False, omitted=omitted)
+    if conditions:
+        review = i18n.t("mcp.warning.commit_chunked_conditions", conditions=conditions)
+    else:
+        review = i18n.t("mcp.warning.commit_chunked")
+    notices = [f"{WARNING_MARKER}{review}]"]
+    if signal and old_type:
+        reason = i18n.t(f"mcp.warning.commit_type_reason.{signal[1]}", detail=signal[2])
+        notices.append(
+            f"{WARNING_MARKER}"
+            + i18n.t("mcp.warning.commit_type_set", old=old_type, new=signal[0], reason=reason)
+            + "]"
+        )
+    return _before_receipt_lines(message, "\n\n".join(notices))
 
 
 # --- Troceado de código por definiciones (local_explain_code, B2c) -----------------------------
@@ -8091,7 +8384,58 @@ def _extract_location_shortcut(
     return shortcut
 
 
+#: #586: why the operation in course has a role other than its size's (`"table"`), or `None`.
+#: `_log_event` reads it for the rows the operation writes from its own thread; the rows the
+#: middleware writes for a stopped call take it from the call's token (`_log_stopped`).
+_ROLE_REASON: contextvars.ContextVar[str | None] = contextvars.ContextVar(
+    "local_delegate_role_reason", default=None
+)
+
+#: #586, decision D12: how many fields a small input with a table must ask for to go to `long`.
+#: Measured with one field asked alone, 7 of the 8 keys that crossed rows crossed again: 1.
+_TABLE_LONG_MIN_FIELDS = 1
+
+#: #586: the value of `role_reason` when the table rule raised the role.
+_ROLE_REASON_TABLE = "table"
+
+
+def _extract_role(probe_len: int, content: str, fields: list[str]) -> tuple[str, str, str | None]:
+    """(role, model, reason) of a `local_extract` call: by size, or `long` for a small table.
+
+    `_role_for_size` stays as it is (four tools share it); only extract wraps it. The reason is
+    `None` when the size alone decided: above the threshold an input is already `long`.
+    """
+    role, model = _role_for_size(probe_len)
+    if (
+        role == "mechanical"
+        and config.EXTRACT_TABLE_LONG
+        and len(fields) >= _TABLE_LONG_MIN_FIELDS
+        and table_detect.has_table(content)
+    ):
+        return "long", config.models_by_role()["long"], _ROLE_REASON_TABLE
+    return role, model, None
+
+
+def _role_reason_scope(fn: Callable[..., Any]) -> Callable[..., Any]:
+    """`fn` run inside its own `_ROLE_REASON` scope, so the reason never leaks to the next call.
+
+    `functools.wraps`: the SDK builds the tool's schema from the signature, which follows
+    `__wrapped__`, and `inspect.getsource` reaches the body the same way.
+    """
+
+    @functools.wraps(fn)
+    def wrapper(*args: Any, **kwargs: Any) -> Any:
+        scope = _ROLE_REASON.set(None)
+        try:
+            return fn(*args, **kwargs)
+        finally:
+            _ROLE_REASON.reset(scope)
+
+    return wrapper
+
+
 @mcp.tool(annotations=_annotations(TOOL_TITLES["local_extract"]))
+@_role_reason_scope
 def local_extract(
     fields: list[str],
     text: str | None = None,
@@ -8128,6 +8472,12 @@ def local_extract(
     A location field naming one heading (`intro_heading_line`) that got the whole Markdown
     outline is cut to the only heading its singular name fits; with any doubt (a plural
     subject, no single heading) it is left as it came. Both go to `outline_copies`, with a warning.
+    A small input that carries a table (an HTML `<table`/`<tr` tag, or a Markdown table with its
+    separator line) goes to the long-context model too, even with one field: the mechanical one
+    answered with the value of another row. Then `_local_delegate.role_reason` says so
+    (`{"role": "long", "reason": "table", "notice": ...}`), also on an `error` answer, and the
+    call is slower and may have to load that model. CSV, TSV and `<div>` grids are not seen.
+    `LOCAL_DELEGATE_EXTRACT_TABLE_LONG=0` turns this off.
 
     Args:
         fields: Names of the fields to extract (JSON keys).
@@ -8139,9 +8489,21 @@ def local_extract(
         raise InputError(i18n.t("mcp.input.fields_required"))
     probe = path and Path(path).is_file()
     probe_len = Path(path).stat().st_size if probe else len(text or "")
-    role, model = _role_for_size(probe_len)
     # Entera (B2c): lo que no cabe en una llamada se trocea en vez de truncarse.
     content, _truncated_in, raw_len = _read_input(text, path, _NO_TRUNCATE)
+    # #586: the role is decided after reading, because the table rule needs the content.
+    role, model, role_reason = _extract_role(probe_len, content, fields)
+    role_meta: dict = {}
+    if role_reason is not None:
+        _ROLE_REASON.set(role_reason)
+        token = cancellation.current()
+        if token is not None:
+            token.role_reason = role_reason
+        role_meta["role_reason"] = {
+            "role": role,
+            "reason": role_reason,
+            "notice": i18n.t("mcp.warning.extract_role_reason_table"),
+        }
     max_chars = config.max_chars_for_role(role)
     key_list = ", ".join(f'"{f}"' for f in fields)
     system = _guard(f"un objeto JSON válido con exactamente estas claves: {{{key_list}}}")
@@ -8290,11 +8652,12 @@ def local_extract(
             # El modelo devolvió algo que no es JSON, o el backend falló y `result` trae el aviso
             # de error. Degradar con la carga cruda es mejor que lanzar: quien llama ve qué pasó
             # en vez de recibir una excepción de protocolo.
+            # #586: whoever waited for the long model and got an error hears why it went there.
             error = {"error": i18n.t("mcp.extract.not_json"), "raw": result}
-            return {"_local_delegate": {**error, **truncation}}
+            return {"_local_delegate": {**error, **truncation, **role_meta}}
     if not isinstance(data, dict):
         error = {"error": i18n.t("mcp.extract.not_object"), "raw": result}
-        return {"_local_delegate": {**error, **truncation}}
+        return {"_local_delegate": {**error, **truncation, **role_meta}}
 
     if location_partials:
         # The location values are joined by program, never left to the reduce (#568).
@@ -8350,6 +8713,8 @@ def local_extract(
             else:
                 data[name] = _strip_extract_prefixes(data[name], total_lines)
     meta: dict = dict(truncation)
+    # #586: its own key, never `warning`: going to `long` is not a failure (as `chunked.notice`).
+    meta.update(role_meta)
     # #473: a chunked document where some field stayed null in every chunk. No chunk saw the
     # whole document, so that null may mean "not seen", not "absent": say so, with the count
     # of chunks and the fields, instead of returning it silently.
@@ -8721,6 +9086,11 @@ def local_commit_msg(
         files = [(f.path, f.added, f.removed) for f in facts]
         budget = max(config.CHUNK_MIN_CHARS, int(config.max_chars_for_role("code") * 0.8))
         inventory = _format_diff_facts(facts, int(budget * 0.25))
+        # #636: the changed condition lines and the type the diff points to, also without a model.
+        # The part that saw the condition wrote a note in prose, and the reduce turned «also when
+        # the backend took the connection, never when it is not there» into «on network errors».
+        conditions = _format_condition_changes(content, int(budget * 0.1))
+        type_signal = _commit_type_signal(content, path) if style == "conventional" else None
         # El formato del map NO se describe con una plantilla del tipo `- ruta: qué cambió`:
         # medido, el modelo la devuelve copiada tal cual —`- ruta: qué cambió y para qué`— y ese
         # trozo se pierde entero. Se ancla con los nombres reales de los archivos, que ya se
@@ -8760,6 +9130,18 @@ def local_commit_msg(
 
         def _build_reduce(joined: str) -> str:
             head = f"{inventory}\n\n" if inventory else ""
+            if conditions:
+                head += (
+                    f"{conditions}\n\nEl sentido del mensaje sale de esas líneas: lo que hacen "
+                    "las + (el después) frente a las - (el antes); si una nota dice otra cosa, "
+                    "mandan las líneas.\n\n"
+                )
+            if type_signal:
+                reason = _COMMIT_TYPE_REASONS_PROMPT[type_signal[1]].format(detail=type_signal[2])
+                head += (
+                    f"Según el propio diff, el tipo: {type_signal[0]} ({reason}). Úsalo en la "
+                    "primera línea.\n\n"
+                )
             return (
                 f"{head}Estas son notas EN ORDEN sobre los archivos de un mismo cambio. La "
                 "lista de arriba es el inventario COMPLETO del diff; las notas pueden no "
@@ -8796,6 +9178,12 @@ def local_commit_msg(
             time_report=time_report,
         )
         if not commit_message.startswith(ERROR_PREFIX):
+            # #636: the type the diff points to replaces a different one, and a chunked message
+            # always says so and lists the changed conditions to check its sense against.
+            old_type = None
+            if type_signal:
+                commit_message, old_type = _with_commit_type(commit_message, type_signal)
+            commit_message = _commit_chunked_notices(commit_message, content, type_signal, old_type)
             if time_report:
                 # #596: not every chunk was read: the receipt does not claim the whole diff.
                 scope = i18n.t(
