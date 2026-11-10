@@ -323,10 +323,11 @@ todos los caminos.
   en la fila.
   - Request: derived: versiones cruzadas; el hook instalado y el servidor se actualizan por separado, también en la Mac
   - Verify: test tests/test_usage_log_project.py
-- **REQ-024** — Todo texto nuevo del panel, de `local_status` y de los scripts sale en español e
+- **REQ-024** — Todo texto nuevo del panel y de `local_status` sale en español e
   inglés y está catalogado: los guardianes de texto sin catalogar y de paridad de catálogos pasan
   sin excepciones nuevas.
   - Request: derived: regla del repo «código en inglés, textos de salida en español e inglés»
+  - Enmienda (2026-11-10, revisión de resultado): los scripts de medición de `scripts/` quedan fuera. No van en el paquete, ya imprimían en español sin catálogo antes de este cambio y el guardián no los mira; catalogarlos es un cambio aparte.
   - Verify: test tests/test_no_uncatalogued_text.py
 - **REQ-025** — CHANGELOG, README y `docs/wiki/` (`Savings-and-metrics.md` y `Configuration.md`)
   describen: los dos campos de la fila y los dos de la telemetría de hooks; la sal, con el aviso
