@@ -1598,17 +1598,77 @@ def _log_event(
                     local_backend=rec["backend"] == "local",
                 )
             )
-        log_path = _current_log_path()
-        log_path.parent.mkdir(parents=True, exist_ok=True)
-        _append_log_line(log_path, json.dumps(rec, ensure_ascii=False) + "\n")
-        # Después de medir: el evento entra en la ventana de su modelo (REQ-025).
-        if "tok_s" in rec:
-            # Registrar la velocidad también es observar: si falla, el evento ya está escrito y la
-            # ventana se queda sin él (REQ-028).
-            with suppress(Exception):
-                _pace_references().record(rec)
+        # #649: an operation that judges its own result afterwards (`local_extract` parses the
+        # JSON) holds its rows until then, so a reply it could not use is written as a failure.
+        pending = _DEFERRED_EVENTS.get()
+        if pending is not None:
+            pending.append(rec)
+            return
+        _write_event(rec)
     except OSError:
         pass  # el logging es best-effort; jamás propaga
+
+
+def _write_event(rec: dict) -> None:
+    """Appends one built usage row to the active log and feeds the pace window. May raise OSError."""
+    log_path = _current_log_path()
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+    _append_log_line(log_path, json.dumps(rec, ensure_ascii=False) + "\n")
+    # Después de medir: el evento entra en la ventana de su modelo (REQ-025).
+    if "tok_s" in rec:
+        # Registrar la velocidad también es observar: si falla, el evento ya está escrito y la
+        # ventana se queda sin él (REQ-028).
+        with suppress(Exception):
+            _pace_references().record(rec)
+
+
+#: #649: the rows the operation in course holds until it knows whether its result was usable, or
+#: `None` (the rows are written at once). Only `_deferred_usage_rows` sets it.
+_DEFERRED_EVENTS: contextvars.ContextVar[list[dict] | None] = contextvars.ContextVar(
+    "local_delegate_deferred_events", default=None
+)
+
+#: #649: the `error` of a `local_extract` row whose backend reply came back but was not a JSON
+#: object (cut by `max_tokens`, prose, a list): the tool answered `_local_delegate.error`.
+EXTRACT_INVALID_JSON = "invalid_json"
+
+
+def _extract_failed(result: Any) -> bool:
+    """True when a `local_extract` result carries no data: `_local_delegate` holds an `error`."""
+    meta = result.get("_local_delegate") if isinstance(result, dict) else None
+    return isinstance(meta, dict) and "error" in meta
+
+
+def _deferred_usage_rows(fn: Callable[..., Any]) -> Callable[..., Any]:
+    """`fn` (`local_extract`) with its usage rows held until it returns (#649).
+
+    The backend call writes its row before the tool parses the reply, so a 200 the tool could not
+    turn into data was logged `ok: true` and counted as saved context. Here the rows wait for the
+    result: if it is an `error` answer, the rows that said success become `ok: false` with
+    `error: "invalid_json"` and `error_class: "model"` (the model's output was unusable); a row that
+    was already a failure keeps its own. The rows are written always, also when `fn` raises.
+    """
+
+    @functools.wraps(fn)
+    def wrapper(*args: Any, **kwargs: Any) -> Any:
+        pending: list[dict] = []
+        scope = _DEFERRED_EVENTS.set(pending)
+        result: Any = None
+        try:
+            result = fn(*args, **kwargs)
+            return result
+        finally:
+            _DEFERRED_EVENTS.reset(scope)
+            failed = _extract_failed(result)
+            for rec in pending:
+                if failed and rec.get("ok") is True:
+                    rec["ok"] = False
+                    rec["error"] = EXTRACT_INVALID_JSON
+                    rec["error_class"] = failures.FailureClass.MODEL.value
+                with suppress(OSError):
+                    _write_event(rec)
+
+    return wrapper
 
 
 _CLAUDE_TOKEN_KINDS = ("text", "returned", "output", "image")
@@ -8392,6 +8452,7 @@ def _role_reason_scope(fn: Callable[..., Any]) -> Callable[..., Any]:
 
 
 @mcp.tool(annotations=_annotations(TOOL_TITLES["local_extract"]))
+@_deferred_usage_rows
 @_role_reason_scope
 def local_extract(
     fields: list[str],
