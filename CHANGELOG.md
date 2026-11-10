@@ -8,6 +8,19 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ### Corregido
 
+- **`local_explain_code` avisa de una premisa de la pregunta afirmada junto a código real
+  (#538).** Preguntado dónde un script «parte por hilo principal y subagente», respondió que esa
+  partición se hace en `by_side` y citó las líneas de `by_side`; el script nunca habla de
+  subagentes y no salió ningún aviso. Dos causas, confirmadas ejecutando la comprobación:
+  «subagente» no era una palabra que se comparara (solo las nominalizaciones como «retención»), y
+  una frase con un identificador o una línea citada reales contaba como apoyada. Ahora se comparan
+  también los sustantivos en -ente/-ante que conservan sus primeras letras en inglés (subagente,
+  cliente, componente), sin los adverbios en -mente ni palabras como «siguiente» o «durante»; y
+  un sustantivo así que el fichero no contiene y la respuesta da por hecho solo junto a código
+  real recibe una nota que pide comprobarlo en esas líneas (no el aviso: el código citado puede
+  tratarlo con otro nombre). Un proceso («partición», «retención») no la recibe: el código suele
+  hacerlo con otro nombre, y en la prueba en vivo marcaba una respuesta correcta. La respuesta que niega la premisa no lleva nada. De paso, «sesión» ya se
+  reconoce en un fichero con `session` (la `s` simple del español es doble en inglés).
 - **`local_lint_summary` ya no da como fallo propio el fichero que cita el mensaje de un test de
   pytest, ni gasta la salida en los ficheros sin fallos (#641).** Con la salida de pytest de 24
   ficheros (1 fallo, 660 pasados) el resumen sumaba un segundo fallo en un fichero que solo salía

@@ -386,7 +386,11 @@ respuesta afirma una palabra de la pregunta que el fichero no contiene (por raí
 como cognado inglés), sin negarla en ninguna frase ni apoyarla en una línea citada o un identificador
 del fichero, lleva un aviso: puede estar confirmando la premisa de la pregunta. Una respuesta que
 niega la premisa («no hay retención: nunca borra») no avisa. Es una guarda por programa; el prompt
-no cambia.
+no cambia. Se comparan las nominalizaciones («retención», «rotación») y, desde el #538 reabierto,
+los sustantivos en -ente/-ante («subagente», «cliente»). Si la respuesta da por hecho uno de esos
+sustantivos solo en frases que sí se apoyan en código real («la partición por subagente se hace en
+`by_side` (línea 9)»), lleva en cambio una nota: el fichero no nombra esa palabra y conviene
+comprobar en esas líneas que el código haga eso de verdad.
 
 **Diff troceado (desde la 0.49.0, #582).** Con `path` y un diff unificado, el modelo sabe que los
 números de las cabeceras `@@` no son líneas del parche; al trocear, cada trozo sabe por programa qué

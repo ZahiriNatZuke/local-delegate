@@ -4857,6 +4857,12 @@ def _verified_lines(answer: str, question: str, content: str, truncated: bool = 
     if premises:
         terms = ", ".join(f"«{term}»" for term in premises)
         extra.append(f"{WARNING_MARKER}{i18n.t('mcp.explain.premise_unsupported', terms=terms)}]")
+    # #538 (reopened): the same kind of word asserted only beside real code («the split by
+    # subagent is done in `by_side` (line 9)»): the file never names it, so it gets a notice.
+    beside = line_check.premises_beside_code(answer, question, content, truncated)
+    if beside:
+        terms = ", ".join(f"«{term}»" for term in beside)
+        extra.append(i18n.t("mcp.explain.premise_beside_code", terms=terms))
     for name, lines in result.found:
         if not lines:
             extra.append(i18n.t("mcp.explain.occurrences_none", name=name))
