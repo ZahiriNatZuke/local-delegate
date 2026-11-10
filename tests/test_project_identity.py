@@ -96,7 +96,7 @@ def test_the_same_name_gives_the_same_hash_and_two_names_two_hashes(hc, tmp_path
     root = _root(tmp_path)
     first = _identity(hc, root, "D--work-shop")["caller_project"]
     again = hc.project_identity(
-        root / "D--work-shop" / "ffffffff-1d2a-4c5b-8e7f-123456789abc.jsonl", root=root
+        root / "D--work-shop" / "10000000-1d2a-4c5b-8e7f-123456789abc.jsonl", root=root
     )["caller_project"]
     other = _identity(hc, root, "D--work-other")["caller_project"]
     assert first == again
@@ -401,7 +401,7 @@ def test_a_session_in_two_directories_has_no_project(hc, tmp_path):
 
 def test_a_missing_session_has_no_project(hc, tmp_path):
     root = _session_world(tmp_path, "D--work-shop")
-    assert hc.project_of_session("ffffffff-1d2a-4c5b-8e7f-123456789abc", root=root) is None
+    assert hc.project_of_session("10000000-1d2a-4c5b-8e7f-123456789abc", root=root) is None
 
 
 def test_the_root_comes_from_the_process_home(hc, tmp_path, monkeypatch):
@@ -434,14 +434,14 @@ def test_a_found_or_ambiguous_result_is_cached_and_not_found_is_not(hc, tmp_path
     assert hc.project_of_session(SESSION, root=root) == _transcript(root, "D--work-shop")
     assert walked == []
 
-    twice = "aaaaaaaa-1d2a-4c5b-8e7f-123456789abc"
+    twice = "20000000-1d2a-4c5b-8e7f-123456789abc"
     _session_world(tmp_path, "D--work-shop", "D--work-other", session=twice)
     assert hc.project_of_session(twice, root=root) is None
     walked.clear()
     assert hc.project_of_session(twice, root=root) is None
     assert walked == []
 
-    later = "bbbbbbbb-1d2a-4c5b-8e7f-123456789abc"
+    later = "30000000-1d2a-4c5b-8e7f-123456789abc"
     assert hc.project_of_session(later, root=root) is None
     _session_world(tmp_path, "D--work-shop", session=later)
     assert hc.project_of_session(later, root=root) == _transcript(root, "D--work-shop", later)

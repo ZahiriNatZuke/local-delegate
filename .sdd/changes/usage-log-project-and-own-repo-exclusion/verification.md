@@ -164,6 +164,14 @@ Without a declaration, list what was run. Never invent a command. -->
 ## Deviations and residual risk
 
 - Mutante 14 equivalente por diseño (arriba).
+- **Fichero fuera de T2–T4**: `scripts/data/spanish_lexicon.json`, que el plan asigna a T10. El CI
+  de la rama falló solo en `test_detect_spanish_names.py` por 23 palabras inglesas nuevas de los
+  identificadores (`alnum`, `dise`, `enriched`, `enriches`, `enriching`, `fork`, `higher`, `kib`,
+  `listdir`, `resolving`, `salted`, `salts`, `scandir`, `sealed`, `subdirectories`,
+  `subdirectory`, `substring`, `symlinks`, `uncrossed`, `unsalted`, `walked`, `won`,
+  `worktrees`). Se añadieron a `en`, solo añadiendo líneas, para dejar el CI en verde; T10 añade
+  las suyas encima. Tres ids de prueba con letras repetidas (`aaaaaaaa…`) se cambiaron por dígitos
+  en vez de añadirlos al léxico.
 - `transcripts.read` gana un parámetro opcional `log_dir` (la sal y la lista del log que se
   rellena), y `recompute` se lo pasa; sin él, usa el `LOG_DIR` del proceso.
 - `hook_common` expone, además de `project_identity` y `project_of_session`, las piezas que usa el
