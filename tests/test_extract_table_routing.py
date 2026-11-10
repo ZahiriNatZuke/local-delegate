@@ -451,8 +451,9 @@ def test_when_the_long_model_fails_the_code_model_answers(backend, tmp_path):
     data = server.local_extract(fields=case["fields"], path=_path(case))
 
     meta = data["_local_delegate"]
+    answered_by = (meta.get("fallback") or {}).get("answered_by")
+    assert answered_by == config.MODEL_CODE, "fallback.answered_by is the model of code"
     assert backend.models == [LONG, CODE], "`loaded` is empty: the code model answers"
-    assert meta["fallback"]["answered_by"] == config.MODEL_CODE
     assert meta["fallback"]["instead_of"] == LONG
     assert meta["role_reason"]["role"] == "long", "the role decided, next to who answered"
     rows = _rows(tmp_path)
