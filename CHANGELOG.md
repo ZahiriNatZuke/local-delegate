@@ -19,6 +19,18 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   condición de la tabla, las cifras avisaban en 36 (cuentas propias del resumen de un log). No
   detecta una causa cambiada ni una cifra que existe en la tabla pero puesta en otra fila: eso
   queda para el enrutado de las entradas con tablas al modelo largo, que se medirá aparte.
+- **`local_lint_summary` ya no da como fallo propio el fichero que cita el mensaje de un test de
+  pytest, ni gasta la salida en los ficheros sin fallos (#641).** Con la salida de pytest de 24
+  ficheros (1 fallo, 660 pasados) el resumen sumaba un segundo fallo en un fichero que solo salía
+  citado en el `AssertionError` del único fallo, y luego una línea «sin errores» por cada fichero
+  limpio hasta cortarse por `max_tokens`. La causa estaba en lo que le daba el programa: la lista
+  de todos los ficheros que nombra el log, con el citado primero por ser el más nombrado. Ahora el
+  programa lee los fallos reales del log (las líneas `FAILED`/`ERROR` del resumen de pytest, con el
+  `fichero:línea` de cada traza, y solo si cuadran con la línea de totales) y se los da al modelo
+  en lugar de esa lista. Además comprueba la respuesta contra ellos y, si da entrada a un fichero
+  sin fallos, deja fuera un fichero con fallos o cuenta mal sus fallos, añade un aviso con los
+  fallos reales. Una respuesta correcta y los logs de otras herramientas (ruff, ESLint) quedan
+  igual que antes.
 - **El mod de lectura ya no entrega como resumen el aviso de Claude Code de que la llamada pasó a
   segundo plano (#631).** Cuando `local_summarize` espera más de 2 min (el turno común ocupado, por
   ejemplo), Claude Code la pasa a segundo plano y contesta a quien la llamó con un texto suyo

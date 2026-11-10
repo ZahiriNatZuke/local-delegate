@@ -253,6 +253,16 @@ resumen final cortado ni inventa recuentos de tests por fichero. Algún paso int
 acabar cortado, y entonces la respuesta lo avisa; lo que se pierde ahí lo cubre la lista del
 programa.
 
+**Log de pytest con fallos.** Si el log trae el resumen de pytest (`FAILED …`/`ERROR …`) y sus
+líneas cuadran con la de totales («1 failed, 660 passed in …»), el programa lee de ahí los fallos
+reales, con el `fichero:línea` de cada traza, y se los da al modelo en lugar de la lista de
+ficheros del log: un fichero que solo sale citado en el mensaje de un fallo es contexto de ese
+fallo, y los ficheros sin fallos no tienen entrada (ni van en «Sin mencionar» ni en «Y otros N
+ficheros…»). Después comprueba la respuesta contra esos fallos: si da entrada a un fichero sin
+fallos, no nombra un fichero con fallos o cuenta mal sus fallos, la respuesta termina con
+`[local-delegate warning: el resumen no cuadra con los fallos que el programa leyó en el log (N en
+total: …). …]`, con los fallos reales. Si cuadra, sale tal cual.
+
 **Entrada sin nada que resumir.** Si la entrada está vacía, solo trae espacios, es un informe JSON
 sin diagnósticos (`[]`, `{}`, `null`, el `[{"filePath": …, "messages": []}]` de ESLint, el
 `{"results": [], "errors": []}` de Semgrep o Bandit, el `"diagnostics": []` de Biome) o solo trae
