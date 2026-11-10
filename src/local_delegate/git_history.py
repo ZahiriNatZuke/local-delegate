@@ -356,6 +356,21 @@ def _resolve_ref(refs_home: Path, name: str) -> str | None:
     return None
 
 
+def head_branch(git_dir: Path) -> str | None:
+    """The branch HEAD points to (`fix/x` for `ref: refs/heads/fix/x`), or None (#636).
+
+    A detached HEAD, an unreadable file or a ref outside `refs/heads/` give None.
+    """
+    try:
+        head = _read_small(git_dir / "HEAD")
+    except (OSError, UnicodeDecodeError):
+        return None
+    name = head[len("ref:") :].strip() if head.startswith("ref:") else ""
+    if not _REF_NAME.match(name) or not name.startswith("refs/heads/"):
+        return None
+    return name[len("refs/heads/") :] or None
+
+
 def _head_sha(git_dir: Path, refs_home: Path) -> str | None:
     try:
         head = _read_small(git_dir / "HEAD")

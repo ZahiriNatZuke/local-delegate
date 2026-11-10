@@ -95,6 +95,17 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   va en `_local_delegate.section_only_keys` con aviso: lee ese rango. El valor nunca se reescribe
   y la instrucción del modelo no cambia (pedirle cada elemento con su línea lo dejaba sin tokens
   a mitad de la lista y sin JSON válido).
+- **`local_commit_msg` ya no entrega sin aviso un mensaje troceado que invierte el sentido del
+  cambio (#636).** Con un diff de ~27 KB en 3 partes, la condición cambiada solo estaba en una
+  parte, y el paso que redacta el mensaje veía las notas de las partes y la lista de ficheros, ni
+  una línea literal de la condición: el mensaje decía «consultar /running en errores de red»,
+  justo el caso en que el cambio deja de consultarlo, y tipaba como `feat` un arreglo. Ahora ese
+  paso recibe las líneas `-`/`+` de las condiciones cambiadas, copiadas del diff (el código antes
+  que sus tests), y el tipo que marca el propio diff: una rama `fix/…`, un diff de solo tests o
+  solo documentación, o la sección del CHANGELOG donde entra la entrada (`### Corregido`,
+  `### Added`…), cuando el encabezado sale en el diff. Si el mensaje trae otro tipo, se cambia y se
+  avisa. Y todo mensaje redactado por partes termina con un aviso que lo dice y lista esas
+  condiciones, para revisarlo sin tener el diff delante. Un diff que cabe en una llamada no cambia.
 - **`local_explain_code` avisa de una premisa de la pregunta afirmada junto a código real
   (#538).** Preguntado dónde un script «parte por hilo principal y subagente», respondió que esa
   partición se hace en `by_side` y citó las líneas de `by_side`; el script nunca habla de

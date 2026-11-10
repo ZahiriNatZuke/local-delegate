@@ -4685,6 +4685,289 @@ def _format_diff_facts(facts: list[_DiffFile], max_chars: int) -> str:
     return f"{files_block}\n\n{symbols_block}" if symbols_block else files_block
 
 
+# --- Sense and type of a chunked diff (#636) -----------------------------------------------------
+# Measured on the diff of the issue (27 KB, 3 parts): the condition lived in one part, and the reduce
+# that wrote the message saw only the notes of the parts plus the file inventory, not one literal
+# line of the condition and no hint of the type. The message said «ask /running on network
+# errors», the opposite of the change, and typed a fix as `feat`. Both facts below are read off the
+# diff without a model: the changed condition lines, copied, and the type the diff points to.
+_CONDITION = re.compile(r"\b(?:if|elif|while|unless|until|when|and|or|not)\b|&&|\|\||\?\?|[!=]==?")
+_CODE_PUNCTUATION = re.compile(r"[()\[\]{}=:?&|!]")
+_COMMENT_PREFIXES = ("#", "//", "/*", "*", "--", "<!--")
+_DOC_SUFFIXES = (".md", ".rst", ".txt", ".adoc")
+_DATA_SUFFIXES = (".json", ".lock", ".csv", ".svg")
+_CONDITION_LINE_MAX = 160
+_CONDITION_LINES_PER_CHANGE = 6
+
+
+def _is_test_path(path: str) -> bool:
+    name = path.rsplit("/", 1)[-1]
+    return (
+        path.startswith(("tests/", "test/"))
+        or "/tests/" in path
+        or "/test/" in path
+        or name.startswith("test_")
+        or ".test." in name
+        or ".spec." in name
+        or name.rsplit(".", 1)[0].endswith("_test")
+    )
+
+
+def _is_doc_path(path: str) -> bool:
+    return path.lower().endswith(_DOC_SUFFIXES) or path.startswith("docs/")
+
+
+def _is_changelog_path(path: str) -> bool:
+    return path.rsplit("/", 1)[-1].upper().startswith(("CHANGELOG", "CHANGES", "HISTORY", "NEWS"))
+
+
+def _diff_file_sections(diff: str) -> list[tuple[str, list[str]]]:
+    """`(path, lines)` of each `diff --git` section; the path is the one `_diff_facts` gives."""
+    sections: list[list[str]] = []
+    for line in diff.splitlines():
+        if line.startswith("diff --git "):
+            sections.append([])
+        if sections:
+            sections[-1].append(line)
+    out = []
+    for lines in sections:
+        facts = _diff_facts("\n".join(lines))
+        if facts:
+            out.append((facts[0].path, lines))
+    return out
+
+
+def _hunk_lines(lines: list[str]) -> Iterable[str]:
+    """The lines of a file section from its first `@@` on (headers left out)."""
+    in_hunk = False
+    for line in lines:
+        if line.startswith("@@"):
+            in_hunk = True
+        if in_hunk:
+            yield line
+
+
+def _condition_line(content: str) -> bool:
+    text = content.strip()
+    if not text or text.startswith(_COMMENT_PREFIXES):
+        return False
+    return bool(_CONDITION.search(text)) and bool(_CODE_PUNCTUATION.search(text))
+
+
+@dataclass
+class _ConditionChange:
+    """One run of `-`/`+` lines of a file that changes a condition (#636)."""
+
+    path: str
+    removed: list[str]
+    added: list[str]
+    order: int
+
+    def rank(self) -> tuple[int, int, int]:
+        # Code before its tests, and a condition changed on both sides before one only added.
+        return (int(_is_test_path(self.path)), int(not (self.removed and self.added)), self.order)
+
+    def lines(self) -> list[str]:
+        def _cut(text: str) -> str:
+            text = text.strip()
+            if len(text) > _CONDITION_LINE_MAX:
+                return text[: _CONDITION_LINE_MAX - 1] + "…"
+            return text
+
+        rows = [f"- {_cut(t)}" for t in self.removed] + [f"+ {_cut(t)}" for t in self.added]
+        return rows[:_CONDITION_LINES_PER_CHANGE]
+
+
+def _diff_condition_changes(diff: str) -> list[_ConditionChange]:
+    """The changed condition lines of the diff, code first, copied as they are (#636).
+
+    Docs and data files are left out (their prose and strings say «if» and «or» without being a
+    condition), and so are comment lines.
+    """
+    changes: list[_ConditionChange] = []
+    for path, lines in _diff_file_sections(diff):
+        if _is_doc_path(path) or path.lower().endswith(_DATA_SUFFIXES):
+            continue
+        for removed, added in _condition_runs(lines):
+            changes.append(_ConditionChange(path, removed, added, len(changes)))
+    return sorted(changes, key=_ConditionChange.rank)
+
+
+def _condition_runs(lines: list[str]) -> list[tuple[list[str], list[str]]]:
+    """`(removed, added)` condition lines of each run of `-`/`+` lines of one file section."""
+    runs: list[tuple[list[str], list[str]]] = []
+    removed: list[str] = []
+    added: list[str] = []
+    for line in [*_hunk_lines(lines), " "]:  # the trailing context line closes the last run
+        if line.startswith("-") and _condition_line(line[1:]):
+            removed.append(line[1:])
+        elif line.startswith("+") and _condition_line(line[1:]):
+            added.append(line[1:])
+        elif not line.startswith(("-", "+")):
+            if removed or added:
+                runs.append((removed, added))
+            removed, added = [], []
+    return runs
+
+
+def _format_condition_changes(
+    diff: str, max_chars: int, header: bool = True, omitted: str | None = None
+) -> str:
+    """The changed conditions within `max_chars`, grouped by file; `""` if there are none.
+
+    What does not fit is counted, not silently dropped: `omitted` (with `{count}`) says so in the
+    warning's language; without it, in the Spanish of the prompt.
+    """
+    changes = _diff_condition_changes(diff)
+    if not changes:
+        return ""
+    title = "Condiciones cambiadas, copiadas tal cual del diff (- antes, + después):"
+    rows: list[str] = [title] if header else []
+    used = sum(len(r) + 1 for r in rows)
+    omitted_note = 70
+    kept = 0
+    last_path = None
+    for change in changes:
+        block = [] if change.path == last_path else [f"  {change.path}:"]
+        block += [f"    {row}" for row in change.lines()]
+        size = sum(len(r) + 1 for r in block)
+        if used + size + omitted_note > max_chars:
+            break
+        rows += block
+        used += size
+        kept += 1
+        last_path = change.path
+    if not kept:
+        return ""
+    if kept < len(changes):
+        note = omitted or "(y {count} cambios de condición más, omitidos por espacio)"
+        rows.append(f"  {note.format(count=len(changes) - kept)}")
+    return "\n".join(rows)
+
+
+_COMMIT_TYPES = frozenset(
+    {"feat", "fix", "docs", "test", "refactor", "perf", "chore", "ci", "build", "style", "revert"}
+)
+_BRANCH_TYPE_ALIASES = {
+    "bugfix": "fix",
+    "hotfix": "fix",
+    "feature": "feat",
+    "doc": "docs",
+    "tests": "test",
+}
+_FIX_SECTIONS = frozenset(
+    {"fixed", "fixes", "bug fixes", "bugfixes", "corregido", "arreglado", "correcciones"}
+)
+_FEAT_SECTIONS = frozenset({"added", "features", "new", "añadido", "nuevo", "novedades"})
+_SECTION_HEADING = re.compile(r"^#{2,4}[ \t]+(\S.*)$")  # linear: no lazy group before `\s*$`
+
+
+def _changelog_type(lines: list[str]) -> tuple[str, str] | None:
+    """`(type, section)` when every entry a CHANGELOG section adds sits under one fix or one feat
+    heading (`### Corregido`, `### Added`…); None if mixed, elsewhere or unknown."""
+    section = ""
+    kinds: set[str] = set()
+    named = ""
+    for line in _hunk_lines(lines):
+        if line.startswith("@@"):
+            tail = line.split("@@", 2)[-1].strip()
+            if heading := _SECTION_HEADING.match(tail):
+                section = heading.group(1)
+            continue
+        text = line[1:] if line[:1] in "+- " else line
+        if heading := _SECTION_HEADING.match(text):
+            if not line.startswith("-"):
+                section = heading.group(1)
+            continue
+        if line.startswith("+") and text.strip():
+            key = section.strip().lower()
+            kind = "fix" if key in _FIX_SECTIONS else "feat" if key in _FEAT_SECTIONS else "other"
+            kinds.add(kind)
+            named = section.strip()
+    if len(kinds) == 1 and kinds <= {"fix", "feat"}:
+        return next(iter(kinds)), named
+    return None
+
+
+def _branch_type(path: str | None) -> tuple[str, str] | None:
+    """`(type, branch)` when the repo holding the diff file is on a `fix/…`-like branch."""
+    if not path:
+        return None
+    try:
+        git_dir = _git_dir_above(Path(path).expanduser().resolve().parent)
+    except (OSError, RuntimeError, ValueError):
+        return None
+    branch = git_history.head_branch(git_dir) if git_dir is not None else None
+    if not branch or "/" not in branch:
+        return None
+    prefix = branch.split("/", 1)[0].lower()
+    kind = _BRANCH_TYPE_ALIASES.get(prefix, prefix)
+    return (kind, branch) if kind in _COMMIT_TYPES else None
+
+
+def _commit_type_signal(diff: str, path: str | None) -> tuple[str, str, str] | None:
+    """`(type, reason, detail)`: the Conventional Commits type the diff itself points to (#636).
+
+    In order: a `fix/…` branch of the repo holding `path`, a diff of only tests, of only docs, and
+    the CHANGELOG section its entries are added under. None when nothing says it clearly.
+    """
+    if branch := _branch_type(path):
+        return branch[0], "branch", branch[1]
+    paths = [p for p, _ in _diff_file_sections(diff)]
+    if not paths:
+        return None
+    if all(_is_test_path(p) for p in paths):
+        return "test", "tests", ""
+    if all(_is_doc_path(p) for p in paths):
+        return "docs", "docs", ""
+    for p, lines in _diff_file_sections(diff):
+        if _is_changelog_path(p) and (found := _changelog_type(lines)):
+            return found[0], "changelog", found[1]
+    return None
+
+
+_COMMIT_TYPE_REASONS_PROMPT = {
+    "branch": "la rama es «{detail}»",
+    "tests": "el diff solo toca tests",
+    "docs": "el diff solo toca documentación",
+    "changelog": "el CHANGELOG añade su entrada en «{detail}»",
+}
+_CONVENTIONAL_HEAD = re.compile(r"^([A-Za-z]+)(\([^)\n]*\))?(!)?:[ \t]")
+
+
+def _with_commit_type(message: str, signal: tuple[str, str, str]) -> tuple[str, str | None]:
+    """`(message, old type)`: the first line's type set to the one of `signal` (#636).
+
+    Only the type word changes; scope, `!` and summary stay. A first line that is not
+    `type(scope): …` is left as it is, and so is one that already has the type.
+    """
+    match = _CONVENTIONAL_HEAD.match(message)
+    if not match or match.group(1).lower() == signal[0]:
+        return message, None
+    return signal[0] + message[match.end(1) :], match.group(1)
+
+
+def _commit_chunked_notices(
+    message: str, diff: str, signal: tuple[str, str, str] | None, old_type: str | None
+) -> str:
+    """The warnings of a chunked message: always the review one, plus the type one (#636)."""
+    omitted = i18n.t("mcp.warning.commit_conditions_omitted", count="{count}")
+    conditions = _format_condition_changes(diff, 900, header=False, omitted=omitted)
+    if conditions:
+        review = i18n.t("mcp.warning.commit_chunked_conditions", conditions=conditions)
+    else:
+        review = i18n.t("mcp.warning.commit_chunked")
+    notices = [f"{WARNING_MARKER}{review}]"]
+    if signal and old_type:
+        reason = i18n.t(f"mcp.warning.commit_type_reason.{signal[1]}", detail=signal[2])
+        notices.append(
+            f"{WARNING_MARKER}"
+            + i18n.t("mcp.warning.commit_type_set", old=old_type, new=signal[0], reason=reason)
+            + "]"
+        )
+    return _before_receipt_lines(message, "\n\n".join(notices))
+
+
 # --- Troceado de código por definiciones (local_explain_code, B2c) -----------------------------
 # Medido (revisión del 2026-10-14): con el truncado a 20 000 chars, la explicación de `cli.py` (32 %
 # leído) dio por completa una lista de subcomandos a la que faltaban `doctor`, `benchmark` y
@@ -8770,6 +9053,11 @@ def local_commit_msg(
         files = [(f.path, f.added, f.removed) for f in facts]
         budget = max(config.CHUNK_MIN_CHARS, int(config.max_chars_for_role("code") * 0.8))
         inventory = _format_diff_facts(facts, int(budget * 0.25))
+        # #636: the changed condition lines and the type the diff points to, also without a model.
+        # The part that saw the condition wrote a note in prose, and the reduce turned «also when
+        # the backend took the connection, never when it is not there» into «on network errors».
+        conditions = _format_condition_changes(content, int(budget * 0.1))
+        type_signal = _commit_type_signal(content, path) if style == "conventional" else None
         # El formato del map NO se describe con una plantilla del tipo `- ruta: qué cambió`:
         # medido, el modelo la devuelve copiada tal cual —`- ruta: qué cambió y para qué`— y ese
         # trozo se pierde entero. Se ancla con los nombres reales de los archivos, que ya se
@@ -8809,6 +9097,18 @@ def local_commit_msg(
 
         def _build_reduce(joined: str) -> str:
             head = f"{inventory}\n\n" if inventory else ""
+            if conditions:
+                head += (
+                    f"{conditions}\n\nEl sentido del mensaje sale de esas líneas: lo que hacen "
+                    "las + (el después) frente a las - (el antes); si una nota dice otra cosa, "
+                    "mandan las líneas.\n\n"
+                )
+            if type_signal:
+                reason = _COMMIT_TYPE_REASONS_PROMPT[type_signal[1]].format(detail=type_signal[2])
+                head += (
+                    f"Según el propio diff, el tipo: {type_signal[0]} ({reason}). Úsalo en la "
+                    "primera línea.\n\n"
+                )
             return (
                 f"{head}Estas son notas EN ORDEN sobre los archivos de un mismo cambio. La "
                 "lista de arriba es el inventario COMPLETO del diff; las notas pueden no "
@@ -8845,6 +9145,12 @@ def local_commit_msg(
             time_report=time_report,
         )
         if not commit_message.startswith(ERROR_PREFIX):
+            # #636: the type the diff points to replaces a different one, and a chunked message
+            # always says so and lists the changed conditions to check its sense against.
+            old_type = None
+            if type_signal:
+                commit_message, old_type = _with_commit_type(commit_message, type_signal)
+            commit_message = _commit_chunked_notices(commit_message, content, type_signal, old_type)
             if time_report:
                 # #596: not every chunk was read: the receipt does not claim the whole diff.
                 scope = i18n.t(
