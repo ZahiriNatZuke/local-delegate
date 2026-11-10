@@ -4,9 +4,9 @@
   "title": "Log de uso con proyecto (hash y tipo) y mediciones que apartan el propio repo",
   "mode": "standard",
   "traceability": "strict",
-  "status": "implementing",
+  "status": "closed",
   "createdAt": "2026-11-10T12:06:28.128Z",
-  "updatedAt": "2026-11-10T13:58:51.316Z",
+  "updatedAt": "2026-11-10T22:03:43.952Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -21,22 +21,22 @@
       "actor": "user"
     },
     "quality": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-11-10T22:03:22.326Z",
+      "evidence": "PR #637 CI 22/22 green; T11 full suite; main a19817e6 green; sdd check ok",
+      "actor": "user"
     },
     "conformance": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-11-10T22:03:43.443Z",
+      "evidence": "review deep tier: one blocker (REQ-024 in measurement scripts) resolved by recorded spec amendment 2026-11-10; rest accepted or follow-up; sdd check ok",
+      "actor": "user"
     },
     "memory": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-11-10T22:03:23.028Z",
+      "evidence": "handoff.md and brief.md Log L6; no secrets or PII",
+      "actor": "user"
     }
   },
   "history": [
@@ -97,6 +97,58 @@
       "to": "implementing",
       "at": "2026-11-10T13:58:51.316Z",
       "reason": "spec y plan aprobados tras plan-review"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-11-10T22:03:22.051Z",
+      "reason": "T1-T11 done; live test REQ-026 passed in window w-20261110T190517Z"
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-11-10T22:03:22.326Z",
+      "evidence": "PR #637 CI 22/22 green; T11 full suite; main a19817e6 green; sdd check ok",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "verifying",
+      "to": "result-review",
+      "at": "2026-11-10T22:03:22.561Z",
+      "reason": "verification complete"
+    },
+    {
+      "type": "gate",
+      "gate": "memory",
+      "status": "approved",
+      "at": "2026-11-10T22:03:23.028Z",
+      "evidence": "handoff.md and brief.md Log L6; no secrets or PII",
+      "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "conformance",
+      "status": "approved",
+      "at": "2026-11-10T22:03:43.443Z",
+      "evidence": "review deep tier: one blocker (REQ-024 in measurement scripts) resolved by recorded spec amendment 2026-11-10; rest accepted or follow-up; sdd check ok",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "result-review",
+      "to": "closing",
+      "at": "2026-11-10T22:03:43.715Z",
+      "reason": "gates approved"
+    },
+    {
+      "type": "transition",
+      "from": "closing",
+      "to": "closed",
+      "at": "2026-11-10T22:03:43.952Z",
+      "reason": "Merged in #637; ships in 0.51.0"
     }
   ]
 }

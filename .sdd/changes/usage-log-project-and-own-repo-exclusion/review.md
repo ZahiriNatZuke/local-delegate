@@ -5,7 +5,8 @@
 - Level: deep
 - Judges: result-reviewer-A, result-reviewer-B
 - Security reviewer: yes — sin hallazgos explotables (recorrido con `session_id`, fuga de rutas o nombres, carrera de la sal, entorno de la petición, XSS del panel, DoS)
-- Verdict: does-not-conform
+- Verdict: conforms-with-notes
+- Resolution (2026-11-10): the only blocker, U1, was resolved by amending REQ-024 (measurement scripts out of scope, recorded in spec.md and verification.md); the verdict before that was does-not-conform.
 
 Revisión del 2026-11-10 sobre el diff mezclado en `main` (`a19817e6`, PR #637, sin `.sdd/`), la
 spec, el plan y `verification.md` con la prueba en vivo ya hecha. Compatibilidad comprobada por la
@@ -44,7 +45,7 @@ puerta `conformance`.
 | REQ-021 | yes | yes | la línea solo sale si no es cero |
 | REQ-022 | yes | yes | CI del PR #637 en verde |
 | REQ-023 | yes | yes | la nota no cambia de formato |
-| REQ-024 | partial | no | panel y `local_status` sí; scripts no (U1) |
+| REQ-024 | yes | yes | panel y `local_status` sí; scripts fuera por la enmienda de U1 |
 | REQ-025 | yes | yes | los cuatro sitios; ver U11 |
 | REQ-026 | yes | yes | 31/1/32 en vez de 1/1/2 por la ventana compartida (U9) |
 | REQ-027 | yes | yes | criterios (a) a (d) |

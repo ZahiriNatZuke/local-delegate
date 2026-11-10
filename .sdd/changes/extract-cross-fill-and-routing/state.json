@@ -4,9 +4,9 @@
   "title": "local_extract: aviso de valor cruzado entre claves y subida al rol long en tablas (#586)",
   "mode": "standard",
   "traceability": "strict",
-  "status": "implementing",
+  "status": "closed",
   "createdAt": "2026-11-10T12:02:04.004Z",
-  "updatedAt": "2026-11-10T14:09:22.283Z",
+  "updatedAt": "2026-11-10T22:03:21.823Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -21,22 +21,22 @@
       "actor": "user"
     },
     "quality": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-11-10T22:02:39.087Z",
+      "evidence": "PR #643 CI 22/22 green (run 42887304570); main da15a6f6 CI green (run 42888361529); sdd check ok",
+      "actor": "user"
     },
     "conformance": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-11-10T22:03:12.878Z",
+      "evidence": "review.md deep tier: conforms-with-notes, no blocking findings; sdd check ok",
+      "actor": "user"
     },
     "memory": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-11-10T22:02:39.546Z",
+      "evidence": "handoff.md and brief.md Log L5; no secrets or PII",
+      "actor": "user"
     }
   },
   "history": [
@@ -97,6 +97,58 @@
       "to": "implementing",
       "at": "2026-11-10T14:09:22.283Z",
       "reason": "spec y plan aprobados"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-11-10T22:02:38.833Z",
+      "reason": "T1-T8 done; live test passed in window w-20261110T190517Z"
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-11-10T22:02:39.087Z",
+      "evidence": "PR #643 CI 22/22 green (run 42887304570); main da15a6f6 CI green (run 42888361529); sdd check ok",
+      "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "memory",
+      "status": "approved",
+      "at": "2026-11-10T22:02:39.546Z",
+      "evidence": "handoff.md and brief.md Log L5; no secrets or PII",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "verifying",
+      "to": "result-review",
+      "at": "2026-11-10T22:03:03.641Z",
+      "reason": "verification complete"
+    },
+    {
+      "type": "gate",
+      "gate": "conformance",
+      "status": "approved",
+      "at": "2026-11-10T22:03:12.878Z",
+      "evidence": "review.md deep tier: conforms-with-notes, no blocking findings; sdd check ok",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "result-review",
+      "to": "closing",
+      "at": "2026-11-10T22:03:21.582Z",
+      "reason": "gates approved"
+    },
+    {
+      "type": "transition",
+      "from": "closing",
+      "to": "closed",
+      "at": "2026-11-10T22:03:21.823Z",
+      "reason": "Merged in #643; #586 closed, follow-up #650; ships in 0.51.0"
     }
   ]
 }

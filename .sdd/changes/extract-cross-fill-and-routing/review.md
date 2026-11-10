@@ -50,11 +50,11 @@ PR #645 y #646, que entraron en la misma integración de la prueba en vivo, no t
 | ID | Finding | Judge A | Judge B | Status | Resolution |
 | --- | --- | --- | --- | --- | --- |
 | E1 | La suite entera solo constaba antes del decorador; después, 15 ficheros | yes | yes | confirmed | resuelto: anotados el CI del PR #643 (22 checks en verde) y el de `main` en `da15a6f6` |
-| E2 | Una línea `---` sin tuberías tras una línea con dos `|` cuenta como tabla (front matter YAML, título subrayado); la spec lo admite al pie de la letra, pero no está en «Límites» ni en la documentación | yes | yes | confirmed | aceptado para esta versión (cae del lado de subir de más); anotado en «Deviations»; propuesto para el seguimiento #650 |
+| E2 | Una línea `---` sin tuberías tras una línea con dos tuberías cuenta como tabla (front matter YAML, título subrayado); la spec lo admite al pie de la letra, pero no está en «Límites» ni en la documentación | yes | yes | confirmed | aceptado para esta versión (cae del lado de subir de más); anotado en «Deviations»; propuesto para el seguimiento #650 |
 | E3 | A la tabla antes/después le faltaba la inferencia «después» caso a caso | yes | yes | confirmed | resuelto: tabla añadida en «Prueba en vivo (REQ-038), resultado» |
 | E4 | La evidencia del cierre del #586 y del #650 no tenía enlaces | yes | yes | confirmed | resuelto: URL del comentario y del issue; comprobados con `gh` |
 | E5 | La prueba en vivo se hizo sobre la integración de cuatro PR, no sobre la rama sola | yes | no | suspected | aceptado: superconjunto sin cambios en el enrutado; anotado en «Deviations» |
-| E6 | El docstring no nombra la tabla GFM sin tuberías externas ni `|-|-|` | yes | no | suspected | seguimiento: completar la frase en una versión próxima |
+| E6 | El docstring no nombra la tabla GFM sin tuberías externas ni el separador de guiones entre tuberías sin espacios | yes | no | suspected | seguimiento: completar la frase en una versión próxima |
 | E7 | `tests/test_extract_table_routing_docs.py` se retocó en el commit de la release | yes | no | suspected | anotado en «Deviations»; es un test del propio cambio |
 | E8 | La exclusión de `ruff` es por carpeta de un cambio y `force-exclude = true` vale para todo el repo | yes | yes | confirmed | aceptado como decisión deliberada (ya en `handoff.md`, «Decisions»); seguimiento opcional: patrón genérico para scripts congelados de `.sdd` |
 | E9 | `_TABLE_LONG_MIN_FIELDS = 1` nunca falla porque `fields` vacío se rechaza antes | no | yes | suspected | aceptado: fija el valor medido de REQ-002 y el mutante M07 |
