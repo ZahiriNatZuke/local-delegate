@@ -58,7 +58,7 @@ Esquema de la regla:
 |---|---|---|
 | `local_summarize` | Resume texto/archivo | mecánico / largo (auto) |
 | `local_classify` | Una etiqueta de una lista | mecánico |
-| `local_extract` | Campos → JSON | mecánico |
+| `local_extract` | Campos → JSON | mecánico / largo (auto; una entrada pequeña con tabla va a largo) |
 | `local_boilerplate` | Genera código y lo escribe en `target` (devuelve un recibo, no el código) | código |
 | `local_delegate` | Escape genérico texto→texto | mecánico (o el que pases) |
 | `local_lint_summary` | Resume logs de lint/tests/CI | mecánico / largo (auto) |

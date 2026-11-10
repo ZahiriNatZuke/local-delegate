@@ -1,0 +1,568 @@
+{
+ "backend": "double, no network",
+ "cases": [
+  {
+   "case": "01-pricing-table-en",
+   "bytes": 957,
+   "has_table": true,
+   "before": {
+    "role": "mechanical",
+    "model": "gemma3-4b",
+    "crossed": [
+     "licensed_user_limits"
+    ],
+    "inference_ms": null
+   },
+   "after": {
+    "models_asked": [
+     "gemma4-26b-a4b"
+    ],
+    "role": "long",
+    "role_reason_answer": "table",
+    "role_reason_log": [
+     "table"
+    ]
+   }
+  },
+  {
+   "case": "02-pricing-table-en-3fields",
+   "bytes": 957,
+   "has_table": true,
+   "before": {
+    "role": "mechanical",
+    "model": "gemma3-4b",
+    "crossed": [
+     "licensed_user_limits"
+    ],
+    "inference_ms": null
+   },
+   "after": {
+    "models_asked": [
+     "gemma4-26b-a4b"
+    ],
+    "role": "long",
+    "role_reason_answer": "table",
+    "role_reason_log": [
+     "table"
+    ]
+   }
+  },
+  {
+   "case": "03-pr-view-es",
+   "bytes": 468,
+   "has_table": false,
+   "before": {
+    "role": "mechanical",
+    "model": "gemma3-4b",
+    "crossed": [],
+    "inference_ms": null
+   },
+   "after": {
+    "models_asked": [
+     "gemma3-4b"
+    ],
+    "role": "mechanical",
+    "role_reason_answer": null,
+    "role_reason_log": [
+     null
+    ]
+   }
+  },
+  {
+   "case": "04-pytest-log-en",
+   "bytes": 2157,
+   "has_table": false,
+   "before": {
+    "role": "mechanical",
+    "model": "gemma3-4b",
+    "crossed": [],
+    "inference_ms": null
+   },
+   "after": {
+    "models_asked": [
+     "gemma3-4b"
+    ],
+    "role": "mechanical",
+    "role_reason_answer": null,
+    "role_reason_log": [
+     null
+    ]
+   }
+  },
+  {
+   "case": "05-pr-view-es-booleans",
+   "bytes": 468,
+   "has_table": false,
+   "before": {
+    "role": "mechanical",
+    "model": "gemma3-4b",
+    "crossed": [],
+    "inference_ms": null
+   },
+   "after": {
+    "models_asked": [
+     "gemma3-4b"
+    ],
+    "role": "mechanical",
+    "role_reason_answer": null,
+    "role_reason_log": [
+     null
+    ]
+   }
+  },
+  {
+   "case": "06-limits-table-es",
+   "bytes": 437,
+   "has_table": true,
+   "before": {
+    "role": "mechanical",
+    "model": "gemma3-4b",
+    "crossed": [
+     "limite_usuarios_con_licencia"
+    ],
+    "inference_ms": null
+   },
+   "after": {
+    "models_asked": [
+     "gemma4-26b-a4b"
+    ],
+    "role": "long",
+    "role_reason_answer": "table",
+    "role_reason_log": [
+     "table"
+    ]
+   }
+  },
+  {
+   "case": "07-gateway-table-en",
+   "bytes": 270,
+   "has_table": true,
+   "before": {
+    "role": "mechanical",
+    "model": "gemma3-4b",
+    "crossed": [],
+    "inference_ms": null
+   },
+   "after": {
+    "models_asked": [
+     "gemma4-26b-a4b"
+    ],
+    "role": "long",
+    "role_reason_answer": "table",
+    "role_reason_log": [
+     "table"
+    ]
+   }
+  },
+  {
+   "case": "08-managed-service-es",
+   "bytes": 778,
+   "has_table": true,
+   "before": {
+    "role": "mechanical",
+    "model": "gemma3-4b",
+    "crossed": [],
+    "inference_ms": null
+   },
+   "after": {
+    "models_asked": [
+     "gemma4-26b-a4b"
+    ],
+    "role": "long",
+    "role_reason_answer": "table",
+    "role_reason_log": [
+     "table"
+    ]
+   }
+  },
+  {
+   "case": "09-allowances-table-en",
+   "bytes": 264,
+   "has_table": true,
+   "before": {
+    "role": "mechanical",
+    "model": "gemma3-4b",
+    "crossed": [],
+    "inference_ms": null
+   },
+   "after": {
+    "models_asked": [
+     "gemma4-26b-a4b"
+    ],
+    "role": "long",
+    "role_reason_answer": "table",
+    "role_reason_log": [
+     "table"
+    ]
+   }
+  },
+  {
+   "case": "10-spec-sheet-en",
+   "bytes": 417,
+   "has_table": true,
+   "before": {
+    "role": "mechanical",
+    "model": "gemma3-4b",
+    "crossed": [],
+    "inference_ms": null
+   },
+   "after": {
+    "models_asked": [
+     "gemma4-26b-a4b"
+    ],
+    "role": "long",
+    "role_reason_answer": "table",
+    "role_reason_log": [
+     "table"
+    ]
+   }
+  },
+  {
+   "case": "11-ficha-suministro-es",
+   "bytes": 179,
+   "has_table": true,
+   "before": {
+    "role": "mechanical",
+    "model": "gemma3-4b",
+    "crossed": [],
+    "inference_ms": null
+   },
+   "after": {
+    "models_asked": [
+     "gemma4-26b-a4b"
+    ],
+    "role": "long",
+    "role_reason_answer": "table",
+    "role_reason_log": [
+     "table"
+    ]
+   }
+  },
+  {
+   "case": "12-capabilities-repeated-en",
+   "bytes": 583,
+   "has_table": true,
+   "before": {
+    "role": "mechanical",
+    "model": "gemma3-4b",
+    "crossed": [
+     "ip_allowlist"
+    ],
+    "inference_ms": null
+   },
+   "after": {
+    "models_asked": [
+     "gemma4-26b-a4b"
+    ],
+    "role": "long",
+    "role_reason_answer": "table",
+    "role_reason_log": [
+     "table"
+    ]
+   }
+  },
+  {
+   "case": "13-aviso-obras-es",
+   "bytes": 396,
+   "has_table": false,
+   "before": {
+    "role": "mechanical",
+    "model": "gemma3-4b",
+    "crossed": [],
+    "inference_ms": null
+   },
+   "after": {
+    "models_asked": [
+     "gemma3-4b"
+    ],
+    "role": "mechanical",
+    "role_reason_answer": null,
+    "role_reason_log": [
+     null
+    ]
+   }
+  },
+  {
+   "case": "14-service-conf-en",
+   "bytes": 243,
+   "has_table": false,
+   "before": {
+    "role": "mechanical",
+    "model": "gemma3-4b",
+    "crossed": [],
+    "inference_ms": null
+   },
+   "after": {
+    "models_asked": [
+     "gemma3-4b"
+    ],
+    "role": "mechanical",
+    "role_reason_answer": null,
+    "role_reason_log": [
+     null
+    ]
+   }
+  },
+  {
+   "case": "15-pricing-page-large-en",
+   "bytes": 6611,
+   "has_table": true,
+   "before": {
+    "role": "long",
+    "model": "gemma4-26b-a4b",
+    "crossed": [],
+    "inference_ms": 9233
+   },
+   "after": {
+    "models_asked": [
+     "gemma4-26b-a4b"
+    ],
+    "role": "long",
+    "role_reason_answer": null,
+    "role_reason_log": [
+     null
+    ]
+   }
+  },
+  {
+   "case": "16-manual-plan-equipo-large-es",
+   "bytes": 6051,
+   "has_table": true,
+   "before": {
+    "role": "long",
+    "model": "gemma4-26b-a4b",
+    "crossed": [],
+    "inference_ms": 5969
+   },
+   "after": {
+    "models_asked": [
+     "gemma4-26b-a4b"
+    ],
+    "role": "long",
+    "role_reason_answer": null,
+    "role_reason_log": [
+     null
+    ]
+   }
+  },
+  {
+   "case": "17-plans-transposed-en",
+   "bytes": 430,
+   "has_table": true,
+   "before": {
+    "role": "mechanical",
+    "model": "gemma3-4b",
+    "crossed": [],
+    "inference_ms": null
+   },
+   "after": {
+    "models_asked": [
+     "gemma4-26b-a4b"
+    ],
+    "role": "long",
+    "role_reason_answer": "table",
+    "role_reason_log": [
+     "table"
+    ]
+   }
+  },
+  {
+   "case": "18-thumbnailer-py",
+   "bytes": 927,
+   "has_table": false,
+   "before": {
+    "role": "mechanical",
+    "model": "gemma3-4b",
+    "crossed": [],
+    "inference_ms": null
+   },
+   "after": {
+    "models_asked": [
+     "gemma3-4b"
+    ],
+    "role": "mechanical",
+    "role_reason_answer": null,
+    "role_reason_log": [
+     null
+    ]
+   }
+  },
+  {
+   "case": "19-pricing-page-noisy-en-3fields",
+   "bytes": 29382,
+   "has_table": true,
+   "before": {
+    "role": "long",
+    "model": "gemma4-26b-a4b",
+    "crossed": [],
+    "inference_ms": 26115
+   },
+   "after": {
+    "models_asked": [
+     "gemma4-26b-a4b"
+    ],
+    "role": "long",
+    "role_reason_answer": null,
+    "role_reason_log": [
+     null
+    ]
+   }
+  },
+  {
+   "case": "20-pricing-page-noisy-en-5fields",
+   "bytes": 29382,
+   "has_table": true,
+   "before": {
+    "role": "long",
+    "model": "gemma4-26b-a4b",
+    "crossed": [],
+    "inference_ms": 16832
+   },
+   "after": {
+    "models_asked": [
+     "gemma4-26b-a4b"
+    ],
+    "role": "long",
+    "role_reason_answer": null,
+    "role_reason_log": [
+     null
+    ]
+   }
+  },
+  {
+   "case": "21-pricing-table-en-near-miss",
+   "bytes": 957,
+   "has_table": true,
+   "before": {
+    "role": "mechanical",
+    "model": "gemma3-4b",
+    "crossed": [
+     "api_requests_per_day",
+     "storage_per_user"
+    ],
+    "inference_ms": null
+   },
+   "after": {
+    "models_asked": [
+     "gemma4-26b-a4b"
+    ],
+    "role": "long",
+    "role_reason_answer": "table",
+    "role_reason_log": [
+     "table"
+    ]
+   }
+  },
+  {
+   "case": "22-limits-table-es-near-miss",
+   "bytes": 437,
+   "has_table": true,
+   "before": {
+    "role": "mechanical",
+    "model": "gemma3-4b",
+    "crossed": [
+     "almacenamiento_por_usuario"
+    ],
+    "inference_ms": null
+   },
+   "after": {
+    "models_asked": [
+     "gemma4-26b-a4b"
+    ],
+    "role": "long",
+    "role_reason_answer": "table",
+    "role_reason_log": [
+     "table"
+    ]
+   }
+  },
+  {
+   "case": "23-managed-service-es-near-miss",
+   "bytes": 778,
+   "has_table": true,
+   "before": {
+    "role": "mechanical",
+    "model": "gemma3-4b",
+    "crossed": [
+     "puestos_adicionales"
+    ],
+    "inference_ms": null
+   },
+   "after": {
+    "models_asked": [
+     "gemma4-26b-a4b"
+    ],
+    "role": "long",
+    "role_reason_answer": "table",
+    "role_reason_log": [
+     "table"
+    ]
+   }
+  },
+  {
+   "case": "24-allowances-table-en-near-miss",
+   "bytes": 264,
+   "has_table": true,
+   "before": {
+    "role": "mechanical",
+    "model": "gemma3-4b",
+    "crossed": [],
+    "inference_ms": null
+   },
+   "after": {
+    "models_asked": [
+     "gemma4-26b-a4b"
+    ],
+    "role": "long",
+    "role_reason_answer": "table",
+    "role_reason_log": [
+     "table"
+    ]
+   }
+  },
+  {
+   "case": "25-gateway-table-en-near-miss",
+   "bytes": 270,
+   "has_table": true,
+   "before": {
+    "role": "mechanical",
+    "model": "gemma3-4b",
+    "crossed": [],
+    "inference_ms": null
+   },
+   "after": {
+    "models_asked": [
+     "gemma4-26b-a4b"
+    ],
+    "role": "long",
+    "role_reason_answer": "table",
+    "role_reason_log": [
+     "table"
+    ]
+   }
+  },
+  {
+   "case": "26-plans-transposed-en-near-miss",
+   "bytes": 430,
+   "has_table": true,
+   "before": {
+    "role": "mechanical",
+    "model": "gemma3-4b",
+    "crossed": [
+     "enterprise_seats"
+    ],
+    "inference_ms": null
+   },
+   "after": {
+    "models_asked": [
+     "gemma4-26b-a4b"
+    ],
+    "role": "long",
+    "role_reason_answer": "table",
+    "role_reason_log": [
+     "table"
+    ]
+   }
+  }
+ ]
+}

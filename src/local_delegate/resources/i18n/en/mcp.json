@@ -218,6 +218,7 @@
   "mcp.warning.extract_recounted_keys": "the program counted the list of the input JSON and corrected the model's figure (detail in `recounted_keys`): {pairs}",
   "mcp.warning.extract_outline_copies": "the model copied the whole heading outline into a field that asks for one heading (detail in `outline_copies`): {pairs}",
   "mcp.warning.extract_outline_kept": "no single heading fits, left as it came",
+  "mcp.warning.extract_role_reason_table": "the input carries a table, so it went to the long-context model, which keeps rows apart better but is slower and may have to load; `LOCAL_DELEGATE_EXTRACT_TABLE_LONG=0` turns this off",
   "mcp.warning.lint_failures_mismatch": "the summary does not match the failures the program read in the log ({count} in all: {failures}).{details}",
   "mcp.warning.lint_failures_missing": " It does not name these files with failures: {files}.",
   "mcp.warning.lint_failures_miscounted": " It miscounts the failures of: {files}.",

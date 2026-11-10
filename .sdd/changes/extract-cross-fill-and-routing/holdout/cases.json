@@ -1,0 +1,1073 @@
+{
+  "description": "Conjunto a ciegas de REQ-004 y REQ-005 (extract-cross-fill-and-routing). Datos inventados. 'expected' es la respuesta correcta anotada a mano; 'crossed' es una respuesta escrita a mano que cruza valores entre claves (control positivo, no cuenta para los cupos ni para los pares sin cruce).",
+  "case_count": 24,
+  "pair_count": 115,
+  "cases": [
+    {
+      "id": "c01",
+      "format": "html",
+      "language": "en",
+      "input": "inputs/c01.html",
+      "fields": [
+        "model",
+        "price",
+        "noise_level",
+        "capacity",
+        "cord_length"
+      ],
+      "expected": {
+        "model": "Nimbus K2",
+        "price": "39",
+        "noise_level": "39",
+        "capacity": "1.7",
+        "cord_length": "0.75"
+      },
+      "crossed": {
+        "answer": {
+          "model": "Nimbus K2",
+          "price": "39",
+          "noise_level": "39",
+          "capacity": "0.75",
+          "cord_length": "1.7"
+        },
+        "crossed_keys": {
+          "capacity": "cord_length",
+          "cord_length": "capacity"
+        }
+      },
+      "quotas": [
+        {
+          "quota": "repeated_number_synonym_label",
+          "key": "price",
+          "value": "39",
+          "own_row_label": "Retail cost (USD)",
+          "other_row_label": "Noise level (dB)",
+          "other_row_requested": true
+        }
+      ],
+      "note": "Hervidor ficticio; el 39 sale en dos filas y las dos se piden."
+    },
+    {
+      "id": "c02",
+      "format": "markdown",
+      "language": "es",
+      "input": "inputs/c02.md",
+      "fields": [
+        "cuota_mensual",
+        "coste_de_alta",
+        "minutos",
+        "datos"
+      ],
+      "expected": {
+        "cuota_mensual": "590",
+        "coste_de_alta": "0",
+        "minutos": "ilimitados",
+        "datos": "25 GB"
+      },
+      "crossed": {
+        "answer": {
+          "cuota_mensual": "590",
+          "coste_de_alta": "0",
+          "minutos": "25 GB",
+          "datos": "ilimitados"
+        },
+        "crossed_keys": {
+          "minutos": "datos",
+          "datos": "minutos"
+        }
+      },
+      "quotas": [
+        {
+          "quota": "repeated_number_synonym_label",
+          "key": "cuota_mensual",
+          "value": "590",
+          "own_row_label": "Abono mensual",
+          "other_row_label": "Penalización por baja anticipada",
+          "other_row_requested": false
+        }
+      ],
+      "note": "Plan de telefonía ficticio; la fila de la penalización no se pide."
+    },
+    {
+      "id": "c03",
+      "format": "html",
+      "language": "es",
+      "input": "inputs/c03.html",
+      "fields": [
+        "plan_actual",
+        "plan_sugerido",
+        "periodo",
+        "fecha_renovacion",
+        "usuarios"
+      ],
+      "expected": {
+        "plan_actual": "Estudio",
+        "plan_sugerido": "Estudio Max",
+        "periodo": "anual",
+        "fecha_renovacion": "2027-03-01",
+        "usuarios": "3"
+      },
+      "crossed": {
+        "answer": {
+          "plan_actual": "Estudio Max",
+          "plan_sugerido": "Estudio",
+          "periodo": "anual",
+          "fecha_renovacion": "2027-03-01",
+          "usuarios": "3"
+        },
+        "crossed_keys": {
+          "plan_actual": "plan_sugerido",
+          "plan_sugerido": "plan_actual"
+        }
+      },
+      "quotas": [
+        {
+          "quota": "substring_of_other_key_row",
+          "key": "plan_actual",
+          "value": "Estudio",
+          "other_key": "plan_sugerido"
+        },
+        {
+          "quota": "substring_of_other_key_row",
+          "key": "usuarios",
+          "value": "3",
+          "other_key": "fecha_renovacion"
+        }
+      ],
+      "note": "Suscripción ficticia; «Estudio» va dentro de «Estudio Max» y «3» dentro de la fecha."
+    },
+    {
+      "id": "c04",
+      "format": "markdown",
+      "language": "en",
+      "input": "inputs/c04.md",
+      "fields": [
+        "primary_color",
+        "trim_color",
+        "size",
+        "pack_size",
+        "material"
+      ],
+      "expected": {
+        "primary_color": "Blue",
+        "trim_color": "Navy Blue",
+        "size": "10",
+        "pack_size": "100",
+        "material": "Cotton"
+      },
+      "crossed": {
+        "answer": {
+          "primary_color": "Navy Blue",
+          "trim_color": "Navy Blue",
+          "size": "100",
+          "pack_size": "100",
+          "material": "Cotton"
+        },
+        "crossed_keys": {
+          "primary_color": "trim_color",
+          "size": "pack_size"
+        }
+      },
+      "quotas": [
+        {
+          "quota": "substring_of_other_key_row",
+          "key": "primary_color",
+          "value": "Blue",
+          "other_key": "trim_color"
+        },
+        {
+          "quota": "substring_of_other_key_row",
+          "key": "size",
+          "value": "10",
+          "other_key": "pack_size"
+        }
+      ],
+      "note": "Calcetines ficticios; «Blue» dentro de «Navy Blue» y «10» dentro de «100»."
+    },
+    {
+      "id": "c05",
+      "format": "html",
+      "language": "en",
+      "input": "inputs/c05.html",
+      "fields": [
+        "return_policy",
+        "warranty",
+        "box_contents",
+        "weight"
+      ],
+      "expected": {
+        "return_policy": "Items can be returned within 30 days if they are unused and in the original box",
+        "warranty": "1 year, limited to the original buyer",
+        "box_contents": "Speaker, cable, and a quick start card",
+        "weight": "850 g"
+      },
+      "crossed": {
+        "answer": {
+          "return_policy": "1 year, limited to the original buyer",
+          "warranty": "Items can be returned within 30 days if they are unused and in the original box",
+          "box_contents": "Speaker, cable, and a quick start card",
+          "weight": "850 g"
+        },
+        "crossed_keys": {
+          "return_policy": "warranty",
+          "warranty": "return_policy"
+        }
+      },
+      "quotas": [
+        {
+          "quota": "long_cell_short_word",
+          "key": "return_policy",
+          "short_word": "box",
+          "other_key": "box_contents"
+        }
+      ],
+      "note": "Altavoz ficticio; «box» y «original» se repiten en otras filas pedidas."
+    },
+    {
+      "id": "c06",
+      "format": "markdown",
+      "language": "es",
+      "input": "inputs/c06.md",
+      "fields": [
+        "condiciones_envio",
+        "gastos_envio",
+        "plazo_devolucion",
+        "atencion_cliente"
+      ],
+      "expected": {
+        "condiciones_envio": "El envío es gratis en pedidos de más de 40 € y tarda de dos a cuatro días hábiles",
+        "gastos_envio": "4,95 €",
+        "plazo_devolucion": "14 días",
+        "atencion_cliente": "lunes a viernes"
+      },
+      "crossed": {
+        "answer": {
+          "condiciones_envio": "El envío es gratis en pedidos de más de 40 € y tarda de dos a cuatro días hábiles",
+          "gastos_envio": "4,95 €",
+          "plazo_devolucion": "lunes a viernes",
+          "atencion_cliente": "14 días"
+        },
+        "crossed_keys": {
+          "plazo_devolucion": "atencion_cliente",
+          "atencion_cliente": "plazo_devolucion"
+        }
+      },
+      "quotas": [
+        {
+          "quota": "long_cell_short_word",
+          "key": "condiciones_envio",
+          "short_word": "días",
+          "other_key": "plazo_devolucion"
+        }
+      ],
+      "note": "Tienda ficticia; «días» y «a» se repiten en otras filas pedidas."
+    },
+    {
+      "id": "c07",
+      "format": "html",
+      "language": "en",
+      "input": "inputs/c07.html",
+      "fields": [
+        "batteries",
+        "accessories",
+        "categories",
+        "warranty"
+      ],
+      "expected": {
+        "batteries": "2 x AA",
+        "accessories": "carrying strap",
+        "categories": "outdoor lights",
+        "warranty": "6 months"
+      },
+      "crossed": {
+        "answer": {
+          "batteries": "carrying strap",
+          "accessories": "2 x AA",
+          "categories": "outdoor lights",
+          "warranty": "6 months"
+        },
+        "crossed_keys": {
+          "batteries": "accessories",
+          "accessories": "batteries"
+        }
+      },
+      "quotas": [
+        {
+          "quota": "plural_ies_en",
+          "key": "batteries",
+          "row_label": "Battery"
+        },
+        {
+          "quota": "plural_ies_en",
+          "key": "accessories",
+          "row_label": "Accessory"
+        },
+        {
+          "quota": "plural_ies_en",
+          "key": "categories",
+          "row_label": "Category"
+        }
+      ],
+      "note": "Linterna ficticia; claves en plural -ies, filas en singular -y."
+    },
+    {
+      "id": "c08",
+      "format": "markdown",
+      "language": "en",
+      "input": "inputs/c08.md",
+      "fields": [
+        "company_count",
+        "city_count",
+        "daily_delivery",
+        "supply_budget",
+        "fleet_size"
+      ],
+      "expected": {
+        "company_count": "120",
+        "city_count": "14",
+        "daily_delivery": "300",
+        "supply_budget": "4,000",
+        "fleet_size": "22 vans"
+      },
+      "crossed": {
+        "answer": {
+          "company_count": "14",
+          "city_count": "120",
+          "daily_delivery": "300",
+          "supply_budget": "4,000",
+          "fleet_size": "22 vans"
+        },
+        "crossed_keys": {
+          "company_count": "city_count",
+          "city_count": "company_count"
+        }
+      },
+      "quotas": [
+        {
+          "quota": "plural_ies_en",
+          "key": "company_count",
+          "row_label": "Companies served"
+        },
+        {
+          "quota": "plural_ies_en",
+          "key": "city_count",
+          "row_label": "Cities covered"
+        },
+        {
+          "quota": "plural_ies_en",
+          "key": "daily_delivery",
+          "row_label": "Deliveries per day"
+        },
+        {
+          "quota": "plural_ies_en",
+          "key": "supply_budget",
+          "row_label": "Supplies budget"
+        }
+      ],
+      "note": "Mensajería ficticia; filas en plural -ies, claves en singular -y; tabla sin barras externas."
+    },
+    {
+      "id": "c09",
+      "format": "html",
+      "language": "es",
+      "input": "inputs/c09.html",
+      "fields": [
+        "motores",
+        "camiones_de_apoyo",
+        "luces_traseras",
+        "colores",
+        "lugar_de_montaje"
+      ],
+      "expected": {
+        "motores": "eléctrico, 3 kW",
+        "camiones_de_apoyo": "no incluido",
+        "luces_traseras": "LED roja",
+        "colores": "gris pizarra",
+        "lugar_de_montaje": "planta norte"
+      },
+      "crossed": {
+        "answer": {
+          "motores": "eléctrico, 3 kW",
+          "camiones_de_apoyo": "no incluido",
+          "luces_traseras": "gris pizarra",
+          "colores": "LED roja",
+          "lugar_de_montaje": "planta norte"
+        },
+        "crossed_keys": {
+          "luces_traseras": "colores",
+          "colores": "luces_traseras"
+        }
+      },
+      "quotas": [
+        {
+          "quota": "plural_es_es",
+          "key": "motores",
+          "row_label": "Motor"
+        },
+        {
+          "quota": "plural_es_es",
+          "key": "camiones_de_apoyo",
+          "row_label": "Camión de apoyo"
+        },
+        {
+          "quota": "plural_es_es",
+          "key": "luces_traseras",
+          "row_label": "Luz trasera"
+        },
+        {
+          "quota": "plural_es_es",
+          "key": "colores",
+          "row_label": "Color"
+        }
+      ],
+      "note": "Patinete ficticio; claves en plural -es (con tilde que cae y z→c), filas en singular."
+    },
+    {
+      "id": "c10",
+      "format": "markdown",
+      "language": "es",
+      "input": "inputs/c10.md",
+      "fields": [
+        "boton",
+        "sensor",
+        "cancion_precargada",
+        "lapiz_optico",
+        "version_de_firmware"
+      ],
+      "expected": {
+        "boton": "6",
+        "sensor": "2",
+        "cancion_precargada": "40",
+        "lapiz_optico": "1",
+        "version_de_firmware": "3"
+      },
+      "crossed": {
+        "answer": {
+          "boton": "2",
+          "sensor": "6",
+          "cancion_precargada": "40",
+          "lapiz_optico": "1",
+          "version_de_firmware": "3"
+        },
+        "crossed_keys": {
+          "boton": "sensor",
+          "sensor": "boton"
+        }
+      },
+      "quotas": [
+        {
+          "quota": "plural_es_es",
+          "key": "boton",
+          "row_label": "Botones"
+        },
+        {
+          "quota": "plural_es_es",
+          "key": "sensor",
+          "row_label": "Sensores"
+        },
+        {
+          "quota": "plural_es_es",
+          "key": "cancion_precargada",
+          "row_label": "Canciones precargadas"
+        },
+        {
+          "quota": "plural_es_es",
+          "key": "lapiz_optico",
+          "row_label": "Lápices ópticos"
+        },
+        {
+          "quota": "plural_es_es",
+          "key": "version_de_firmware",
+          "row_label": "Versiones de firmware"
+        }
+      ],
+      "note": "Tableta infantil ficticia; filas en plural -es, claves en singular y sin tildes."
+    },
+    {
+      "id": "c11",
+      "format": "html",
+      "language": "en",
+      "input": "inputs/c11.html",
+      "fields": [
+        "team_monthly_price",
+        "team_annual_price",
+        "scale_monthly_price",
+        "starter_seats",
+        "scale_seats"
+      ],
+      "expected": {
+        "team_monthly_price": "29",
+        "team_annual_price": "290",
+        "scale_monthly_price": "79",
+        "starter_seats": "1",
+        "scale_seats": "50"
+      },
+      "crossed": {
+        "answer": {
+          "team_monthly_price": "290",
+          "team_annual_price": "29",
+          "scale_monthly_price": "79",
+          "starter_seats": "1",
+          "scale_seats": "50"
+        },
+        "crossed_keys": {
+          "team_monthly_price": "team_annual_price",
+          "team_annual_price": "team_monthly_price"
+        }
+      },
+      "quotas": [
+        {
+          "quota": "similar_keys_table",
+          "keys": [
+            "team_monthly_price",
+            "team_annual_price",
+            "scale_monthly_price"
+          ]
+        }
+      ],
+      "note": "Planes de software ficticios en tabla de doble entrada; «29» dentro de «290»."
+    },
+    {
+      "id": "c12",
+      "format": "markdown",
+      "language": "es",
+      "input": "inputs/c12.md",
+      "fields": [
+        "precio_sin_iva",
+        "precio_con_iva",
+        "precio_envio",
+        "precio_envio_urgente",
+        "descuento"
+      ],
+      "expected": {
+        "precio_sin_iva": "100,00",
+        "precio_con_iva": "122,00",
+        "precio_envio": "6,50",
+        "precio_envio_urgente": "12,00",
+        "descuento": "10 %"
+      },
+      "crossed": {
+        "answer": {
+          "precio_sin_iva": "100,00",
+          "precio_con_iva": "122,00",
+          "precio_envio": "12,00",
+          "precio_envio_urgente": "6,50",
+          "descuento": "10 %"
+        },
+        "crossed_keys": {
+          "precio_envio": "precio_envio_urgente",
+          "precio_envio_urgente": "precio_envio"
+        }
+      },
+      "quotas": [
+        {
+          "quota": "similar_keys_table",
+          "keys": [
+            "precio_sin_iva",
+            "precio_con_iva",
+            "precio_envio",
+            "precio_envio_urgente"
+          ]
+        }
+      ],
+      "note": "Presupuesto ficticio; cuatro claves que empiezan por «precio»."
+    },
+    {
+      "id": "c13",
+      "format": "html",
+      "language": "es",
+      "input": "inputs/c13.html",
+      "fields": [
+        "brisa_llamadas_internacionales",
+        "ciclon_llamadas_internacionales",
+        "brisa_sms_nacionales",
+        "ciclon_sms_nacionales",
+        "ciclon_llamadas_nacionales"
+      ],
+      "expected": {
+        "brisa_llamadas_internacionales": "0,20 €/min",
+        "ciclon_llamadas_internacionales": "100 min incluidos",
+        "brisa_sms_nacionales": "0,05 €",
+        "ciclon_sms_nacionales": "ilimitados",
+        "ciclon_llamadas_nacionales": "ilimitadas"
+      },
+      "crossed": {
+        "answer": {
+          "brisa_llamadas_internacionales": "100 min incluidos",
+          "ciclon_llamadas_internacionales": "0,20 €/min",
+          "brisa_sms_nacionales": "0,05 €",
+          "ciclon_sms_nacionales": "ilimitados",
+          "ciclon_llamadas_nacionales": "ilimitadas"
+        },
+        "crossed_keys": {
+          "brisa_llamadas_internacionales": "ciclon_llamadas_internacionales",
+          "ciclon_llamadas_internacionales": "brisa_llamadas_internacionales"
+        }
+      },
+      "quotas": [
+        {
+          "quota": "similar_keys_table",
+          "keys": [
+            "brisa_llamadas_internacionales",
+            "ciclon_llamadas_internacionales",
+            "ciclon_llamadas_nacionales"
+          ]
+        }
+      ],
+      "note": "Tarifas móviles ficticias; «ilimitadas» e «ilimitados» en varias celdas."
+    },
+    {
+      "id": "c14",
+      "format": "markdown",
+      "language": "en",
+      "input": "inputs/c14.md",
+      "fields": [
+        "active_users_q1",
+        "active_paying_users_q1",
+        "active_users_q2",
+        "active_paying_users_q2",
+        "new_users_q2"
+      ],
+      "expected": {
+        "active_users_q1": "1,200",
+        "active_paying_users_q1": "300",
+        "active_users_q2": "1,450",
+        "active_paying_users_q2": "410",
+        "new_users_q2": "610"
+      },
+      "crossed": {
+        "answer": {
+          "active_users_q1": "300",
+          "active_paying_users_q1": "1,200",
+          "active_users_q2": "1,450",
+          "active_paying_users_q2": "410",
+          "new_users_q2": "610"
+        },
+        "crossed_keys": {
+          "active_users_q1": "active_paying_users_q1",
+          "active_paying_users_q1": "active_users_q1"
+        }
+      },
+      "quotas": [
+        {
+          "quota": "similar_keys_table",
+          "keys": [
+            "active_users_q1",
+            "active_paying_users_q1",
+            "active_users_q2",
+            "active_paying_users_q2"
+          ]
+        }
+      ],
+      "note": "Métricas ficticias de una app; «Active users» va dentro de «Active paying users»."
+    },
+    {
+      "id": "c15",
+      "format": "json",
+      "language": "en",
+      "input": "inputs/c15.json",
+      "fields": [
+        "summary",
+        "care_instructions",
+        "known_issues",
+        "product",
+        "price"
+      ],
+      "expected": {
+        "summary": "A slim desk lamp with three brightness levels and a warm light mode for reading at night.",
+        "care_instructions": "Wipe with a dry cloth. Do not use water or cleaning sprays on the light panel.",
+        "known_issues": "The touch button can respond late in cold rooms; this does not affect the light itself.",
+        "product": "Lumen desk lamp",
+        "price": "34 EUR"
+      },
+      "crossed": {
+        "answer": {
+          "summary": "A slim desk lamp with three brightness levels and a warm light mode for reading at night.",
+          "care_instructions": "The touch button can respond late in cold rooms; this does not affect the light itself.",
+          "known_issues": "Wipe with a dry cloth. Do not use water or cleaning sprays on the light panel.",
+          "product": "Lumen desk lamp",
+          "price": "34 EUR"
+        },
+        "crossed_keys": {
+          "care_instructions": "known_issues",
+          "known_issues": "care_instructions"
+        }
+      },
+      "quotas": [
+        {
+          "quota": "json_prose",
+          "prose_keys": [
+            "summary",
+            "care_instructions",
+            "known_issues"
+          ]
+        }
+      ],
+      "note": "Lámpara ficticia; «light» sale en los tres campos de prosa."
+    },
+    {
+      "id": "c16",
+      "format": "json",
+      "language": "es",
+      "input": "inputs/c16.json",
+      "fields": [
+        "nota_cliente",
+        "respuesta_soporte",
+        "motivo_retraso",
+        "estado",
+        "pedido"
+      ],
+      "expected": {
+        "nota_cliente": "Por favor, dejen el paquete en la portería si no hay nadie en casa por la tarde.",
+        "respuesta_soporte": "Hemos pasado la nota al repartidor; el paquete llegará el jueves por la tarde.",
+        "motivo_retraso": "Faltaba una pieza en el almacén y se tuvo que pedir a otro centro.",
+        "estado": "enviado",
+        "pedido": "PX-4471"
+      },
+      "crossed": {
+        "answer": {
+          "nota_cliente": "Hemos pasado la nota al repartidor; el paquete llegará el jueves por la tarde.",
+          "respuesta_soporte": "Por favor, dejen el paquete en la portería si no hay nadie en casa por la tarde.",
+          "motivo_retraso": "Faltaba una pieza en el almacén y se tuvo que pedir a otro centro.",
+          "estado": "enviado",
+          "pedido": "PX-4471"
+        },
+        "crossed_keys": {
+          "nota_cliente": "respuesta_soporte",
+          "respuesta_soporte": "nota_cliente"
+        }
+      },
+      "quotas": [
+        {
+          "quota": "json_prose",
+          "prose_keys": [
+            "nota_cliente",
+            "respuesta_soporte",
+            "motivo_retraso"
+          ]
+        }
+      ],
+      "note": "Pedido ficticio; las claves pedidas acortan el nombre del campo; «por la tarde» en dos campos."
+    },
+    {
+      "id": "c17",
+      "format": "label_lines",
+      "language": "en",
+      "input": "inputs/c17.txt",
+      "fields": [
+        "goal",
+        "risk",
+        "owner",
+        "next_step"
+      ],
+      "expected": {
+        "goal": "Move the billing page to the new layout before the spring release.",
+        "risk": "The old layout is still used by the export page, so both must change together.",
+        "owner": "The web team, with help from the billing team.",
+        "next_step": "Write the layout tests for the billing page."
+      },
+      "crossed": {
+        "answer": {
+          "goal": "Write the layout tests for the billing page.",
+          "risk": "The old layout is still used by the export page, so both must change together.",
+          "owner": "The web team, with help from the billing team.",
+          "next_step": "Move the billing page to the new layout before the spring release."
+        },
+        "crossed_keys": {
+          "goal": "next_step",
+          "next_step": "goal"
+        }
+      },
+      "quotas": [
+        {
+          "quota": "label_sentence_lines",
+          "keys": [
+            "goal",
+            "risk",
+            "owner",
+            "next_step"
+          ]
+        }
+      ],
+      "note": "Nota de proyecto ficticia; «billing», «layout» y «page» se repiten entre líneas."
+    },
+    {
+      "id": "c18",
+      "format": "label_lines",
+      "language": "es",
+      "input": "inputs/c18.txt",
+      "fields": [
+        "resumen",
+        "problema_conocido",
+        "solucion_temporal",
+        "proxima_version",
+        "contacto"
+      ],
+      "expected": {
+        "resumen": "La app de recetas guarda ahora las listas de la compra sin conexión.",
+        "problema_conocido": "Las listas muy largas tardan en abrir en móviles antiguos.",
+        "solucion_temporal": "Dividir la lista en dos o más listas cortas.",
+        "proxima_version": "Añadirá la opción de compartir listas por enlace.",
+        "contacto": "El equipo de la app responde en el foro de la comunidad."
+      },
+      "crossed": {
+        "answer": {
+          "resumen": "La app de recetas guarda ahora las listas de la compra sin conexión.",
+          "problema_conocido": "Dividir la lista en dos o más listas cortas.",
+          "solucion_temporal": "Las listas muy largas tardan en abrir en móviles antiguos.",
+          "proxima_version": "Añadirá la opción de compartir listas por enlace.",
+          "contacto": "El equipo de la app responde en el foro de la comunidad."
+        },
+        "crossed_keys": {
+          "problema_conocido": "solucion_temporal",
+          "solucion_temporal": "problema_conocido"
+        }
+      },
+      "quotas": [
+        {
+          "quota": "label_sentence_lines",
+          "keys": [
+            "resumen",
+            "problema_conocido",
+            "solucion_temporal",
+            "proxima_version",
+            "contacto"
+          ]
+        }
+      ],
+      "note": "Notas de versión ficticias; «listas» y «app» se repiten; las claves pierden las tildes."
+    },
+    {
+      "id": "c19",
+      "format": "csv",
+      "language": "en",
+      "input": "inputs/c19.csv",
+      "fields": [
+        "basic_storage",
+        "basic_backup_storage",
+        "basic_plus_storage",
+        "pro_backup_storage",
+        "basic_plus_support",
+        "pro_support_hours"
+      ],
+      "expected": {
+        "basic_storage": "50 GB",
+        "basic_backup_storage": "10 GB",
+        "basic_plus_storage": "200 GB",
+        "pro_backup_storage": "200 GB",
+        "basic_plus_support": "email and chat",
+        "pro_support_hours": "24/7"
+      },
+      "crossed": {
+        "answer": {
+          "basic_storage": "200 GB",
+          "basic_backup_storage": "10 GB",
+          "basic_plus_storage": "50 GB",
+          "pro_backup_storage": "200 GB",
+          "basic_plus_support": "email",
+          "pro_support_hours": "24/7"
+        },
+        "crossed_keys": {
+          "basic_storage": "basic_plus_storage",
+          "basic_plus_storage": "basic_storage",
+          "basic_plus_support": "basic_storage"
+        }
+      },
+      "quotas": [
+        {
+          "quota": "csv_shared_words",
+          "keys": [
+            "basic_storage",
+            "basic_backup_storage",
+            "basic_plus_storage",
+            "pro_backup_storage",
+            "basic_plus_support",
+            "pro_support_hours"
+          ]
+        }
+      ],
+      "note": "Caso CSV de REQ-005: «Basic» dentro de «Basic Plus», «storage» y «support» en dos columnas, «200 GB» y «50 GB» repetidos. En el cruce, basic_plus_support toma «email», que es de la fila de basic_*."
+    },
+    {
+      "id": "c20",
+      "format": "csv",
+      "language": "es",
+      "input": "inputs/c20.csv",
+      "fields": [
+        "precio_camiseta_m",
+        "precio_rebajado_camiseta_l",
+        "stock_camiseta_l",
+        "precio_rebajado_pantalon_m",
+        "stock_pantalon_m"
+      ],
+      "expected": {
+        "precio_camiseta_m": "24,90",
+        "precio_rebajado_camiseta_l": "19,90",
+        "stock_camiseta_l": "0",
+        "precio_rebajado_pantalon_m": null,
+        "stock_pantalon_m": "5"
+      },
+      "crossed": {
+        "answer": {
+          "precio_camiseta_m": "24,90",
+          "precio_rebajado_camiseta_l": "19,90",
+          "stock_camiseta_l": "12",
+          "precio_rebajado_pantalon_m": "19,90",
+          "stock_pantalon_m": "5"
+        },
+        "crossed_keys": {
+          "stock_camiseta_l": "otra fila (Camiseta lino M)",
+          "precio_rebajado_pantalon_m": "precio_rebajado_camiseta_l"
+        }
+      },
+      "quotas": [
+        {
+          "quota": "csv_shared_words",
+          "keys": [
+            "precio_camiseta_m",
+            "precio_rebajado_camiseta_l",
+            "precio_rebajado_pantalon_m"
+          ]
+        }
+      ],
+      "note": "CSV con punto y coma y coma decimal; dos filas casi iguales; celda vacía cuya respuesta correcta es null."
+    },
+    {
+      "id": "c21",
+      "format": "tsv",
+      "language": "en",
+      "input": "inputs/c21.tsv",
+      "fields": [
+        "north_1_location",
+        "north_2_toner",
+        "south_1_speed",
+        "north_2_speed",
+        "south_1_location"
+      ],
+      "expected": {
+        "north_1_location": "Floor 2",
+        "north_2_toner": "full",
+        "south_1_speed": "45",
+        "north_2_speed": "30",
+        "south_1_location": "Floor 2"
+      },
+      "crossed": {
+        "answer": {
+          "north_1_location": "Floor 2",
+          "north_2_toner": "low",
+          "south_1_speed": "30",
+          "north_2_speed": "30",
+          "south_1_location": "Floor 2"
+        },
+        "crossed_keys": {
+          "north_2_toner": "otra fila (North-1)",
+          "south_1_speed": "north_2_speed"
+        }
+      },
+      "quotas": [],
+      "note": "Impresoras ficticias en TSV; «speed» como sinónimo de «Pages per minute»; valores repetidos."
+    },
+    {
+      "id": "c22",
+      "format": "markdown",
+      "language": "en",
+      "input": "inputs/c22.md",
+      "fields": [
+        "flour_amount",
+        "water_unit",
+        "salt_amount",
+        "seeds_amount",
+        "seeds_optional"
+      ],
+      "expected": {
+        "flour_amount": "500",
+        "water_unit": "ml",
+        "salt_amount": "10",
+        "seeds_amount": null,
+        "seeds_optional": "yes"
+      },
+      "crossed": {
+        "answer": {
+          "flour_amount": "500",
+          "water_unit": "ml",
+          "salt_amount": "10",
+          "seeds_amount": "10",
+          "seeds_optional": "yes"
+        },
+        "crossed_keys": {
+          "seeds_amount": "salt_amount"
+        }
+      },
+      "quotas": [],
+      "note": "Receta ficticia con columnas alineadas por espacios y una fila con celdas vacías (respuesta null)."
+    },
+    {
+      "id": "c23",
+      "format": "html",
+      "language": "es",
+      "input": "inputs/c23.html",
+      "fields": [
+        "vela_s_battery_life",
+        "vela_m_battery_life",
+        "vela_m_weight",
+        "vela_s_ports",
+        "vela_m_ports"
+      ],
+      "expected": {
+        "vela_s_battery_life": "8 h",
+        "vela_m_battery_life": "12 h",
+        "vela_m_weight": "1,4 kg",
+        "vela_s_ports": "2 USB-C",
+        "vela_m_ports": "2 USB-C, 1 HDMI"
+      },
+      "crossed": {
+        "answer": {
+          "vela_s_battery_life": "12 h",
+          "vela_m_battery_life": "8 h",
+          "vela_m_weight": "1,4 kg",
+          "vela_s_ports": "2 USB-C, 1 HDMI",
+          "vela_m_ports": "2 USB-C, 1 HDMI"
+        },
+        "crossed_keys": {
+          "vela_s_battery_life": "vela_m_battery_life",
+          "vela_m_battery_life": "vela_s_battery_life",
+          "vela_s_ports": "vela_m_ports"
+        }
+      },
+      "quotas": [],
+      "note": "Portátiles ficticios en tabla traspuesta, cabeceras en español y claves en inglés; «2 USB-C» dentro de la otra celda."
+    },
+    {
+      "id": "c24",
+      "format": "markdown_list",
+      "language": "en",
+      "input": "inputs/c24.md",
+      "fields": [
+        "new_feature",
+        "changed",
+        "fixed",
+        "removed"
+      ],
+      "expected": {
+        "new_feature": "Notes can be pinned to the top of any folder.",
+        "changed": "The search box now also looks inside attachments.",
+        "fixed": "Pinned notes no longer disappear after a sync.",
+        "removed": "The old print preview."
+      },
+      "crossed": {
+        "answer": {
+          "new_feature": "Pinned notes no longer disappear after a sync.",
+          "changed": "The search box now also looks inside attachments.",
+          "fixed": "Notes can be pinned to the top of any folder.",
+          "removed": "The old print preview."
+        },
+        "crossed_keys": {
+          "new_feature": "fixed",
+          "fixed": "new_feature"
+        }
+      },
+      "quotas": [],
+      "note": "Notas de versión ficticias en lista Markdown con etiqueta en negrita; «pinned» y «notes» se repiten."
+    }
+  ]
+}

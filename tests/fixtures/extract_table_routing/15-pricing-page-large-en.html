@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Plans and pricing | Tidewater CI</title>
+<meta name="description" content="Compare the Standard and Enterprise plans of Tidewater CI.">
+<link rel="stylesheet" href="/assets/site.css">
+</head>
+<body>
+<header class="site-header">
+  <a class="logo" href="/">Tidewater CI</a>
+  <nav aria-label="Main">
+    <ul>
+      <li><a href="/product">Product</a></li>
+      <li><a href="/docs">Documentation</a></li>
+      <li><a href="/changelog">Changelog</a></li>
+      <li><a href="/pricing" aria-current="page">Pricing</a></li>
+      <li><a href="/contact">Contact</a></li>
+    </ul>
+  </nav>
+</header>
+
+<main>
+<section class="hero">
+  <h1>Plans and pricing</h1>
+  <p>Tidewater CI builds, tests and ships your code from the same pipeline file, on our runners or on yours. Pick the plan that matches how your organisation works today; you can move between plans at the end of any billing period.</p>
+  <p class="note">Prices are loaded at runtime; contact sales for a quote.</p>
+  <div id="price-cards" data-source="/api/prices" data-state="loading"></div>
+</section>
+
+<section class="why">
+  <h2>What every plan includes</h2>
+  <ul>
+    <li>Unlimited public and private projects.</li>
+    <li>Pipelines as code, with reusable templates and a visual editor.</li>
+    <li>Build caches shared between branches, with a manual purge button.</li>
+    <li>Secrets stored encrypted and scoped to an environment.</li>
+    <li>Status badges, commit checks and merge gates for the main code hosts.</li>
+    <li>A command line client for Linux, macOS and Windows.</li>
+  </ul>
+  <p>Both plans run on the same infrastructure. The differences are in the limits, in how long we keep your history and in the ways you can reach us when something goes wrong.</p>
+</section>
+
+<section class="compare-section">
+  <h2>Compare plans</h2>
+  <p>The table lists the limits that differ between the two plans. A dash means the feature is not part of the plan.</p>
+  <table class="compare">
+    <thead>
+      <tr><th scope="col">Feature</th><th scope="col">Standard</th><th scope="col">Enterprise</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Custom domains</td><td>1–5</td><td>1–3 per region</td></tr>
+      <tr><td>Storage per workspace</td><td>50 GB</td><td>2 TB</td></tr>
+      <tr><td>API requests per minute</td><td>600</td><td>6 000</td></tr>
+      <tr><td>Concurrent pipelines</td><td>4</td><td>40</td></tr>
+      <tr><td>Audit log retention</td><td>30 days</td><td>365 days</td></tr>
+      <tr><td>Build artifact retention</td><td>14 days</td><td>180 days</td></tr>
+      <tr><td>Single sign-on (SAML)</td><td>—</td><td>Included</td></tr>
+      <tr><td>Self-hosted runner</td><td>—</td><td>Available on request</td></tr>
+      <tr><td>Support</td><td>Email, 2 business days</td><td>24/7 phone and email</td></tr>
+    </tbody>
+  </table>
+  <p class="small">Limits are counted per workspace unless the row says otherwise.</p>
+</section>
+
+<section class="details">
+  <h2>How the limits work</h2>
+  <h3>Storage</h3>
+  <p>Storage covers build caches, artifacts and container layers. When a workspace reaches its limit, the oldest caches are removed first; artifacts are never deleted before their retention period ends. You can see the current usage on the workspace settings page, and an owner receives a notice when usage passes four fifths of the limit.</p>
+  <h3>Pipelines</h3>
+  <p>A pipeline counts as concurrent from the moment its first job starts until its last job ends. Pipelines above the limit wait in a queue in the order they were created. Manual jobs that are waiting for approval do not count.</p>
+  <h3>API</h3>
+  <p>The request limit applies to each access token. Requests above the limit receive a 429 response with a header that says when to retry. Webhook deliveries that we send to you are not counted.</p>
+  <h3>Domains</h3>
+  <p>A custom domain lets you serve build previews and documentation sites from an address of your own. Certificates are issued and renewed for you. On Enterprise the limit is counted separately in each region where the workspace has runners.</p>
+</section>
+
+<section class="migrate">
+  <h2>Moving from another service</h2>
+  <p>An importer reads the pipeline files of the most common build services and writes the equivalent Tidewater file next to them, with a comment on every step it could not translate. Nothing is changed in your repository until you open the pull request it prepares.</p>
+  <p>Secrets are never imported. The importer lists the names it found so that you can create them again by hand, and it marks the jobs that will fail until you do.</p>
+  <p>Build history stays in the service you are leaving. If you need it for an audit, export it there first; we can attach the archive to your workspace as a read-only record.</p>
+</section>
+
+<section class="faq">
+  <h2>Frequently asked questions</h2>
+  <details>
+    <summary>Can I try Enterprise before I decide?</summary>
+    <p>Yes. Ask sales for a trial workspace; it stays active for three weeks and keeps the pipelines you create if you subscribe afterwards.</p>
+  </details>
+  <details>
+    <summary>Do you offer discounts?</summary>
+    <p>Registered charities, schools and open source projects with a public repository can apply for a reduced rate. The form is on the contact page.</p>
+  </details>
+  <details>
+    <summary>How do I pay?</summary>
+    <p>Standard is paid by card. Enterprise can also be paid by bank transfer against an invoice, with payment terms agreed in the contract.</p>
+  </details>
+  <details>
+    <summary>Where is my data stored?</summary>
+    <p>You choose the region when you create the workspace. Build logs and artifacts stay in that region; account data is stored in the region of the organisation's owner.</p>
+  </details>
+  <details>
+    <summary>What happens if I cancel?</summary>
+    <p>The workspace becomes read-only at the end of the billing period. You can export pipelines, logs and artifacts during the following month; after that they are deleted.</p>
+  </details>
+</section>
+</main>
+
+<footer class="site-footer">
+  <p>All plans include unlimited projects.</p>
+  <ul>
+    <li><a href="/terms">Terms of service</a></li>
+    <li><a href="/privacy">Privacy</a></li>
+    <li><a href="/security">Security</a></li>
+    <li><a href="/status">System status</a></li>
+  </ul>
+  <p>&copy; Tidewater CI. All product names are fictional and used for illustration.</p>
+</footer>
+<script src="/assets/prices.js" defer></script>
+</body>
+</html>

@@ -218,6 +218,7 @@
   "mcp.warning.extract_recounted_keys": "el programa contó la lista del JSON de entrada y corrigió la cifra del modelo (detalle en `recounted_keys`): {pairs}",
   "mcp.warning.extract_outline_copies": "el modelo copió el esquema de encabezados entero en un campo que pide un solo título (detalle en `outline_copies`): {pairs}",
   "mcp.warning.extract_outline_kept": "sin un título único, se deja como vino",
+  "mcp.warning.extract_role_reason_table": "la entrada trae una tabla y por eso fue al modelo de contexto largo, que separa mejor las filas pero tarda más y puede tener que cargarse; `LOCAL_DELEGATE_EXTRACT_TABLE_LONG=0` lo apaga",
   "mcp.warning.lint_failures_mismatch": "el resumen no cuadra con los fallos que el programa leyó en el log ({count} en total: {failures}).{details}",
   "mcp.warning.lint_failures_missing": " No nombra estos ficheros con fallos: {files}.",
   "mcp.warning.lint_failures_miscounted": " Cuenta mal los fallos de: {files}.",

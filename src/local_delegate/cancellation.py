@@ -92,6 +92,9 @@ class Token:
         self.failure: BaseException | None = None
         #: The daemon's budget for this call in seconds (`0`: none), for the deadline's message.
         self.deadline_s = 0.0
+        #: #586: why the call's role is not the one its size gives (`"table"`), or `None`. Set by
+        #: `server.local_extract`, so the rows `_log_stopped` writes for a stopped call carry it.
+        self.role_reason: str | None = None
         #: Issue #479: where the call is now, for the progress heartbeat's message. Written from
         #: the tool's thread (`server._inflight_*`), read by `middleware` on the event loop:
         #: `wait` ("turn" or "slot"), `position`, `in_use`, `chunk`, `chunks`, `phase`, and
