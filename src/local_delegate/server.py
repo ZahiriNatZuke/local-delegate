@@ -52,6 +52,7 @@ from . import (
     cost,
     failures,
     git_history,
+    grounding,
     i18n,
     json_state,
     legacy_names,
@@ -65,6 +66,7 @@ from . import (
     questions,
     remote_turn,
     sections,
+    table_detect,
     test_windows,
     topology,
     turn,
@@ -7313,6 +7315,47 @@ def _string_literal_notice(content: str, *, kind: str) -> Callable[[str, bool], 
     return _notice
 
 
+def _grounding_notice(
+    content: str, before: Callable[[str, bool], str]
+) -> Callable[[str, bool], str]:
+    """#630: `before`, then a warning when the summary holds data the input does not.
+
+    `grounding.check` looks, by program and against the whole input, for an acronym expansion,
+    a figure and a word of another language that the input does not hold. The summary is not
+    changed: the caller is told what to check against the source. Judged on what the model wrote,
+    before the other notices add their own text. The figures are judged only on an input with a
+    table: elsewhere a summary counts on its own («3 errores» of a lint log) and the warning would
+    be noise (36 of 90 stored live summaries, all counts; 0 of the 20 with a table).
+    """
+    figures = table_detect.has_table(content)
+
+    def _notice(text: str, truncated: bool) -> str:
+        found = grounding.check(text, content, language=_summary_language(), figures=figures)
+        text = before(text, truncated)
+        if not found:
+            return text
+        parts = [
+            i18n.t(key, items=_listed(items))
+            for key, items in (
+                ("mcp.warning.ungrounded_acronyms", found.acronyms),
+                ("mcp.warning.ungrounded_numbers", found.numbers),
+                ("mcp.warning.ungrounded_foreign_words", found.foreign_words),
+            )
+            if items
+        ]
+        notice = i18n.t("mcp.warning.summary_ungrounded", details="; ".join(parts))
+        return f"{text.rstrip()}\n\n{WARNING_MARKER}{notice}]"
+
+    return _notice
+
+
+def _listed(items: list[str]) -> str:
+    """`items` as «a», «b»…, the first `grounding.MAX_ITEMS`, and how many more."""
+    shown = ", ".join(f"«{item}»" for item in items[: grounding.MAX_ITEMS])
+    rest = len(items) - grounding.MAX_ITEMS
+    return shown + (i18n.t("mcp.warning.ungrounded_more", count=rest) if rest > 0 else "")
+
+
 # --- Tools ------------------------------------------------------------------
 #: #580: output tokens per requested word in the flat `local_summarize` (single call and
 #: map/reduce). Measured on 2026-11-04 against the real backend (gemma4-26b-a4b and gemma3-4b,
@@ -7412,7 +7455,8 @@ def local_summarize(
     # #539: never on a code file: its `## ` lines live in string literals (test fixtures) and are
     # data, and the structured path handed them to the model as the sections to follow.
     kind = _source_kind(path)
-    literal_notice = _string_literal_notice(content, kind=kind)
+    # #630: the check of the summary against the input runs on every path, with the #539 notice.
+    literal_notice = _grounding_notice(content, _string_literal_notice(content, kind=kind))
     structured = config.STRUCTURED_SUMMARY and role == "long" and kind != "code"
     structure = sections.detect(content) if structured else None
     if structure is not None:
