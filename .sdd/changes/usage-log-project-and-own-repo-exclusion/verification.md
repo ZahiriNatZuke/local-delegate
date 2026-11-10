@@ -85,6 +85,67 @@ Relleno con el código nuevo sobre una tercera copia intacta de la instantánea,
 
 Las 2.357 `unknown` incluyen las pruebas, que el panel ya aparta por su cuenta.
 
+## T6 y T7 — Scripts de medición sobre la instantánea
+
+Medido el 2026-11-10 hacia las 11:50 (hora de Uruguay) sobre dos copias privadas de la instantánea
+de T1 (la de T1 queda intacta para T11), con `LOCAL_DELEGATE_LOG_DIR` y `LD_HOOK_TELEMETRY_LOG`
+apuntando a la copia y `measure_plugin_adoption.py --now 2026-11-10T14:05:00+00:00`. La raíz de
+proyectos es la real (solo lectura). Solo recuentos.
+
+- **Copia A**: la instantánea tal cual la dejó T1 (relleno de `main`, sin proyecto).
+- **Copia B**: la instantánea intacta más el relleno del código nuevo con el mismo `now`; los
+  cruces salen iguales que en T1 (3.709 líneas; 1.076 / 181 / 57 / 7 / 2.388). Es lo que medirá T11.
+
+Con `--include-self` las cifras coinciden con la línea base de T1 en las dos copias:
+
+| Cifra | T1 | A `--include-self` | B `--include-self` | A por defecto | B por defecto |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| `measure_adoption.py`: `reads` | 59.555 | 59.555 | 59.555 | 15.250 | 15.250 |
+| `offered` / `blocks` / `accepted` | 3.548 / 498 / 49 | 3.548 / 498 / 49 | 3.548 / 498 / 49 | 1.455 / 184 / 25 | 1.455 / 184 / 23 |
+| `total_delegations` | 1.264 | 1.264 | 1.264 | 1.264 | 483 |
+| `sessions` | 95 | 95 | 95 | 29 | 29 |
+| `excluded_self`: `hooks` / `usage` | — | 0 / 0 | 0 / 0 | 45.035 / 0 | 45.035 / 781 |
+| `unknown_project`: `hooks` / `usage` | — | 2.180 / 1.270 | 2.180 / 151 | 2.180 / 1.270 | 2.180 / 151 |
+| `delegations_by_caller`: `main` / `subagent` / `mod` / `unknown` | — | 54 / 911 / 154 / 145 | 54 / 911 / 154 / 145 | 54 / 911 / 154 / 145 | 0 / 247 / 91 / 145 |
+| `delegations_by_project_kind`: `self` / `other` / `unknown` | — | 0 / 0 / 1.264 | 781 / 338 / 145 | — / 0 / 1.264 | — / 338 / 145 |
+| `measure_plugin_adoption.py`: `sessions` / `with_delegation` / `pct` | 59 / 18 / 30,5 | 59 / 18 / 30,5 | 59 / 18 / 30,5 | 11 / 0 / 0,0 | 11 / 0 / 0,0 |
+| `excluded_rows` (los seis motivos) | 4 / 12 / 154 / 743 / 341 / 2.126 | iguales | iguales | iguales | iguales |
+| `excluded_self_sessions` | — | 0 | 0 | 48 | 48 |
+| `with_subagent_delegation` / `with_mod_delegation` | — | 43 / 18 | 43 / 18 | 6 / 4 | 6 / 4 |
+| `delegations_by_caller`: `main` / `subagent` / `mod` / `unknown` | — | 30 / 747 / 154 / 0 | 30 / 747 / 154 / 0 | 30 / 747 / 154 / 0 | 0 / 108 / 91 / 0 |
+
+Lectura:
+
+- Los eventos de hooks no dependen del relleno: sus 45.035 eventos del propio repo salen de la
+  sesión de cada evento (`project_of_session`, todos son eventos de antes de T8) y los 2.180 que
+  quedan sin proyecto son lecturas cuya sesión ya no tiene transcript o no tiene forma de UUID.
+- Las filas del log de uso solo se apartan con el relleno nuevo (copia B): en la A no hay ninguna
+  fila con tipo, y por eso allí `total_delegations` no baja.
+- Corte de 90 días del 2026-12-14 (REQ-029): los dos scripts dan las dos cifras con la misma
+  orden, con y sin `--include-self`; la comparable con los cortes de 14 y 30 días es la de
+  `--include-self`. El aviso en la wiki es de T10.
+
+### Control positivo (REQ-028), mutantes de T6 y T7
+
+Cada mutante se aplicó solo sobre el script, con `PYTHONDONTWRITEBYTECODE=1`, se comprobó que el
+fichero cambiaba y se corrió su fichero de test entero; después se restauró el original byte a byte.
+
+| N.º | Mutante | Test que falla por la aserción del plan | Otros tests que también caen |
+| ---: | --- | --- | --- |
+| 51 | No se filtran los eventos de hooks | `test_hook_events_of_the_own_repo_are_left_out`: «the reads are only those of the other session» | el del evento viejo, el de la opción por defecto, el de la salida de texto y el de una búsqueda por sesión |
+| 52 | No se filtran las filas del log de uso | `test_usage_rows_of_the_own_repo_are_left_out`: «total_delegations counts only the other one» | ninguno |
+| 53 | No se resuelven los eventos viejos | `test_an_old_event_is_resolved_by_its_session`: «the old event of the self session is left out» | el de la opción por defecto, el de la salida de texto y el de una búsqueda por sesión |
+| 54 | `--include-self` se ignora | `test_include_self_counts_both_sessions`: «both sessions count» | ninguno |
+| 55 | `delegations_by_caller` sin el mod primero (cuenta por `caller_kind`) | `test_delegations_by_caller_counts_the_mod_first`: «the mod row sums in mod» | ninguno |
+| 56 | `delegations_by_project_kind` cuenta lo desconocido como `other` | `test_delegations_by_project_kind_keeps_the_unknown_apart`: «the row without kind sums in unknown» | ninguno |
+| 57 | No se excluyen las sesiones `self` | `test_the_sessions_of_the_own_repo_are_left_out_by_default`: «pct is 0.0 by default» | el de la opción por defecto y el de la lista `self-projects.json` |
+| 58 | `--include-self` se ignora (en `main`) | `test_include_self_counts_them`: «pct is 50.0 with the option» | ninguno |
+| 59 | No se miran los transcripts de subagentes | `test_a_delegation_in_a_subagent_transcript_counts_in_its_column`: «with_subagent_delegation is 1» | `test_pct_comes_only_from_the_main_thread` (su segunda aserción) |
+| 60 | El mod no se atribuye por clave de sesión (compara el id en claro) | `test_a_mod_row_counts_by_the_session_key`: «with_mod_delegation is 1» | `test_pct_comes_only_from_the_main_thread` (su segunda aserción) |
+| 61 | `pct` cuenta subagentes | `test_pct_comes_only_from_the_main_thread`: «pct comes only from the main thread» | ninguno |
+
+Ningún mutante sobrevive y en todos dispara la aserción que nombra el plan.
+
 ## Control positivo (REQ-028), mutantes de T2 a T4
 
 Cada mutante se aplicó solo, con `PYTHONDONTWRITEBYTECODE=1` y el fichero restaurado byte a byte
@@ -153,6 +214,8 @@ Without a declaration, list what was run. Never invent a command. -->
 | `pytest` de los ficheros existentes más cercanos (transcripts, recompute ×3, attribution, hook_common, quota, density, valuation, filtro de sesión del panel; hook_boundaries, hook_legacy_names, f1_conformance, no_uncatalogued_text, correlation, clients) | sí | pass | 136 y 150 passed |
 | `pytest -n 2` suite completa | ver PR | — | la primera corrida la paró Claude Code por falta de memoria de la máquina (no por el cambio); resultado en el PR |
 | `ruff check .` y `ruff format --check .` | sí | pass | «All checks passed!» y «461 files already formatted» |
+| T6/T7: `pytest -n 2` de los dos ficheros nuevos y de `test_measure_adoption`, `test_measure_plugin_adoption`, `test_measure_cooldown`, `test_hook_boundaries`, `test_telemetry_concurrent_writes` y `test_detect_spanish_names` | sí | pass | 149 passed, 1 skipped |
+| T6/T7: `ruff check` y `ruff format --check` de los cuatro ficheros | sí | pass | «All checks passed!» y «4 files already formatted» |
 
 ## Quality checks
 
@@ -177,3 +240,21 @@ Without a declaration, list what was run. Never invent a command. -->
 - `hook_common` expone, además de `project_identity` y `project_of_session`, las piezas que usa el
   relleno: `project_directory`, `project_fields`, `project_salt`, `self_project_entries`,
   `normalize_project_name` y `projects_root`.
+- **T6, `unknown_project.hooks`** cuenta solo las lecturas que quedan (el denominador), no todos
+  los eventos de hooks: contado sobre todos, `test_a_file_the_hook_could_not_size_is_not_a_read`
+  (existente) fallaba, porque las líneas `no_file` cambiaban esa cifra y el test exige que solo
+  cambie `not_reads`. `excluded_self.hooks` sí cuenta todos los eventos apartados, igual que
+  `excluded_tests.hooks`.
+- **T6, tope de la búsqueda**: el script llama a `project_of_session` con 10 s de tope
+  (`SESSION_SEARCH_BUDGET_S`) en vez de los 50 ms del hook, una vez por sesión y corrida
+  (`SessionProjects`): con el tope del hook, un disco frío dejaría sesiones como `unknown` al azar.
+  Solo lee el tipo (`project_kind_of`); nunca crea la sal en el `LOG_DIR` que mide.
+- **T7, `delegations_by_caller`**: cuenta las filas de Claude Code del periodo fuera de pruebas y
+  ventanas (motivos de `exclusion` `None`, `plugin`, `subagent` y `no_tool_use_id`), sin las del
+  propio repo por defecto, con `caller_column` sobre la fila fundida por `cost.merge_row`.
+  `excluded_rows` no cambia (no gana un motivo `self`), para que sus seis cifras sigan siendo
+  las de T1. `with_subagent_delegation` busca los `tool_use_id` del modelo, incluidos los de
+  subagente; `with_mod_delegation`, la `caller_session_key` de las filas del mod. Las dos, como
+  `with_delegation`, desde el comienzo del periodo y sin final.
+- **T6/T7, léxico**: no hizo falta tocar `scripts/data/spanish_lexicon.json`; dos palabras nuevas
+  sin clasificar (`callers`, `puts`) se evitaron renombrando una variable y un test.

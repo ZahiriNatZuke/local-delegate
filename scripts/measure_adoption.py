@@ -15,6 +15,13 @@ Las pruebas no cuentan: los eventos de hooks dentro de una ventana de prueba
 (`attribution.test_reason`, con la ventana estampada) marca como prueba se quitan, y la salida dice
 cuantas. `--include-tests` las deja.
 
+El propio repo tampoco cuenta por defecto (`--exclude-self`): sus filas del log de uso
+(`attribution.project_kind`) y sus eventos de hooks (`project_kind` del evento) se quitan, y la
+salida dice cuantos en `excluded_self`. Un evento viejo sin `project_kind` se resuelve por su
+sesion (`hook_common.project_of_session` sobre `--projects`); si no se encuentra, o se encuentra en
+dos directorios, es `unknown` y se queda (`unknown_project`). `--include-self` lo deja todo: es la
+cifra comparable con los cortes anteriores de la medicion.
+
 Uso:
     uv run python scripts/measure_adoption.py                    # desde que arranco el experimento
     uv run python scripts/measure_adoption.py --since 2026-09-12 # una ventana concreta
@@ -36,6 +43,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 import measurement_boundaries
 
 from local_delegate import attribution, config, cost, legacy_names, test_windows
+from local_delegate.resources.hooks import hook_common
 
 #: El hook que escribe cada evento, para buscar su huella en el conjunto de ESE script: el de
 #: prompts no lleva `category` de lectura, el de shell lleva `shell` y el resto es el de `Read`.
@@ -47,6 +55,49 @@ HOOK_SCRIPTS = {
 
 #: Reasons of an event that is not a read the rule could act on (see `measure`).
 NOT_A_READ = frozenset({"no_file"})
+
+#: The columns of `delegations_by_caller`, in the order of `attribution.caller_column`.
+CALLER_COLUMNS = ("main", "subagent", "mod", "unknown")
+
+#: A script is not a hook: the search of a session's transcript gets room for a cold disk, and
+#: each session is searched once per run (`SessionProjects`).
+SESSION_SEARCH_BUDGET_S = 10.0
+
+
+class SessionProjects:
+    """The project kind of a session, by `hook_common.project_of_session` over `projects`.
+
+    One search per session and run: the index is built as the events ask for it. A session not
+    found, or found in two directories, is `unknown`.
+    """
+
+    def __init__(self, projects: Path, log_dir: Path) -> None:
+        self.projects = Path(projects)
+        self.log_dir = Path(log_dir)
+        self._kinds: dict[str, str] = {}
+
+    def kind(self, session_id: object) -> str:
+        if not isinstance(session_id, str) or not session_id:
+            return "unknown"
+        if session_id not in self._kinds:
+            transcript = hook_common.project_of_session(
+                session_id, root=self.projects, budget_s=SESSION_SEARCH_BUDGET_S
+            )
+            self._kinds[session_id] = (
+                "unknown"
+                if transcript is None
+                else hook_common.project_kind_of(transcript.parent.name, directory=self.log_dir)
+            )
+        return self._kinds[session_id]
+
+
+def event_project_kind(event: dict, sessions: SessionProjects) -> str:
+    """`self`, `other` or `unknown` of a hook event: its own `project_kind` if it carries one,
+    and otherwise (an event from before the field) the kind of its session."""
+    kind = event.get("project_kind")
+    if kind in attribution.PROJECT_KINDS:
+        return kind
+    return sessions.kind(event.get("session_id"))
 
 
 def hook_telemetry() -> Path:
@@ -149,7 +200,14 @@ def by_side(
     return {side: {key: result[side][key] for key in keys} for side in sides}
 
 
-def measure(since: str | None, include_tests: bool = False, boundaries: dict | None = None) -> dict:
+def measure(
+    since: str | None,
+    include_tests: bool = False,
+    boundaries: dict | None = None,
+    *,
+    include_self: bool = False,
+    projects: Path | None = None,
+) -> dict:
     # Claves y valores viejos (`motivo`, `bloqueo`, `camino`…) y nuevos dan lo mismo (REQ-006).
     hooks = [legacy_names.normalize("hook_telemetry", e) for e in read(hook_telemetry(), since)]
     usages = merged_usages(since)
@@ -165,6 +223,26 @@ def measure(since: str | None, include_tests: bool = False, boundaries: dict | N
         usages = [e for e in usages if not attribution.test_reason(e)]
         outside["usage"] = before - len(usages)
 
+    # The repo's own use, after the tests (usage-log-project-and-own-repo-exclusion, REQ-017).
+    sessions = SessionProjects(
+        projects if projects is not None else hook_common.projects_root(), logs_dir()
+    )
+    hook_kinds = {id(e): event_project_kind(e, sessions) for e in hooks}
+    usage_kinds = [attribution.project_kind(e) for e in usages]
+    excluded_self = {"hooks": 0, "usage": 0}
+    if not include_self:
+        before = len(hooks)
+        hooks = [e for e in hooks if hook_kinds[id(e)] != "self"]
+        excluded_self["hooks"] = before - len(hooks)
+        excluded_self["usage"] = usage_kinds.count("self")
+        usages = [e for e, kind in zip(usages, usage_kinds, strict=True) if kind != "self"]
+        usage_kinds = [kind for kind in usage_kinds if kind != "self"]
+
+    delegations = [e for e in usages if e.get("tool", "").startswith("local_")]
+    by_caller = Counter(attribution.caller_column(e) for e in delegations)
+    by_kind = Counter(attribution.project_kind(e) for e in delegations)
+    kinds = ("self", "other", "unknown") if include_self else ("other", "unknown")
+
     # `no_file`: the hook could not size the file (it does not exist or cannot be read), so there
     # was nothing to delegate. The shell hook always wrote these lines and the read hook started
     # with the UTF-8 fix (#560): counted as reads, they would inflate the «after» denominator.
@@ -174,6 +252,12 @@ def measure(since: str | None, include_tests: bool = False, boundaries: dict | N
     not_reads = dict(Counter(e["reason"] for e in seen if e.get("reason") in NOT_A_READ))
     offered = [e for e in reads if e.get("suggested")]
     blocks = [e for e in offered if e.get("blocked")]
+    # What stays without a known project, among what the measurement counts: the reads and the
+    # usage rows (the events that are not reads do not move any figure).
+    unknown_project = {
+        "hooks": sum(1 for e in reads if hook_kinds[id(e)] == "unknown"),
+        "usage": usage_kinds.count("unknown"),
+    }
 
     # «Aceptado» = el identificador del bloqueo aparece en un evento de tool. Sin esto, lo unico
     # medible era «hubo delegaciones», que no dice si las provoco el aviso.
@@ -213,7 +297,9 @@ def measure(since: str | None, include_tests: bool = False, boundaries: dict | N
         "blocks": len(blocks),
         "accepted": len(accepted),
         "acceptance_rate": round(len(accepted) / len(blocks), 3) if blocks else None,
-        "total_delegations": len([e for e in usages if e.get("tool", "").startswith("local_")]),
+        "total_delegations": len(delegations),
+        "delegations_by_caller": {column: by_caller[column] for column in CALLER_COLUMNS},
+        "delegations_by_project_kind": {kind: by_kind[kind] for kind in kinds},
         "spontaneous_delegations": len(
             [e for e in usages if e.get("tool", "").startswith("local_") and not e.get("block_id")]
         ),
@@ -221,6 +307,9 @@ def measure(since: str | None, include_tests: bool = False, boundaries: dict | N
         "bounded_worth_delegating": len(worth_delegating),
         "excluded_tests": outside,
         "test_windows": applied,
+        "include_self": include_self,
+        "excluded_self": excluded_self,
+        "unknown_project": unknown_project,
         "by_side": by_side(reads, usages, delegated_ids, boundaries),
     }
 
@@ -238,9 +327,34 @@ def main() -> int:
         action="store_true",
         help="no quitar las pruebas (ventanas y regla comun)",
     )
+    own = parser.add_mutually_exclusive_group()
+    own.add_argument(
+        "--exclude-self",
+        dest="include_self",
+        action="store_false",
+        help="quitar el propio repo (por defecto)",
+    )
+    own.add_argument(
+        "--include-self",
+        dest="include_self",
+        action="store_true",
+        help="contar tambien el propio repo: la cifra comparable con los cortes anteriores",
+    )
+    parser.set_defaults(include_self=False)
+    parser.add_argument(
+        "--projects",
+        type=Path,
+        default=None,
+        help="raiz de proyectos de Claude Code para los eventos viejos (~/.claude/projects)",
+    )
     args = parser.parse_args()
 
-    result = measure(args.since, include_tests=args.include_tests)
+    result = measure(
+        args.since,
+        include_tests=args.include_tests,
+        include_self=args.include_self,
+        projects=args.projects,
+    )
     if args.json:
         print(json.dumps(result, ensure_ascii=False, indent=2))
         return 0
@@ -255,6 +369,19 @@ def main() -> int:
             f"Pruebas fuera: {outside['hooks']} eventos de hooks y {outside['usage']} filas del log de "
             f"uso ({len(result['test_windows'])} ventanas de prueba en el fichero)"
         )
+    own = result["excluded_self"]
+    unknown = result["unknown_project"]
+    if args.include_self:
+        print("Propio repo: incluido (--include-self)")
+    else:
+        print(
+            f"Propio repo fuera: {own['hooks']} eventos de hooks y {own['usage']} filas del log de "
+            f"uso (--include-self para contarlo)"
+        )
+    print(
+        f"Sin proyecto conocido: {unknown['hooks']} eventos de hooks y {unknown['usage']} filas "
+        f"del log de uso (se quedan)"
+    )
     print()
     print(f"Lecturas vistas:        {result['reads']}")
     for reason, how_many in sorted(result["by_reason"].items(), key=lambda x: -x[1]):
@@ -269,6 +396,12 @@ def main() -> int:
     print()
     print(f"Delegaciones totales:   {result['total_delegations']}")
     print(f"  espontaneas:          {result['spontaneous_delegations']}")
+    threads = result["delegations_by_caller"]
+    print(
+        f"  por hilo:             principal {threads['main']}, subagentes {threads['subagent']}, "
+        f"mod {threads['mod']}, sin dato {threads['unknown']}"
+    )
+    print(f"  por proyecto:         {result['delegations_by_project_kind']}")
     print()
     print("Guarda de lectura acotada (REQ-F1-8):")
     print(f"  agrupables por fichero: {result['bounded_with_footprint']}")
