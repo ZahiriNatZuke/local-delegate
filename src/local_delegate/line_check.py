@@ -264,6 +264,19 @@ PREMISE_STEM_LEN = 5
 #: answer that echoes them is right (5 false warnings out of 6 correct answers without this
 #: filter). Endings after folding accents and dropping a plural `s`/`es`.
 _NOMINALIZATION = re.compile(r"(?:cion|sion|tion|idad|ity|ncia|ncy|nce|eza)$")
+#: #538 (reopened): Spanish agent nouns in -ente/-ante keep their first letters in English too
+#: (subagente/subagent, cliente/client, componente/component), and they name what a question
+#: presupposes («split by main thread and subagent»). Not the adverbs in -mente nor the words of
+#: asking that end the same way (`_NOT_AGENT_NOUNS`).
+_AGENT_NOUN = re.compile(r"(?<!m)(?:ente|ante)$")
+_NOT_AGENT_NOUNS = frozenset(
+    {
+        "siguiente", "durante", "mediante", "antes", "bastante", "delante", "adelante",
+        "restante", "suficiente", "correspondiente", "fuente", "frente", "gente", "mente",
+        "diferente", "anteriormente", "importante", "relevante", "existente", "presente",
+        "aparente", "evidente", "constante", "instante",
+    }
+)  # fmt: skip
 #: Nominalizations of asking, not of the domain, and cognates whose first letters differ between
 #: the two languages (opción/option, sección/section). Stems of PREMISE_STEM_LEN letters. The
 #: domain words (retention, rotation, expiration) are never listed: the check works for any.
@@ -303,11 +316,24 @@ def _without_fences(answer: str) -> str:
     return "\n".join(out)
 
 
+def _singular(folded_word: str) -> str:
+    """The folded word without a plural `s`/`es`: «retenciones» → «retencion»."""
+    return re.sub(r"(?:(?<=[cs]ion)|(?<=dad))es$|(?<=[^s])s$", "", folded_word)
+
+
+def _is_agent_noun(word: str) -> bool:
+    """#538 (reopened): «subagente», «clientes»; not «rápidamente», «siguiente», «antes»."""
+    folded_word = _fold(word)
+    singular = _singular(folded_word)
+    return bool(_AGENT_NOUN.search(singular)) and not ({singular, folded_word} & _NOT_AGENT_NOUNS)
+
+
 def premise_terms(question: str, content: str) -> list[str]:
     """#538: the nominalizations of `question` whose stem the file does not hold, in order.
 
     Plain words (not code identifiers: those get their exact occurrences) ending as a
-    nominalization (`_NOMINALIZATION`) and not words of asking. The file is searched as a whole,
+    nominalization (`_NOMINALIZATION`) or as a Spanish agent noun (`_AGENT_NOUN`: subagente,
+    cliente) and not words of asking. The file is searched as a whole,
     comments and strings included, without accents and ignoring case.
     """
     folded = _fold(content)
@@ -316,10 +342,10 @@ def premise_terms(question: str, content: str) -> list[str]:
     stems: set[str] = set()
     for word in _PREMISE_WORD.findall(question):
         folded_word = _fold(word)
-        singular = re.sub(r"(?:(?<=[cs]ion)|(?<=dad))es$|(?<=[^s])s$", "", folded_word)
+        singular = _singular(folded_word)
         stem = folded_word[:PREMISE_STEM_LEN]
         if (
-            not _NOMINALIZATION.search(singular)
+            not (_NOMINALIZATION.search(singular) or _is_agent_noun(word))
             or stem in stems
             or stem in _QUESTION_STEMS
             or folded_word in names
@@ -334,6 +360,8 @@ def premise_terms(question: str, content: str) -> list[str]:
 #: A Spanish `c` before `i` that English writes `t`: rotación/rotation, acción/action,
 #: inicialización/initialization. Only a variant is added, so it can only remove warnings.
 _SOFT_C = re.compile(r"c(?=i)")
+#: A vowel's single `s` before `ion` («sesión»), that English doubles («session»).
+_SINGLE_S = re.compile(r"(?<=[aeiou])s(?=ion)")
 
 
 def _held(folded_word: str, folded: str) -> bool:
@@ -345,6 +373,10 @@ def _held(folded_word: str, folded: str) -> bool:
     """
     english = _SOFT_C.sub("t", folded_word)
     if folded_word[:PREMISE_STEM_LEN] in folded or english[:PREMISE_STEM_LEN] in folded:
+        return True
+    # #538 (reopened): the single `s` of «sesión», «misión», «permisión» is double in English.
+    doubled = _SINGLE_S.sub("ss", folded_word)
+    if doubled != folded_word and doubled[:PREMISE_STEM_LEN] in folded:
         return True
     if english == folded_word:
         return False
@@ -374,24 +406,53 @@ def unsupported_premises(
     prose. With `truncated`, as in `check`, the last line is not judged: its citation may be cut
     in half.
     """
+    return _asserted_premises(answer, question, content, truncated)[0]
+
+
+def premises_beside_code(
+    answer: str, question: str, content: str, truncated: bool = False
+) -> list[str]:
+    """#538 (reopened): the agent nouns of the question the file does not hold that the answer
+    asserts only in sentences that stand on the code.
+
+    «La partición por subagente se realiza en `by_side` (línea 9)»: `by_side` is real and on line
+    9, so `unsupported_premises` takes the sentence as anchored, yet no line of the file names a
+    subagent. Only agent nouns (`_is_agent_noun`): they name things (a subagent, a client) that
+    code handling them names somewhere; a process («partición», «retención») is often done under
+    another name (`by_side`, `prune`), and the live check flagged «partición» of a right answer.
+    The code cited may still do it, so this is a notice to check, not the warning. Same rules as
+    `unsupported_premises` (negation, fences, `truncated`); a word gets one of the two, never both.
+    """
+    anchored = _asserted_premises(answer, question, content, truncated)[1]
+    return [term for term in anchored if _is_agent_noun(term)]
+
+
+def _asserted_premises(
+    answer: str, question: str, content: str, truncated: bool
+) -> tuple[list[str], list[str]]:
+    """(unanchored, anchored only) premise words the answer names and never denies."""
     terms = premise_terms(question, content)
     if not terms:
-        return []
+        return [], []
     if truncated:
         answer = answer.rstrip("\n").rpartition("\n")[0]
     lines = content.split("\n")
     sentences = [s for s in _SENTENCE_END.split(_without_fences(answer)) if s.strip()]
-    out: list[str] = []
+    unanchored: list[str] = []
+    anchored: list[str] = []
     for term in terms:
         folded_term = _fold(term)
         stems = {folded_term[:PREMISE_STEM_LEN], _SOFT_C.sub("t", folded_term)[:PREMISE_STEM_LEN]}
+        stems.add(_SINGLE_S.sub("ss", folded_term)[:PREMISE_STEM_LEN])
         stem = re.compile(r"(?<![^\W\d_])(?:" + "|".join(map(re.escape, sorted(stems))) + ")")
         naming = [s for s in sentences if stem.search(_fold(s))]
-        if any(_denies(s) for s in naming):
+        if not naming or any(_denies(s) for s in naming):
             continue
         if any(not _anchored(s, question, content, lines) for s in naming):
-            out.append(term)
-    return out
+            unanchored.append(term)
+        else:
+            anchored.append(term)
+    return unanchored, anchored
 
 
 #: #553: words after «no»/«not» that limit instead of deny: «no solo aplica retención, sino…».
