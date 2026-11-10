@@ -893,11 +893,13 @@ def backend(lang: str | None = Query(None)):
 
     Con un fallo, `cause`/`label`/`detail` dicen por qué (REQ-012, textos de `failures.py`) y
     `models` es la última lista buena de esta URL con `models_stale: true` (REQ-021). `/running`
-    solo se pide si `/models` respondió (REQ-013), y `running_ok` dice si respondió (REQ-022).
+    solo se pide si `/models` respondió (REQ-013) o si falló con el backend atendiendo la conexión
+    (`_CAUSES_WORTH_RUNNING`, issue #628), y `running_ok` dice si respondió (REQ-022).
     """
     language = _lang(lang)
     probe = server.probe_backend()
-    running, running_ok = _running() if probe.available else ([], False)
+    ask_running = probe.available or probe.cause in _CAUSES_WORTH_RUNNING
+    running, running_ok = _running() if ask_running else ([], False)
     return JSONResponse(
         {
             "available": probe.available,
@@ -910,6 +912,21 @@ def backend(lang: str | None = Query(None)):
             "host": config.backend_host(),
         }
     )
+
+
+#: Causes of a failed `/v1/models` probe in which the backend's port DID take the connection: it
+#: gave no answer in time, an HTTP error, or a body that is not the list. `/running` is still worth
+#: asking then (issue #628): llama-swap may be loading a model, and the band of the mod says so
+#: instead of «down». `available` stays false: it only speaks of `/v1/models`. Left out on purpose:
+#: `credential` (`/running` asks for the same key) and every cause of a backend that is not there
+#: (refused, connect timeout, no route, DNS, transport), which keep costing one deadline (REQ-013).
+_CAUSES_WORTH_RUNNING = frozenset(
+    {
+        failures.ConnectionCause.NO_RESPONSE.value,
+        failures.ConnectionCause.HTTP_ERROR.value,
+        failures.ConnectionCause.INVALID_RESPONSE.value,
+    }
+)
 
 
 def _cause_json(cause: str | None, detail: str | None, language: str | None = None) -> dict:
@@ -951,7 +968,12 @@ def _probe_detail(probe: server.BackendState, language: str) -> str | None:
 
 
 def _running() -> tuple[list, bool]:
-    """`GET {base sin /v1}/running` de llama-swap: (entradas, ¿respondió?). Con el plazo de sondeo."""
+    """`GET {base sin /v1}/running` de llama-swap: (entradas, ¿respondió?). Con el plazo de sondeo.
+
+    Nunca lanza, como `server.probe_backend`: desde el issue #628 también se pide tras un sondeo de
+    `/v1/models` fallido, y una sorpresa aquí no puede convertir en un 500 la respuesta que dice
+    por qué falló.
+    """
     base = config.BASE_URL.removesuffix("/v1")
     try:
         with httpx2.Client(timeout=server._probe_timeout()) as c:
@@ -959,7 +981,7 @@ def _running() -> tuple[list, bool]:
         if not r.is_success:
             return [], False
         data = r.json()
-    except (httpx2.HTTPError, ValueError):
+    except Exception:  # best-effort: lo que no se espera es «no respondió», no una excepción
         return [], False
     entries = data.get("running") if isinstance(data, dict) else None
     if entries is None:

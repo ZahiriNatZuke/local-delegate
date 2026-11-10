@@ -1149,6 +1149,36 @@
       "text": "{}{}{}Estas son notas EN ORDEN sobre los fragmentos de un mismo diff unificado. El índice de arriba es COMPLETO y sus líneas son exactas; las notas pueden no cubrirlo entero. Los números de línea son del parche, no de las cabeceras @@: consérvalos, y si se pregunta dónde está algo, responde con «ruta: líneas». {}:\n\n{}",
       "kind": "verbatim",
       "reason": "prompt del modelo local (#582): lectura de un diff troceado en `local_explain_code` (líneas del parche frente a cabeceras @@, una nota por fichero, índice por programa); no es texto de interfaz y su idioma lo decide REQ-028, como el resto de cláusulas del prompt"
+    },
+    {
+      "file": "src/local_delegate/lint_patterns.py",
+      "text": "ERROR at setup of {}",
+      "kind": "verbatim",
+      "reason": "título de sección que escribe pytest en su salida y que el programa busca tal cual en el log (issue #641); no es salida"
+    },
+    {
+      "file": "src/local_delegate/lint_patterns.py",
+      "text": "ERROR at teardown of {}",
+      "kind": "verbatim",
+      "reason": "título de sección que escribe pytest en su salida y que el programa busca tal cual en el log (issue #641); no es salida"
+    },
+    {
+      "file": "src/local_delegate/server.py",
+      "text": "- y {} fallos más",
+      "kind": "verbatim",
+      "reason": "prompt del modelo local (issue #641): los fallos de pytest que el programa lee del log, dados como hechos; no es texto de interfaz y su idioma lo decide REQ-028, como el resto del prompt de lint"
+    },
+    {
+      "file": "src/local_delegate/server.py",
+      "text": "Fallos reales del log, leídos por el programa en el resumen de pytest ({} en total; «nodo (fichero:línea)»):\n",
+      "kind": "verbatim",
+      "reason": "prompt del modelo local (issue #641): los fallos de pytest que el programa lee del log, dados como hechos; no es texto de interfaz y su idioma lo decide REQ-028, como el resto del prompt de lint"
+    },
+    {
+      "file": "src/local_delegate/server.py",
+      "text": "\nSon los únicos tests que fallan. Da una entrada solo a sus ficheros, con el número de fallos de esta lista. Un fichero que sale dentro del mensaje de un fallo es contexto de ese fallo, no es un fallo propio. Los ficheros sin fallos no se listan.",
+      "kind": "verbatim",
+      "reason": "prompt del modelo local (issue #641): los fallos de pytest que el programa lee del log, dados como hechos; no es texto de interfaz y su idioma lo decide REQ-028, como el resto del prompt de lint"
     }
   ]
 }

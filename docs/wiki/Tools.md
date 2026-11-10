@@ -235,6 +235,16 @@ resumen final cortado ni inventa recuentos de tests por fichero. Algún paso int
 acabar cortado, y entonces la respuesta lo avisa; lo que se pierde ahí lo cubre la lista del
 programa.
 
+**Log de pytest con fallos.** Si el log trae el resumen de pytest (`FAILED …`/`ERROR …`) y sus
+líneas cuadran con la de totales («1 failed, 660 passed in …»), el programa lee de ahí los fallos
+reales, con el `fichero:línea` de cada traza, y se los da al modelo en lugar de la lista de
+ficheros del log: un fichero que solo sale citado en el mensaje de un fallo es contexto de ese
+fallo, y los ficheros sin fallos no tienen entrada (ni van en «Sin mencionar» ni en «Y otros N
+ficheros…»). Después comprueba la respuesta contra esos fallos: si da entrada a un fichero sin
+fallos, no nombra un fichero con fallos o cuenta mal sus fallos, la respuesta termina con
+`[local-delegate warning: el resumen no cuadra con los fallos que el programa leyó en el log (N en
+total: …). …]`, con los fallos reales. Si cuadra, sale tal cual.
+
 **Entrada sin nada que resumir.** Si la entrada está vacía, solo trae espacios, es un informe JSON
 sin diagnósticos (`[]`, `{}`, `null`, el `[{"filePath": …, "messages": []}]` de ESLint, el
 `{"results": [], "errors": []}` de Semgrep o Bandit, el `"diagnostics": []` de Biome) o solo trae
@@ -351,6 +361,13 @@ fichero (búsqueda exacta): 233, 270, …», con un tope de 20. La prosa del mod
 `code` o sin `question`, la salida no cambia. Desde la 0.50.0 (#616), si el fichero liga otro
 nombre al citado (`TOOL = 'local_summarize'`, `summarize_fn = readSummarize`, `import … as`), una
 línea que usa ese alias confirma la cita; una comparación o una expresión más larga no crean alias.
+«La frase que las cita» es literal (#627): una cita se comprueba contra lo que nombra su frase y los
+identificadores de la pregunta, no contra el resto del párrafo (ni un `;` ni «p. ej.» cortan la
+frase); una cita entre paréntesis, contra su cláusula: lo que anotan los paréntesis y lo que les
+sigue hasta la primera coma, `;`, `:` o conjunción. Si ahí no hay ningún identificador de código y
+la pregunta tampoco nombra ninguno, la cita queda sin comprobar y no sale en el aviso. Una palabra
+sin comillas invertidas justo antes del paréntesis cuenta solo si el fichero la escribe como
+llamada, pegada a un `(`.
 
 **Combinación de notas cortada (desde la 0.50.0, #598).** Troceado y con pregunta, un paso de
 combinar notas cortado por `max_tokens` que no se puede partir se repite una vez con el doble de
@@ -369,7 +386,11 @@ respuesta afirma una palabra de la pregunta que el fichero no contiene (por raí
 como cognado inglés), sin negarla en ninguna frase ni apoyarla en una línea citada o un identificador
 del fichero, lleva un aviso: puede estar confirmando la premisa de la pregunta. Una respuesta que
 niega la premisa («no hay retención: nunca borra») no avisa. Es una guarda por programa; el prompt
-no cambia.
+no cambia. Se comparan las nominalizaciones («retención», «rotación») y, desde el #538 reabierto,
+los sustantivos en -ente/-ante («subagente», «cliente»). Si la respuesta da por hecho uno de esos
+sustantivos solo en frases que sí se apoyan en código real («la partición por subagente se hace en
+`by_side` (línea 9)»), lleva en cambio una nota: el fichero no nombra esa palabra y conviene
+comprobar en esas líneas que el código haga eso de verdad.
 
 **Diff troceado (desde la 0.49.0, #582).** Con `path` y un diff unificado, el modelo sabe que los
 números de las cabeceras `@@` no son líneas del parche; al trocear, cada trozo sabe por programa qué

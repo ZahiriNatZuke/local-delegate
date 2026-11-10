@@ -8,7 +8,10 @@
 //     (`tokens_context_net`, the panel's KPI) and, when `recompute-cost` left its figures, what that
 //     is worth at API prices (`cost.figure.estimate`).
 //   - `/api/backend`: whether the local backend answers and which model it has mounted (or is still
-//     loading: a `running` entry whose state is not `ready`).
+//     loading: a `running` entry whose state is not `ready`). A model in `starting` reads as
+//     «loading» (` ◔ CARGANDO `) unless this session is delegating, also when the probe of
+//     `/v1/models` failed and only `/running` answered (issue #628): «down» is for a backend that
+//     does not answer.
 //   - `/api/inflight?session=<id>`: the delegations running right now, each with its tool, its
 //     `elapsed_s` and whether this session asked for it (`mine`, issue #442). Only this session's
 //     own make the band say «delegating» with the tool, the time and the chunks; when the backend
@@ -29,9 +32,10 @@
 //
 // How it looks depends on the surface (`e.surface`):
 //   - terminal, `status_style: bar` (the default): one row with the theme's message background, a
-//     state chip in inverse video (` ● LISTO `, ` ◐ DELEGANDO `, ` ○ CAÍDO `, ` ◌ SIN DATOS `,
-//     ` ○ SIN SERVICIO `), the model dim, the tool at work, the figures bold with dim labels, and the
-//     read mode dim on the right. No empty row above or below: the background sets it apart.
+//     state chip in inverse video (` ● LISTO `, ` ◐ DELEGANDO `, ` ◔ CARGANDO `, ` ○ CAÍDO `,
+//     ` ◌ SIN DATOS `, ` ○ SIN SERVICIO `), the model dim, the tool at work, the figures bold with
+//     dim labels, and the read mode dim on the right. No empty row above or below: the background
+//     sets it apart.
 //   - terminal, `status_style: line`: a dim `─` rule as wide as the band over one plain line,
 //     `local-delegate · ● qwen3-8b listo · 3 delegaciones · 12,3k tokens ahorrados ≈ $0,18 ·
 //     lecturas: pregunta`, color only on the dot (all of it red when the backend is down). The rule
@@ -90,9 +94,10 @@ const STATUS_COLD_MS = 30000
 
 // The glyphs carry the state on their own, for a terminal without color. `shared` (the backend
 // works for another session, issue #442) is still ready for this one: the same dot and color.
-const STATUS_GLYPH = { ready: '●', shared: '●', down: '○', none: '◌' }
+// `loading` (a model is starting, issue #628) has a dot of its own, from the block of the spinner's.
+const STATUS_GLYPH = { ready: '●', shared: '●', loading: '◔', down: '○', none: '◌' }
 const STATUS_SPIN = ['◐', '◓', '◑', '◒']
-const STATUS_COLOR = { ready: 'success', shared: 'success', busy: 'warning', down: 'error' }
+const STATUS_COLOR = { ready: 'success', shared: 'success', busy: 'warning', loading: 'warning', down: 'error' }
 
 /** A token count in a few characters: `850`, `12.3k`, `456k`, `1.2M` (`,` as the decimal in es). */
 export function statusTokens(value, lang) {
@@ -223,9 +228,10 @@ export function statusInflight(inflight) {
  * What the band shows, from the daemon's three answers (each a parsed body or `null`).
  *
  * `{ daemon: 'down' }` when the stats are not there; otherwise the figures, the backend's state
- * (`ready`, `busy` with a delegation of this session, `shared` when only other sessions' run,
- * `down`, or `null` when `/api/backend` did not answer), the model, whether the backend is still
- * loading one, and this session's oldest delegation in flight.
+ * (`ready`, `busy` with a delegation of this session, `loading` while a model is starting and this
+ * session delegates nothing, `shared` when only other sessions' run, `down`, or `null` when
+ * `/api/backend` did not answer), the model, whether the backend is still loading one, and this
+ * session's oldest delegation in flight.
  */
 export function statusSnapshot(stats, backend, inflight) {
   const net = stats ? statusNumber(stats.tokens_context_net) : null
@@ -241,14 +247,20 @@ export function statusSnapshot(stats, backend, inflight) {
   const cost = figure ? statusNumber(figure.estimate) : null
   const running = backend && Array.isArray(backend.running) ? backend.running : []
   const { own, ownCount, others } = statusInflight(inflight)
+  // The model llama-swap is starting, if any (issue #628). The daemon sends `running` also when the
+  // probe of `/v1/models` failed but the backend took the connection: a backend that answers
+  // `/running` with a model on its way up is loading, not down.
+  const starting = running.find(item => item && item.state === 'starting') || null
   let state = null
   let task = null
   if (backend && typeof backend.available === 'boolean') {
     if (!backend.available) {
-      state = 'down'
+      state = starting ? 'loading' : 'down'
     } else if (ownCount > 0) {
       state = 'busy'
       task = statusTask(own) || { tool: null, seconds: 0, more: Math.max(0, ownCount - 1), model: null, progress: null, waiting: null }
+    } else if (starting) {
+      state = 'loading'
     } else if (others > 0) {
       state = 'shared'
     } else {
@@ -259,7 +271,9 @@ export function statusSnapshot(stats, backend, inflight) {
   // A call that waits for llama-swap to switch models names the model it ASKED for: the loaded
   // one is the one it waits behind (seen on 2026-10-28).
   const waitingBackend = task && task.waiting === 'waiting_backend' && task.model
-  const model = waitingBackend || statusModelName(running) || (task && task.model) || null
+  // While loading, the model named is the one that is starting, not one already mounted.
+  const mounted = state === 'loading' ? statusModelName([starting]) : statusModelName(running)
+  const model = waitingBackend || mounted || (task && task.model) || null
   return { daemon: 'up', calls, failed, net, cost, backend: state, model, loading, task }
 }
 
@@ -375,9 +389,8 @@ export function statusLineParts(snapshot, options, lang) {
     parts.push(statusPart(0, STATUS_SEPARATOR, { text: `${glyph} ${t('status.no_data')}`, dim: true }))
   } else {
     const busy = snapshot.backend === 'busy'
-    const words = snapshot.model
-      ? t(busy ? 'status.busy_model' : 'status.ready_model', { model: snapshot.model })
-      : t(busy ? 'status.busy' : 'status.ready')
+    const verb = busy ? 'busy' : snapshot.backend === 'loading' ? 'loading' : 'ready'
+    const words = snapshot.model ? t(`status.${verb}_model`, { model: snapshot.model }) : t(`status.${verb}`)
     parts.push(statusPart(0, STATUS_SEPARATOR, { text: glyph, color: STATUS_COLOR[snapshot.backend] }, { text: ` ${words}` }))
     if (busy && snapshot.task) {
       parts.push(statusPart(1, STATUS_SEPARATOR, ...statusTaskPieces(snapshot.task)))

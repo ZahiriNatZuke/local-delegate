@@ -58,6 +58,31 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ### Corregido
 
+- **`local_explain_code` avisa de una premisa de la pregunta afirmada junto a código real
+  (#538).** Preguntado dónde un script «parte por hilo principal y subagente», respondió que esa
+  partición se hace en `by_side` y citó las líneas de `by_side`; el script nunca habla de
+  subagentes y no salió ningún aviso. Dos causas, confirmadas ejecutando la comprobación:
+  «subagente» no era una palabra que se comparara (solo las nominalizaciones como «retención»), y
+  una frase con un identificador o una línea citada reales contaba como apoyada. Ahora se comparan
+  también los sustantivos en -ente/-ante que conservan sus primeras letras en inglés (subagente,
+  cliente, componente), sin los adverbios en -mente ni palabras como «siguiente» o «durante»; y
+  un sustantivo así que el fichero no contiene y la respuesta da por hecho solo junto a código
+  real recibe una nota que pide comprobarlo en esas líneas (no el aviso: el código citado puede
+  tratarlo con otro nombre). Un proceso («partición», «retención») no la recibe: el código suele
+  hacerlo con otro nombre, y en la prueba en vivo marcaba una respuesta correcta. La respuesta que niega la premisa no lleva nada. De paso, «sesión» ya se
+  reconoce en un fichero con `session` (la `s` simple del español es doble en inglés).
+- **`local_lint_summary` ya no da como fallo propio el fichero que cita el mensaje de un test de
+  pytest, ni gasta la salida en los ficheros sin fallos (#641).** Con la salida de pytest de 24
+  ficheros (1 fallo, 660 pasados) el resumen sumaba un segundo fallo en un fichero que solo salía
+  citado en el `AssertionError` del único fallo, y luego una línea «sin errores» por cada fichero
+  limpio hasta cortarse por `max_tokens`. La causa estaba en lo que le daba el programa: la lista
+  de todos los ficheros que nombra el log, con el citado primero por ser el más nombrado. Ahora el
+  programa lee los fallos reales del log (las líneas `FAILED`/`ERROR` del resumen de pytest, con el
+  `fichero:línea` de cada traza, y solo si cuadran con la línea de totales) y se los da al modelo
+  en lugar de esa lista. Además comprueba la respuesta contra ellos y, si da entrada a un fichero
+  sin fallos, deja fuera un fichero con fallos o cuenta mal sus fallos, añade un aviso con los
+  fallos reales. Una respuesta correcta y los logs de otras herramientas (ruff, ESLint) quedan
+  igual que antes.
 - **El mod de lectura ya no entrega como resumen el aviso de Claude Code de que la llamada pasó a
   segundo plano (#631).** Cuando `local_summarize` espera más de 2 min (el turno común ocupado, por
   ejemplo), Claude Code la pasa a segundo plano y contesta a quien la llamó con un texto suyo
@@ -73,6 +98,35 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   80 % del fichero, así que un tramo corto de un fichero que había crecido podía volver resumido.
   Ahora se cuenta al momento; lo que dijo una lectura anterior solo vale si el fichero no se puede
   leer.
+- **La banda del mod dice «cargando» mientras llama-swap arranca un modelo, no «modelo local
+  caído» (#628).** Con el backend en otra máquina y otra sesión cambiando de modelo, la banda pasó
+  minutos en ` ○ CAÍDO ` con el backend vivo: `/api/backend` daba `available: false` y, como
+  `/running` solo se pedía si `/v1/models` había respondido, el modelo en `starting` ni se veía.
+  Ahora el daemon pide `/running` también cuando `/v1/models` falla con el backend atendiendo la
+  conexión (sin respuesta a tiempo, error HTTP o un cuerpo que no es la lista), y la banda pinta un
+  modelo en `starting` como ` ◔ CARGANDO ` (` ◔ LOADING `; en la línea, `◔ <modelo> cargando`; en
+  Desktop, «Cargando modelo») con el modelo que arranca, salvo que esta sesión esté delegando.
+  «Caído» queda para un backend que no responde: apagado, sin ruta, sin DNS o con la credencial
+  rechazada, `/running` no se pide y la banda pasa a ` ○ CAÍDO ` en los mismos dos sondeos que
+  antes. `available` sigue diciendo solo si `/v1/models` respondió con su lista.
+- **`local_explain_code` ya no da por falsa una cita de línea correcta descrita en prosa (#627).**
+  Con `path` y `question`, una respuesta en párrafos («los logs de uso (línea 65)») llevaba el
+  aviso «no te fíes de esos números» sobre líneas buenas: cada cita se comprobaba contra los
+  identificadores de todo el párrafo, es decir, los que nombraban las demás citas. Ahora cada cita
+  se comprueba contra lo que nombra su frase (una frase acaba en `.`, `!` o `?` seguidos de algo
+  que no empieza en minúscula, así que ni un `;` ni «p. ej.» la cortan). Una cita entre paréntesis
+  se comprueba contra su cláusula: lo que anotan sus paréntesis y lo que les sigue hasta la
+  primera coma, `;`, `:` o conjunción («El filtro de pruebas (línea 165) usa `test_reason`, y el de
+  ventanas (línea 162) usa `windows.find`»). Una cita que no nombra ningún identificador de código,
+  con una pregunta que tampoco nombra ninguno, queda sin comprobar: ni buena ni mala. La palabra
+  que precede a una cita entre paréntesis solo cuenta como nombre si el fichero la escribe pegada a
+  un `(`, como una llamada («measure (línea 152)» con `def measure(`; no «los ficheros (línea 64)»
+  ni una palabra que solo sale en un comentario). Y el nombre de un fichero entre comillas
+  invertidas (`measure_adoption.py`) ya no da un identificador, aunque sí una llamada
+  (`user_data.json()`) o un atributo (`worker_pool.lock`). Una cita que nombra un identificador que
+  no está en su línea sigue saliendo en el aviso cuando ese nombre está en su frase o en su
+  cláusula; ya no sale si el nombre está en otra frase («`hook_side` decide el tramo. Lo hace en la
+  línea 118.»), y los identificadores de la pregunta se siguen comprobando en todas las citas.
 
 ## [0.50.0] - 2026-11-09
 
