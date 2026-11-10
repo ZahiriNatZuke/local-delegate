@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import json
 import random
+import re
 import time
 
 import pytest
@@ -112,12 +113,16 @@ _KEY_PIECES = ["error", "Error", "ERROR", "warning", "offense", "issue", "proble
                "count", "Count", "COUNT", "_", "fatal", "x", "ſ", "ı", "s", "counts", "cou", "\n", "\r"]  # fmt: skip
 
 
+#: The definition of a finding counter, the reference `is_finding_counter` must match.
+_FINDING_COUNT = re.compile(r"(?i).*(?:error|warning|offense|issue|problem|violation).*count")
+
+
 def test_the_finding_counter_check_is_the_regex():
     rng = random.Random(210)
     hits = 0
     for _ in range(30_000):
         key = "".join(rng.choice(_KEY_PIECES) for _ in range(rng.randint(0, 6)))
-        expected = lint_patterns._FINDING_COUNT.fullmatch(key) is not None
+        expected = _FINDING_COUNT.fullmatch(key) is not None
         assert lint_patterns.is_finding_counter(key) is expected, key
         hits += expected
     assert hits > 1_500

@@ -285,15 +285,15 @@ _DIAGNOSTIC_KEYS = frozenset(
     }
 )
 
-#: A counter of findings in a JSON report (`errorCount`, `fatalErrorCount`, `offense_count`).
-#: The definition, kept as the reference of `is_finding_counter`, which checks it in linear time.
-_FINDING_COUNT = re.compile(r"(?i).*(?:error|warning|offense|issue|problem|violation).*count")
 _FINDING_WORD = re.compile(r"error|warning|offense|issue|problem|violation", re.IGNORECASE)
 _COUNT_SUFFIX = re.compile(r"count", re.IGNORECASE)
 
 
 def is_finding_counter(key: str) -> bool:
-    """`_FINDING_COUNT.fullmatch(key)`, in linear time: a JSON key is untrusted input.
+    """A counter of findings in a JSON report (`errorCount`, `fatalErrorCount`, `offense_count`).
+
+    Same verdict as `re.fullmatch(r"(?i).*(?:error|warning|offense|issue|problem|violation).*count",
+    key)` (the reference regex lives in the tests), in linear time: a JSON key is untrusted input.
 
     The `.*` of the pattern takes no line break, so the key holds none; it ends in `count`, and a
     word of the list comes before that suffix. The fullmatch backtracked in quadratic time.
