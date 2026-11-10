@@ -20,7 +20,17 @@
 | REQ-008 | `tests/test_caller_column.py` | pass | mutantes 28 y 29 mueren |
 | REQ-023 | `tests/test_usage_log_project.py::test_a_note_of_an_older_hook_is_enough` | pass | mutante 65 muere |
 | REQ-031 | `tests/test_backfill_project.py` (fila del mod, `match` intacto, cruce y clave distintos, sesión en dos directorios, sin clave, sesión perdida) | pass | mutantes 24 a 27 mueren |
-| REQ-027 | Línea base «antes» de T1 (abajo) | parcial | la columna «después» es de T11 |
+| REQ-005 | `tests/test_project_privacy.py` (de punta a punta: fila, relleno, evento de hook, línea del mod, `local_status`, `/api/stats`, `/api/events`, `/api/hooks`) | pass | mutantes 16 y 16a (y tres variantes de 16a) mueren (T11, abajo) |
+| REQ-015 | Capturas del panel en claro y oscuro con los datos de la copia de T1, interruptor apagado y encendido | pass | T11, «Capturas» |
+| REQ-022 | Suite completa con `-n 2` | ver «Commands» | T11 |
+| REQ-024 | `tests/test_no_uncatalogued_text.py`, `tests/test_i18n_parity.py`, `tests/test_detect_spanish_names.py` sin excepciones nuevas | pass | mutante 66 muere; `tests/data/uncatalogued_exceptions.json` y `scripts/data/spanish_lexicon.json` sin tocar en T10/T11 |
+| REQ-025 | Revisión de CHANGELOG, README, `Savings-and-metrics.md` y `Configuration.md` contra la lista de REQ-025 | pass | T10, tabla de cobertura |
+| REQ-026 | Prueba en vivo con el daemon instalado | pendiente | la hace la sesión principal; pasos y cifras esperadas en «Prueba en vivo (REQ-026), preparada» |
+| REQ-027 | Tabla antes/después sobre una copia nueva de la instantánea de T1, mismo `now` y mismo rango | pass | T11, «Tabla antes/después»: criterios (a) a (d) se cumplen |
+| REQ-028 | Tabla de mutantes completa: 1 a 66 | pass | todos mueren salvo el 14, equivalente por diseño (ya anotado) |
+| REQ-029 | `docs/wiki/Savings-and-metrics.md`, «Los medidores»: el corte del 2026-12-14 con las dos cifras junto al comando | pass | T10 |
+| REQ-030 | `git diff --diff-filter=MDR --name-only origin/main...HEAD -- tests/` | pass | vacío (T11) |
+| REQ-032 | `tests/test_hook_classify_endpoint.py` sin tocar y en verde | pass | 0 líneas de diff; pasa (T11) |
 
 ## T1 — Instantánea y línea base («antes», código de `main`)
 
@@ -300,6 +310,177 @@ corrió además solo contra su test, para ver la aserción que nombra el plan.
 | 63 | `local_status` resta lo `self` de la cifra | sí | el mismo test: `"eventos: 4 " in text` |
 | 64 | la línea sale con recuento cero | sí | `test_without_own_events_there_is_no_line`: `SELF_ES not in text` |
 
+## T10 — Documentación y guardianes compartidos
+
+Rama `feat/usage-log-project-t10-t11`, desde `feat/usage-log-project`. Superficies contadas con
+`git grep` (`include_tests`, `caller_kind`, `Quién delegó`, `LD_HOOK_TELEMETRY_LOG`, `excluded_tests`
+fuera de `src/`, `tests/`, `scripts/`, `.sdd/` y `benchmarks/`): seis ficheros de documentación
+describen el log, la telemetría o el panel, y los seis se cubren.
+
+| Requisito de REQ-025 | CHANGELOG | README | `Savings-and-metrics.md` | `Configuration.md` |
+| --- | :---: | :---: | :---: | :---: |
+| Los dos campos de la fila (`caller_project`, `caller_project_kind`) | sí | sí | sí (campos del log, relleno, «El propio repo») | sí |
+| Los dos de la telemetría (`project`, `project_kind`) | sí | sí | sí («El propio repo», «Sugerencias de los hooks») | sí (sección nueva y hooks) |
+| La sal y el aviso de fuerza bruta; no compartirla junto a un log | sí | sí | sí | sí |
+| `self-projects.json`: forma, tramos, mejor rutas, 64 KiB, en `LOG_DIR`, reiniciar el daemon, solo filas nuevas | sí | en parte (remite a la wiki) | sí | sí |
+| Mismo `LOG_DIR` en todos los procesos | sí | sí (tabla de variables) | sí | sí |
+| Interruptor, tres columnas y opciones de los scripts | sí | sí | sí (y tabla de APIs) | remite |
+| Cambio de comportamiento: las cifras bajan y cómo recuperar la anterior | sí | sí | sí | — |
+| `recompute-cost` tras actualizar | sí | sí | sí | — |
+| El campo `path` sigue en claro | sí | — | sí | — |
+| Corte de 90 días con las dos cifras, junto al comando (REQ-029) | sí | — | sí («Los medidores») | — |
+
+Además: `docs/wiki/Claude-plugin.md` (la línea del mod gana `project` y `project_kind`, de dónde
+salen y cuándo faltan) y `docs/recipes/claude-code-hooks.md` (las dos listas de campos de la nota y
+de la telemetría). Corregido de paso en la wiki: «N del mod» pasó en T5 al `title` de la columna
+Mod, y la frase «el coste y la cuota no dependen del interruptor» se precisa (el coste sí sigue al
+del propio repo).
+
+Guardianes: `test_no_uncatalogued_text.py`, `test_i18n_parity.py`, `test_detect_spanish_names.py`
+y `test_wiki.py` en verde sin tocar `tests/data/uncatalogued_exceptions.json` ni el léxico: el test
+nuevo no trajo palabras sin clasificar. Ninguna excepción de REQ-030.
+
+**El corte de 90 días y `measure_cooldown.py`.** La ventana abierta el 2026-09-15 (P-4) se mide con
+`measure_cooldown.py`, que cuenta saltos y fallos del backend y no aparta el propio repo: su cifra no
+cambia. Las dos cifras de REQ-029 son las de `measure_adoption.py` con el mismo `--since`; la wiki
+da las tres órdenes juntas.
+
+## T11 — Integración y verificación de conjunto (sin la prueba en vivo)
+
+### Privacidad de punta a punta (REQ-005)
+
+`tests/test_project_privacy.py`, un solo mundo sintético: un directorio de proyecto ajeno con un
+marcador en el nombre y otro propio cuyo nombre lleva el marcador de la única entrada de
+`self-projects.json`. Cada superficie se escribe por su camino real (fila por `server._chat` con la
+nota del hook, relleno por `recompute.run` con cruce exacto y fila del mod por clave de sesión,
+evento del hook de prompt como proceso propio, línea del mod por `hook_entry.record_read`,
+`local_status`, y las tres APIs con y sin `include_self`) y se busca en ella cada marcador sin
+distinguir mayúsculas. Cada superficie tiene su guarda de que de verdad lleva el proyecto, y un
+control previo comprueba que la búsqueda ve el marcador en la ruta del transcript.
+
+### Mutantes de T10 y T11 (16, 16a y 66)
+
+Cada uno solo, con `PYTHONDONTWRITEBYTECODE=1`, el fichero restaurado byte a byte (comprobado) y
+`git status` limpio después. Control: el test nuevo en verde antes.
+
+| N.º | Mutante | Muere | Aserción que dispara |
+| ---: | --- | --- | --- |
+| 16 | `caller_project` guarda el nombre en claro (`project_fields`) | sí | `test_neither_the_name_nor_the_list_entry_reaches_any_surface`: «the usage row toolu_now_self carries the marker» |
+| 16a | la fila guarda la entrada de la lista que coincidió (`project_fields`) | sí | el mismo test, en la fila |
+| 16a′ | el evento de hook guarda la lista (`_event_project`) | sí | el mismo test: «the hook telemetry carries the marker» |
+| 16a″ | `local_status` imprime la lista junto a su línea | sí | el mismo test: «local_status carries the marker» |
+| 16a‴ | las respuestas de `/api/stats` y `/api/events` llevan la lista | sí | el mismo test: «/api/stats carries the marker» |
+| 66 | un texto nuevo del panel sin catalogar (el ⓘ del propio repo, en claro) | sí | `test_no_uncatalogued_text_outside_pending`: «Texto para personas fuera del catálogo» |
+
+Con estos, la tabla del plan queda completa: los 66 criterios más las variantes mueren todos salvo
+el 14, equivalente por diseño (arriba).
+
+### REQ-030 y REQ-032
+
+- `git diff --diff-filter=MDR --name-only origin/main...HEAD -- tests/`: **vacío** (contra la base
+  común, `7b612ca6`). Con dos puntos (`origin/main` sin `...`) salen
+  `tests/test_backend_running_on_failed_probe.py` y `tests/test_explain_code_verified_lines.py`,
+  que cambió `main` después de abrir la rama (#635 y #632), no este cambio. La rama solo añade
+  ficheros en `tests/` (11 nuevos).
+- `tests/test_hook_classify_endpoint.py`: 0 líneas de diff y en verde; el mutante 50 ya lo hizo
+  caer por `response.content == expected`.
+
+### Tabla antes/después (REQ-027)
+
+Medido el 2026-11-10 hacia las 12:58 (hora de Uruguay) con el código de la rama sobre una copia
+**nueva** de la copia intacta de la instantánea de T1 (`snapshot-pristine`), con el mismo guion de
+T1 (`baseline.py --after`), el mismo `now` (`2026-11-10T14:05:00+00:00`), el mismo rango y el mismo
+fichero mensual para `local_status`. Solo recuentos.
+
+| Cifra | Antes (T1) | Después, propio repo incluido | Después, por defecto |
+| --- | ---: | ---: | ---: |
+| `recompute`: líneas / cruces `exact`·`window`·`window+path`·`ambiguous`·`no_match` / casos de `N` | 3.709 / 1.076·181·57·7·2.388 / 953 | iguales | (no depende) |
+| `recompute`: transcripts leídos | 1.188 | 1.195 | — |
+| `/api/stats` `total.calls` | 929 | 929 | 211 |
+| ahorro neto (`total.net`) | 9.901.682 | 9.901.682 | 1.766.545 |
+| `mod_calls` / filas de `by_client` | 153 / 2 | 153 / 2 | 91 / 2 |
+| `excluded_tests` | 2.463 | 2.463 | 2.463 |
+| `excluded_self` / `self_in_range` / `unknown_project` | — | 0 / 1.018 / 12 | **718** / 1.018 / 12 |
+| `main_calls` / `subagent_calls` / `mod_calls` / `unknown_caller_calls` | — | 29 / 735 / 153 / 12 (= 929) | 0 / 108 / 91 / 12 (= 211) |
+| Resto del total (`backend_calls`, `chars_in`, `chars_out`, `errors`, `tokens_in`, `tokens_out`, `saved`, `returned`, `estimated_events`, `fallback_events`) | los de T1 | iguales uno a uno | 281, 4.089.071, 406.716, 6, 1.332.633, 115.423, 1.948.577, 182.032, 7, 1 |
+| `/api/events` `count` | 929 | 929 | 211 |
+| `/api/hooks` `total` / `read_total` / `suggested` / `excluded_tests` | 41.586 / 7.140 / 2.506 / 2.850 | iguales | iguales |
+| `/api/hooks` `excluded_self` / `unknown_project` | — | 0 / 41.586 | 0 / 41.586 |
+| coste: `events` / `T` | 808 / 9.736.338 | 808 / 9.736.338 | 198 / 1.766.545 |
+| `local_status`: eventos / llamadas / neto / bruto / pruebas fuera | 215 / 402 / 2.418.983 / 2.566.604 / 145 | iguales | iguales, más «del propio repo (local-delegate): 122 de esos eventos» |
+| `measure_adoption.py`: `reads` / `offered` / `blocks` / `accepted` / `total_delegations` / `sessions` | 59.555 / 3.548 / 498 / 49 / 1.264 / 95 | iguales | 15.250 / 1.455 / 184 / 23 / 483 / 29 |
+| `measure_adoption.py` `excluded_self` (`hooks`/`usage`) / `unknown_project` | — | 0/0 / 2.180/151 | 45.035/781 / 2.180/151 |
+| `measure_adoption.py` `delegations_by_caller` (`main`/`subagent`/`mod`/`unknown`) | — | 54 / 911 / 154 / 145 | 0 / 247 / 91 / 145 |
+| `measure_plugin_adoption.py`: `sessions` / `with_delegation` / `pct` | 59 / 18 / 30,5 | iguales | 11 / 0 / 0,0 |
+| `measure_plugin_adoption.py` `excluded_rows` (seis motivos) | 4 / 12 / 154 / 743 / 341 / 2.126 | iguales | iguales |
+| `measure_plugin_adoption.py` `excluded_self_sessions` / `with_subagent_delegation` / `with_mod_delegation` | — | 0 / 43 / 18 | 48 / 6 / 4 |
+
+Criterios del plan:
+
+- **(a)** Con el propio repo incluido, toda cifra que ya existía es igual a la de T1. La única
+  diferencia es `transcripts` (1.188 → 1.195): siete transcripts nuevos de la jornada en la raíz
+  viva, la deriva admitida; no mueve ni los cruces ni `N`.
+- **(b)** Por defecto, el panel difiere solo en lo que `excluded_self` explica: 211 + 2.463 + 718 =
+  3.392 = 929 + 2.463. El coste baja con el mismo filtro (808 → 198 eventos).
+- **(c)** `excluded_self > 0` en el panel (718), en `measure_adoption.py` (45.035 eventos y 781
+  filas) y en `measure_plugin_adoption.py` (48 sesiones). En `/api/hooks` es 0, como debe: los
+  41.586 eventos de la instantánea son de antes de T8 y no traen `project_kind`, así que son
+  `unknown` y se quedan (REQ-012); solo `measure_adoption.py` resuelve los viejos por su sesión.
+- **(d)** Las cuatro columnas suman `calls` en las dos columnas (929 y 211).
+
+**Reparto `self` / `other` / `unknown`** tras el relleno (`attribution.project_kind` sobre las filas
+fundidas por `cost.merge`): todas las filas de la copia, 1.094 / 388 / 2.357 (las 2.357 incluyen
+las pruebas; igual que en T4); fuera de pruebas, 781 / 338 / 151. En el rango del panel, 1.018
+`self` (718 fuera de pruebas), 199 `other` y 12 sin tipo.
+
+### Capturas (REQ-015)
+
+Panel servido desde el worktree en un puerto que asigna el sistema (nunca el 9393), leyendo solo la
+copia, sin backend, rango «Últimos 30 días» del navegador (por eso el número del interruptor es 720
+y no 718: el rango del navegador acaba hacia las 13:00 y no a las 11:00). Tema claro y oscuro,
+interruptor apagado y encendido: controles, KPIs, «Quién delegó» y el diálogo del ⓘ. Fuera del repo,
+en el scratchpad de la sesión: `t11/captures/t11-{controls,kpis,clients}-{light,dark}-{off,on}.png`
+y `t11/captures/t11-dialog-{light,dark}.png`. Apagado: Hilo principal 0, Subagentes 108, Mod 91,
+Sin dato 12; encendido: 29 / 736 / 154 / 12; legibles en los dos temas.
+
+### Prueba en vivo (REQ-026), preparada
+
+La hace la sesión principal. Todas las horas, en hora de Uruguay; el log escribe en UTC y su
+fichero mensual va por mes UTC.
+
+0. **Preparación.** Paquete instalado desde el árbol de la rama, `uv tool install --force .`;
+   reiniciar el daemon (`schtasks /Run` de su tarea) y hacer `/mcp` en Claude Code. Comprobar que
+   `local-delegate --version` es el del árbol. Que nadie más delegue durante la ventana: ni agentes
+   en segundo plano ni el mod (no abrir ficheros grandes). Cada sesión hace **una** delegación, con
+   `text`. La sesión «del otro proyecto» se abre en un directorio cuyo nombre no lleve
+   `local-delegate` como tramo (ojo: los worktrees de `.claude/worktrees` del repo son `self`).
+1. `local-delegate test-window start --label own-repo-live`. Anotar el id y el instante de inicio
+   (`INICIO`, en ISO UTC, p. ej. `2026-11-10T19:30:00Z`).
+2. Una delegación desde la sesión del repo (p. ej. `local_summarize` con `text` corto) y otra desde
+   la sesión del otro directorio. Anotar el id de sesión de la del repo (`SID`, el nombre del
+   transcript en `~/.claude/projects/<dir>/`).
+3. Las dos filas, sin imprimir rutas:
+
+   ```bash
+   uv run python -c "import json,re,sys; from pathlib import Path; from local_delegate import config; f=sorted(Path(config.LOG_DIR).glob('usage-*.jsonl'))[-1]; rows=[json.loads(l) for l in f.read_text(encoding='utf-8').splitlines() if l.strip()]; rows=[r for r in rows if r.get('ts','')>=sys.argv[1]]; [print(r.get('tool'), r.get('caller_project_kind'), bool(re.fullmatch('[0-9a-f]{16}', r.get('caller_project',''))), any(('/' in str(r.get(k,''))) or ('\\\\' in str(r.get(k,''))) for k in ('caller_project','caller_project_kind'))) for r in rows]; print('distintos:', len({r.get('caller_project') for r in rows}))" INICIO
+   ```
+
+   Esperado: dos líneas, una `self True False` y otra `other True False`, y `distintos: 2`. Si el
+   corte de mes UTC cae dentro de la ventana, mirar también el fichero anterior.
+4. `curl -s "http://127.0.0.1:9393/api/stats?from=INICIO&include_tests=1"`: `excluded_self == 1` y
+   `total.calls == 1`. Con `&include_self=1` además: `total.calls == 2` y `excluded_self == 0`.
+5. `curl -s "http://127.0.0.1:9393/api/stats?session=SID&include_tests=1"`: `total.calls >= 1` y
+   `excluded_self == 0`.
+6. Si el mod registró alguna decisión en la sesión del repo durante la ventana, su línea de
+   telemetría (`LD_HOOK_TELEMETRY_LOG`) lleva `project_kind: "self"` y el mismo `project` que la
+   fila `self` del paso 3. Si no hubo ninguna, anotarlo y no forzarla.
+7. `local-delegate test-window stop <id>`; comprobar que no queda ningún proceso ni espera.
+
+Si no se puede garantizar que nadie más delegue, los pasos 4 y 5 se hacen solo con `session=` para
+cada una de las dos sesiones (la del repo y la del otro directorio: las dos `total.calls >= 1` y
+`excluded_self == 0`) y se anota por qué. La instantánea de T1 y sus copias (`t1/`, `t11/snap`) se
+borran después de la prueba en vivo, cuando la sesión principal dé la tabla por buena.
+
 ## Commands
 
 <!-- One row per command declared in .sdd/project.json (test, lint, typecheck, build, format, ...).
@@ -315,6 +496,9 @@ Without a declaration, list what was run. Never invent a command. -->
 | T5: `ruff check` y `ruff format --check` de los ficheros tocados | sí | pass | sin hallazgos |
 | T6/T7: `pytest -n 2` de los dos ficheros nuevos y de `test_measure_adoption`, `test_measure_plugin_adoption`, `test_measure_cooldown`, `test_hook_boundaries`, `test_telemetry_concurrent_writes` y `test_detect_spanish_names` | sí | pass | 149 passed, 1 skipped |
 | T6/T7: `ruff check` y `ruff format --check` de los cuatro ficheros | sí | pass | «All checks passed!» y «4 files already formatted» |
+| T10/T11: `pytest -n 2` del test nuevo y de los guardianes (`detect_spanish_names`, `no_uncatalogued_text`, `i18n_parity`, `wiki`, `hook_classify_endpoint`) | sí | pass | 146 passed |
+| T11: `pytest -n 2` suite completa (una corrida, con el cerrojo de comandos pesados) | sí | pass | 7.021 passed, 31 skipped y 1 failed: `test_build_hook.py::test_sdist_carries_what_regenerates_the_mod`, por un `register.js` generado e ignorado que quedó en el worktree (el sdist de un worktree no aplica `.gitignore`, trampa ya conocida). Borrado el fichero, el test pasa (2 passed); no lo causa el cambio |
+| T10/T11: `ruff check` y `ruff format --check` del test nuevo | sí | pass | «All checks passed!» |
 
 ## Quality checks
 
@@ -359,5 +543,14 @@ Without a declaration, list what was run. Never invent a command. -->
   las de T1. `with_subagent_delegation` busca los `tool_use_id` del modelo, incluidos los de
   subagente; `with_mod_delegation`, la `caller_session_key` de las filas del mod. Las dos, como
   `with_delegation`, desde el comienzo del periodo y sin final.
+- **T10, ficheros fuera de la lista del plan**: `docs/wiki/Claude-plugin.md` y
+  `docs/recipes/claude-code-hooks.md`, porque también describen los campos de la nota, de la línea
+  del mod y de la telemetría (recuento de superficies con `git grep`). Solo documentación.
+  `scripts/data/spanish_lexicon.json` no hizo falta.
+- **T11, REQ-030 con tres puntos**: el diff contra `origin/main` a secas lista dos tests que cambió
+  `main` después de abrir la rama; la comprobación correcta es contra la base común
+  (`origin/main...HEAD`), y da vacío.
+- **T11, la instantánea no se borra todavía**: queda para después de la prueba en vivo, por si la
+  sesión principal quiere repetir alguna cifra.
 - **T6/T7, léxico**: no hizo falta tocar `scripts/data/spanish_lexicon.json`; dos palabras nuevas
   sin clasificar (`callers`, `puts`) se evitaron renombrando una variable y un test.
