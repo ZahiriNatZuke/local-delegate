@@ -194,7 +194,7 @@ def _summarize(monkeypatch, tmp_path, answer: str, **kwargs):
 
 
 def _write(tmp_path, text: str):
-    path = tmp_path / "verificacion.md"
+    path = tmp_path / "verification.md"
     path.write_bytes(text.encode("utf-8"))
     return path
 
