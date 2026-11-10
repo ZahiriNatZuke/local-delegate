@@ -1,0 +1,13 @@
+{
+  "_run": {"model": "gemma3-4b", "via": "local_delegate(model='gemma3-4b', chunk='off') con el system de local_extract; sin schema, temperature 0.2, sin post-proceso. La respuesta vino entre ```json; aquí va el objeto ya parseado.", "window": "w-20261110T121214Z"},
+  "01-pricing-table-en": {"plans_with_monthly_price": "Prices are loaded at runtime; contact sales for a quote.", "licensed_user_limits": "1–5 per region, 1–3 per region", "custom_domain_limits": "1–5, 1–3 per region", "storage_per_workspace": "50 GB, 2 TB", "sso_availability": "Included"},
+  "02-pricing-table-en-3fields": {"plans_with_monthly_price": ["Standard", "Enterprise"], "licensed_user_limits": "1–5, 1–3 per region", "self_hosted_options": "Available on request"},
+  "03-pr-view-es": {"review_verdict": null, "comments_authors_and_gist": null, "number_of_reviews": 0, "closes_issue": false, "body_summary": "El exportador de informes ya no falla cuando la hoja está vacía: devuelve un CSV con solo la cabecera."},
+  "05-pr-view-es-booleans": {"includes_database_migration": false, "mentions_windows": true, "body_language": false},
+  "06-limits-table-es": {"limite_usuarios_activos": "75", "limite_usuarios_con_licencia": "75", "limite_usuarios_invitados": "20", "limite_de_proyectos": "40", "almacenamiento_por_proyecto": "25 GB"},
+  "08-managed-service-es": {"sso_disponible": "Incluido (SAML y OIDC)", "frecuencia_backups": "Cada 6 horas", "sla_soporte": "2 horas", "retencion_logs": "400 días", "limite_llamadas_api": null, "usuarios_con_licencia": "5"},
+  "09-allowances-table-en": {"licensed_user_limits": "8", "storage_quota": "1 TB", "sla_uptime": "99.95%", "data_region": "US, EU or APAC", "custom_domain_limits": null, "staging_environments": "1, 12"},
+  "12-capabilities-repeated-en": {"audit_log": "Included", "single_sign_on": "Included", "priority_support": "Included", "custom_roles": "Included", "ip_allowlist": "Not mentioned"},
+  "14-service-conf-en": {"db_host": "pg-staging.internal.example", "db_port": 5433, "cache_host": "redis-staging.internal.example", "cache_port": null, "queue_host": "mq-staging.internal.example", "queue_port": 5673, "db_timeout_seconds": null},
+  "17-plans-transposed-en": {"studio_seats": 15, "studio_storage": 200, "factory_storage": 5, "hobby_monthly_builds": 100, "studio_bandwidth": null, "factory_seats": 250}
+}

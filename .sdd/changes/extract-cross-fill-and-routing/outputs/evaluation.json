@@ -1,0 +1,2156 @@
+{
+ "runs": {
+  "g3-extract": {
+   "totals": {
+    "cases": 22,
+    "keys": 113,
+    "correct": 102,
+    "crossed": 9,
+    "missed": 0,
+    "invented": 2
+   },
+   "cases": {
+    "01-pricing-table-en": {
+     "plans_with_monthly_price": {
+      "verdict": "correct",
+      "value": "Prices are loaded at runtime; contact sales for a quote."
+     },
+     "licensed_user_limits": {
+      "verdict": "crossed",
+      "value": "1–5 (Standard), 1–3 per region (Enterprise)",
+      "from_row": "Custom domains"
+     },
+     "custom_domain_limits": {
+      "verdict": "correct",
+      "value": "1–5 (Standard), 1–3 per region (Enterprise)"
+     },
+     "storage_per_workspace": {
+      "verdict": "correct",
+      "value": "50 GB (Standard), 2 TB (Enterprise)"
+     },
+     "sso_availability": {
+      "verdict": "correct",
+      "value": "Included (Enterprise)"
+     }
+    },
+    "02-pricing-table-en-3fields": {
+     "plans_with_monthly_price": {
+      "verdict": "invented",
+      "value": "Standard, Enterprise"
+     },
+     "licensed_user_limits": {
+      "verdict": "crossed",
+      "value": "1–5, 1–3 per region",
+      "from_row": "Custom domains"
+     },
+     "self_hosted_options": {
+      "verdict": "correct",
+      "value": "Available on request"
+     }
+    },
+    "03-pr-view-es": {
+     "review_verdict": {
+      "verdict": "correct",
+      "value": null
+     },
+     "comments_authors_and_gist": {
+      "verdict": "correct",
+      "value": null
+     },
+     "number_of_reviews": {
+      "verdict": "correct",
+      "value": 0
+     },
+     "closes_issue": {
+      "verdict": "correct",
+      "value": null
+     },
+     "body_summary": {
+      "verdict": "correct",
+      "value": "El exportador de informes ya no falla cuando la hoja está vacía: devuelve un CSV con solo la cabecera."
+     }
+    },
+    "04-pytest-log-en": {
+     "number_of_failed_tests": {
+      "verdict": "correct",
+      "value": 4
+     },
+     "first_failed_test": {
+      "verdict": "correct",
+      "value": "tests/test_ledger.py::test_ledger_rounds_half_even"
+     },
+     "total_duration_seconds": {
+      "verdict": "correct",
+      "value": 14.69
+     },
+     "coverage_percent": {
+      "verdict": "correct",
+      "value": null
+     },
+     "python_version": {
+      "verdict": "correct",
+      "value": "3.11"
+     }
+    },
+    "05-pr-view-es-booleans": {
+     "includes_database_migration": {
+      "verdict": "correct",
+      "value": false
+     },
+     "mentions_windows": {
+      "verdict": "correct",
+      "value": true
+     },
+     "body_language": {
+      "verdict": "invented",
+      "value": false
+     }
+    },
+    "06-limits-table-es": {
+     "limite_usuarios_activos": {
+      "verdict": "correct",
+      "value": 75
+     },
+     "limite_usuarios_con_licencia": {
+      "verdict": "crossed",
+      "value": 75,
+      "from_row": "Límite de usuarios activos"
+     },
+     "limite_usuarios_invitados": {
+      "verdict": "correct",
+      "value": 20
+     },
+     "limite_de_proyectos": {
+      "verdict": "correct",
+      "value": 40
+     },
+     "almacenamiento_por_proyecto": {
+      "verdict": "correct",
+      "value": 25
+     }
+    },
+    "07-gateway-table-en": {
+     "max_upload_size": {
+      "verdict": "correct",
+      "value": "250 MB"
+     },
+     "max_download_size": {
+      "verdict": "correct",
+      "value": "4 GB"
+     },
+     "max_request_body_size": {
+      "verdict": "correct",
+      "value": null
+     },
+     "idle_timeout": {
+      "verdict": "correct",
+      "value": "90 s"
+     },
+     "request_timeout": {
+      "verdict": "correct",
+      "value": "30 s"
+     },
+     "connect_timeout": {
+      "verdict": "correct",
+      "value": null
+     }
+    },
+    "08-managed-service-es": {
+     "sso_disponible": {
+      "verdict": "correct",
+      "value": "Incluido (SAML y OIDC)"
+     },
+     "frecuencia_backups": {
+      "verdict": "correct",
+      "value": "Cada 6 horas"
+     },
+     "sla_soporte": {
+      "verdict": "correct",
+      "value": "2 horas"
+     },
+     "retencion_logs": {
+      "verdict": "correct",
+      "value": "400 días"
+     },
+     "limite_llamadas_api": {
+      "verdict": "correct",
+      "value": null
+     },
+     "usuarios_con_licencia": {
+      "verdict": "correct",
+      "value": "5"
+     }
+    },
+    "09-allowances-table-en": {
+     "licensed_user_limits": {
+      "verdict": "correct",
+      "value": "300"
+     },
+     "storage_quota": {
+      "verdict": "correct",
+      "value": "1 TB"
+     },
+     "sla_uptime": {
+      "verdict": "correct",
+      "value": "99.95%"
+     },
+     "data_region": {
+      "verdict": "correct",
+      "value": "US, EU or APAC"
+     },
+     "custom_domain_limits": {
+      "verdict": "correct",
+      "value": null
+     },
+     "staging_environments": {
+      "verdict": "correct",
+      "value": "12"
+     }
+    },
+    "10-spec-sheet-en": {
+     "weight": {
+      "verdict": "correct",
+      "value": "1.24 kg"
+     },
+     "color": {
+      "verdict": "correct",
+      "value": "Graphite"
+     },
+     "warranty": {
+      "verdict": "correct",
+      "value": "3 years"
+     },
+     "battery_life": {
+      "verdict": "correct",
+      "value": "17 hours"
+     }
+    },
+    "11-ficha-suministro-es": {
+     "titular": {
+      "verdict": "correct",
+      "value": "Cooperativa Arroyo Claro"
+     },
+     "fecha_de_alta": {
+      "verdict": "correct",
+      "value": "2024-03-18"
+     },
+     "ciudad": {
+      "verdict": "correct",
+      "value": "Villa Serrana"
+     },
+     "tarifa": {
+      "verdict": "correct",
+      "value": "Nocturna reducida"
+     }
+    },
+    "12-capabilities-repeated-en": {
+     "audit_log": {
+      "verdict": "correct",
+      "value": "Not included"
+     },
+     "single_sign_on": {
+      "verdict": "correct",
+      "value": "Not included"
+     },
+     "priority_support": {
+      "verdict": "correct",
+      "value": "Not included"
+     },
+     "custom_roles": {
+      "verdict": "correct",
+      "value": "Included"
+     },
+     "ip_allowlist": {
+      "verdict": "crossed",
+      "value": "Not included",
+      "from_row": "Audit log"
+     }
+    },
+    "13-aviso-obras-es": {
+     "fecha_inicio": {
+      "verdict": "correct",
+      "value": "14 de abril de 2026"
+     },
+     "fecha_fin": {
+      "verdict": "correct",
+      "value": "2 de mayo de 2026"
+     },
+     "responsable": {
+      "verdict": "correct",
+      "value": "Mirta Olazábal"
+     },
+     "presupuesto": {
+      "verdict": "correct",
+      "value": null
+     },
+     "ubicacion_temporal": {
+      "verdict": "correct",
+      "value": "depósito de Canelón Chico"
+     },
+     "fecha_de_inspeccion": {
+      "verdict": "correct",
+      "value": null
+     }
+    },
+    "14-service-conf-en": {
+     "db_host": {
+      "verdict": "correct",
+      "value": "pg-staging.internal.example"
+     },
+     "db_port": {
+      "verdict": "correct",
+      "value": 5433
+     },
+     "cache_host": {
+      "verdict": "correct",
+      "value": "redis-staging.internal.example"
+     },
+     "cache_port": {
+      "verdict": "correct",
+      "value": null
+     },
+     "queue_host": {
+      "verdict": "correct",
+      "value": "mq-staging.internal.example"
+     },
+     "queue_port": {
+      "verdict": "correct",
+      "value": 5673
+     },
+     "db_timeout_seconds": {
+      "verdict": "correct",
+      "value": null
+     }
+    },
+    "17-plans-transposed-en": {
+     "studio_seats": {
+      "verdict": "correct",
+      "value": 15
+     },
+     "studio_storage": {
+      "verdict": "correct",
+      "value": 200
+     },
+     "factory_storage": {
+      "verdict": "correct",
+      "value": 5
+     },
+     "hobby_monthly_builds": {
+      "verdict": "correct",
+      "value": 100
+     },
+     "studio_bandwidth": {
+      "verdict": "correct",
+      "value": null
+     },
+     "factory_seats": {
+      "verdict": "correct",
+      "value": 250
+     }
+    },
+    "18-thumbnailer-py": {
+     "function_names": {
+      "verdict": "correct",
+      "value": "make_thumbnail"
+     },
+     "shell_command_used": {
+      "verdict": "correct",
+      "value": "magick convert"
+     },
+     "http_port": {
+      "verdict": "correct",
+      "value": null
+     },
+     "database_table_name": {
+      "verdict": "correct",
+      "value": null
+     }
+    },
+    "21-pricing-table-en-near-miss": {
+     "storage_per_user": {
+      "verdict": "crossed",
+      "value": "2 TB",
+      "from_row": "Storage per workspace"
+     },
+     "api_requests_per_day": {
+      "verdict": "crossed",
+      "value": "6 000",
+      "from_row": "API requests per minute"
+     },
+     "custom_domains": {
+      "verdict": "correct",
+      "value": "1–3 per region"
+     },
+     "audit_log_retention": {
+      "verdict": "correct",
+      "value": "365 days"
+     },
+     "build_log_retention": {
+      "verdict": "correct",
+      "value": null
+     }
+    },
+    "22-limits-table-es-near-miss": {
+     "limite_usuarios_activos": {
+      "verdict": "correct",
+      "value": "75"
+     },
+     "limite_de_tableros": {
+      "verdict": "correct",
+      "value": null
+     },
+     "almacenamiento_por_usuario": {
+      "verdict": "crossed",
+      "value": "25 GB",
+      "from_row": "Almacenamiento por proyecto"
+     },
+     "retencion_de_la_papelera": {
+      "verdict": "correct",
+      "value": "45 días"
+     },
+     "retencion_de_copias": {
+      "verdict": "correct",
+      "value": null
+     }
+    },
+    "23-managed-service-es-near-miss": {
+     "copias_de_seguridad": {
+      "verdict": "correct",
+      "value": "Semanales"
+     },
+     "tiempo_de_respuesta_del_soporte": {
+      "verdict": "correct",
+      "value": "48 horas"
+     },
+     "tiempo_de_restauracion": {
+      "verdict": "correct",
+      "value": null
+     },
+     "puestos_incluidos": {
+      "verdict": "correct",
+      "value": "5"
+     },
+     "puestos_adicionales": {
+      "verdict": "crossed",
+      "value": "120",
+      "from_row": "Puestos incluidos"
+     }
+    },
+    "24-allowances-table-en-near-miss": {
+     "seats": {
+      "verdict": "correct",
+      "value": 8
+     },
+     "disk_quota": {
+      "verdict": "correct",
+      "value": "20 GB"
+     },
+     "bandwidth_quota": {
+      "verdict": "correct",
+      "value": null
+     },
+     "uptime_guarantee": {
+      "verdict": "correct",
+      "value": "99.5%"
+     },
+     "support_response_time": {
+      "verdict": "correct",
+      "value": null
+     },
+     "sandbox_environments": {
+      "verdict": "correct",
+      "value": 12
+     }
+    },
+    "25-gateway-table-en-near-miss": {
+     "max_upload_size": {
+      "verdict": "correct",
+      "value": "250 MB"
+     },
+     "max_message_size": {
+      "verdict": "correct",
+      "value": null
+     },
+     "max_concurrent_connections": {
+      "verdict": "correct",
+      "value": "1200"
+     },
+     "max_concurrent_streams": {
+      "verdict": "correct",
+      "value": null
+     },
+     "idle_timeout": {
+      "verdict": "correct",
+      "value": "90 s"
+     },
+     "connect_timeout": {
+      "verdict": "correct",
+      "value": null
+     }
+    },
+    "26-plans-transposed-en-near-miss": {
+     "hobby_seats": {
+      "verdict": "correct",
+      "value": "1"
+     },
+     "hobby_storage": {
+      "verdict": "correct",
+      "value": "5 GB"
+     },
+     "studio_monthly_builds": {
+      "verdict": "correct",
+      "value": "4 000"
+     },
+     "factory_monthly_builds": {
+      "verdict": "correct",
+      "value": "60 000"
+     },
+     "enterprise_seats": {
+      "verdict": "crossed",
+      "value": "250",
+      "from_row": "factory seats"
+     },
+     "studio_price": {
+      "verdict": "correct",
+      "value": null
+     }
+    }
+   }
+  },
+  "g3-proxy": {
+   "totals": {
+    "cases": 10,
+    "keys": 51,
+    "correct": 45,
+    "crossed": 3,
+    "missed": 0,
+    "invented": 3
+   },
+   "cases": {
+    "01-pricing-table-en": {
+     "plans_with_monthly_price": {
+      "verdict": "correct",
+      "value": "Prices are loaded at runtime; contact sales for a quote."
+     },
+     "licensed_user_limits": {
+      "verdict": "crossed",
+      "value": "1–5 per region, 1–3 per region",
+      "from_row": "Custom domains"
+     },
+     "custom_domain_limits": {
+      "verdict": "correct",
+      "value": "1–5, 1–3 per region"
+     },
+     "storage_per_workspace": {
+      "verdict": "correct",
+      "value": "50 GB, 2 TB"
+     },
+     "sso_availability": {
+      "verdict": "correct",
+      "value": "Included"
+     }
+    },
+    "02-pricing-table-en-3fields": {
+     "plans_with_monthly_price": {
+      "verdict": "invented",
+      "value": [
+       "Standard",
+       "Enterprise"
+      ]
+     },
+     "licensed_user_limits": {
+      "verdict": "crossed",
+      "value": "1–5, 1–3 per region",
+      "from_row": "Custom domains"
+     },
+     "self_hosted_options": {
+      "verdict": "correct",
+      "value": "Available on request"
+     }
+    },
+    "03-pr-view-es": {
+     "review_verdict": {
+      "verdict": "correct",
+      "value": null
+     },
+     "comments_authors_and_gist": {
+      "verdict": "correct",
+      "value": null
+     },
+     "number_of_reviews": {
+      "verdict": "correct",
+      "value": 0
+     },
+     "closes_issue": {
+      "verdict": "invented",
+      "value": false
+     },
+     "body_summary": {
+      "verdict": "correct",
+      "value": "El exportador de informes ya no falla cuando la hoja está vacía: devuelve un CSV con solo la cabecera."
+     }
+    },
+    "05-pr-view-es-booleans": {
+     "includes_database_migration": {
+      "verdict": "correct",
+      "value": false
+     },
+     "mentions_windows": {
+      "verdict": "correct",
+      "value": true
+     },
+     "body_language": {
+      "verdict": "invented",
+      "value": false
+     }
+    },
+    "06-limits-table-es": {
+     "limite_usuarios_activos": {
+      "verdict": "correct",
+      "value": "75"
+     },
+     "limite_usuarios_con_licencia": {
+      "verdict": "crossed",
+      "value": "75",
+      "from_row": "Límite de usuarios activos"
+     },
+     "limite_usuarios_invitados": {
+      "verdict": "correct",
+      "value": "20"
+     },
+     "limite_de_proyectos": {
+      "verdict": "correct",
+      "value": "40"
+     },
+     "almacenamiento_por_proyecto": {
+      "verdict": "correct",
+      "value": "25 GB"
+     }
+    },
+    "08-managed-service-es": {
+     "sso_disponible": {
+      "verdict": "correct",
+      "value": "Incluido (SAML y OIDC)"
+     },
+     "frecuencia_backups": {
+      "verdict": "correct",
+      "value": "Cada 6 horas"
+     },
+     "sla_soporte": {
+      "verdict": "correct",
+      "value": "2 horas"
+     },
+     "retencion_logs": {
+      "verdict": "correct",
+      "value": "400 días"
+     },
+     "limite_llamadas_api": {
+      "verdict": "correct",
+      "value": null
+     },
+     "usuarios_con_licencia": {
+      "verdict": "correct",
+      "value": "5"
+     }
+    },
+    "09-allowances-table-en": {
+     "licensed_user_limits": {
+      "verdict": "correct",
+      "value": "8"
+     },
+     "storage_quota": {
+      "verdict": "correct",
+      "value": "1 TB"
+     },
+     "sla_uptime": {
+      "verdict": "correct",
+      "value": "99.95%"
+     },
+     "data_region": {
+      "verdict": "correct",
+      "value": "US, EU or APAC"
+     },
+     "custom_domain_limits": {
+      "verdict": "correct",
+      "value": null
+     },
+     "staging_environments": {
+      "verdict": "correct",
+      "value": "1, 12"
+     }
+    },
+    "12-capabilities-repeated-en": {
+     "audit_log": {
+      "verdict": "correct",
+      "value": "Included"
+     },
+     "single_sign_on": {
+      "verdict": "correct",
+      "value": "Included"
+     },
+     "priority_support": {
+      "verdict": "correct",
+      "value": "Included"
+     },
+     "custom_roles": {
+      "verdict": "correct",
+      "value": "Included"
+     },
+     "ip_allowlist": {
+      "verdict": "correct",
+      "value": "Not mentioned"
+     }
+    },
+    "14-service-conf-en": {
+     "db_host": {
+      "verdict": "correct",
+      "value": "pg-staging.internal.example"
+     },
+     "db_port": {
+      "verdict": "correct",
+      "value": 5433
+     },
+     "cache_host": {
+      "verdict": "correct",
+      "value": "redis-staging.internal.example"
+     },
+     "cache_port": {
+      "verdict": "correct",
+      "value": null
+     },
+     "queue_host": {
+      "verdict": "correct",
+      "value": "mq-staging.internal.example"
+     },
+     "queue_port": {
+      "verdict": "correct",
+      "value": 5673
+     },
+     "db_timeout_seconds": {
+      "verdict": "correct",
+      "value": null
+     }
+    },
+    "17-plans-transposed-en": {
+     "studio_seats": {
+      "verdict": "correct",
+      "value": 15
+     },
+     "studio_storage": {
+      "verdict": "correct",
+      "value": 200
+     },
+     "factory_storage": {
+      "verdict": "correct",
+      "value": 5
+     },
+     "hobby_monthly_builds": {
+      "verdict": "correct",
+      "value": 100
+     },
+     "studio_bandwidth": {
+      "verdict": "correct",
+      "value": null
+     },
+     "factory_seats": {
+      "verdict": "correct",
+      "value": 250
+     }
+    }
+   }
+  },
+  "g4-proxy": {
+   "totals": {
+    "cases": 22,
+    "keys": 113,
+    "correct": 112,
+    "crossed": 0,
+    "missed": 0,
+    "invented": 1
+   },
+   "cases": {
+    "01-pricing-table-en": {
+     "plans_with_monthly_price": {
+      "verdict": "correct",
+      "value": "Prices are loaded at runtime; contact sales for a quote."
+     },
+     "licensed_user_limits": {
+      "verdict": "correct",
+      "value": null
+     },
+     "custom_domain_limits": {
+      "verdict": "correct",
+      "value": {
+       "Standard": "1–5",
+       "Enterprise": "1–3 per region"
+      }
+     },
+     "storage_per_workspace": {
+      "verdict": "correct",
+      "value": {
+       "Standard": "50 GB",
+       "Enterprise": "2 TB"
+      }
+     },
+     "sso_availability": {
+      "verdict": "correct",
+      "value": {
+       "Standard": "—",
+       "Enterprise": "Included"
+      }
+     }
+    },
+    "02-pricing-table-en-3fields": {
+     "plans_with_monthly_price": {
+      "verdict": "correct",
+      "value": "Prices are loaded at runtime; contact sales for a quote."
+     },
+     "licensed_user_limits": {
+      "verdict": "correct",
+      "value": null
+     },
+     "self_hosted_options": {
+      "verdict": "correct",
+      "value": "Available on request"
+     }
+    },
+    "03-pr-view-es": {
+     "review_verdict": {
+      "verdict": "correct",
+      "value": null
+     },
+     "comments_authors_and_gist": {
+      "verdict": "correct",
+      "value": []
+     },
+     "number_of_reviews": {
+      "verdict": "correct",
+      "value": 0
+     },
+     "closes_issue": {
+      "verdict": "correct",
+      "value": "#412"
+     },
+     "body_summary": {
+      "verdict": "correct",
+      "value": "El exportador de informes se ha corregido para que, en caso de hoja vacía, devuelva un CSV únicamente con la cabecera en lugar de fallar. Se ha verificado mediante pruebas en Windows y Linux."
+     }
+    },
+    "04-pytest-log-en": {
+     "number_of_failed_tests": {
+      "verdict": "correct",
+      "value": 4
+     },
+     "first_failed_test": {
+      "verdict": "correct",
+      "value": "test_ledger_rounds_half_even"
+     },
+     "total_duration_seconds": {
+      "verdict": "correct",
+      "value": 14.69
+     },
+     "coverage_percent": {
+      "verdict": "correct",
+      "value": null
+     },
+     "python_version": {
+      "verdict": "correct",
+      "value": "3.11"
+     }
+    },
+    "05-pr-view-es-booleans": {
+     "includes_database_migration": {
+      "verdict": "correct",
+      "value": false
+     },
+     "mentions_windows": {
+      "verdict": "correct",
+      "value": true
+     },
+     "body_language": {
+      "verdict": "invented",
+      "value": false
+     }
+    },
+    "06-limits-table-es": {
+     "limite_usuarios_activos": {
+      "verdict": "correct",
+      "value": 75
+     },
+     "limite_usuarios_con_licencia": {
+      "verdict": "correct",
+      "value": null
+     },
+     "limite_usuarios_invitados": {
+      "verdict": "correct",
+      "value": 20
+     },
+     "limite_de_proyectos": {
+      "verdict": "correct",
+      "value": 40
+     },
+     "almacenamiento_por_proyecto": {
+      "verdict": "correct",
+      "value": "25 GB"
+     }
+    },
+    "07-gateway-table-en": {
+     "max_upload_size": {
+      "verdict": "correct",
+      "value": "250 MB"
+     },
+     "max_download_size": {
+      "verdict": "correct",
+      "value": "4 GB"
+     },
+     "max_request_body_size": {
+      "verdict": "correct",
+      "value": null
+     },
+     "idle_timeout": {
+      "verdict": "correct",
+      "value": "90 s"
+     },
+     "request_timeout": {
+      "verdict": "correct",
+      "value": "30 s"
+     },
+     "connect_timeout": {
+      "verdict": "correct",
+      "value": null
+     }
+    },
+    "08-managed-service-es": {
+     "sso_disponible": {
+      "verdict": "correct",
+      "value": "Incluido (SAML y OIDC)"
+     },
+     "frecuencia_backups": {
+      "verdict": "correct",
+      "value": "Cada 6 horas"
+     },
+     "sla_soporte": {
+      "verdict": "correct",
+      "value": "2 horas"
+     },
+     "retencion_logs": {
+      "verdict": "correct",
+      "value": "400 días"
+     },
+     "limite_llamadas_api": {
+      "verdict": "correct",
+      "value": null
+     },
+     "usuarios_con_licencia": {
+      "verdict": "correct",
+      "value": "120"
+     }
+    },
+    "09-allowances-table-en": {
+     "licensed_user_limits": {
+      "verdict": "correct",
+      "value": {
+       "Starter": 8,
+       "Scale": 300
+      }
+     },
+     "storage_quota": {
+      "verdict": "correct",
+      "value": {
+       "Starter": "20 GB",
+       "Scale": "1 TB"
+      }
+     },
+     "sla_uptime": {
+      "verdict": "correct",
+      "value": {
+       "Starter": "99.5%",
+       "Scale": "99.95%"
+      }
+     },
+     "data_region": {
+      "verdict": "correct",
+      "value": {
+       "Starter": "US only",
+       "Scale": "US, EU or APAC"
+      }
+     },
+     "custom_domain_limits": {
+      "verdict": "correct",
+      "value": null
+     },
+     "staging_environments": {
+      "verdict": "correct",
+      "value": {
+       "Starter": 1,
+       "Scale": 12
+      }
+     }
+    },
+    "10-spec-sheet-en": {
+     "weight": {
+      "verdict": "correct",
+      "value": "1.24 kg"
+     },
+     "color": {
+      "verdict": "correct",
+      "value": "Graphite"
+     },
+     "warranty": {
+      "verdict": "correct",
+      "value": "3 years"
+     },
+     "battery_life": {
+      "verdict": "correct",
+      "value": "17 hours"
+     }
+    },
+    "11-ficha-suministro-es": {
+     "titular": {
+      "verdict": "correct",
+      "value": "Cooperativa Arroyo Claro"
+     },
+     "fecha_de_alta": {
+      "verdict": "correct",
+      "value": "2024-03-18"
+     },
+     "ciudad": {
+      "verdict": "correct",
+      "value": "Villa Serrana"
+     },
+     "tarifa": {
+      "verdict": "correct",
+      "value": "Nocturna reducida"
+     }
+    },
+    "12-capabilities-repeated-en": {
+     "audit_log": {
+      "verdict": "correct",
+      "value": "Included"
+     },
+     "single_sign_on": {
+      "verdict": "correct",
+      "value": "Included"
+     },
+     "priority_support": {
+      "verdict": "correct",
+      "value": "Included"
+     },
+     "custom_roles": {
+      "verdict": "correct",
+      "value": "Included"
+     },
+     "ip_allowlist": {
+      "verdict": "correct",
+      "value": "Not found"
+     }
+    },
+    "13-aviso-obras-es": {
+     "fecha_inicio": {
+      "verdict": "correct",
+      "value": "14 de abril de 2026"
+     },
+     "fecha_fin": {
+      "verdict": "correct",
+      "value": "2 de mayo de 2026"
+     },
+     "responsable": {
+      "verdict": "correct",
+      "value": "Mirta Olazábal"
+     },
+     "presupuesto": {
+      "verdict": "correct",
+      "value": null
+     },
+     "ubicacion_temporal": {
+      "verdict": "correct",
+      "value": "depósito de Canelón Chico"
+     },
+     "fecha_de_inspeccion": {
+      "verdict": "correct",
+      "value": null
+     }
+    },
+    "14-service-conf-en": {
+     "db_host": {
+      "verdict": "correct",
+      "value": "pg-staging.internal.example"
+     },
+     "db_port": {
+      "verdict": "correct",
+      "value": "5433"
+     },
+     "cache_host": {
+      "verdict": "correct",
+      "value": "redis-staging.internal.example"
+     },
+     "cache_port": {
+      "verdict": "correct",
+      "value": null
+     },
+     "queue_host": {
+      "verdict": "correct",
+      "value": "mq-staging.internal.example"
+     },
+     "queue_port": {
+      "verdict": "correct",
+      "value": "5673"
+     },
+     "db_timeout_seconds": {
+      "verdict": "correct",
+      "value": null
+     }
+    },
+    "17-plans-transposed-en": {
+     "studio_seats": {
+      "verdict": "correct",
+      "value": 15
+     },
+     "studio_storage": {
+      "verdict": "correct",
+      "value": "200 GB"
+     },
+     "factory_storage": {
+      "verdict": "correct",
+      "value": "5 TB"
+     },
+     "hobby_monthly_builds": {
+      "verdict": "correct",
+      "value": 100
+     },
+     "studio_bandwidth": {
+      "verdict": "correct",
+      "value": null
+     },
+     "factory_seats": {
+      "verdict": "correct",
+      "value": 250
+     }
+    },
+    "18-thumbnailer-py": {
+     "function_names": {
+      "verdict": "correct",
+      "value": [
+       "is_supported",
+       "build_command",
+       "make_thumbnail"
+      ]
+     },
+     "shell_command_used": {
+      "verdict": "correct",
+      "value": "magick convert"
+     },
+     "http_port": {
+      "verdict": "correct",
+      "value": null
+     },
+     "database_table_name": {
+      "verdict": "correct",
+      "value": null
+     }
+    },
+    "21-pricing-table-en-near-miss": {
+     "storage_per_user": {
+      "verdict": "correct",
+      "value": null
+     },
+     "api_requests_per_day": {
+      "verdict": "correct",
+      "value": null
+     },
+     "custom_domains": {
+      "verdict": "correct",
+      "value": "1–5"
+     },
+     "audit_log_retention": {
+      "verdict": "correct",
+      "value": "30 days"
+     },
+     "build_log_retention": {
+      "verdict": "correct",
+      "value": null
+     }
+    },
+    "22-limits-table-es-near-miss": {
+     "limite_usuarios_activos": {
+      "verdict": "correct",
+      "value": "75"
+     },
+     "limite_de_tableros": {
+      "verdict": "correct",
+      "value": "No disponible"
+     },
+     "almacenamiento_por_usuario": {
+      "verdict": "correct",
+      "value": "No disponible"
+     },
+     "retencion_de_la_papelera": {
+      "verdict": "correct",
+      "value": "45 días"
+     },
+     "retencion_de_copias": {
+      "verdict": "correct",
+      "value": "No disponible"
+     }
+    },
+    "23-managed-service-es-near-miss": {
+     "copias_de_seguridad": {
+      "verdict": "correct",
+      "value": {
+       "Plan Inicial": "Semanales",
+       "Plan Corporativo": "Cada 6 horas"
+      }
+     },
+     "tiempo_de_respuesta_del_soporte": {
+      "verdict": "correct",
+      "value": {
+       "Plan Inicial": "48 horas",
+       "Plan Corporativo": "2 horas"
+      }
+     },
+     "tiempo_de_restauracion": {
+      "verdict": "correct",
+      "value": "No disponible"
+     },
+     "puestos_incluidos": {
+      "verdict": "correct",
+      "value": {
+       "Plan Inicial": "5",
+       "Plan Corporativo": "120"
+      }
+     },
+     "puestos_adicionales": {
+      "verdict": "correct",
+      "value": "No disponible"
+     }
+    },
+    "24-allowances-table-en-near-miss": {
+     "seats": {
+      "verdict": "correct",
+      "value": "8 (Starter), 300 (Scale)"
+     },
+     "disk_quota": {
+      "verdict": "correct",
+      "value": "20 GB (Starter), 1 TB (Scale)"
+     },
+     "bandwidth_quota": {
+      "verdict": "correct",
+      "value": null
+     },
+     "uptime_guarantee": {
+      "verdict": "correct",
+      "value": "99.5% (Starter), 99.95% (Scale)"
+     },
+     "support_response_time": {
+      "verdict": "correct",
+      "value": null
+     },
+     "sandbox_environments": {
+      "verdict": "correct",
+      "value": "1 (Starter), 12 (Scale)"
+     }
+    },
+    "25-gateway-table-en-near-miss": {
+     "max_upload_size": {
+      "verdict": "correct",
+      "value": "250 MB"
+     },
+     "max_message_size": {
+      "verdict": "correct",
+      "value": null
+     },
+     "max_concurrent_connections": {
+      "verdict": "correct",
+      "value": "1200"
+     },
+     "max_concurrent_streams": {
+      "verdict": "correct",
+      "value": null
+     },
+     "idle_timeout": {
+      "verdict": "correct",
+      "value": "90 s"
+     },
+     "connect_timeout": {
+      "verdict": "correct",
+      "value": null
+     }
+    },
+    "26-plans-transposed-en-near-miss": {
+     "hobby_seats": {
+      "verdict": "correct",
+      "value": 1
+     },
+     "hobby_storage": {
+      "verdict": "correct",
+      "value": "5 GB"
+     },
+     "studio_monthly_builds": {
+      "verdict": "correct",
+      "value": 4000
+     },
+     "factory_monthly_builds": {
+      "verdict": "correct",
+      "value": 60000
+     },
+     "enterprise_seats": {
+      "verdict": "correct",
+      "value": null
+     },
+     "studio_price": {
+      "verdict": "correct",
+      "value": null
+     }
+    }
+   }
+  },
+  "g4-extract": {
+   "totals": {
+    "cases": 4,
+    "keys": 17,
+    "correct": 17,
+    "crossed": 0,
+    "missed": 0,
+    "invented": 0
+   },
+   "cases": {
+    "15-pricing-page-large-en": {
+     "plans_with_monthly_price": {
+      "verdict": "correct",
+      "value": "Prices are loaded at runtime; contact sales for a quote."
+     },
+     "licensed_user_limits": {
+      "verdict": "correct",
+      "value": null
+     },
+     "self_hosted_options": {
+      "verdict": "correct",
+      "value": "Enterprise: Available on request"
+     },
+     "api_rate_limits": {
+      "verdict": "correct",
+      "value": "Standard: 600 requests per minute; Enterprise: 6,000 requests per minute"
+     }
+    },
+    "16-manual-plan-equipo-large-es": {
+     "limite_usuarios_activos": {
+      "verdict": "correct",
+      "value": "Plan Básico: 10, Plan Equipo: 75"
+     },
+     "limite_usuarios_con_licencia": {
+      "verdict": "correct",
+      "value": null
+     },
+     "limite_usuarios_invitados": {
+      "verdict": "correct",
+      "value": "Plan Básico: 3, Plan Equipo: 20"
+     },
+     "limite_de_proyectos": {
+      "verdict": "correct",
+      "value": "Plan Básico: 5, Plan Equipo: 40"
+     },
+     "almacenamiento_por_proyecto": {
+      "verdict": "correct",
+      "value": "Plan Básico: 2 GB, Plan Equipo: 25 GB"
+     }
+    },
+    "19-pricing-page-noisy-en-3fields": {
+     "plans_with_monthly_price": {
+      "verdict": "correct",
+      "value": "Prices are loaded at runtime; contact sales for a quote."
+     },
+     "licensed_user_limits": {
+      "verdict": "correct",
+      "value": null
+     },
+     "self_hosted_options": {
+      "verdict": "correct",
+      "value": "Available on request (Enterprise plan)"
+     }
+    },
+    "20-pricing-page-noisy-en-5fields": {
+     "plans_with_monthly_price": {
+      "verdict": "correct",
+      "value": "Standard: contact sales, Enterprise: contact sales"
+     },
+     "licensed_user_limits": {
+      "verdict": "correct",
+      "value": null
+     },
+     "custom_domain_limits": {
+      "verdict": "correct",
+      "value": "Standard: 1–5, Enterprise: 1–3 per region"
+     },
+     "storage_per_workspace": {
+      "verdict": "correct",
+      "value": "Standard: 50 GB, Enterprise: 2 TB"
+     },
+     "sso_availability": {
+      "verdict": "correct",
+      "value": "Standard: No, Enterprise: Included"
+     }
+    }
+   }
+  }
+ },
+ "detector": {
+  "strict": {
+   "g3-extract": {
+    "tp": [
+     "01-pricing-table-en/licensed_user_limits",
+     "06-limits-table-es/limite_usuarios_con_licencia",
+     "12-capabilities-repeated-en/ip_allowlist",
+     "23-managed-service-es-near-miss/puestos_adicionales"
+    ],
+    "fp": [],
+    "fn": [
+     "02-pricing-table-en-3fields/licensed_user_limits",
+     "21-pricing-table-en-near-miss/storage_per_user",
+     "21-pricing-table-en-near-miss/api_requests_per_day",
+     "22-limits-table-es-near-miss/almacenamiento_por_usuario",
+     "26-plans-transposed-en-near-miss/enterprise_seats"
+    ],
+    "negatives": 104
+   },
+   "g3-proxy": {
+    "tp": [
+     "01-pricing-table-en/licensed_user_limits",
+     "06-limits-table-es/limite_usuarios_con_licencia"
+    ],
+    "fp": [],
+    "fn": [
+     "02-pricing-table-en-3fields/licensed_user_limits"
+    ],
+    "negatives": 48
+   },
+   "g4-proxy": {
+    "tp": [],
+    "fp": [],
+    "fn": [],
+    "negatives": 113
+   },
+   "g4-extract": {
+    "tp": [],
+    "fp": [],
+    "fn": [],
+    "negatives": 17
+   }
+  },
+  "loose": {
+   "g3-extract": {
+    "tp": [
+     "01-pricing-table-en/licensed_user_limits",
+     "02-pricing-table-en-3fields/licensed_user_limits",
+     "06-limits-table-es/limite_usuarios_con_licencia",
+     "12-capabilities-repeated-en/ip_allowlist",
+     "23-managed-service-es-near-miss/puestos_adicionales"
+    ],
+    "fp": [
+     "01-pricing-table-en/sso_availability (correct; fila «Single sign-on (SAML)»)",
+     "08-managed-service-es/sso_disponible (correct; fila «Inicio de sesión único»)",
+     "08-managed-service-es/frecuencia_backups (correct; fila «Copias de seguridad»)",
+     "08-managed-service-es/retencion_logs (correct; fila «Conservación de registros de auditoría»)",
+     "08-managed-service-es/usuarios_con_licencia (correct; fila «Puestos incluidos»)",
+     "09-allowances-table-en/licensed_user_limits (correct; fila «Seats»)"
+    ],
+    "fn": [
+     "21-pricing-table-en-near-miss/storage_per_user",
+     "21-pricing-table-en-near-miss/api_requests_per_day",
+     "22-limits-table-es-near-miss/almacenamiento_por_usuario",
+     "26-plans-transposed-en-near-miss/enterprise_seats"
+    ],
+    "negatives": 104
+   },
+   "g3-proxy": {
+    "tp": [
+     "01-pricing-table-en/licensed_user_limits",
+     "02-pricing-table-en-3fields/licensed_user_limits",
+     "06-limits-table-es/limite_usuarios_con_licencia"
+    ],
+    "fp": [
+     "01-pricing-table-en/sso_availability (correct; fila «Single sign-on (SAML)»)",
+     "08-managed-service-es/sso_disponible (correct; fila «Inicio de sesión único»)",
+     "08-managed-service-es/frecuencia_backups (correct; fila «Copias de seguridad»)",
+     "08-managed-service-es/retencion_logs (correct; fila «Conservación de registros de auditoría»)",
+     "08-managed-service-es/usuarios_con_licencia (correct; fila «Puestos incluidos»)",
+     "09-allowances-table-en/licensed_user_limits (correct; fila «Seats»)"
+    ],
+    "fn": [],
+    "negatives": 48
+   },
+   "g4-proxy": {
+    "tp": [],
+    "fp": [
+     "01-pricing-table-en/sso_availability (correct; fila «Single sign-on (SAML)»)",
+     "08-managed-service-es/sso_disponible (correct; fila «Inicio de sesión único»)",
+     "08-managed-service-es/frecuencia_backups (correct; fila «Copias de seguridad»)",
+     "08-managed-service-es/retencion_logs (correct; fila «Conservación de registros de auditoría»)",
+     "08-managed-service-es/usuarios_con_licencia (correct; fila «Puestos incluidos»)",
+     "09-allowances-table-en/licensed_user_limits (correct; fila «Seats»)"
+    ],
+    "fn": [],
+    "negatives": 113
+   },
+   "g4-extract": {
+    "tp": [],
+    "fp": [
+     "20-pricing-page-noisy-en-5fields/sso_availability (correct; fila «Single sign-on (SAML)»)"
+    ],
+    "fn": [],
+    "negatives": 17
+   }
+  },
+  "partial": {
+   "g3-extract": {
+    "tp": [
+     "01-pricing-table-en/licensed_user_limits",
+     "06-limits-table-es/limite_usuarios_con_licencia",
+     "12-capabilities-repeated-en/ip_allowlist",
+     "21-pricing-table-en-near-miss/storage_per_user",
+     "21-pricing-table-en-near-miss/api_requests_per_day",
+     "22-limits-table-es-near-miss/almacenamiento_por_usuario",
+     "23-managed-service-es-near-miss/puestos_adicionales",
+     "26-plans-transposed-en-near-miss/enterprise_seats"
+    ],
+    "fp": [
+     "02-pricing-table-en-3fields/self_hosted_options (correct; fila «Self-hosted runner»)",
+     "08-managed-service-es/sla_soporte (correct; fila «Tiempo de respuesta del soporte»)",
+     "09-allowances-table-en/storage_quota (correct; fila «Disk quota»)",
+     "09-allowances-table-en/sla_uptime (correct; fila «Uptime guarantee»)",
+     "09-allowances-table-en/data_region (correct; fila «Data residency»)",
+     "09-allowances-table-en/staging_environments (correct; fila «Sandbox environments»)"
+    ],
+    "fn": [
+     "02-pricing-table-en-3fields/licensed_user_limits"
+    ],
+    "negatives": 104
+   },
+   "g3-proxy": {
+    "tp": [
+     "01-pricing-table-en/licensed_user_limits",
+     "06-limits-table-es/limite_usuarios_con_licencia"
+    ],
+    "fp": [
+     "02-pricing-table-en-3fields/self_hosted_options (correct; fila «Self-hosted runner»)",
+     "08-managed-service-es/sla_soporte (correct; fila «Tiempo de respuesta del soporte»)",
+     "09-allowances-table-en/storage_quota (correct; fila «Disk quota»)",
+     "09-allowances-table-en/sla_uptime (correct; fila «Uptime guarantee»)",
+     "09-allowances-table-en/data_region (correct; fila «Data residency»)",
+     "09-allowances-table-en/staging_environments (correct; fila «Sandbox environments»)"
+    ],
+    "fn": [
+     "02-pricing-table-en-3fields/licensed_user_limits"
+    ],
+    "negatives": 48
+   },
+   "g4-proxy": {
+    "tp": [],
+    "fp": [
+     "02-pricing-table-en-3fields/self_hosted_options (correct; fila «Self-hosted runner»)",
+     "04-pytest-log-en/first_failed_test (correct; fila «FAILED tests/test_ledger.py»)",
+     "08-managed-service-es/sla_soporte (correct; fila «Tiempo de respuesta del soporte»)",
+     "09-allowances-table-en/storage_quota (correct; fila «Disk quota»)",
+     "09-allowances-table-en/sla_uptime (correct; fila «Uptime guarantee»)",
+     "09-allowances-table-en/data_region (correct; fila «Data residency»)",
+     "09-allowances-table-en/staging_environments (correct; fila «Sandbox environments»)"
+    ],
+    "fn": [],
+    "negatives": 113
+   },
+   "g4-extract": {
+    "tp": [],
+    "fp": [
+     "15-pricing-page-large-en/self_hosted_options (correct; fila «Self-hosted runner»)",
+     "15-pricing-page-large-en/api_rate_limits (correct; fila «API requests per minute»)",
+     "19-pricing-page-noisy-en-3fields/self_hosted_options (correct; fila «Self-hosted runner»)"
+    ],
+    "fn": [],
+    "negatives": 17
+   }
+  }
+ },
+ "swap_control": {
+  "strict": {
+   "pairs": 154,
+   "keys": 308,
+   "flagged": 238,
+   "missed": [
+    "01-pricing-table-en/custom_domain_limits <- sso_availability",
+    "01-pricing-table-en/storage_per_workspace <- sso_availability",
+    "04-pytest-log-en/number_of_failed_tests <- total_duration_seconds",
+    "04-pytest-log-en/total_duration_seconds <- number_of_failed_tests",
+    "08-managed-service-es/sso_disponible <- frecuencia_backups",
+    "08-managed-service-es/frecuencia_backups <- sso_disponible",
+    "08-managed-service-es/sla_soporte <- sso_disponible",
+    "08-managed-service-es/sso_disponible <- retencion_logs",
+    "08-managed-service-es/retencion_logs <- sso_disponible",
+    "08-managed-service-es/sso_disponible <- usuarios_con_licencia",
+    "08-managed-service-es/usuarios_con_licencia <- sso_disponible",
+    "08-managed-service-es/sla_soporte <- frecuencia_backups",
+    "08-managed-service-es/frecuencia_backups <- retencion_logs",
+    "08-managed-service-es/retencion_logs <- frecuencia_backups",
+    "08-managed-service-es/frecuencia_backups <- usuarios_con_licencia",
+    "08-managed-service-es/usuarios_con_licencia <- frecuencia_backups",
+    "08-managed-service-es/sla_soporte <- retencion_logs",
+    "08-managed-service-es/sla_soporte <- usuarios_con_licencia",
+    "08-managed-service-es/retencion_logs <- usuarios_con_licencia",
+    "08-managed-service-es/usuarios_con_licencia <- retencion_logs",
+    "09-allowances-table-en/storage_quota <- licensed_user_limits",
+    "09-allowances-table-en/sla_uptime <- licensed_user_limits",
+    "09-allowances-table-en/data_region <- licensed_user_limits",
+    "09-allowances-table-en/staging_environments <- licensed_user_limits",
+    "09-allowances-table-en/staging_environments <- storage_quota",
+    "12-capabilities-repeated-en/audit_log <- custom_roles",
+    "12-capabilities-repeated-en/custom_roles <- audit_log",
+    "12-capabilities-repeated-en/single_sign_on <- custom_roles",
+    "12-capabilities-repeated-en/custom_roles <- single_sign_on",
+    "12-capabilities-repeated-en/priority_support <- custom_roles",
+    "12-capabilities-repeated-en/custom_roles <- priority_support",
+    "13-aviso-obras-es/fecha_inicio <- fecha_fin",
+    "13-aviso-obras-es/fecha_fin <- fecha_inicio",
+    "13-aviso-obras-es/fecha_inicio <- responsable",
+    "13-aviso-obras-es/responsable <- fecha_inicio",
+    "13-aviso-obras-es/fecha_inicio <- ubicacion_temporal",
+    "13-aviso-obras-es/ubicacion_temporal <- fecha_inicio",
+    "13-aviso-obras-es/fecha_fin <- responsable",
+    "13-aviso-obras-es/responsable <- fecha_fin",
+    "13-aviso-obras-es/fecha_fin <- ubicacion_temporal",
+    "13-aviso-obras-es/ubicacion_temporal <- fecha_fin",
+    "13-aviso-obras-es/responsable <- ubicacion_temporal",
+    "13-aviso-obras-es/ubicacion_temporal <- responsable",
+    "17-plans-transposed-en/studio_storage <- factory_storage",
+    "17-plans-transposed-en/hobby_monthly_builds <- factory_storage",
+    "01-pricing-table-en/custom_domain_limits <- sso_availability",
+    "01-pricing-table-en/storage_per_workspace <- sso_availability",
+    "09-allowances-table-en/storage_quota <- licensed_user_limits",
+    "09-allowances-table-en/sla_uptime <- licensed_user_limits",
+    "09-allowances-table-en/data_region <- licensed_user_limits",
+    "09-allowances-table-en/staging_environments <- licensed_user_limits",
+    "09-allowances-table-en/staging_environments <- storage_quota",
+    "01-pricing-table-en/custom_domain_limits <- sso_availability",
+    "01-pricing-table-en/storage_per_workspace <- sso_availability",
+    "08-managed-service-es/sso_disponible <- usuarios_con_licencia",
+    "08-managed-service-es/usuarios_con_licencia <- sso_disponible",
+    "08-managed-service-es/frecuencia_backups <- usuarios_con_licencia",
+    "08-managed-service-es/usuarios_con_licencia <- frecuencia_backups",
+    "08-managed-service-es/sla_soporte <- usuarios_con_licencia",
+    "08-managed-service-es/retencion_logs <- usuarios_con_licencia",
+    "08-managed-service-es/usuarios_con_licencia <- retencion_logs",
+    "09-allowances-table-en/storage_quota <- licensed_user_limits",
+    "09-allowances-table-en/sla_uptime <- licensed_user_limits",
+    "09-allowances-table-en/data_region <- licensed_user_limits",
+    "09-allowances-table-en/staging_environments <- licensed_user_limits",
+    "09-allowances-table-en/storage_quota <- staging_environments",
+    "09-allowances-table-en/staging_environments <- storage_quota",
+    "24-allowances-table-en-near-miss/sandbox_environments <- disk_quota",
+    "20-pricing-page-noisy-en-5fields/custom_domain_limits <- sso_availability",
+    "20-pricing-page-noisy-en-5fields/storage_per_workspace <- sso_availability"
+   ]
+  },
+  "loose": {
+   "pairs": 154,
+   "keys": 308,
+   "flagged": 281,
+   "missed": [
+    "04-pytest-log-en/number_of_failed_tests <- total_duration_seconds",
+    "04-pytest-log-en/total_duration_seconds <- number_of_failed_tests",
+    "09-allowances-table-en/staging_environments <- storage_quota",
+    "12-capabilities-repeated-en/audit_log <- custom_roles",
+    "12-capabilities-repeated-en/custom_roles <- audit_log",
+    "12-capabilities-repeated-en/single_sign_on <- custom_roles",
+    "12-capabilities-repeated-en/custom_roles <- single_sign_on",
+    "12-capabilities-repeated-en/priority_support <- custom_roles",
+    "12-capabilities-repeated-en/custom_roles <- priority_support",
+    "13-aviso-obras-es/fecha_inicio <- fecha_fin",
+    "13-aviso-obras-es/fecha_fin <- fecha_inicio",
+    "13-aviso-obras-es/fecha_inicio <- responsable",
+    "13-aviso-obras-es/responsable <- fecha_inicio",
+    "13-aviso-obras-es/fecha_inicio <- ubicacion_temporal",
+    "13-aviso-obras-es/ubicacion_temporal <- fecha_inicio",
+    "13-aviso-obras-es/fecha_fin <- responsable",
+    "13-aviso-obras-es/responsable <- fecha_fin",
+    "13-aviso-obras-es/fecha_fin <- ubicacion_temporal",
+    "13-aviso-obras-es/ubicacion_temporal <- fecha_fin",
+    "13-aviso-obras-es/responsable <- ubicacion_temporal",
+    "13-aviso-obras-es/ubicacion_temporal <- responsable",
+    "17-plans-transposed-en/studio_storage <- factory_storage",
+    "17-plans-transposed-en/hobby_monthly_builds <- factory_storage",
+    "09-allowances-table-en/staging_environments <- storage_quota",
+    "09-allowances-table-en/storage_quota <- staging_environments",
+    "09-allowances-table-en/staging_environments <- storage_quota",
+    "24-allowances-table-en-near-miss/sandbox_environments <- disk_quota"
+   ]
+  },
+  "partial": {
+   "pairs": 154,
+   "keys": 308,
+   "flagged": 243,
+   "missed": [
+    "01-pricing-table-en/custom_domain_limits <- sso_availability",
+    "01-pricing-table-en/storage_per_workspace <- sso_availability",
+    "04-pytest-log-en/number_of_failed_tests <- total_duration_seconds",
+    "04-pytest-log-en/total_duration_seconds <- number_of_failed_tests",
+    "08-managed-service-es/sso_disponible <- frecuencia_backups",
+    "08-managed-service-es/frecuencia_backups <- sso_disponible",
+    "08-managed-service-es/sla_soporte <- sso_disponible",
+    "08-managed-service-es/sso_disponible <- retencion_logs",
+    "08-managed-service-es/retencion_logs <- sso_disponible",
+    "08-managed-service-es/sso_disponible <- usuarios_con_licencia",
+    "08-managed-service-es/usuarios_con_licencia <- sso_disponible",
+    "08-managed-service-es/sla_soporte <- frecuencia_backups",
+    "08-managed-service-es/frecuencia_backups <- retencion_logs",
+    "08-managed-service-es/retencion_logs <- frecuencia_backups",
+    "08-managed-service-es/frecuencia_backups <- usuarios_con_licencia",
+    "08-managed-service-es/usuarios_con_licencia <- frecuencia_backups",
+    "08-managed-service-es/sla_soporte <- retencion_logs",
+    "08-managed-service-es/sla_soporte <- usuarios_con_licencia",
+    "08-managed-service-es/retencion_logs <- usuarios_con_licencia",
+    "08-managed-service-es/usuarios_con_licencia <- retencion_logs",
+    "09-allowances-table-en/storage_quota <- licensed_user_limits",
+    "09-allowances-table-en/sla_uptime <- licensed_user_limits",
+    "09-allowances-table-en/data_region <- licensed_user_limits",
+    "09-allowances-table-en/staging_environments <- licensed_user_limits",
+    "12-capabilities-repeated-en/audit_log <- custom_roles",
+    "12-capabilities-repeated-en/custom_roles <- audit_log",
+    "12-capabilities-repeated-en/single_sign_on <- custom_roles",
+    "12-capabilities-repeated-en/custom_roles <- single_sign_on",
+    "12-capabilities-repeated-en/priority_support <- custom_roles",
+    "12-capabilities-repeated-en/custom_roles <- priority_support",
+    "13-aviso-obras-es/fecha_inicio <- fecha_fin",
+    "13-aviso-obras-es/fecha_fin <- fecha_inicio",
+    "13-aviso-obras-es/fecha_inicio <- responsable",
+    "13-aviso-obras-es/responsable <- fecha_inicio",
+    "13-aviso-obras-es/fecha_inicio <- ubicacion_temporal",
+    "13-aviso-obras-es/ubicacion_temporal <- fecha_inicio",
+    "13-aviso-obras-es/fecha_fin <- responsable",
+    "13-aviso-obras-es/responsable <- fecha_fin",
+    "13-aviso-obras-es/fecha_fin <- ubicacion_temporal",
+    "13-aviso-obras-es/ubicacion_temporal <- fecha_fin",
+    "13-aviso-obras-es/responsable <- ubicacion_temporal",
+    "13-aviso-obras-es/ubicacion_temporal <- responsable",
+    "17-plans-transposed-en/hobby_monthly_builds <- factory_storage",
+    "01-pricing-table-en/custom_domain_limits <- sso_availability",
+    "01-pricing-table-en/storage_per_workspace <- sso_availability",
+    "09-allowances-table-en/storage_quota <- licensed_user_limits",
+    "09-allowances-table-en/sla_uptime <- licensed_user_limits",
+    "09-allowances-table-en/data_region <- licensed_user_limits",
+    "09-allowances-table-en/staging_environments <- licensed_user_limits",
+    "01-pricing-table-en/custom_domain_limits <- sso_availability",
+    "01-pricing-table-en/storage_per_workspace <- sso_availability",
+    "08-managed-service-es/sso_disponible <- usuarios_con_licencia",
+    "08-managed-service-es/usuarios_con_licencia <- sso_disponible",
+    "08-managed-service-es/frecuencia_backups <- usuarios_con_licencia",
+    "08-managed-service-es/usuarios_con_licencia <- frecuencia_backups",
+    "08-managed-service-es/sla_soporte <- usuarios_con_licencia",
+    "08-managed-service-es/retencion_logs <- usuarios_con_licencia",
+    "08-managed-service-es/usuarios_con_licencia <- retencion_logs",
+    "09-allowances-table-en/storage_quota <- licensed_user_limits",
+    "09-allowances-table-en/sla_uptime <- licensed_user_limits",
+    "09-allowances-table-en/data_region <- licensed_user_limits",
+    "09-allowances-table-en/staging_environments <- licensed_user_limits",
+    "24-allowances-table-en-near-miss/sandbox_environments <- disk_quota",
+    "20-pricing-page-noisy-en-5fields/custom_domain_limits <- sso_availability",
+    "20-pricing-page-noisy-en-5fields/storage_per_workspace <- sso_availability"
+   ]
+  }
+ },
+ "routing": {
+  "cases": [
+   {
+    "case": "01-pricing-table-en",
+    "bytes": 957,
+    "table": true,
+    "fields": 5,
+    "shared_fields": 2,
+    "g3_crossed": 1,
+    "g3_wrong": 1
+   },
+   {
+    "case": "02-pricing-table-en-3fields",
+    "bytes": 957,
+    "table": true,
+    "fields": 3,
+    "shared_fields": 0,
+    "g3_crossed": 1,
+    "g3_wrong": 2
+   },
+   {
+    "case": "03-pr-view-es",
+    "bytes": 468,
+    "table": false,
+    "fields": 5,
+    "shared_fields": 2,
+    "g3_crossed": 0,
+    "g3_wrong": 0
+   },
+   {
+    "case": "04-pytest-log-en",
+    "bytes": 2157,
+    "table": false,
+    "fields": 5,
+    "shared_fields": 2,
+    "g3_crossed": 0,
+    "g3_wrong": 0
+   },
+   {
+    "case": "05-pr-view-es-booleans",
+    "bytes": 468,
+    "table": false,
+    "fields": 3,
+    "shared_fields": 0,
+    "g3_crossed": 0,
+    "g3_wrong": 1
+   },
+   {
+    "case": "06-limits-table-es",
+    "bytes": 437,
+    "table": true,
+    "fields": 5,
+    "shared_fields": 5,
+    "g3_crossed": 1,
+    "g3_wrong": 1
+   },
+   {
+    "case": "07-gateway-table-en",
+    "bytes": 270,
+    "table": true,
+    "fields": 6,
+    "shared_fields": 6,
+    "g3_crossed": 0,
+    "g3_wrong": 0
+   },
+   {
+    "case": "08-managed-service-es",
+    "bytes": 778,
+    "table": true,
+    "fields": 6,
+    "shared_fields": 0,
+    "g3_crossed": 0,
+    "g3_wrong": 0
+   },
+   {
+    "case": "09-allowances-table-en",
+    "bytes": 264,
+    "table": true,
+    "fields": 6,
+    "shared_fields": 2,
+    "g3_crossed": 0,
+    "g3_wrong": 0
+   },
+   {
+    "case": "10-spec-sheet-en",
+    "bytes": 417,
+    "table": true,
+    "fields": 4,
+    "shared_fields": 0,
+    "g3_crossed": 0,
+    "g3_wrong": 0
+   },
+   {
+    "case": "11-ficha-suministro-es",
+    "bytes": 179,
+    "table": true,
+    "fields": 4,
+    "shared_fields": 0,
+    "g3_crossed": 0,
+    "g3_wrong": 0
+   },
+   {
+    "case": "12-capabilities-repeated-en",
+    "bytes": 583,
+    "table": true,
+    "fields": 5,
+    "shared_fields": 0,
+    "g3_crossed": 1,
+    "g3_wrong": 1
+   },
+   {
+    "case": "13-aviso-obras-es",
+    "bytes": 396,
+    "table": false,
+    "fields": 6,
+    "shared_fields": 3,
+    "g3_crossed": 0,
+    "g3_wrong": 0
+   },
+   {
+    "case": "14-service-conf-en",
+    "bytes": 243,
+    "table": false,
+    "fields": 7,
+    "shared_fields": 7,
+    "g3_crossed": 0,
+    "g3_wrong": 0
+   },
+   {
+    "case": "15-pricing-page-large-en",
+    "bytes": 6611,
+    "table": true,
+    "fields": 4,
+    "shared_fields": 2,
+    "g3_crossed": null,
+    "g3_wrong": null
+   },
+   {
+    "case": "16-manual-plan-equipo-large-es",
+    "bytes": 6051,
+    "table": true,
+    "fields": 5,
+    "shared_fields": 5,
+    "g3_crossed": null,
+    "g3_wrong": null
+   },
+   {
+    "case": "17-plans-transposed-en",
+    "bytes": 430,
+    "table": true,
+    "fields": 6,
+    "shared_fields": 5,
+    "g3_crossed": 0,
+    "g3_wrong": 0
+   },
+   {
+    "case": "18-thumbnailer-py",
+    "bytes": 927,
+    "table": false,
+    "fields": 4,
+    "shared_fields": 2,
+    "g3_crossed": 0,
+    "g3_wrong": 0
+   },
+   {
+    "case": "19-pricing-page-noisy-en-3fields",
+    "bytes": 29382,
+    "table": true,
+    "fields": 3,
+    "shared_fields": 0,
+    "g3_crossed": null,
+    "g3_wrong": null
+   },
+   {
+    "case": "20-pricing-page-noisy-en-5fields",
+    "bytes": 29382,
+    "table": true,
+    "fields": 5,
+    "shared_fields": 2,
+    "g3_crossed": null,
+    "g3_wrong": null
+   },
+   {
+    "case": "21-pricing-table-en-near-miss",
+    "bytes": 957,
+    "table": true,
+    "fields": 5,
+    "shared_fields": 2,
+    "g3_crossed": 2,
+    "g3_wrong": 2
+   },
+   {
+    "case": "22-limits-table-es-near-miss",
+    "bytes": 437,
+    "table": true,
+    "fields": 5,
+    "shared_fields": 5,
+    "g3_crossed": 1,
+    "g3_wrong": 1
+   },
+   {
+    "case": "23-managed-service-es-near-miss",
+    "bytes": 778,
+    "table": true,
+    "fields": 5,
+    "shared_fields": 4,
+    "g3_crossed": 1,
+    "g3_wrong": 1
+   },
+   {
+    "case": "24-allowances-table-en-near-miss",
+    "bytes": 264,
+    "table": true,
+    "fields": 6,
+    "shared_fields": 2,
+    "g3_crossed": 0,
+    "g3_wrong": 0
+   },
+   {
+    "case": "25-gateway-table-en-near-miss",
+    "bytes": 270,
+    "table": true,
+    "fields": 6,
+    "shared_fields": 6,
+    "g3_crossed": 0,
+    "g3_wrong": 0
+   },
+   {
+    "case": "26-plans-transposed-en-near-miss",
+    "bytes": 430,
+    "table": true,
+    "fields": 6,
+    "shared_fields": 6,
+    "g3_crossed": 1,
+    "g3_wrong": 1
+   }
+  ],
+  "rules": {
+   "table": {
+    "fires": 16,
+    "of": 22,
+    "crossing_cases_caught": 8,
+    "crossing_cases": 8,
+    "crossed_keys_caught": 9,
+    "crossed_keys": 9,
+    "clean_cases_upgraded": 8,
+    "clean_cases": 14,
+    "missed": []
+   },
+   "shared>=2": {
+    "fires": 16,
+    "of": 22,
+    "crossing_cases_caught": 6,
+    "crossing_cases": 8,
+    "crossed_keys_caught": 7,
+    "crossed_keys": 9,
+    "clean_cases_upgraded": 10,
+    "clean_cases": 14,
+    "missed": [
+     "02-pricing-table-en-3fields",
+     "12-capabilities-repeated-en"
+    ]
+   },
+   "shared>=3": {
+    "fires": 9,
+    "of": 22,
+    "crossing_cases_caught": 4,
+    "crossing_cases": 8,
+    "crossed_keys_caught": 4,
+    "crossed_keys": 9,
+    "clean_cases_upgraded": 5,
+    "clean_cases": 14,
+    "missed": [
+     "01-pricing-table-en",
+     "02-pricing-table-en-3fields",
+     "12-capabilities-repeated-en",
+     "21-pricing-table-en-near-miss"
+    ]
+   },
+   "shared>=4": {
+    "fires": 8,
+    "of": 22,
+    "crossing_cases_caught": 4,
+    "crossing_cases": 8,
+    "crossed_keys_caught": 4,
+    "crossed_keys": 9,
+    "clean_cases_upgraded": 4,
+    "clean_cases": 14,
+    "missed": [
+     "01-pricing-table-en",
+     "02-pricing-table-en-3fields",
+     "12-capabilities-repeated-en",
+     "21-pricing-table-en-near-miss"
+    ]
+   },
+   "table or shared>=3": {
+    "fires": 18,
+    "of": 22,
+    "crossing_cases_caught": 8,
+    "crossing_cases": 8,
+    "crossed_keys_caught": 9,
+    "crossed_keys": 9,
+    "clean_cases_upgraded": 10,
+    "clean_cases": 14,
+    "missed": []
+   },
+   "table and shared>=2": {
+    "fires": 11,
+    "of": 22,
+    "crossing_cases_caught": 6,
+    "crossing_cases": 8,
+    "crossed_keys_caught": 7,
+    "crossed_keys": 9,
+    "clean_cases_upgraded": 5,
+    "clean_cases": 14,
+    "missed": [
+     "02-pricing-table-en-3fields",
+     "12-capabilities-repeated-en"
+    ]
+   },
+   "table and fields>=5": {
+    "fires": 13,
+    "of": 22,
+    "crossing_cases_caught": 7,
+    "crossing_cases": 8,
+    "crossed_keys_caught": 8,
+    "crossed_keys": 9,
+    "clean_cases_upgraded": 6,
+    "clean_cases": 14,
+    "missed": [
+     "02-pricing-table-en-3fields"
+    ]
+   }
+  }
+ },
+ "detector_without_long_cell_guard": {
+  "strict": {
+   "tp": 6,
+   "fp": [
+    "g4-proxy/03-pr-view-es/closes_issue"
+   ],
+   "fn": 6
+  },
+  "loose": {
+   "tp": 8,
+   "fp": [
+    "g3-extract/01-pricing-table-en/sso_availability",
+    "g3-extract/08-managed-service-es/sso_disponible",
+    "g3-extract/08-managed-service-es/frecuencia_backups",
+    "g3-extract/08-managed-service-es/retencion_logs",
+    "g3-extract/08-managed-service-es/usuarios_con_licencia",
+    "g3-extract/09-allowances-table-en/licensed_user_limits",
+    "g3-proxy/01-pricing-table-en/sso_availability",
+    "g3-proxy/08-managed-service-es/sso_disponible",
+    "g3-proxy/08-managed-service-es/frecuencia_backups",
+    "g3-proxy/08-managed-service-es/retencion_logs",
+    "g3-proxy/08-managed-service-es/usuarios_con_licencia",
+    "g3-proxy/09-allowances-table-en/licensed_user_limits",
+    "g4-proxy/01-pricing-table-en/sso_availability",
+    "g4-proxy/03-pr-view-es/closes_issue",
+    "g4-proxy/08-managed-service-es/sso_disponible",
+    "g4-proxy/08-managed-service-es/frecuencia_backups",
+    "g4-proxy/08-managed-service-es/retencion_logs",
+    "g4-proxy/08-managed-service-es/usuarios_con_licencia",
+    "g4-proxy/09-allowances-table-en/licensed_user_limits",
+    "g4-extract/20-pricing-page-noisy-en-5fields/sso_availability"
+   ],
+   "fn": 4
+  },
+  "partial": {
+   "tp": 10,
+   "fp": [
+    "g3-extract/02-pricing-table-en-3fields/self_hosted_options",
+    "g3-extract/08-managed-service-es/sla_soporte",
+    "g3-extract/09-allowances-table-en/storage_quota",
+    "g3-extract/09-allowances-table-en/sla_uptime",
+    "g3-extract/09-allowances-table-en/data_region",
+    "g3-extract/09-allowances-table-en/staging_environments",
+    "g3-proxy/02-pricing-table-en-3fields/self_hosted_options",
+    "g3-proxy/08-managed-service-es/sla_soporte",
+    "g3-proxy/09-allowances-table-en/storage_quota",
+    "g3-proxy/09-allowances-table-en/sla_uptime",
+    "g3-proxy/09-allowances-table-en/data_region",
+    "g3-proxy/09-allowances-table-en/staging_environments",
+    "g4-proxy/02-pricing-table-en-3fields/self_hosted_options",
+    "g4-proxy/03-pr-view-es/closes_issue",
+    "g4-proxy/04-pytest-log-en/first_failed_test",
+    "g4-proxy/08-managed-service-es/sla_soporte",
+    "g4-proxy/09-allowances-table-en/storage_quota",
+    "g4-proxy/09-allowances-table-en/sla_uptime",
+    "g4-proxy/09-allowances-table-en/data_region",
+    "g4-proxy/09-allowances-table-en/staging_environments",
+    "g4-extract/15-pricing-page-large-en/self_hosted_options",
+    "g4-extract/15-pricing-page-large-en/api_rate_limits",
+    "g4-extract/19-pricing-page-noisy-en-3fields/self_hosted_options"
+   ],
+   "fn": 2
+  }
+ }
+}

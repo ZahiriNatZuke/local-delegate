@@ -1,0 +1,590 @@
+{
+  "_readme": "Conjunto de medición del SDD extract-cross-fill-and-routing (#586). Datos inventados. `expected` está anotado a mano: `null` = la fuente no trae el dato; `all`/`any` = trozos que el valor debe contener (tras normalizar: minúsculas, sin acentos, guiones a '-', sin espacio entre cifras); `none` = trozos prohibidos; `number`/`bool` = valor exacto. `rows` son las filas o hechos de la fuente con sus celdas distintivas y `own` dice de qué fila sale cada clave (null = de ninguna): sirven para clasificar un error como cruce.",
+  "cases": [
+    {
+      "id": "01-pricing-table-en",
+      "file": "01-pricing-table-en.html",
+      "origin": "extract-prompt-sin-relleno, caso 2 de rerun_after.md (repro reducida del #586)",
+      "kind": "html-table", "lang": "en", "has_table": true,
+      "fields": ["plans_with_monthly_price", "licensed_user_limits", "custom_domain_limits", "storage_per_workspace", "sso_availability"],
+      "expected": {
+        "plans_with_monthly_price": {"null": true, "also_ok": ["contact sales", "loaded at runtime"]},
+        "licensed_user_limits": {"null": true},
+        "custom_domain_limits": {"all": ["1-5", "1-3"]},
+        "storage_per_workspace": {"all": ["50 gb", "2 tb"]},
+        "sso_availability": {"any": ["included"], "none": ["days", "available on request", "gb"]}
+      },
+      "rows": {
+        "Custom domains": ["1-5", "1-3"],
+        "Storage per workspace": ["50 gb", "2 tb"],
+        "API requests per minute": ["600", "6000"],
+        "Audit log retention": ["30 days", "365 days"],
+        "Single sign-on (SAML)": ["included"],
+        "Self-hosted runner": ["available on request"],
+        "Support": ["2 business days", "24/7"]
+      },
+      "own": {"plans_with_monthly_price": null, "licensed_user_limits": null, "custom_domain_limits": "Custom domains", "storage_per_workspace": "Storage per workspace", "sso_availability": "Single sign-on (SAML)"}
+    },
+    {
+      "id": "02-pricing-table-en-3fields",
+      "file": "01-pricing-table-en.html",
+      "origin": "issue #586, evidencia del 2026-11-08: los tres campos de la página de 33 KB sobre la tabla reducida; la fila vecina (Custom domains) NO es una clave pedida",
+      "kind": "html-table", "lang": "en", "has_table": true,
+      "fields": ["plans_with_monthly_price", "licensed_user_limits", "self_hosted_options"],
+      "expected": {
+        "plans_with_monthly_price": {"null": true, "also_ok": ["contact sales", "loaded at runtime"]},
+        "licensed_user_limits": {"null": true},
+        "self_hosted_options": {"any": ["available on request", "self-hosted runner"], "none": ["days", "gb", "1-5"]}
+      },
+      "rows": {
+        "Custom domains": ["1-5", "1-3"],
+        "Storage per workspace": ["50 gb", "2 tb"],
+        "API requests per minute": ["600", "6000"],
+        "Audit log retention": ["30 days", "365 days"],
+        "Single sign-on (SAML)": ["included"],
+        "Self-hosted runner": ["available on request"],
+        "Support": ["2 business days", "24/7"]
+      },
+      "own": {"plans_with_monthly_price": null, "licensed_user_limits": null, "self_hosted_options": "Self-hosted runner"}
+    },
+    {
+      "id": "03-pr-view-es",
+      "file": "03-pr-view-es.json",
+      "origin": "extract-placeholder-values (comentario del #586 del 2026-11-04) y caso 1 de rerun_after.md, con un PR inventado",
+      "kind": "json", "lang": "es", "has_table": false,
+      "fields": ["review_verdict", "comments_authors_and_gist", "number_of_reviews", "closes_issue", "body_summary"],
+      "expected": {
+        "review_verdict": {"null": true},
+        "comments_authors_and_gist": {"null": true},
+        "number_of_reviews": {"number": 0},
+        "closes_issue": {"null": true, "also_ok": ["412"]},
+        "body_summary": {"any": ["export", "csv", "hoja", "cabecera"]}
+      },
+      "rows": {
+        "body": ["exportador", "csv", "cabecera", "hoja"],
+        "state": ["merged"],
+        "title": ["fix(exporter)"]
+      },
+      "own": {"review_verdict": null, "comments_authors_and_gist": null, "number_of_reviews": null, "closes_issue": null, "body_summary": "body"}
+    },
+    {
+      "id": "04-pytest-log-en",
+      "file": "04-pytest-log-en.log",
+      "origin": "caso 4 de rerun_after.md, con un log inventado; sin tabla",
+      "kind": "log", "lang": "en", "has_table": false,
+      "fields": ["number_of_failed_tests", "first_failed_test", "total_duration_seconds", "coverage_percent", "python_version"],
+      "expected": {
+        "number_of_failed_tests": {"number": 4},
+        "first_failed_test": {"all": ["test_ledger_rounds_half_even"]},
+        "total_duration_seconds": {"number": 14.69},
+        "coverage_percent": {"null": true},
+        "python_version": {"all": ["3.11"]}
+      },
+      "rows": {
+        "failed": ["4 failed"],
+        "passed": ["239"],
+        "duration": ["14.69"],
+        "progress": ["16%", "34%", "55%", "76%", "100%"],
+        "collected": ["243"],
+        "pytest": ["8.3.2"],
+        "pluggy": ["1.5.0"]
+      },
+      "own": {"number_of_failed_tests": "failed", "first_failed_test": null, "total_duration_seconds": "duration", "coverage_percent": null, "python_version": null}
+    },
+    {
+      "id": "05-pr-view-es-booleans",
+      "file": "03-pr-view-es.json",
+      "origin": "caso 7 de rerun_after.md (booleanos por ausencia y una clasificación), con un PR inventado",
+      "kind": "json", "lang": "es", "has_table": false,
+      "fields": ["includes_database_migration", "mentions_windows", "body_language"],
+      "expected": {
+        "includes_database_migration": {"bool": false},
+        "mentions_windows": {"bool": true},
+        "body_language": {"exact_any": ["es", "espanol", "spanish", "castellano", "es-es"]}
+      },
+      "rows": {},
+      "own": {"includes_database_migration": null, "mentions_windows": null, "body_language": null}
+    },
+    {
+      "id": "06-limits-table-es",
+      "file": "06-limits-table-es.md",
+      "origin": "nuevo: tabla Markdown en español con claves que comparten palabras",
+      "kind": "md-table", "lang": "es", "has_table": true,
+      "fields": ["limite_usuarios_activos", "limite_usuarios_con_licencia", "limite_usuarios_invitados", "limite_de_proyectos", "almacenamiento_por_proyecto"],
+      "expected": {
+        "limite_usuarios_activos": {"any": ["10", "75"], "none": ["20", "40", "gb"]},
+        "limite_usuarios_con_licencia": {"null": true},
+        "limite_usuarios_invitados": {"any": ["3", "20"], "none": ["10", "75", "40", "gb"]},
+        "limite_de_proyectos": {"any": ["5", "40"], "none": ["10", "75", "20", "gb"]},
+        "almacenamiento_por_proyecto": {"any": ["2 gb", "25 gb", "25"], "none": ["dias", "75", "40"]}
+      },
+      "rows": {
+        "Límite de usuarios activos": ["10", "75"],
+        "Límite de usuarios invitados": ["3", "20"],
+        "Límite de proyectos": ["5", "40"],
+        "Almacenamiento por proyecto": ["2 gb", "25 gb"],
+        "Retención de la papelera": ["7 dias", "45 dias"]
+      },
+      "own": {"limite_usuarios_activos": "Límite de usuarios activos", "limite_usuarios_con_licencia": null, "limite_usuarios_invitados": "Límite de usuarios invitados", "limite_de_proyectos": "Límite de proyectos", "almacenamiento_por_proyecto": "Almacenamiento por proyecto"}
+    },
+    {
+      "id": "07-gateway-table-en",
+      "file": "07-gateway-table-en.md",
+      "origin": "nuevo: tabla Markdown en inglés de una columna, claves con palabras compartidas (max_*, *_timeout)",
+      "kind": "md-table", "lang": "en", "has_table": true,
+      "fields": ["max_upload_size", "max_download_size", "max_request_body_size", "idle_timeout", "request_timeout", "connect_timeout"],
+      "expected": {
+        "max_upload_size": {"all": ["250"]},
+        "max_download_size": {"all": ["4"], "none": ["250", "1200"]},
+        "max_request_body_size": {"null": true},
+        "idle_timeout": {"all": ["90"]},
+        "request_timeout": {"all": ["30"], "none": ["90"]},
+        "connect_timeout": {"null": true}
+      },
+      "rows": {
+        "Max upload size": ["250"],
+        "Max download size": ["4 gb"],
+        "Max concurrent connections": ["1200"],
+        "Idle timeout": ["90"],
+        "Request timeout": ["30"]
+      },
+      "own": {"max_upload_size": "Max upload size", "max_download_size": "Max download size", "max_request_body_size": null, "idle_timeout": "Idle timeout", "request_timeout": "Request timeout", "connect_timeout": null}
+    },
+    {
+      "id": "08-managed-service-es",
+      "file": "08-managed-service-es.html",
+      "origin": "nuevo: tabla HTML en español con sinónimos (la clave no comparte palabras con la etiqueta de su fila)",
+      "kind": "html-table", "lang": "es", "has_table": true,
+      "fields": ["sso_disponible", "frecuencia_backups", "sla_soporte", "retencion_logs", "limite_llamadas_api", "usuarios_con_licencia"],
+      "expected": {
+        "sso_disponible": {"any": ["incluido", "corporativo", "saml"], "none": ["semanales", "horas", "dias"]},
+        "frecuencia_backups": {"any": ["semanales", "6 horas"], "none": ["48 horas", "2 horas", "dias"]},
+        "sla_soporte": {"any": ["48 horas", "2 horas"], "none": ["6 horas", "dias", "semanales"]},
+        "retencion_logs": {"any": ["15 dias", "400 dias"], "none": ["horas", "semanales"]},
+        "limite_llamadas_api": {"null": true},
+        "usuarios_con_licencia": {"any": ["5", "120"], "none": ["dias", "horas", "semanales"]}
+      },
+      "rows": {
+        "Inicio de sesión único": ["saml", "no incluido"],
+        "Copias de seguridad": ["semanales", "6 horas"],
+        "Tiempo de respuesta del soporte": ["48 horas", "2 horas"],
+        "Conservación de registros de auditoría": ["15 dias", "400 dias"],
+        "Puestos incluidos": ["5", "120"]
+      },
+      "own": {"sso_disponible": "Inicio de sesión único", "frecuencia_backups": "Copias de seguridad", "sla_soporte": "Tiempo de respuesta del soporte", "retencion_logs": "Conservación de registros de auditoría", "limite_llamadas_api": null, "usuarios_con_licencia": "Puestos incluidos"}
+    },
+    {
+      "id": "09-allowances-table-en",
+      "file": "09-allowances-table-en.md",
+      "origin": "nuevo: tabla Markdown en inglés con sinónimos (Seats = licensed users, Disk quota = storage)",
+      "kind": "md-table", "lang": "en", "has_table": true,
+      "fields": ["licensed_user_limits", "storage_quota", "sla_uptime", "data_region", "custom_domain_limits", "staging_environments"],
+      "expected": {
+        "licensed_user_limits": {"any": ["8", "300"], "none": ["gb", "tb", "%", "12"]},
+        "storage_quota": {"any": ["20 gb", "1 tb"]},
+        "sla_uptime": {"any": ["99.5", "99.95"]},
+        "data_region": {"any": ["us only", "apac", "eu"]},
+        "custom_domain_limits": {"null": true},
+        "staging_environments": {"any": ["1", "12"], "none": ["gb", "tb", "%", "300"]}
+      },
+      "rows": {
+        "Seats": ["8", "300"],
+        "Disk quota": ["20 gb", "1 tb"],
+        "Uptime guarantee": ["99.5", "99.95"],
+        "Data residency": ["us only", "apac"],
+        "Sandbox environments": ["12"]
+      },
+      "own": {"licensed_user_limits": "Seats", "storage_quota": "Disk quota", "sla_uptime": "Uptime guarantee", "data_region": "Data residency", "custom_domain_limits": null, "staging_environments": "Sandbox environments"}
+    },
+    {
+      "id": "10-spec-sheet-en",
+      "file": "10-spec-sheet-en.html",
+      "origin": "nuevo: control negativo, tabla HTML donde cada clave pedida es la etiqueta de una fila y todas están",
+      "kind": "html-table", "lang": "en", "has_table": true, "negative_control": true,
+      "fields": ["weight", "color", "warranty", "battery_life"],
+      "expected": {
+        "weight": {"all": ["1.24"]},
+        "color": {"all": ["graphite"]},
+        "warranty": {"all": ["3"], "none": ["17", "1.24"]},
+        "battery_life": {"all": ["17"]}
+      },
+      "rows": {"Weight": ["1.24"], "Color": ["graphite"], "Warranty": ["3 years"], "Battery life": ["17"]},
+      "own": {"weight": "Weight", "color": "Color", "warranty": "Warranty", "battery_life": "Battery life"}
+    },
+    {
+      "id": "11-ficha-suministro-es",
+      "file": "11-ficha-suministro-es.md",
+      "origin": "nuevo: control negativo, tabla Markdown en español de una columna con todas las claves presentes",
+      "kind": "md-table", "lang": "es", "has_table": true, "negative_control": true,
+      "fields": ["titular", "fecha_de_alta", "ciudad", "tarifa"],
+      "expected": {
+        "titular": {"all": ["arroyo claro"]},
+        "fecha_de_alta": {"any": ["2024-03-18", "18 de marzo de 2024", "18/03/2024"]},
+        "ciudad": {"all": ["villa serrana"]},
+        "tarifa": {"all": ["nocturna"]}
+      },
+      "rows": {"Titular": ["arroyo claro"], "Fecha de alta": ["2024-03-18"], "Ciudad": ["villa serrana"], "Tarifa": ["nocturna"]},
+      "own": {"titular": "Titular", "fecha_de_alta": "Fecha de alta", "ciudad": "Ciudad", "tarifa": "Tarifa"}
+    },
+    {
+      "id": "12-capabilities-repeated-en",
+      "file": "12-capabilities-repeated-en.html",
+      "origin": "nuevo: tabla HTML con el mismo valor repetido en varias filas (trampa de falso positivo del detector) y una clave ausente",
+      "kind": "html-table", "lang": "en", "has_table": true,
+      "fields": ["audit_log", "single_sign_on", "priority_support", "custom_roles", "ip_allowlist"],
+      "expected": {
+        "audit_log": {"any": ["included", "business"]},
+        "single_sign_on": {"any": ["included", "business"]},
+        "priority_support": {"any": ["included", "business"]},
+        "custom_roles": {"any": ["included", "team", "both", "true"], "none": ["not included"]},
+        "ip_allowlist": {"null": true}
+      },
+      "rows": {
+        "Audit log": ["included"],
+        "Single sign-on": ["included"],
+        "Priority support": ["included"],
+        "Custom roles": ["included"],
+        "API access": ["included"]
+      },
+      "own": {"audit_log": "Audit log", "single_sign_on": "Single sign-on", "priority_support": "Priority support", "custom_roles": "Custom roles", "ip_allowlist": null}
+    },
+    {
+      "id": "13-aviso-obras-es",
+      "file": "13-aviso-obras-es.txt",
+      "origin": "nuevo: prosa en español sin tabla, con dos fechas y dos lugares parecidos",
+      "kind": "prose", "lang": "es", "has_table": false,
+      "fields": ["fecha_inicio", "fecha_fin", "responsable", "presupuesto", "ubicacion_temporal", "fecha_de_inspeccion"],
+      "expected": {
+        "fecha_inicio": {"any": ["14 de abril", "2026-04-14", "14/04/2026", "14 abril"], "none": ["mayo", "05-02"]},
+        "fecha_fin": {"any": ["2 de mayo", "2026-05-02", "02/05/2026", "2 mayo"], "none": ["abril", "04-14"]},
+        "responsable": {"all": ["mirta olazabal"]},
+        "presupuesto": {"null": true},
+        "ubicacion_temporal": {"all": ["canelon chico"]},
+        "fecha_de_inspeccion": {"null": true}
+      },
+      "rows": {
+        "inicio": ["14 de abril", "2026-04-14"],
+        "fin": ["2 de mayo", "2026-05-02"],
+        "responsable": ["mirta"],
+        "traslado": ["canelon chico"],
+        "almacen": ["las brujas"],
+        "horario": ["8:00", "16:30"],
+        "extension": ["4417"]
+      },
+      "own": {"fecha_inicio": "inicio", "fecha_fin": "fin", "responsable": "responsable", "presupuesto": null, "ubicacion_temporal": "traslado", "fecha_de_inspeccion": null}
+    },
+    {
+      "id": "14-service-conf-en",
+      "file": "14-service-conf-en.conf",
+      "origin": "nuevo: líneas clave = valor sin tabla, claves con palabras compartidas (db_*, cache_*, queue_*) y dos ausentes",
+      "kind": "kv-lines", "lang": "en", "has_table": false,
+      "fields": ["db_host", "db_port", "cache_host", "cache_port", "queue_host", "queue_port", "db_timeout_seconds"],
+      "expected": {
+        "db_host": {"all": ["pg-staging.internal.example"]},
+        "db_port": {"number": 5433},
+        "cache_host": {"all": ["redis-staging.internal.example"]},
+        "cache_port": {"null": true},
+        "queue_host": {"all": ["mq-staging.internal.example"]},
+        "queue_port": {"number": 5673},
+        "db_timeout_seconds": {"null": true}
+      },
+      "rows": {
+        "db_host": ["pg-staging"],
+        "db_port": ["5433"],
+        "db_pool_size": ["20"],
+        "cache_host": ["redis-staging"],
+        "cache_ttl_seconds": ["300"],
+        "queue_host": ["mq-staging"],
+        "queue_port": ["5673"],
+        "log_level": ["warning"]
+      },
+      "own": {"db_host": "db_host", "db_port": "db_port", "cache_host": "cache_host", "cache_port": null, "queue_host": "queue_host", "queue_port": "queue_port", "db_timeout_seconds": null}
+    },
+    {
+      "id": "15-pricing-page-large-en",
+      "file": "15-pricing-page-large-en.html",
+      "origin": "nuevo: página HTML de 6,6 KB (va al rol long por tamaño) con la tabla del #586 dentro; imita la evidencia de 33 KB con datos inventados",
+      "kind": "html-table", "lang": "en", "has_table": true, "large": true,
+      "fields": ["plans_with_monthly_price", "licensed_user_limits", "self_hosted_options", "api_rate_limits"],
+      "expected": {
+        "plans_with_monthly_price": {"null": true, "also_ok": ["contact sales", "loaded at runtime"]},
+        "licensed_user_limits": {"null": true},
+        "self_hosted_options": {"any": ["available on request", "self-hosted runner", "on yours"], "none": ["days", "gb", "1-5"]},
+        "api_rate_limits": {"any": ["600", "6000"], "none": ["gb", "days"]}
+      },
+      "rows": {
+        "Custom domains": ["1-5", "1-3"],
+        "Storage per workspace": ["50 gb", "2 tb"],
+        "API requests per minute": ["600", "6000"],
+        "Concurrent pipelines": ["40"],
+        "Audit log retention": ["30 days", "365 days"],
+        "Build artifact retention": ["14 days", "180 days"],
+        "Single sign-on (SAML)": ["included"],
+        "Self-hosted runner": ["available on request"],
+        "Support": ["2 business days", "24/7"]
+      },
+      "own": {"plans_with_monthly_price": null, "licensed_user_limits": null, "self_hosted_options": "Self-hosted runner", "api_rate_limits": "API requests per minute"}
+    },
+    {
+      "id": "16-manual-plan-equipo-large-es",
+      "file": "16-manual-plan-equipo-large-es.md",
+      "origin": "nuevo: manual Markdown de 6,1 KB (va al rol long por tamaño) con la tabla del caso 06 dentro y los mismos campos",
+      "kind": "md-table", "lang": "es", "has_table": true, "large": true,
+      "fields": ["limite_usuarios_activos", "limite_usuarios_con_licencia", "limite_usuarios_invitados", "limite_de_proyectos", "almacenamiento_por_proyecto"],
+      "expected": {
+        "limite_usuarios_activos": {"any": ["10", "75"], "none": ["20", "40", "gb"]},
+        "limite_usuarios_con_licencia": {"null": true},
+        "limite_usuarios_invitados": {"any": ["3", "20"], "none": ["10", "75", "40", "gb"]},
+        "limite_de_proyectos": {"any": ["5", "40"], "none": ["10", "75", "20", "gb"]},
+        "almacenamiento_por_proyecto": {"any": ["2 gb", "25 gb", "25"], "none": ["dias", "75", "40"]}
+      },
+      "rows": {
+        "Límite de usuarios activos": ["10", "75"],
+        "Límite de usuarios invitados": ["3", "20"],
+        "Límite de proyectos": ["5", "40"],
+        "Almacenamiento por proyecto": ["2 gb", "25 gb"],
+        "Retención de la papelera": ["7 dias", "45 dias"],
+        "Automatizaciones por tablero": ["30"]
+      },
+      "own": {"limite_usuarios_activos": "Límite de usuarios activos", "limite_usuarios_con_licencia": null, "limite_usuarios_invitados": "Límite de usuarios invitados", "limite_de_proyectos": "Límite de proyectos", "almacenamiento_por_proyecto": "Almacenamiento por proyecto"}
+    },
+    {
+      "id": "17-plans-transposed-en",
+      "file": "17-plans-transposed-en.html",
+      "origin": "nuevo: tabla HTML traspuesta (los planes son filas y las características, columnas); las claves combinan fila y columna",
+      "kind": "html-table", "lang": "en", "has_table": true,
+      "fields": ["studio_seats", "studio_storage", "factory_storage", "hobby_monthly_builds", "studio_bandwidth", "factory_seats"],
+      "expected": {
+        "studio_seats": {"number": 15},
+        "studio_storage": {"any": ["200 gb", "200"]},
+        "factory_storage": {"any": ["5 tb", "5"], "none": ["5 gb", "200"]},
+        "hobby_monthly_builds": {"number": 100},
+        "studio_bandwidth": {"null": true},
+        "factory_seats": {"number": 250}
+      },
+      "rows": {
+        "studio seats": ["15"],
+        "studio storage": ["200 gb"],
+        "studio builds": ["4000"],
+        "factory seats": ["250"],
+        "factory storage": ["5 tb"],
+        "factory builds": ["60000"],
+        "hobby storage": ["5 gb"],
+        "hobby builds": ["100"]
+      },
+      "own": {"studio_seats": "studio seats", "studio_storage": "studio storage", "factory_storage": "factory storage", "hobby_monthly_builds": "hobby builds", "studio_bandwidth": null, "factory_seats": "factory seats"}
+    },
+    {
+      "id": "18-thumbnailer-py",
+      "file": "18-thumbnailer-py.py",
+      "origin": "caso 5 de rerun_after.md, con un fichero de código inventado; sin tabla",
+      "kind": "code", "lang": "en", "has_table": false,
+      "fields": ["function_names", "shell_command_used", "http_port", "database_table_name"],
+      "expected": {
+        "function_names": {"any": ["is_supported", "build_command", "make_thumbnail"]},
+        "shell_command_used": {"any": ["magick"]},
+        "http_port": {"null": true},
+        "database_table_name": {"null": true}
+      },
+      "rows": {"MAX_SIDE": ["512"], "timeout": ["30"], "_CACHE": ["_cache"]},
+      "own": {"function_names": null, "shell_command_used": null, "http_port": null, "database_table_name": null}
+    },
+    {
+      "id": "19-pricing-page-noisy-en-3fields",
+      "file": "19-pricing-page-noisy-en.html",
+      "origin": "nuevo: página de 29 KB con el ruido de marcado de un sitio real (la genera build_noisy_page.py); los tres campos de la evidencia de 33 KB del #586",
+      "kind": "html-table", "lang": "en", "has_table": true, "large": true,
+      "fields": ["plans_with_monthly_price", "licensed_user_limits", "self_hosted_options"],
+      "expected": {
+        "plans_with_monthly_price": {"null": true, "also_ok": ["contact sales", "loaded at runtime"]},
+        "licensed_user_limits": {"null": true},
+        "self_hosted_options": {"any": ["available on request", "self-hosted runner", "on yours"], "none": ["days", "gb", "1-5"]}
+      },
+      "rows": {
+        "Custom domains": ["1-5", "1-3"],
+        "Storage per workspace": ["50 gb", "2 tb"],
+        "API requests per minute": ["600", "6000"],
+        "Concurrent pipelines": ["40"],
+        "Audit log retention": ["30 days", "365 days"],
+        "Build artifact retention": ["14 days", "180 days"],
+        "Environments per project": ["25"],
+        "Scheduled pipelines": ["500"],
+        "Single sign-on (SAML)": ["included"],
+        "Self-hosted runner": ["available on request"],
+        "Uptime commitment": ["99.5", "99.95"],
+        "Support": ["2 business days", "24/7"]
+      },
+      "own": {"plans_with_monthly_price": null, "licensed_user_limits": null, "self_hosted_options": "Self-hosted runner"}
+    },
+    {
+      "id": "20-pricing-page-noisy-en-5fields",
+      "file": "19-pricing-page-noisy-en.html",
+      "origin": "nuevo: la misma página de 29 KB con los cinco campos del caso 01 (la fila vecina sí es una clave pedida)",
+      "kind": "html-table", "lang": "en", "has_table": true, "large": true,
+      "fields": ["plans_with_monthly_price", "licensed_user_limits", "custom_domain_limits", "storage_per_workspace", "sso_availability"],
+      "expected": {
+        "plans_with_monthly_price": {"null": true, "also_ok": ["contact sales", "loaded at runtime"]},
+        "licensed_user_limits": {"null": true},
+        "custom_domain_limits": {"all": ["1-5", "1-3"]},
+        "storage_per_workspace": {"all": ["50 gb", "2 tb"]},
+        "sso_availability": {"any": ["included"], "none": ["days", "available on request", "gb"]}
+      },
+      "rows": {
+        "Custom domains": ["1-5", "1-3"],
+        "Storage per workspace": ["50 gb", "2 tb"],
+        "API requests per minute": ["600", "6000"],
+        "Concurrent pipelines": ["40"],
+        "Audit log retention": ["30 days", "365 days"],
+        "Build artifact retention": ["14 days", "180 days"],
+        "Environments per project": ["25"],
+        "Scheduled pipelines": ["500"],
+        "Single sign-on (SAML)": ["included"],
+        "Self-hosted runner": ["available on request"],
+        "Uptime commitment": ["99.5", "99.95"],
+        "Support": ["2 business days", "24/7"]
+      },
+      "own": {"plans_with_monthly_price": null, "licensed_user_limits": null, "custom_domain_limits": "Custom domains", "storage_per_workspace": "Storage per workspace", "sso_availability": "Single sign-on (SAML)"}
+    },
+    {
+      "id": "21-pricing-table-en-near-miss",
+      "file": "01-pricing-table-en.html",
+      "origin": "nuevo: la tabla del caso 01 con claves ausentes que comparten casi todas las palabras con una fila que sí está (storage_per_user frente a Storage per workspace)",
+      "kind": "html-table", "lang": "en", "has_table": true,
+      "fields": ["storage_per_user", "api_requests_per_day", "custom_domains", "audit_log_retention", "build_log_retention"],
+      "expected": {
+        "storage_per_user": {"null": true},
+        "api_requests_per_day": {"null": true},
+        "custom_domains": {"any": ["1-5", "1-3"]},
+        "audit_log_retention": {"any": ["30 days", "365 days"]},
+        "build_log_retention": {"null": true}
+      },
+      "rows": {
+        "Custom domains": ["1-5", "1-3"],
+        "Storage per workspace": ["50 gb", "2 tb"],
+        "API requests per minute": ["600", "6000"],
+        "Audit log retention": ["30 days", "365 days"],
+        "Single sign-on (SAML)": ["included"],
+        "Self-hosted runner": ["available on request"],
+        "Support": ["2 business days", "24/7"]
+      },
+      "own": {"storage_per_user": null, "api_requests_per_day": null, "custom_domains": "Custom domains", "audit_log_retention": "Audit log retention", "build_log_retention": null}
+    },
+    {
+      "id": "22-limits-table-es-near-miss",
+      "file": "06-limits-table-es.md",
+      "origin": "nuevo: la tabla del caso 06 con claves ausentes casi iguales a una fila presente (almacenamiento_por_usuario frente a Almacenamiento por proyecto)",
+      "kind": "md-table", "lang": "es", "has_table": true,
+      "fields": ["limite_usuarios_activos", "limite_de_tableros", "almacenamiento_por_usuario", "retencion_de_la_papelera", "retencion_de_copias"],
+      "expected": {
+        "limite_usuarios_activos": {"any": ["10", "75"], "none": ["20", "40", "gb"]},
+        "limite_de_tableros": {"null": true},
+        "almacenamiento_por_usuario": {"null": true},
+        "retencion_de_la_papelera": {"any": ["7 dias", "45 dias"]},
+        "retencion_de_copias": {"null": true}
+      },
+      "rows": {
+        "Límite de usuarios activos": ["10", "75"],
+        "Límite de usuarios invitados": ["3", "20"],
+        "Límite de proyectos": ["5", "40"],
+        "Almacenamiento por proyecto": ["2 gb", "25 gb"],
+        "Retención de la papelera": ["7 dias", "45 dias"]
+      },
+      "own": {"limite_usuarios_activos": "Límite de usuarios activos", "limite_de_tableros": null, "almacenamiento_por_usuario": null, "retencion_de_la_papelera": "Retención de la papelera", "retencion_de_copias": null}
+    },
+    {
+      "id": "23-managed-service-es-near-miss",
+      "file": "08-managed-service-es.html",
+      "origin": "nuevo: la tabla del caso 08 con las etiquetas como claves y dos ausentes casi iguales (puestos_adicionales frente a Puestos incluidos)",
+      "kind": "html-table", "lang": "es", "has_table": true,
+      "fields": ["copias_de_seguridad", "tiempo_de_respuesta_del_soporte", "tiempo_de_restauracion", "puestos_incluidos", "puestos_adicionales"],
+      "expected": {
+        "copias_de_seguridad": {"any": ["semanales", "6 horas"], "none": ["48 horas", "2 horas", "dias"]},
+        "tiempo_de_respuesta_del_soporte": {"any": ["48 horas", "2 horas"], "none": ["6 horas", "dias", "semanales"]},
+        "tiempo_de_restauracion": {"null": true},
+        "puestos_incluidos": {"any": ["5", "120"], "none": ["dias", "horas", "semanales"]},
+        "puestos_adicionales": {"null": true}
+      },
+      "rows": {
+        "Inicio de sesión único": ["saml", "no incluido"],
+        "Copias de seguridad": ["semanales", "6 horas"],
+        "Tiempo de respuesta del soporte": ["48 horas", "2 horas"],
+        "Conservación de registros de auditoría": ["15 dias", "400 dias"],
+        "Puestos incluidos": ["5", "120"]
+      },
+      "own": {"copias_de_seguridad": "Copias de seguridad", "tiempo_de_respuesta_del_soporte": "Tiempo de respuesta del soporte", "tiempo_de_restauracion": null, "puestos_incluidos": "Puestos incluidos", "puestos_adicionales": null}
+    },
+    {
+      "id": "24-allowances-table-en-near-miss",
+      "file": "09-allowances-table-en.md",
+      "origin": "nuevo: la tabla del caso 09 con las etiquetas como claves y dos ausentes (bandwidth_quota frente a Disk quota)",
+      "kind": "md-table", "lang": "en", "has_table": true,
+      "fields": ["seats", "disk_quota", "bandwidth_quota", "uptime_guarantee", "support_response_time", "sandbox_environments"],
+      "expected": {
+        "seats": {"any": ["8", "300"], "none": ["gb", "tb", "%", "12"]},
+        "disk_quota": {"any": ["20 gb", "1 tb"]},
+        "bandwidth_quota": {"null": true},
+        "uptime_guarantee": {"any": ["99.5", "99.95"]},
+        "support_response_time": {"null": true},
+        "sandbox_environments": {"any": ["1", "12"], "none": ["gb", "tb", "%", "300"]}
+      },
+      "rows": {
+        "Seats": ["8", "300"],
+        "Disk quota": ["20 gb", "1 tb"],
+        "Uptime guarantee": ["99.5", "99.95"],
+        "Data residency": ["us only", "apac"],
+        "Sandbox environments": ["12"]
+      },
+      "own": {"seats": "Seats", "disk_quota": "Disk quota", "bandwidth_quota": null, "uptime_guarantee": "Uptime guarantee", "support_response_time": null, "sandbox_environments": "Sandbox environments"}
+    },
+    {
+      "id": "25-gateway-table-en-near-miss",
+      "file": "07-gateway-table-en.md",
+      "origin": "nuevo: la tabla del caso 07 con tres claves ausentes casi iguales a filas presentes (max_concurrent_streams frente a Max concurrent connections)",
+      "kind": "md-table", "lang": "en", "has_table": true,
+      "fields": ["max_upload_size", "max_message_size", "max_concurrent_connections", "max_concurrent_streams", "idle_timeout", "connect_timeout"],
+      "expected": {
+        "max_upload_size": {"all": ["250"]},
+        "max_message_size": {"null": true},
+        "max_concurrent_connections": {"all": ["1200"]},
+        "max_concurrent_streams": {"null": true},
+        "idle_timeout": {"all": ["90"]},
+        "connect_timeout": {"null": true}
+      },
+      "rows": {
+        "Max upload size": ["250"],
+        "Max download size": ["4 gb"],
+        "Max concurrent connections": ["1200"],
+        "Idle timeout": ["90"],
+        "Request timeout": ["30"]
+      },
+      "own": {"max_upload_size": "Max upload size", "max_message_size": null, "max_concurrent_connections": "Max concurrent connections", "max_concurrent_streams": null, "idle_timeout": "Idle timeout", "connect_timeout": null}
+    },
+    {
+      "id": "26-plans-transposed-en-near-miss",
+      "file": "17-plans-transposed-en.html",
+      "origin": "nuevo: la tabla traspuesta del caso 17 con un plan que no existe (enterprise_seats) y una columna que no existe (studio_price)",
+      "kind": "html-table", "lang": "en", "has_table": true,
+      "fields": ["hobby_seats", "hobby_storage", "studio_monthly_builds", "factory_monthly_builds", "enterprise_seats", "studio_price"],
+      "expected": {
+        "hobby_seats": {"number": 1},
+        "hobby_storage": {"all": ["5 gb"]},
+        "studio_monthly_builds": {"number": 4000},
+        "factory_monthly_builds": {"number": 60000},
+        "enterprise_seats": {"null": true},
+        "studio_price": {"null": true}
+      },
+      "rows": {
+        "hobby seats": ["1"],
+        "studio seats": ["15"],
+        "studio storage": ["200 gb"],
+        "studio builds": ["4000"],
+        "factory seats": ["250"],
+        "factory storage": ["5 tb"],
+        "factory builds": ["60000"],
+        "hobby storage": ["5 gb"],
+        "hobby builds": ["100"]
+      },
+      "own": {"hobby_seats": "hobby seats", "hobby_storage": "hobby storage", "studio_monthly_builds": "studio builds", "factory_monthly_builds": "factory builds", "enterprise_seats": null, "studio_price": null}
+    }
+  ]
+}
