@@ -23,6 +23,7 @@ from fake_llamaswap import (
     NOT_WATCHED,
     REFUSAL,
     SURCHARGE,
+    FakeLlamaSwap,
     FakeModel,
     binary_available,
     fake_llamaswap,
@@ -42,12 +43,27 @@ def _sleep_until(hour: float) -> None:
 # --- (a) semántica del TTL -----------------------------------------------------------------------
 
 
+def _wait_for_arrival(ls: FakeLlamaSwap, model: str, cap: float = 30.0) -> float:
+    """Hour (`time.time()`) at which the fake server of `model` got its request, waiting up to `cap`."""
+    limit = time.monotonic() + cap
+    while time.monotonic() < limit:
+        if arrivals := ls.arrivals(model):
+            return float(str(arrivals[-1]["ts"]))
+        time.sleep(0.02)
+    raise AssertionError(f"the request never reached the fake server of {model} in {cap} s")
+
+
 def _measure_ttl(directory: Path, ttl: int) -> dict[str, object]:
-    """Una petición de 3 s a un modelo con `ttl`; mira `/running` durante y tras la petición."""
+    """Una petición de 3 s a un modelo con `ttl`; mira `/running` durante y tras la petición.
+
+    The seconds of `during` count from the arrival of the request at the model's server, not from
+    the send: llama-swap loads the model first and retries `/health` once a second, so the model
+    is `ready` 0.3 s or 1.3 s after the send and a sample at «send + 1 s» found it `starting`.
+    """
     with fake_llamaswap(directory, [FakeModel("m-ttl", ttl=ttl)]) as ls:
         thread = threading.Thread(target=lambda: ls.chat("m-ttl", delay_s=3))
-        start_ts = time.time()
         thread.start()
+        start_ts = _wait_for_arrival(ls, "m-ttl")
         during: dict[float, bool] = {}
         for second in (1.0, 2.0, 3.0):
             _sleep_until(start_ts + second)
