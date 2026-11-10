@@ -315,6 +315,12 @@ DEPRECATED_ENV_VALUES: dict[str, str | None] = {
 # Umbral para elegir el modelo "largo" vs "mecánico" en tools que enrutan por tamaño.
 LONG_INPUT_CHARS = _env_int("LOCAL_DELEGATE_LONG_INPUT_CHARS", 6000)
 
+# #586: a `local_extract` input under that threshold that carries a table (`table_detect`) goes to
+# `long` too: the mechanical model answered with the value of another row in 8 of the 16 small
+# tables measured, the long one in none. **On by default**; it costs latency and model switches on
+# a shared backend, so `0` turns it off. Read at start: changing it needs a restart.
+EXTRACT_TABLE_LONG = _env_flag("LOCAL_DELEGATE_EXTRACT_TABLE_LONG", True)
+
 # local_summarize sigue la estructura del documento cuando tiene títulos Markdown y el rol es
 # `long` (SDD resumen-por-secciones). Apagado, resume en prosa como antes, byte a byte. **Apagado
 # por defecto**: mejora mucho la salida de la tool (100 % de títulos, con introducción y

@@ -38,7 +38,12 @@ hace `POST /chat/completions` al endpoint configurado y devuelve **solo texto**.
   retiró en la 0.30.0) más
   un rol de visión (`local_describe_image`), cada uno un id de modelo configurable. Las que
   dependen del tamaño del input eligen mecánico vs. largo por un umbral
-  (`LOCAL_DELEGATE_LONG_INPUT_CHARS`).
+  (`LOCAL_DELEGATE_LONG_INPUT_CHARS`). `local_extract` decide el rol **después de leer** la
+  entrada: una pequeña que trae una tabla HTML o Markdown (`table_detect.has_table`, lineal y sin
+  expresiones regulares) va también a largo, porque el modelo mecánico contestaba con el valor de
+  otra fila (#586). El motivo viaja en `_local_delegate.role_reason` y en el campo `role_reason`
+  del log, también en las filas de una llamada cortada; `LOCAL_DELEGATE_EXTRACT_TABLE_LONG=0` lo
+  apaga. Las demás tools siguen solo por tamaño.
 - **Backend opt-in.** El auto-arranque de un backend (llama-swap) está **desactivado por defecto**
   (`LOCAL_DELEGATE_AUTOSTART=0`); el paquete asume que tu endpoint ya corre.
 - **Un fichero JSONL es toda la telemetría, y OpenTelemetry queda descartado.** Decidido en la

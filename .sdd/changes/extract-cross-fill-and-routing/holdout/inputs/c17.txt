@@ -1,0 +1,4 @@
+Goal: Move the billing page to the new layout before the spring release.
+Risk: The old layout is still used by the export page, so both must change together.
+Owner: The web team, with help from the billing team.
+Next step: Write the layout tests for the billing page.

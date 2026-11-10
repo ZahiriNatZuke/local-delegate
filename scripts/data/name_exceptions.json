@@ -1120,6 +1120,16 @@
           "reason": "dato congelado de corpus o caso: directorio del corpus congelado en `benchmarks/` (ola A10a-3)"
         },
         {
+          "name": "catalogo-2026-09",
+          "file": "tests/test_table_detect.py",
+          "reason": "dato congelado de corpus o caso: directorio del corpus congelado en `benchmarks/`, donde está la fuente de `extraer-toml-2k` (REQ-007 de #586)"
+        },
+        {
+          "name": "extraer-toml-2k.toml",
+          "file": "tests/test_table_detect.py",
+          "reason": "dato congelado de corpus o caso: fuente congelada del caso `extraer-toml-2k`, que no debe traer tabla (REQ-007 de #586)"
+        },
+        {
           "name": "clasificar-53",
           "file": "tests/test_resource_probe.py",
           "reason": "dato congelado de corpus o caso: id de un caso del corpus congelado (ola A10a-3)"

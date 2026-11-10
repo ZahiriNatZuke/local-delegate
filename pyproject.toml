@@ -161,6 +161,11 @@ ui = ["playwright>=1.40"]
 [tool.ruff]
 target-version = "py311"
 line-length = 100
+# The measurement scripts of an SDD change are kept as they ran: the frozen detector of #586 is
+# identified by its sha256 (`verification.md`), so not one byte of it is rewritten.
+extend-exclude = [".sdd/changes/extract-cross-fill-and-routing"]
+# The pre-commit hook passes each file by name: without this it would lint the excluded ones too.
+force-exclude = true
 
 [tool.ruff.lint]
 # Reglas por defecto (E4/E7/E9, F) + imports ordenados (I).

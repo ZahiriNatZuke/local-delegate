@@ -1,0 +1,5 @@
+Resumen: La app de recetas guarda ahora las listas de la compra sin conexión.
+Problema conocido: Las listas muy largas tardan en abrir en móviles antiguos.
+Solución temporal: Dividir la lista en dos o más listas cortas.
+Próxima versión: Añadirá la opción de compartir listas por enlace.
+Contacto: El equipo de la app responde en el foro de la comunidad.

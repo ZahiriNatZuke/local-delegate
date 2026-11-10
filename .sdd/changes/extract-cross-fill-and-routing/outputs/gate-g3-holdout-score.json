@@ -1,0 +1,719 @@
+{
+ "detector_sha256": "0b940737e792a6787ef96c02f64227046225ca08446f621b77fab67a359a18d7",
+ "totals": {
+  "keys": 115,
+  "correct": 110,
+  "crossed": 0,
+  "error_or_raw": 0,
+  "correct_unit_dropped": 2,
+  "incomplete_or_other_row": 1,
+  "neighbour_cell_unrequested": 1,
+  "correct_bool": 1
+ },
+ "flags_on_keys_without_cross": [
+  "c01/price (correct; fila «Noise level (dB)»)"
+ ],
+ "flags_on_crossed_keys": [],
+ "crossed_unflagged": [],
+ "per_case": {
+  "c01": {
+   "format": "html",
+   "verdicts": {
+    "model": {
+     "verdict": "correct",
+     "value": "Nimbus K2",
+     "expected": "Nimbus K2"
+    },
+    "price": {
+     "verdict": "correct",
+     "value": 39,
+     "expected": "39",
+     "flag": {
+      "row": "Noise level (dB)",
+      "other_key": "noise_level"
+     }
+    },
+    "noise_level": {
+     "verdict": "correct",
+     "value": 39,
+     "expected": "39"
+    },
+    "capacity": {
+     "verdict": "correct",
+     "value": 1.7,
+     "expected": "1.7"
+    },
+    "cord_length": {
+     "verdict": "correct",
+     "value": 0.75,
+     "expected": "0.75"
+    }
+   }
+  },
+  "c02": {
+   "format": "markdown",
+   "verdicts": {
+    "cuota_mensual": {
+     "verdict": "correct",
+     "value": 590,
+     "expected": "590"
+    },
+    "coste_de_alta": {
+     "verdict": "correct",
+     "value": 0,
+     "expected": "0"
+    },
+    "minutos": {
+     "verdict": "correct",
+     "value": "ilimitados",
+     "expected": "ilimitados"
+    },
+    "datos": {
+     "verdict": "correct",
+     "value": "25 GB",
+     "expected": "25 GB"
+    }
+   }
+  },
+  "c03": {
+   "format": "html",
+   "verdicts": {
+    "plan_actual": {
+     "verdict": "correct",
+     "value": "Estudio",
+     "expected": "Estudio"
+    },
+    "plan_sugerido": {
+     "verdict": "correct",
+     "value": "Estudio Max",
+     "expected": "Estudio Max"
+    },
+    "periodo": {
+     "verdict": "correct",
+     "value": "anual",
+     "expected": "anual"
+    },
+    "fecha_renovacion": {
+     "verdict": "correct",
+     "value": "2027-03-01",
+     "expected": "2027-03-01"
+    },
+    "usuarios": {
+     "verdict": "correct",
+     "value": 3,
+     "expected": "3"
+    }
+   }
+  },
+  "c04": {
+   "format": "markdown",
+   "verdicts": {
+    "primary_color": {
+     "verdict": "correct",
+     "value": "Blue",
+     "expected": "Blue"
+    },
+    "trim_color": {
+     "verdict": "correct",
+     "value": "Navy Blue",
+     "expected": "Navy Blue"
+    },
+    "size": {
+     "verdict": "correct",
+     "value": "10",
+     "expected": "10"
+    },
+    "pack_size": {
+     "verdict": "correct",
+     "value": "100",
+     "expected": "100"
+    },
+    "material": {
+     "verdict": "correct",
+     "value": "Cotton",
+     "expected": "Cotton"
+    }
+   }
+  },
+  "c05": {
+   "format": "html",
+   "verdicts": {
+    "return_policy": {
+     "verdict": "correct",
+     "value": "Items can be returned within 30 days if they are unused and in the original box",
+     "expected": "Items can be returned within 30 days if they are unused and in the original box"
+    },
+    "warranty": {
+     "verdict": "correct",
+     "value": "1 year, limited to the original buyer",
+     "expected": "1 year, limited to the original buyer"
+    },
+    "box_contents": {
+     "verdict": "correct",
+     "value": "Speaker, cable, and a quick start card",
+     "expected": "Speaker, cable, and a quick start card"
+    },
+    "weight": {
+     "verdict": "correct",
+     "value": "850 g",
+     "expected": "850 g"
+    }
+   }
+  },
+  "c06": {
+   "format": "markdown",
+   "verdicts": {
+    "condiciones_envio": {
+     "verdict": "correct",
+     "value": "El envío es gratis en pedidos de más de 40 € y tarda de dos a cuatro días hábiles",
+     "expected": "El envío es gratis en pedidos de más de 40 € y tarda de dos a cuatro días hábiles"
+    },
+    "gastos_envio": {
+     "verdict": "correct",
+     "value": "4,95 €",
+     "expected": "4,95 €"
+    },
+    "plazo_devolucion": {
+     "verdict": "correct",
+     "value": "14 días",
+     "expected": "14 días"
+    },
+    "atencion_cliente": {
+     "verdict": "correct",
+     "value": "lunes a viernes",
+     "expected": "lunes a viernes"
+    }
+   }
+  },
+  "c07": {
+   "format": "html",
+   "verdicts": {
+    "batteries": {
+     "verdict": "correct",
+     "value": "2 x AA",
+     "expected": "2 x AA"
+    },
+    "accessories": {
+     "verdict": "correct",
+     "value": "carrying strap",
+     "expected": "carrying strap"
+    },
+    "categories": {
+     "verdict": "correct",
+     "value": "outdoor lights",
+     "expected": "outdoor lights"
+    },
+    "warranty": {
+     "verdict": "correct",
+     "value": "6 months",
+     "expected": "6 months"
+    }
+   }
+  },
+  "c08": {
+   "format": "markdown",
+   "verdicts": {
+    "company_count": {
+     "verdict": "correct",
+     "value": 120,
+     "expected": "120"
+    },
+    "city_count": {
+     "verdict": "correct",
+     "value": 14,
+     "expected": "14"
+    },
+    "daily_delivery": {
+     "verdict": "correct",
+     "value": 300,
+     "expected": "300"
+    },
+    "supply_budget": {
+     "verdict": "correct",
+     "value": 4000,
+     "expected": "4,000"
+    },
+    "fleet_size": {
+     "verdict": "correct_unit_dropped",
+     "value": 22,
+     "expected": "22 vans"
+    }
+   }
+  },
+  "c09": {
+   "format": "html",
+   "verdicts": {
+    "motores": {
+     "verdict": "correct",
+     "value": "eléctrico, 3 kW",
+     "expected": "eléctrico, 3 kW"
+    },
+    "camiones_de_apoyo": {
+     "verdict": "correct",
+     "value": "no incluido",
+     "expected": "no incluido"
+    },
+    "luces_traseras": {
+     "verdict": "correct",
+     "value": "LED roja",
+     "expected": "LED roja"
+    },
+    "colores": {
+     "verdict": "correct",
+     "value": "gris pizarra",
+     "expected": "gris pizarra"
+    },
+    "lugar_de_montaje": {
+     "verdict": "correct",
+     "value": "planta norte",
+     "expected": "planta norte"
+    }
+   }
+  },
+  "c10": {
+   "format": "markdown",
+   "verdicts": {
+    "boton": {
+     "verdict": "correct",
+     "value": 6,
+     "expected": "6"
+    },
+    "sensor": {
+     "verdict": "correct",
+     "value": 2,
+     "expected": "2"
+    },
+    "cancion_precargada": {
+     "verdict": "correct",
+     "value": 40,
+     "expected": "40"
+    },
+    "lapiz_optico": {
+     "verdict": "correct",
+     "value": 1,
+     "expected": "1"
+    },
+    "version_de_firmware": {
+     "verdict": "correct",
+     "value": 3,
+     "expected": "3"
+    }
+   }
+  },
+  "c11": {
+   "format": "html",
+   "verdicts": {
+    "team_monthly_price": {
+     "verdict": "correct",
+     "value": 29,
+     "expected": "29"
+    },
+    "team_annual_price": {
+     "verdict": "correct",
+     "value": 290,
+     "expected": "290"
+    },
+    "scale_monthly_price": {
+     "verdict": "correct",
+     "value": 79,
+     "expected": "79"
+    },
+    "starter_seats": {
+     "verdict": "correct",
+     "value": 1,
+     "expected": "1"
+    },
+    "scale_seats": {
+     "verdict": "correct",
+     "value": 50,
+     "expected": "50"
+    }
+   }
+  },
+  "c12": {
+   "format": "markdown",
+   "verdicts": {
+    "precio_sin_iva": {
+     "verdict": "correct",
+     "value": 100,
+     "expected": "100,00"
+    },
+    "precio_con_iva": {
+     "verdict": "correct",
+     "value": 122,
+     "expected": "122,00"
+    },
+    "precio_envio": {
+     "verdict": "correct",
+     "value": 6.5,
+     "expected": "6,50"
+    },
+    "precio_envio_urgente": {
+     "verdict": "correct",
+     "value": 12,
+     "expected": "12,00"
+    },
+    "descuento": {
+     "verdict": "correct_unit_dropped",
+     "value": 10,
+     "expected": "10 %"
+    }
+   }
+  },
+  "c13": {
+   "format": "html",
+   "verdicts": {
+    "brisa_llamadas_internacionales": {
+     "verdict": "correct",
+     "value": "0,20 €/min",
+     "expected": "0,20 €/min"
+    },
+    "ciclon_llamadas_internacionales": {
+     "verdict": "correct",
+     "value": "100 min incluidos",
+     "expected": "100 min incluidos"
+    },
+    "brisa_sms_nacionales": {
+     "verdict": "correct",
+     "value": "0,05 €",
+     "expected": "0,05 €"
+    },
+    "ciclon_sms_nacionales": {
+     "verdict": "correct",
+     "value": "ilimitados",
+     "expected": "ilimitados"
+    },
+    "ciclon_llamadas_nacionales": {
+     "verdict": "correct",
+     "value": "ilimitadas",
+     "expected": "ilimitadas"
+    }
+   }
+  },
+  "c14": {
+   "format": "markdown",
+   "verdicts": {
+    "active_users_q1": {
+     "verdict": "correct",
+     "value": "1200",
+     "expected": "1,200"
+    },
+    "active_paying_users_q1": {
+     "verdict": "correct",
+     "value": "300",
+     "expected": "300"
+    },
+    "active_users_q2": {
+     "verdict": "correct",
+     "value": "1450",
+     "expected": "1,450"
+    },
+    "active_paying_users_q2": {
+     "verdict": "correct",
+     "value": "410",
+     "expected": "410"
+    },
+    "new_users_q2": {
+     "verdict": "correct",
+     "value": "610",
+     "expected": "610"
+    }
+   }
+  },
+  "c15": {
+   "format": "json",
+   "verdicts": {
+    "summary": {
+     "verdict": "correct",
+     "value": "A slim desk lamp with three brightness levels and a warm light mode for reading at night.",
+     "expected": "A slim desk lamp with three brightness levels and a warm light mode for reading at night."
+    },
+    "care_instructions": {
+     "verdict": "correct",
+     "value": "Wipe with a dry cloth. Do not use water or cleaning sprays on the light panel.",
+     "expected": "Wipe with a dry cloth. Do not use water or cleaning sprays on the light panel."
+    },
+    "known_issues": {
+     "verdict": "correct",
+     "value": "The touch button can respond late in cold rooms; this does not affect the light itself.",
+     "expected": "The touch button can respond late in cold rooms; this does not affect the light itself."
+    },
+    "product": {
+     "verdict": "correct",
+     "value": "Lumen desk lamp",
+     "expected": "Lumen desk lamp"
+    },
+    "price": {
+     "verdict": "correct",
+     "value": "34 EUR",
+     "expected": "34 EUR"
+    }
+   }
+  },
+  "c16": {
+   "format": "json",
+   "verdicts": {
+    "nota_cliente": {
+     "verdict": "correct",
+     "value": "Por favor, dejen el paquete en la portería si no hay nadie en casa por la tarde.",
+     "expected": "Por favor, dejen el paquete en la portería si no hay nadie en casa por la tarde."
+    },
+    "respuesta_soporte": {
+     "verdict": "correct",
+     "value": "Hemos pasado la nota al repartidor; el paquete llegará el jueves por la tarde.",
+     "expected": "Hemos pasado la nota al repartidor; el paquete llegará el jueves por la tarde."
+    },
+    "motivo_retraso": {
+     "verdict": "correct",
+     "value": "Faltaba una pieza en el almacén y se tuvo que pedir a otro centro.",
+     "expected": "Faltaba una pieza en el almacén y se tuvo que pedir a otro centro."
+    },
+    "estado": {
+     "verdict": "correct",
+     "value": "enviado",
+     "expected": "enviado"
+    },
+    "pedido": {
+     "verdict": "correct",
+     "value": "PX-4471",
+     "expected": "PX-4471"
+    }
+   }
+  },
+  "c17": {
+   "format": "label_lines",
+   "verdicts": {
+    "goal": {
+     "verdict": "correct",
+     "value": "Move the billing page to the new layout before the spring release.",
+     "expected": "Move the billing page to the new layout before the spring release."
+    },
+    "risk": {
+     "verdict": "correct",
+     "value": "The old layout is still used by the export page, so both must change together.",
+     "expected": "The old layout is still used by the export page, so both must change together."
+    },
+    "owner": {
+     "verdict": "correct",
+     "value": "The web team, with help from the billing team.",
+     "expected": "The web team, with help from the billing team."
+    },
+    "next_step": {
+     "verdict": "correct",
+     "value": "Write the layout tests for the billing page.",
+     "expected": "Write the layout tests for the billing page."
+    }
+   }
+  },
+  "c18": {
+   "format": "label_lines",
+   "verdicts": {
+    "resumen": {
+     "verdict": "correct",
+     "value": "La app de recetas guarda ahora las listas de la compra sin conexión.",
+     "expected": "La app de recetas guarda ahora las listas de la compra sin conexión."
+    },
+    "problema_conocido": {
+     "verdict": "correct",
+     "value": "Las listas muy largas tardan en abrir en móviles antiguos.",
+     "expected": "Las listas muy largas tardan en abrir en móviles antiguos."
+    },
+    "solucion_temporal": {
+     "verdict": "correct",
+     "value": "Dividir la lista en dos o más listas cortas.",
+     "expected": "Dividir la lista en dos o más listas cortas."
+    },
+    "proxima_version": {
+     "verdict": "correct",
+     "value": "Añadirá la opción de compartir listas por enlace.",
+     "expected": "Añadirá la opción de compartir listas por enlace."
+    },
+    "contacto": {
+     "verdict": "correct",
+     "value": "El equipo de la app responde en el foro de la comunidad.",
+     "expected": "El equipo de la app responde en el foro de la comunidad."
+    }
+   }
+  },
+  "c19": {
+   "format": "csv",
+   "verdicts": {
+    "basic_storage": {
+     "verdict": "correct",
+     "value": "50 GB",
+     "expected": "50 GB"
+    },
+    "basic_backup_storage": {
+     "verdict": "correct",
+     "value": "10 GB",
+     "expected": "10 GB"
+    },
+    "basic_plus_storage": {
+     "verdict": "correct",
+     "value": "200 GB",
+     "expected": "200 GB"
+    },
+    "pro_backup_storage": {
+     "verdict": "correct",
+     "value": "200 GB",
+     "expected": "200 GB"
+    },
+    "basic_plus_support": {
+     "verdict": "incomplete_or_other_row",
+     "value": "email",
+     "expected": "email and chat"
+    },
+    "pro_support_hours": {
+     "verdict": "correct",
+     "value": "24/7",
+     "expected": "24/7"
+    }
+   }
+  },
+  "c20": {
+   "format": "csv",
+   "verdicts": {
+    "precio_camiseta_m": {
+     "verdict": "correct",
+     "value": "24,90",
+     "expected": "24,90"
+    },
+    "precio_rebajado_camiseta_l": {
+     "verdict": "correct",
+     "value": "19,90",
+     "expected": "19,90"
+    },
+    "stock_camiseta_l": {
+     "verdict": "correct",
+     "value": "0",
+     "expected": "0"
+    },
+    "precio_rebajado_pantalon_m": {
+     "verdict": "neighbour_cell_unrequested",
+     "value": "39,90",
+     "expected": null
+    },
+    "stock_pantalon_m": {
+     "verdict": "correct",
+     "value": "5",
+     "expected": "5"
+    }
+   }
+  },
+  "c21": {
+   "format": "tsv",
+   "verdicts": {
+    "north_1_location": {
+     "verdict": "correct",
+     "value": "Floor 2",
+     "expected": "Floor 2"
+    },
+    "north_2_toner": {
+     "verdict": "correct",
+     "value": "full",
+     "expected": "full"
+    },
+    "south_1_speed": {
+     "verdict": "correct",
+     "value": "45",
+     "expected": "45"
+    },
+    "north_2_speed": {
+     "verdict": "correct",
+     "value": "30",
+     "expected": "30"
+    },
+    "south_1_location": {
+     "verdict": "correct",
+     "value": "Floor 2",
+     "expected": "Floor 2"
+    }
+   }
+  },
+  "c22": {
+   "format": "markdown",
+   "verdicts": {
+    "flour_amount": {
+     "verdict": "correct",
+     "value": 500,
+     "expected": "500"
+    },
+    "water_unit": {
+     "verdict": "correct",
+     "value": "ml",
+     "expected": "ml"
+    },
+    "salt_amount": {
+     "verdict": "correct",
+     "value": 10,
+     "expected": "10"
+    },
+    "seeds_amount": {
+     "verdict": "correct",
+     "value": null,
+     "expected": null
+    },
+    "seeds_optional": {
+     "verdict": "correct_bool",
+     "value": true,
+     "expected": "yes"
+    }
+   }
+  },
+  "c23": {
+   "format": "html",
+   "verdicts": {
+    "vela_s_battery_life": {
+     "verdict": "correct",
+     "value": "8 h",
+     "expected": "8 h"
+    },
+    "vela_m_battery_life": {
+     "verdict": "correct",
+     "value": "12 h",
+     "expected": "12 h"
+    },
+    "vela_m_weight": {
+     "verdict": "correct",
+     "value": "1,4 kg",
+     "expected": "1,4 kg"
+    },
+    "vela_s_ports": {
+     "verdict": "correct",
+     "value": "2 USB-C",
+     "expected": "2 USB-C"
+    },
+    "vela_m_ports": {
+     "verdict": "correct",
+     "value": "2 USB-C, 1 HDMI",
+     "expected": "2 USB-C, 1 HDMI"
+    }
+   }
+  },
+  "c24": {
+   "format": "markdown_list",
+   "verdicts": {
+    "new_feature": {
+     "verdict": "correct",
+     "value": "Notes can be pinned to the top of any folder.",
+     "expected": "Notes can be pinned to the top of any folder."
+    },
+    "changed": {
+     "verdict": "correct",
+     "value": "The search box now also looks inside attachments.",
+     "expected": "The search box now also looks inside attachments."
+    },
+    "fixed": {
+     "verdict": "correct",
+     "value": "Pinned notes no longer disappear after a sync.",
+     "expected": "Pinned notes no longer disappear after a sync."
+    },
+    "removed": {
+     "verdict": "correct",
+     "value": "The old print preview.",
+     "expected": "The old print preview."
+    }
+   }
+  }
+ }
+}
