@@ -331,7 +331,8 @@ def _run(claude_dir: Path, log_dir: Path, *, now: datetime, reset: str | None) -
     cleanup_days = attribution.cleanup_period_days(claude_dir)
     projects = claude_dir / "projects"
     has_transcripts = projects.is_dir()
-    index = transcripts.read(projects)
+    # The salt and the list of own projects are those of the log being backfilled (REQ-007).
+    index = transcripts.read(projects, log_dir=log_dir)
     set_aside: list[Path] = []
     previous = _previous_aggregates(log_dir, set_aside.append)
 
