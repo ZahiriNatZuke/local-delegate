@@ -64,47 +64,47 @@ Orden: T1 y T2 a la vez; después T3 y T8 a la vez; después, con T1 cerrada, T4
 la vez; T10 y, al final, T11. Los comandos pesados (pytest, `ruff`, build, navegador, el relleno)
 van de uno en uno en toda la máquina, con el cerrojo de comandos pesados, y `pytest` con `-n 2`.
 
-- [ ] T1 — Instantánea y línea base de cifras, con `main` (REQ-027)
+- [x] T1 — Instantánea y línea base de cifras, con `main` (REQ-027)
   - Files or modules: `.sdd/changes/usage-log-project-and-own-repo-exclusion/verification.md` (tabla antes/después; solo recuentos, sin rutas ni contenido). La instantánea vive en un directorio temporal fuera del repo y se borra en T11
   - Verification: copiar `LOG_DIR` y el fichero de telemetría de hooks a un directorio temporal; fijar y anotar un instante `now` y un rango `from`/`to` que acabe antes de `now`; con el código de `main` y `LOCAL_DELEGATE_LOG_DIR` y `LD_HOOK_TELEMETRY_LOG` apuntando a la copia, llamar a `recompute.run(claude_dir, copia, now=now)` (el comando `recompute-cost` no tiene `--now`, la función sí) y anotar las cifras de «Tabla antes/después». El log real no se toca
   - Depends on: none
-- [ ] T2 — Reglas puras de proyecto, sal y lista de extras (REQ-001, REQ-002, REQ-003)
+- [x] T2 — Reglas puras de proyecto, sal y lista de extras (REQ-001, REQ-002, REQ-003)
   - Files or modules: `src/local_delegate/resources/hooks/hook_common.py` (sección nueva: `project_identity`, `project_of_session`, sal y lista; no toca `context_of`), `tests/test_project_identity.py` (nuevo)
   - Verification: tests unitarios de hash, tipo y lista (ausente, rota, con otra forma, de más de 64 KiB, entradas cortas). Regla por tramos: `app` no marca `webapp` ni `happy` y sí `D--work-app`; una entrada con ruta casa con su directorio, un subdirectorio y un worktree; un nombre con `ñ` (`Diseño`) se normaliza a `dise-o` en las dos partes. Sal: creación atómica con contenido (temporal en el mismo directorio y enlace al nombre final, que falla si ya existe), reparación bajo cerrojo de un fichero vacío o inválido, y caché con clave por ruta para la sal y para la lista, porque la suite cambia `LOCAL_DELEGATE_LOG_DIR` en cada test (`tests/conftest.py:62`). La carrera se prueba de forma determinista: el fichero ya existe con contenido válido, la función lo devuelve y no lo pisa; sin procesos reales. `project_of_session`: id con forma de UUID, id con separadores o `..`, sesión en dos directorios, sesión inexistente; raíz de proyectos sacada de `Path.home()` del proceso (como `attribution._projects_root`), nunca de `current_environ()`; tope de 50 ms con un recorrido doblado que tarda; caché por `session_id` del resultado encontrado o ambiguo, no del «no encontrado» ni del tope agotado. Importar `hook_common` como módulo suelto, sin el paquete. Anotar en `verification.md` que todos los nombres de transcript principal de esta máquina tienen forma de UUID (solo recuento)
   - Depends on: none
-- [ ] T3 — Atribución: campos al momento, reglas de tipo y de columna, enriquecimiento del relleno (REQ-004, REQ-006, REQ-007, REQ-008, REQ-023)
+- [x] T3 — Atribución: campos al momento, reglas de tipo y de columna, enriquecimiento del relleno (REQ-004, REQ-006, REQ-007, REQ-008, REQ-023)
   - Files or modules: `src/local_delegate/attribution.py`, `tests/test_usage_log_project.py` (nuevo), `tests/test_caller_column.py` (nuevo)
   - Verification: filas escritas con nota de principal, de subagente y de mod por los cuatro caminos de `_log_event`; regla que lanza (la fila conserva los demás `caller_*`); espía sobre `builtins.open`, `os.stat`, `os.scandir` y `os.listdir` durante `resolve_call` (`Path.exists` e `is_dir` acaban en `os.stat`), con la sal y la lista ya en caché, que compara las rutas tocadas con las de hoy; nota con el formato de hoy; `write_backfill` del mismo rango para `exact`, `window` y `no_match`, y rango menor contra mayor
   - Depends on: T2
-- [ ] T4 — Proyecto en el relleno, por cruce y por clave de sesión (REQ-007, REQ-031)
+- [x] T4 — Proyecto en el relleno, por cruce y por clave de sesión (REQ-007, REQ-031)
   - Files or modules: `src/local_delegate/transcripts.py`, `src/local_delegate/cost.py`, `src/local_delegate/recompute.py`, `tests/test_backfill_project.py` (nuevo)
   - Verification: `recompute.run` sobre un mundo de test deja el proyecto en entradas `exact`, `window` y `window+path`, y en una fila del mod `no_match` con clave de sesión; no lo deja con la sesión en dos directorios ni con cruce y clave en proyectos distintos; `cost.merge` lo pone en la fila; la segunda pasada enriquece sin perder campos. Datos fijados: la entrada vieja trae un `n` distinto del que recalcula la pasada nueva (si no, «sustituir» y «añadir» dan lo mismo). Los tests de `recompute`, `transcripts`, `density` y `valuation` pasan sin tocar. Anotar en `verification.md` cuántas filas del mod de la instantánea recuperan proyecto
   - Depends on: T1, T3
-- [ ] T5 — Panel entero, Python y JS, un solo dueño (REQ-009, REQ-010, REQ-011, REQ-012, REQ-013, REQ-014, REQ-015)
+- [x] T5 — Panel entero, Python y JS, un solo dueño (REQ-009, REQ-010, REQ-011, REQ-012, REQ-013, REQ-014, REQ-015)
   - Files or modules: `src/local_delegate/web/metrics.py` (sin tocar los endpoints `/api/hook/*`), `src/local_delegate/resources/i18n/es/panel.json`, `src/local_delegate/resources/i18n/en/panel.json`, `scripts/dev/capture_dashboard.py`, `tests/test_metrics_own_repo.py` (nuevo), `tests/test_dashboard_own_repo.py` (nuevo: `buildQuery` con node y el interruptor en navegador). `tests/panel_server.py` se usa tal cual, no se edita
   - Verification: tests de API y de navegador; `buildQuery` gana un cuarto parámetro opcional, así que los tests de hoy con tres argumentos siguen valiendo; capturas en claro y oscuro. Datos fijados: el test del coste lleva una fila `self` valorable (cliente Claude Code, con modelo y agregados), para que haya algo que baje; el de los contadores lleva una fila que es a la vez prueba y `self`, para que `excluded_self` y `self_in_range` puedan diferir
   - Depends on: T1, T3
-- [ ] T6 — `measure_adoption.py`: filtro, eventos viejos y columnas (REQ-017, REQ-018)
+- [x] T6 — `measure_adoption.py`: filtro, eventos viejos y columnas (REQ-017, REQ-018)
   - Files or modules: `scripts/measure_adoption.py`, `tests/test_measure_adoption_own_repo.py` (nuevo)
   - Verification: mundo de test con una sesión `self` y otra ajena, eventos con y sin `project_kind`, filas de uso de los tres hilos, y `--include-self`; los 16 tests de hoy pasan sin tocar. Opción nueva: `--projects`. No hace falta tope superior ni `--log-dir`: el script lee `LOCAL_DELEGATE_LOG_DIR` y `LD_HOOK_TELEMETRY_LOG`, y para la tabla antes/después se mide sobre la instantánea, que no crece
   - Depends on: T1, T3
-- [ ] T7 — `measure_plugin_adoption.py`: sesiones del propio repo y tres columnas (REQ-019, REQ-020)
+- [x] T7 — `measure_plugin_adoption.py`: sesiones del propio repo y tres columnas (REQ-019, REQ-020)
   - Files or modules: `scripts/measure_plugin_adoption.py`, `tests/test_measure_plugin_adoption_own_repo.py` (nuevo)
   - Verification: `pct` 0,0 por defecto y 50,0 con `--include-self`; columnas de subagentes y mod; los 7 tests de hoy pasan sin tocar
   - Depends on: T1, T3
-- [ ] T8 — Proyecto en la telemetría de hooks y en la línea del mod (REQ-016, REQ-032)
+- [x] T8 — Proyecto en la telemetría de hooks y en la línea del mod (REQ-016, REQ-032)
   - Files or modules: `src/local_delegate/resources/hooks/hook_common.py` (solo `context_of` y la variable de contexto; mismo fichero que T2, por eso va después), `src/local_delegate/hook_entry.py` (solo `record_read`), `tests/test_hook_project.py` (nuevo). En el daemon `hook_common` está cargado dos veces, como módulo suelto (`hook_entry._load_hook_module`, el que importan los scripts) y como módulo del paquete (el de `attribution`), cada uno con su variable de contexto y su caché: `record_read` pone la variable en la instancia suelta, la misma que devuelve `_load_hook_module("hook_common")` y que leen `record_decision` y `context_of`. No toca `classify_text`, `suggest_delegate_read.py`, `suggest_delegate_shell.py`, `suggest_delegate_prompt.py`, `read_classifier.py`, el mod (`mod/*.js`), `CLASSIFY_ENV`, `RECORD_ENV` ni `web/metrics.py`
   - Verification: evento de cada hook con `transcript_path`, y sin él (con `cwd`) sale sin campos; línea del mod por `record_read` con la raíz de proyectos de un mundo de test: mismo `project` que la fila de esa sesión; `session_id` inválido, ausente o en dos directorios: sin campos; regla que lanza en `context_of` y en `record_read`; `record_read` dentro de `run_with_environ` con un `LOCAL_DELEGATE_LOG_DIR` de la petición distinto: no crea nada ahí y usa la sal del proceso; con un `HOME` y un `USERPROFILE` de la petición que apuntan a otra raíz con la misma sesión: recorre la raíz del proceso y el hash es el de la fila; por `POST /api/hook/record-read`, el campo escrito en la línea demuestra que la variable llegó a la instancia suelta; anotar en `verification.md` el tiempo medido de la búsqueda sobre la raíz real (solo la cifra). `tests/test_hook_boundaries.py`, `tests/test_hook_common.py`, `tests/test_hook_classify_endpoint.py`, `tests/test_hook_record_read_endpoint.py`, `tests/test_telemetry_concurrent_writes.py` y `tests/test_mod_static.py` pasan sin tocar
   - Depends on: T2
-- [ ] T9 — `local_status`: recuento del propio repo (REQ-021)
+- [x] T9 — `local_status`: recuento del propio repo (REQ-021)
   - Files or modules: `src/local_delegate/server.py` (solo `local_status`), `src/local_delegate/resources/i18n/es/mcp.json`, `src/local_delegate/resources/i18n/en/mcp.json`, `tests/test_status_own_repo.py` (nuevo)
   - Verification: mes con filas `self`, `other` y sin tipo: las cifras de hoy no cambian y aparece la línea; mes sin `self`: no aparece
   - Depends on: T1, T3
-- [ ] T10 — Documentación y guardianes compartidos (REQ-024, REQ-025, REQ-029)
+- [x] T10 — Documentación y guardianes compartidos (REQ-024, REQ-025, REQ-029)
   - Files or modules: `CHANGELOG.md`, `README.md`, `docs/wiki/Savings-and-metrics.md`, `docs/wiki/Configuration.md`, `scripts/data/spanish_lexicon.json`
   - Verification: guardianes de texto y de catálogos; revisión de los tres sitios contra la lista de REQ-025 y el aviso del corte de 90 días de REQ-029. Las demás tareas no tocan estos ficheros: entregan a T10 las palabras y los textos que necesitan. Todo texto nuevo va al catálogo; `tests/data/uncatalogued_exceptions.json` no se toca. Si una excepción resultara inevitable, se escala con su motivo y se declara una a una como excepción de REQ-030
   - Depends on: T4, T5, T6, T7, T8, T9
-- [ ] T11 — Integración y verificación de conjunto (REQ-005, REQ-015, REQ-022, REQ-026, REQ-027, REQ-028, REQ-030, REQ-032)
+- [x] T11 — Integración y verificación de conjunto (REQ-005, REQ-015, REQ-022, REQ-026, REQ-027, REQ-028, REQ-030, REQ-032)
   - Files or modules: `tests/test_project_privacy.py` (nuevo), `.sdd/changes/usage-log-project-and-own-repo-exclusion/verification.md`
   - Verification: test de privacidad de punta a punta; suite completa; `tests/test_hook_classify_endpoint.py` sin tocar; `git diff --diff-filter=MDR --name-only main -- tests/` vacío; mutantes; tabla «después» sobre la instantánea de T1, con el mismo `now` y el mismo rango; prueba en vivo; capturas; borrar la instantánea
   - Depends on: T1, T10

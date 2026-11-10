@@ -300,7 +300,7 @@ Un test se corrigió por esta tabla, como pide el plan («si falla por otra, se 
 el mutante»): con M09 disparaba antes «`loaded` is empty: the code model answers» (la lista de
 modelos llamados) que la de `fallback.answered_by`; se adelantó la aserción de `answered_by`.
 
-## Prueba en vivo (REQ-038): pendiente, la hace la sesión principal
+## Prueba en vivo (REQ-038): pasos (resultado al final de la sección)
 
 No la hizo el agente de implementación (encargo expreso). La hace la sesión principal, junto con
 otra prueba, con el daemon reinstalado desde la rama. Pasos:
@@ -375,6 +375,40 @@ Lo que debe dar (criterios de REQ-038 y del plan):
 
 Si falla un criterio, el #586 sigue abierto y solo se comenta el resultado (T8).
 
+### Prueba en vivo (REQ-038), resultado
+
+Hecha por la sesión principal el 2026-11-10 entre las 16:05 y las 16:16 (hora de Uruguay), dentro
+de la ventana `w-20261110T190517Z` (etiqueta `live-2026-11-10`, cerrada a las 16:16:39, 32 filas:
+las 26 de este cambio y 6 de la prueba en vivo de `usage-log-project-and-own-repo-exclusion`), con
+el daemon instalado desde la rama local de integración de los PR #637, #643, #645 y #646 (las filas
+llevan `v: 0.50.0`, la versión del árbol antes del salto a 0.51.0). Antes de mezclar el PR #643
+(mezclado a las 16:44). Puntuado desde la carpeta del cambio con `python -I gate/score_live.py
+outputs/live-answers.json <filas en jsonl>`; las filas se guardan en `outputs/live-log-rows.json`
+(lista JSON; el repo ignora `*.jsonl`) con solo los campos que lee el puntuador y los de la tabla
+de esperados, sin `host`, `path` ni atribución.
+
+| Qué | Esperado | Medido | Resultado |
+| --- | --- | --- | --- |
+| Llamadas | 26, de una en una | 26 respuestas y 26 filas `local_extract` | pass |
+| Puntuador | `pass: true` | `pass: true`, `problems: []` | pass |
+| Casos 1 a 6 (sin tabla) | `gemma3-4b`, sin `role_reason` | `gemma3-4b`, sin `role_reason` en respuesta ni fila | pass |
+| Casos 7 a 22 (tabla pequeña) | `gemma4-26b-a4b`, `role_reason` `table` en respuesta y fila | los 16, con `role_reason` `table` en las dos | pass |
+| Casos 23 a 26 (grandes) | `gemma4-26b-a4b`, sin `role_reason` | los 4, sin `role_reason` | pass |
+| Cruces | 1 caso como mucho de los 8 | 0 de 8 (`crossed_cases_of_the_8: []`) | pass |
+| `error`/`raw` | ninguno | 0 | pass |
+| Inferencia de los 16 con tabla | mediana ≤ 6,5 s | mediana 3,09 s (3.086,5 ms); la primera tras el cambio de modelo, 9,96 s (la carga) | pass |
+| Valores de los sin tabla | sin cambio | mismos veredictos que la corrida grabada; `05/body_language` sigue inventado, igual que antes | pass |
+| Ventana | cerrada | cerrada a las 16:16:39 | pass |
+
+Inferencia «después» caso a caso (ms, de `outputs/live-log-rows.json`; veredictos por clave en
+`outputs/live-score.json`), que completa la tabla antes/después de REQ-037:
+
+| Grupo | Caso: inferencia (ms) |
+| --- | --- |
+| Sin tabla (`gemma3-4b`) | 03: 889 · 04: 1.152 · 05: 428 · 13: 1.075 · 14: 1.023 · 18: 735 |
+| Tabla pequeña (`gemma4-26b-a4b`) | 01: 9.955 · 02: 2.394 · 06: 3.289 · 07: 3.042 · 08: 3.441 · 09: 4.283 · 10: 2.014 · 11: 2.242 · 12: 2.395 · 17: 2.703 · 21: 3.294 · 22: 3.131 · 23: 3.242 · 24: 3.683 · 25: 2.798 · 26: 2.488 |
+| Grandes (`gemma4-26b-a4b`) | 15: 4.964 · 16: 5.603 · 19: 13.199 · 20: 14.099 |
+
 ## Evidence
 
 <!-- One row per requirement. Result is pass, fail or skip; skip needs evidence explaining why. -->
@@ -384,8 +418,6 @@ Si falla un criterio, el #586 sigue abierto y solo se comenta el resultado (T8).
 | REQ-001 | 16 casos con `gemma4-26b-a4b` por `local_extract` en el segundo proceso | pass | `outputs/gate-g4-research.json`; 0 de 8 casos cruzan, 0 de 44 claves falladas, 0 `error`/`raw` |
 | REQ-002 | 8 claves solas con `gemma3-4b` por el MCP del daemon | pass (valor fijado: 1) | `outputs/gate-g3-single.json`; 1 de 8 bien → `_TABLE_LONG_MIN_FIELDS = 1` |
 | REQ-003 | mediana de inferencia de los 16 casos | pass | 2944 ms (1918–6085) ≤ 6500 ms |
-| REQ-004 | detector congelado sobre `holdout/`, sin modelo y con `gemma3-4b` | puerta del aviso, fuera de esta versión | 1 aviso en falso en cada pasada (`c01/price`); `outputs/gate-offline.json`, `outputs/gate-g3-holdout-score.json` |
-| REQ-005 | caso CSV con `gemma3-4b` | puerta del aviso, fuera de esta versión | `c20`: celda vacía rellenada con la vecina no pedida; `c19`: ambiguo; va al seguimiento de REQ-039 |
 | REQ-006 | vía A con validación del turno | pass | fila temporal `remote_turn: granted` y entrada `remote:<host>/46640-1` en el daemon |
 | REQ-007 | `has_table` del prototipo sobre `extraer-toml-2k.toml` y `tests/test_corpus.py` | pass | `False` (`outputs/gate-offline.json`); `63 passed`; con el `has_table` del paquete, `test_the_frozen_toml_source_of_the_corpus_has_no_table` y `tests/test_corpus.py` sin tocar, en verde |
 | REQ-008 | reparto 16/6 de los 22 pequeños, formas que no ve, mayúsculas, `<track>`/`<tablet>`, tubería sin separadora | pass | `tests/test_table_detect.py`; mutantes M01 a M04 |
@@ -404,11 +436,11 @@ Si falla un criterio, el #586 sigue abierto y solo se comenta el resultado (T8).
 | REQ-032 | guardián de superficies (7 ficheros) y la clave de texto en `es` y `en` | pass | `tests/test_extract_table_routing_docs.py` |
 | REQ-033 | lectura de CHANGELOG y `docs/wiki/Tools.md` contra «Coste» y «Límites»: cifras de la puerta (0 de 8, 0 de 44, 2,944 s frente a 0,84 s), de 10 a 13 s si no estaba cargado, p90 31,9 s, respaldo al de `code`, otros clientes, cómo se apaga, lo que no ve, el caso de 33 KB y el aviso fuera | pass (lectura del implementador; la revisión de resultado la repite) | `CHANGELOG.md` `[Unreleased]` → «Cambiado»; `docs/wiki/Tools.md` → `local_extract` |
 | REQ-034 | `git diff --name-only origin/main...HEAD` sobre skills, memoria, plugin, hooks y `web/` | pass | 0 ficheros |
-| REQ-035 | `git diff --name-status origin/main...HEAD -- tests` y suite entera | pass | 22 `A` (3 tests y 19 fixtures), ningún `M`/`D`; suite: ver «Commands» |
+| REQ-035 | `git diff --name-status origin/main...HEAD -- tests` y suite entera | pass | 22 `A` (3 tests y 19 fixtures), ningún `M`/`D` (en `da15a6f6`, `--diff-filter=MDR -- tests` vacío); suite entera sobre el código final: CI del PR #643, 22 checks en verde (corrida 42887304570), y CI de `main` en `da15a6f6` en verde (corrida 42888361529) |
 | REQ-036 | 17 mutantes, uno a uno | pass | «Mutantes (REQ-036)»: 17 de 17 mueren por la aserción nombrada |
-| REQ-037 | tabla antes/después de los 26 casos con un doble de backend | pass (enrutado); valores «después», pendientes de la prueba en vivo | «Tabla antes/después (REQ-037), sin backend»; `outputs/routing-before-after.json` |
-| REQ-038 | prueba en vivo por el daemon con el paquete de la rama | skip | la hace la sesión principal (encargo del 2026-11-10); pasos, llamadas y cifras en «Prueba en vivo» |
-| REQ-039 | cierre del #586, issue de seguimiento y tarjetas | skip | depende de REQ-038; borradores en `handoff.md` |
+| REQ-037 | tabla antes/después de los 26 casos con un doble de backend, y valores «después» de la prueba en vivo | pass | «Tabla antes/después (REQ-037), sin backend» y «Prueba en vivo (REQ-038), resultado»: los 6 sin tabla siguen en `gemma3-4b` sin `role_reason` y con los mismos veredictos que antes (incluido el `body_language` inventado de `05`, igual que en `outputs/evaluation.json`); los 4 grandes no ganan `role_reason` |
+| REQ-038 | prueba en vivo por el daemon con el paquete de la rama, ventana `w-20261110T190517Z` | pass | `gate/score_live.py` → `pass: true`; 0 cruces de 8, 0 `error`/`raw`, mediana 3,09 s; `outputs/live-answers.json`, `outputs/live-log-rows.json`, `outputs/live-score.json`; ventana cerrada; antes de mezclar el PR #643 |
+| REQ-039 | cierre del #586, issue de seguimiento y tarjetas | pass | #586 cerrado con comentario (https://github.com/ZahiriNatZuke/local-delegate/issues/586#issuecomment-6777699868) cuya primera línea dice lo que queda fuera; seguimiento público #650 (caso de 33 KB con criterio de reapertura, aviso con `c01`, `c20` y `c19`); tarjeta del seguimiento y tarjeta del #630 en el tablero |
 
 ## Commands
 
@@ -438,6 +470,22 @@ Without a declaration, list what was run. Never invent a command. -->
 
 ## Deviations and residual risk
 
+- **Prueba en vivo sobre la integración de cuatro PR**: el daemon se instaló desde una rama local
+  con #637, #643, #645 y #646, no desde la rama de este cambio sola. Es un superconjunto, más cerca
+  de lo que salió en 0.51.0; ninguno de los otros tres toca el enrutado de `local_extract`.
+- **Test del cambio retocado al sacar la release**: `tests/test_extract_table_routing_docs.py`
+  exigía la entrada en `[Unreleased]` del CHANGELOG; el commit de la release 0.51.0 (`034fe612`)
+  la cambia por `test_the_changelog_entry_is_newer_than_0_50_0`. Es un test de este cambio, no uno
+  existente (REQ-035 no se toca), pero el diff revisado (`da15a6f6`) ya no es el código vigente en
+  ese fichero.
+- **Una línea `---` sin tuberías cuenta como separadora**: tras una línea con dos `|`, da tabla
+  (front matter YAML con `|`, título subrayado). La spec lo admite al pie de la letra y cae del
+  lado de subir de más; no está en «Límites» ni en la documentación. Propuesto para el seguimiento
+  #650 (hallazgo de la revisión de resultado; el comentario en el issue queda por hacer).
+- REQ-004 y REQ-005 (la puerta del aviso y el caso CSV) ya no los define la spec: están en
+  «Non-goals». Lo medido sigue en «Puerta (T1)»: 1 aviso en falso en cada pasada (`c01/price`;
+  `outputs/gate-offline.json`, `outputs/gate-g3-holdout-score.json`) y, en el CSV, `c20` con la
+  celda vecina y `c19` ambiguo; todo va al seguimiento #650.
 - La corrección de plurales no se aplicó (ver «Versión del detector que se congela»): la spec y el
   plan no coinciden en cuándo se decide; se siguió la spec. No cambia el veredicto.
 - El segundo proceso no prueba la capa MCP por HTTP, el middleware de cancelación ni las plazas

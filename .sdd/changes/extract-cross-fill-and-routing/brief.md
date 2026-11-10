@@ -57,3 +57,10 @@ stopped and what remains. -->
   commit del aviso quedan `[-]`, el detector se congeló sin la corrección de plurales, y `c20` y
   `c19` van al issue de seguimiento. Queda: T2, T3, T5, T6, T7 y T8; la transición en
   `state.json` la anota la sesión coordinadora.
+- L5 2026-11-10 Cierre. T2, T3, T5, T6, T7 y T8 hechas; el PR #643 se mezcló en `main` a las 16:44
+  (hora de Uruguay), después de la prueba en vivo (ventana `w-20261110T190517Z`, 26 llamadas,
+  `gate/score_live.py` → `pass: true`, 0 cruces de 8, mediana 3,09 s). #586 cerrado con comentario
+  y seguimiento público #650. Revisión de resultado de nivel `deep` (dos jueces y revisor de
+  seguridad, `review.md`): `conforms-with-notes`, sin bloqueantes; los arreglos de registro (CI,
+  enlaces, inferencia caso a caso) ya están en `verification.md`. Queda: las puertas `quality`,
+  `conformance` y `memory`, y mover la tarjeta del tablero del enrutado a «Hecho».
