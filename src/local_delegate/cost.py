@@ -65,6 +65,10 @@ BACKFILL_FIELDS = (
     "expiries",
     "match",
     "bench",
+    # The project (usage-log-project-and-own-repo-exclusion, REQ-007): a hash and a kind, never
+    # the name. A row already sealed at call time keeps its own.
+    "caller_project",
+    "caller_project_kind",
 )
 
 SEGMENTS = ("excluded", "at_call", "backfilled", "pending", "assumed")

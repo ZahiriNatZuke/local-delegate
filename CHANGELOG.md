@@ -6,6 +6,56 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Añadido
+
+- **Cada fila del log de uso guarda desde qué proyecto se pidió la delegación**:
+  `caller_project`, 16 hexadecimales de un hash con sal del directorio de proyecto de Claude Code
+  (nunca el nombre ni la ruta), y `caller_project_kind`, `self` (el propio repo) u `other`. Salen
+  de la misma nota del hook `record-call` que los demás `caller_*`; un hook instalado de una
+  versión anterior ya sirve. Cada evento de la telemetría de hooks lleva `project` y
+  `project_kind` con la misma regla: los hooks, del `transcript_path` de su entrada; la línea del
+  mod de lectura, del `session_id` que ya manda. La respuesta de `hook classify` no cambia. El campo
+  `path` de la fila sigue en claro, como antes.
+- **La sal vive en `LOG_DIR/project-salt`**: 64 hexadecimales aleatorios, solo del usuario, creada
+  la primera vez. Quien tenga el log **y** ese fichero puede confirmar un nombre de proyecto por
+  fuerza bruta: no lo compartas junto a un log.
+- **`LOG_DIR/self-projects.json` (opcional)** añade proyectos propios: `{"names": [...]}`, con
+  nombres o, mejor, rutas completas. La coincidencia es por tramo completo del nombre del
+  directorio, no por subcadena (`app` no marca `webapp`); hasta 64 KiB; las entradas de menos de 3
+  caracteres se ignoran. **Reinicia el daemon tras editarlo**, y cuenta con que solo afecta a filas
+  nuevas. Todos los procesos (daemon, hooks, scripts) tienen que resolver el mismo `LOG_DIR`, o la
+  sal y la lista difieren entre filas y eventos.
+- **«Quién delegó» separa hilo principal, subagentes y mod.** El total de `/api/stats` y cada
+  cliente de `by_client` traen `main_calls`, `subagent_calls`, `mod_calls` y
+  `unknown_caller_calls`, que suman `calls`; la tarjeta enseña «Sin dato» solo cuando no es cero.
+  Las respuestas del panel traen además `excluded_self`, `self_in_range` y `unknown_project`.
+  `measure_adoption.py` gana `delegations_by_caller`, `delegations_by_project_kind` y `--projects`;
+  `measure_plugin_adoption.py`, `excluded_self_sessions`, `with_subagent_delegation`,
+  `with_mod_delegation` y `delegations_by_caller` (`pct` sigue saliendo solo del hilo principal).
+
+### Cambiado
+
+- **El panel y las mediciones de adopción apartan por defecto el uso del propio repo: las cifras
+  bajan al actualizar.** Desarrollar local-delegate delega mucho, y ese uso no dice si la
+  herramienta sirve fuera del repo. Ahora el panel (KPIs, tablas, gráficos, coste equivalente y
+  tarjeta de hooks), `scripts/measure_adoption.py` y `scripts/measure_plugin_adoption.py` dejan
+  fuera, como ya hacían con las pruebas, las delegaciones y los eventos de hooks pedidos desde
+  `local-delegate`, desde un worktree suyo o desde un proyecto de `LOG_DIR/self-projects.json`. En
+  una máquina donde se desarrolla el repo, los KPI y los porcentajes bajan mucho. **Para recuperar
+  la cifra anterior**: el interruptor «Propio repo» del panel, `include_self=1` en `/api/stats`,
+  `/api/events` y `/api/hooks`, o `--include-self` en los dos scripts. La barra de estado del mod
+  (`/api/stats?session=`) cuenta su sesión entera, sea o no del propio repo, y `local_status`
+  conserva sus cifras y añade una línea con cuántos eventos del mes son del propio repo. Lo
+  desconocido (filas y eventos sin proyecto) se sigue contando. La cuota no cambia.
+- **Lanza `local-delegate recompute-cost` tras actualizar.** Las filas escritas antes no llevan
+  proyecto y cuentan como desconocidas hasta que el relleno se lo da a las que aún tienen
+  transcript, incluidas las del mod por su clave de sesión. Sin esa pasada, el histórico del propio
+  repo sigue dentro de las cifras.
+- **El corte de 90 días de la medición abierta el 2026-09-15 (2026-12-14) se saca con las dos
+  cifras** de `measure_adoption.py`: la comparable con los cortes de 14 y 30 días es la de
+  `--include-self`, porque la de por defecto mezcla eventos viejos sin transcript (se quedan) con
+  eventos recientes del propio repo (se apartan).
+
 ### Corregido
 
 - **`local_commit_msg` ya no entrega sin aviso un mensaje troceado que invierte el sentido del
@@ -19,6 +69,31 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   `### Added`…), cuando el encabezado sale en el diff. Si el mensaje trae otro tipo, se cambia y se
   avisa. Y todo mensaje redactado por partes termina con un aviso que lo dice y lista esas
   condiciones, para revisarlo sin tener el diff delante. Un diff que cabe en una llamada no cambia.
+- **`local_explain_code` avisa de una premisa de la pregunta afirmada junto a código real
+  (#538).** Preguntado dónde un script «parte por hilo principal y subagente», respondió que esa
+  partición se hace en `by_side` y citó las líneas de `by_side`; el script nunca habla de
+  subagentes y no salió ningún aviso. Dos causas, confirmadas ejecutando la comprobación:
+  «subagente» no era una palabra que se comparara (solo las nominalizaciones como «retención»), y
+  una frase con un identificador o una línea citada reales contaba como apoyada. Ahora se comparan
+  también los sustantivos en -ente/-ante que conservan sus primeras letras en inglés (subagente,
+  cliente, componente), sin los adverbios en -mente ni palabras como «siguiente» o «durante»; y
+  un sustantivo así que el fichero no contiene y la respuesta da por hecho solo junto a código
+  real recibe una nota que pide comprobarlo en esas líneas (no el aviso: el código citado puede
+  tratarlo con otro nombre). Un proceso («partición», «retención») no la recibe: el código suele
+  hacerlo con otro nombre, y en la prueba en vivo marcaba una respuesta correcta. La respuesta que niega la premisa no lleva nada. De paso, «sesión» ya se
+  reconoce en un fichero con `session` (la `s` simple del español es doble en inglés).
+- **`local_lint_summary` ya no da como fallo propio el fichero que cita el mensaje de un test de
+  pytest, ni gasta la salida en los ficheros sin fallos (#641).** Con la salida de pytest de 24
+  ficheros (1 fallo, 660 pasados) el resumen sumaba un segundo fallo en un fichero que solo salía
+  citado en el `AssertionError` del único fallo, y luego una línea «sin errores» por cada fichero
+  limpio hasta cortarse por `max_tokens`. La causa estaba en lo que le daba el programa: la lista
+  de todos los ficheros que nombra el log, con el citado primero por ser el más nombrado. Ahora el
+  programa lee los fallos reales del log (las líneas `FAILED`/`ERROR` del resumen de pytest, con el
+  `fichero:línea` de cada traza, y solo si cuadran con la línea de totales) y se los da al modelo
+  en lugar de esa lista. Además comprueba la respuesta contra ellos y, si da entrada a un fichero
+  sin fallos, deja fuera un fichero con fallos o cuenta mal sus fallos, añade un aviso con los
+  fallos reales. Una respuesta correcta y los logs de otras herramientas (ruff, ESLint) quedan
+  igual que antes.
 - **El mod de lectura ya no entrega como resumen el aviso de Claude Code de que la llamada pasó a
   segundo plano (#631).** Cuando `local_summarize` espera más de 2 min (el turno común ocupado, por
   ejemplo), Claude Code la pasa a segundo plano y contesta a quien la llamó con un texto suyo

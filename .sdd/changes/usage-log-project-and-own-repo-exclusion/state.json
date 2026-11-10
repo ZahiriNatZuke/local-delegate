@@ -1,0 +1,102 @@
+{
+  "schemaVersion": 1,
+  "slug": "usage-log-project-and-own-repo-exclusion",
+  "title": "Log de uso con proyecto (hash y tipo) y mediciones que apartan el propio repo",
+  "mode": "standard",
+  "traceability": "strict",
+  "status": "implementing",
+  "createdAt": "2026-11-10T12:06:28.128Z",
+  "updatedAt": "2026-11-10T13:58:51.316Z",
+  "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-11-10T13:58:44.702Z",
+      "evidence": "spec.md: 32 requisitos verificables; research.md con mapa de impacto; tres pasadas de revisión adversarial (plan-review-1.md), última APROBABLE; decisiones D1-D14 en brief.md L1-L5",
+      "actor": "user"
+    },
+    "plan": {
+      "status": "approved",
+      "updatedAt": "2026-11-10T13:58:44.860Z",
+      "evidence": "plan.md: 11 tareas con ficheros dueños y dependencias, 76 mutantes, tabla antes/después sobre copia del log, prueba en vivo con test-window; revisión adversarial en tres pasadas sin bloqueantes (plan-review-1.md)",
+      "actor": "user"
+    },
+    "quality": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "conformance": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "memory": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-11-10T12:06:28.128Z",
+      "reason": "SDD change created"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "researching",
+      "at": "2026-11-10T12:23:37.865Z",
+      "reason": "petición entendida; dos tarjetas de Base fiable"
+    },
+    {
+      "type": "transition",
+      "from": "researching",
+      "to": "specifying",
+      "at": "2026-11-10T12:23:37.953Z",
+      "reason": "research.md entregado: mapa de impacto, 16 requisitos candidatos y 8 tareas"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-11-10T13:58:44.702Z",
+      "evidence": "spec.md: 32 requisitos verificables; research.md con mapa de impacto; tres pasadas de revisión adversarial (plan-review-1.md), última APROBABLE; decisiones D1-D14 en brief.md L1-L5",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-11-10T13:58:44.779Z",
+      "reason": "spec aprobada"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-11-10T13:58:44.860Z",
+      "evidence": "plan.md: 11 tareas con ficheros dueños y dependencias, 76 mutantes, tabla antes/después sobre copia del log, prueba en vivo con test-window; revisión adversarial en tres pasadas sin bloqueantes (plan-review-1.md)",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "plan-review",
+      "at": "2026-11-10T13:58:51.224Z",
+      "reason": "revisión adversarial en tres pasadas (plan-review-1.md)"
+    },
+    {
+      "type": "transition",
+      "from": "plan-review",
+      "to": "implementing",
+      "at": "2026-11-10T13:58:51.316Z",
+      "reason": "spec y plan aprobados tras plan-review"
+    }
+  ]
+}

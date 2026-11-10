@@ -154,8 +154,52 @@ def context_of(payload: dict, script: str) -> dict:
     La hora de arranque de la sesion no se inventa aqui: con ``session_id`` en cada evento, el
     primer evento de esa sesion en el log ya dice cuando empezo, y agrupar por sesion evita mezclar
     dos politicas en la misma muestra.
+
+    Also `project` and `project_kind` (REQ-016), with the rule and from the directory of the usage
+    row: a hook takes them from the `transcript_path` of its input, never from the `cwd`; the mod's
+    line has no `transcript_path` and takes the ones `hook_entry.record_read` resolved from its
+    `session_id` (`run_with_session_project`). Without a valid source, neither field. A rule that
+    raises leaves the event without them, never without the event.
     """
-    return {"version": version_de(script), "session_id": str(payload.get("session_id") or "")}
+    context = {"version": version_de(script), "session_id": str(payload.get("session_id") or "")}
+    context.update(_event_project(payload))
+    return context
+
+
+#: The project of the mod's line (`caller_project`/`caller_project_kind` of `project_identity`), set
+#: only inside `run_with_session_project`; `context_of` reads it when its input has no
+#: `transcript_path`. Holds a hash and a kind, never a path.
+_SESSION_PROJECT: contextvars.ContextVar[Mapping[str, str] | None] = contextvars.ContextVar(
+    "local_delegate_session_project", default=None
+)
+
+
+def run_with_session_project(fields: Mapping[str, str] | None, function, *args):
+    """`function(*args)` with `fields` as the project of the events it records (the mod's line)."""
+    token = _SESSION_PROJECT.set(fields)
+    try:
+        return function(*args)
+    finally:
+        _SESSION_PROJECT.reset(token)
+
+
+def _event_project(payload: object) -> dict:
+    """`project` and `project_kind` of a hook event, or `{}`; never raises."""
+    try:
+        if isinstance(payload, dict) and "transcript_path" in payload:
+            fields: Mapping[str, str] | None = project_identity(payload.get("transcript_path"))
+        else:
+            fields = _SESSION_PROJECT.get()
+        if not fields:
+            return {}
+        event: dict = {}
+        if "caller_project" in fields:
+            event["project"] = fields["caller_project"]
+        if "caller_project_kind" in fields:
+            event["project_kind"] = fields["caller_project_kind"]
+        return event
+    except Exception:
+        return {}
 
 
 # --- Añadir una línea entre procesos (telemetria-escritura-concurrente) ---------------------------
@@ -753,6 +797,318 @@ def log_dir() -> Path:
         return Path.home() / "Library" / "Application Support" / "local-delegate"
     base = os.environ.get("XDG_DATA_HOME", "").strip()
     return (Path(base) if base else Path.home() / ".local" / "share") / "local-delegate"
+
+
+# --- The project of a session (usage-log-project-and-own-repo-exclusion, REQ-001 to REQ-003) ------
+#
+# Every usage row, every hook event and the mod's line say which Claude Code project they came
+# from, as a salted one-way hash and a kind: `self` (this repo, `local-delegate`) or `other`. The
+# rule lives ONCE and here, because the hooks are loose stdlib scripts that cannot import the
+# package; `attribution` re-exports it.
+#
+# The project is the name of the directory Claude Code keeps the session's transcript in, right
+# under `~/.claude/projects` (every path separator of the `cwd` becomes `-`). Nothing is read from
+# disk to decide it: the name comes from the transcript path alone, so it also works for a
+# directory that no longer exists.
+#
+# The salt and the list of extra own projects live in `LOG_DIR`, which always comes from the
+# PROCESS environment (`log_dir()`, never `current_environ()`): the daemon writes the mod's line
+# with the environment the mod sends, and reading `LOG_DIR` from it would let a request create
+# files anywhere (the class of failure closed in 0.41.1). Both are read once per process and per
+# path; the cache key is the file's path because the suite changes `LOCAL_DELEGATE_LOG_DIR` in
+# every test.
+
+#: The public name of this repo: a project whose directory name holds it as a whole segment is
+#: `self`. (A constant of the package; the hooks keep their own copy because they cannot import it.)
+SELF_PROJECT_NAME = "local-delegate"
+#: Prefix of the project hash, so it is never the plain hash of a name someone else hashes.
+PROJECT_HASH_PREFIX = "local-delegate-project:"
+#: The salt's file in `LOG_DIR`: 64 random hex characters, readable only by the user.
+PROJECT_SALT_FILE = "project-salt"
+#: The list of extra own projects in `LOG_DIR`: `{"names": ["<name or path>", ...]}`.
+SELF_PROJECTS_FILE = "self-projects.json"
+#: Above this size the list counts as empty: it is read in every hook event.
+SELF_PROJECTS_MAX_BYTES = 64 * 1024
+#: An entry with fewer alphanumeric characters than this, once normalized, is ignored.
+SELF_PROJECT_MIN_CHARS = 3
+#: How long the search of a session's transcript may take (the budget of `attribution`).
+PROJECT_SEARCH_BUDGET_S = 0.050
+
+_SALT_SHAPE = re.compile(r"^[0-9a-f]{64}$")
+_NOT_ALNUM = re.compile(r"[^A-Za-z0-9]")
+#: Claude Code names a main transcript `<session id>.jsonl`, and the id is a UUID (all 353 of this
+#: machine on 2026-11-10). Anything else never becomes a path.
+_SESSION_UUID = re.compile(
+    r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+)
+_SALTS: dict[str, str] = {}
+_SELF_ENTRIES: dict[str, tuple[str, ...]] = {}
+_SESSION_TRANSCRIPTS: dict[tuple[str, str], Path | None] = {}
+
+
+def projects_root() -> Path:
+    """`~/.claude/projects` of the PROCESS (`Path.home()`, like `attribution._projects_root`).
+
+    Never the `HOME` or `USERPROFILE` a request brings: the caller would choose which folder is
+    walked, and the hash could come from another root than the row's.
+    """
+    return Path.home() / ".claude" / "projects"
+
+
+def normalize_project_name(text: str) -> str:
+    """Every character outside ASCII `[A-Za-z0-9]` becomes `-`, and all of it lower case.
+
+    The same for a directory name and for a list entry (`Diseño` → `dise-o`), so the comparison
+    does not depend on what Claude Code does with those letters.
+    """
+    return _NOT_ALNUM.sub("-", text).lower()
+
+
+def _read_salt(path: Path) -> str | None:
+    """The salt in `path`; `None` if it is missing (`FileNotFoundError` propagates) or invalid."""
+    with open(path, "rb") as stream:
+        text = stream.read(4096).decode("ascii", "replace").strip()
+    return text if _SALT_SHAPE.match(text) else None
+
+
+def _new_salt_file(directory: Path) -> tuple[str, str]:
+    """A temporary file in `directory` that already holds a fresh salt: `(salt, temporary path)`."""
+    salt = os.urandom(32).hex()
+    descriptor, temporary = tempfile.mkstemp(dir=directory, prefix=".project-salt.", suffix=".tmp")
+    try:
+        with os.fdopen(descriptor, "w", encoding="ascii") as stream:
+            stream.write(salt)
+        with contextlib.suppress(OSError):
+            os.chmod(temporary, 0o600)
+    except BaseException:
+        with contextlib.suppress(OSError):
+            os.unlink(temporary)
+        raise
+    return salt, temporary
+
+
+def _repair_salt(path: Path) -> str | None:
+    """Replace an empty or invalid salt file with a valid one, under a lock; `None` if it cannot.
+
+    Under the lock it reads again: another process may have repaired it a moment before, and a
+    valid salt is never overwritten.
+    """
+    fd = _open_shared(path.with_name(PROJECT_SALT_FILE + ".lock"), os.O_RDWR)
+    try:
+        with _exclusive(fd, APPEND_LOCK_WAIT_S) as locked:
+            if not locked:
+                return None
+            try:
+                current = _read_salt(path)
+            except FileNotFoundError:
+                current = None
+            if current is not None:
+                return current
+            salt, temporary = _new_salt_file(path.parent)
+            try:
+                os.replace(temporary, path)
+            except OSError:
+                with contextlib.suppress(OSError):
+                    os.unlink(temporary)
+                return None
+            return salt
+    finally:
+        os.close(fd)
+
+
+def _create_salt(path: Path) -> str | None:
+    """Create the salt atomically and with its content: a temporary file linked to the final
+    name, which fails if it already exists. If another process won, its salt is the one."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    salt, temporary = _new_salt_file(path.parent)
+    try:
+        try:
+            os.link(temporary, path)
+        except FileExistsError:
+            existing = _read_salt(path)
+            return existing if existing is not None else _repair_salt(path)
+        except OSError:
+            # No hard links on this file system: the repair path creates it under the lock.
+            return _repair_salt(path)
+        return salt
+    finally:
+        with contextlib.suppress(OSError):
+            os.unlink(temporary)
+
+
+def project_salt(directory: Path | None = None) -> str | None:
+    """The local salt of the project hash (`LOG_DIR/project-salt`), or `None` if it cannot be read,
+    created or repaired. Read once per process and per path; a failure is not cached."""
+    path = Path(directory if directory is not None else log_dir()) / PROJECT_SALT_FILE
+    key = str(path)
+    cached = _SALTS.get(key)
+    if cached is not None:
+        return cached
+    try:
+        try:
+            salt = _read_salt(path)
+        except FileNotFoundError:
+            salt = _create_salt(path)
+        else:
+            if salt is None:
+                salt = _repair_salt(path)
+    except (OSError, ValueError):
+        return None
+    if salt is not None:
+        _SALTS[key] = salt
+    return salt
+
+
+def self_project_entries(directory: Path | None = None) -> tuple[str, ...]:
+    """The normalized entries of `LOG_DIR/self-projects.json`, read once per process and per path.
+
+    A file above `SELF_PROJECTS_MAX_BYTES`, missing, unreadable or with another shape is an empty
+    list, without error. Entries that are not text, or that have fewer than
+    `SELF_PROJECT_MIN_CHARS` alphanumeric characters once normalized, are ignored. Its content is
+    never logged.
+    """
+    path = Path(directory if directory is not None else log_dir()) / SELF_PROJECTS_FILE
+    key = str(path)
+    if key in _SELF_ENTRIES:
+        return _SELF_ENTRIES[key]
+    entries: tuple[str, ...] = ()
+    try:
+        with open(path, "rb") as stream:
+            data = stream.read(SELF_PROJECTS_MAX_BYTES + 1)
+        if len(data) <= SELF_PROJECTS_MAX_BYTES:
+            parsed = json.loads(data.decode("utf-8-sig"))
+            names = parsed.get("names") if isinstance(parsed, dict) else None
+            if isinstance(names, list):
+                kept = []
+                for name in names:
+                    if not isinstance(name, str):
+                        continue
+                    entry = normalize_project_name(name).strip("-")
+                    if sum(c.isalnum() for c in entry) >= SELF_PROJECT_MIN_CHARS:
+                        kept.append(entry)
+                entries = tuple(dict.fromkeys(kept))
+    except (OSError, ValueError, RecursionError):
+        entries = ()
+    _SELF_ENTRIES[key] = entries
+    return entries
+
+
+def _holds_segment(name: str, entry: str) -> bool:
+    """Whether `entry` is a whole segment of `name`: a `-` or the start on its left, and a `-` or
+    the end on its right (both already normalized)."""
+    return f"-{entry}-" in f"-{name}-"
+
+
+def project_kind_of(name: str, *, directory: Path | None = None) -> str:
+    """`self` if the directory name holds the repo's name or an entry of the list as a whole
+    segment; `other` otherwise."""
+    normalized = normalize_project_name(name)
+    if _holds_segment(normalized, SELF_PROJECT_NAME):
+        return "self"
+    if any(_holds_segment(normalized, entry) for entry in self_project_entries(directory)):
+        return "self"
+    return "other"
+
+
+def project_hash(name: str, salt: str) -> str:
+    """16 hex characters of `sha256(prefix + salt + ":" + name in lower case)`."""
+    data = f"{PROJECT_HASH_PREFIX}{salt}:{name.lower()}".encode("utf-8", "replace")
+    return hashlib.sha256(data).hexdigest()[:16]
+
+
+def project_directory(transcript_path: object, root: Path | None = None) -> str | None:
+    """The name of the project directory of a transcript, or `None` if the path is not valid.
+
+    Valid: it hangs from `root` (by default `projects_root()`) at least one directory deep and ends
+    in `.jsonl`. The check is lexical and touches nothing on disk: the server calls it on the path
+    of every delegation.
+    """
+    if isinstance(transcript_path, Path):
+        transcript_path = str(transcript_path)
+    if not isinstance(transcript_path, str) or not transcript_path.strip():
+        return None
+    path = Path(os.path.abspath(transcript_path.strip()))
+    base = Path(os.path.abspath(root if root is not None else projects_root()))
+    if path.suffix.lower() != ".jsonl":
+        return None
+    parts, base_parts = path.parts, base.parts
+    if len(parts) < len(base_parts) + 2:
+        return None
+    if [os.path.normcase(p) for p in parts[: len(base_parts)]] != [
+        os.path.normcase(p) for p in base_parts
+    ]:
+        return None
+    return parts[len(base_parts)]
+
+
+def project_fields(name: str, *, directory: Path | None = None) -> dict:
+    """`caller_project` and `caller_project_kind` of a project directory name.
+
+    Without a salt there is no hash, never an unsalted one: only the kind.
+    """
+    fields: dict = {}
+    salt = project_salt(directory)
+    if salt is not None:
+        fields["caller_project"] = project_hash(name, salt)
+    fields["caller_project_kind"] = project_kind_of(name, directory=directory)
+    return fields
+
+
+def project_identity(
+    transcript_path: object, *, root: Path | None = None, directory: Path | None = None
+) -> dict:
+    """The ONE project rule (REQ-001): from a valid transcript path, `caller_project` (salted hash
+    of the directory name) and `caller_project_kind` (`self` or `other`); `{}` if the path is not
+    valid. `directory` is `LOG_DIR` (salt and list); by default, the process's."""
+    name = project_directory(transcript_path, root)
+    return {} if name is None else project_fields(name, directory=directory)
+
+
+def project_of_session(
+    session_id: object,
+    *,
+    root: Path | None = None,
+    clock=time.monotonic,
+    budget_s: float = PROJECT_SEARCH_BUDGET_S,
+) -> Path | None:
+    """The only `<root>/*/<session_id>.jsonl`, or `None` (REQ-016, D13, D14).
+
+    `session_id` must have the shape of a UUID: any other shape, separators or `..` included,
+    never forms a path. `None` too if it is in no directory, in more than one, or if the search
+    takes more than `budget_s`. The root is the process's (`projects_root()`). A found or
+    ambiguous result is cached per root and session; "not found" and a spent budget are not, so a
+    session that shows up later is found the next time.
+    """
+    if not isinstance(session_id, str) or not _SESSION_UUID.match(session_id):
+        return None
+    base = Path(root) if root is not None else projects_root()
+    key = (str(base), session_id)
+    if key in _SESSION_TRANSCRIPTS:
+        return _SESSION_TRANSCRIPTS[key]
+    start = clock()
+    found: list[Path] = []
+    try:
+        with os.scandir(base) as entries:
+            for entry in entries:
+                if clock() - start > budget_s:
+                    return None
+                try:
+                    if not entry.is_dir(follow_symlinks=False):
+                        continue
+                except OSError:
+                    continue
+                candidate = Path(entry.path) / f"{session_id}.jsonl"
+                if candidate.is_file():
+                    found.append(candidate)
+                    if len(found) > 1:
+                        break
+    except OSError:
+        return None
+    if clock() - start > budget_s or not found:
+        return None
+    result = found[0] if len(found) == 1 else None
+    _SESSION_TRANSCRIPTS[key] = result
+    return result
 
 
 # --- Idioma de la salida (REQ-018, REQ-019, REQ-047; plan D7) ------------------------------------

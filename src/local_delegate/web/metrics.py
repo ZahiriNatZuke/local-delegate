@@ -255,6 +255,15 @@ def _last_event_ts() -> str | None:
 # números distintos del mismo log.
 _accounting = server._accounting
 
+#: `attribution.caller_column` value → the count field of `/api/stats` (REQ-014). `mod_calls`
+#: keeps its meaning: the calls the plugin's mod asked for.
+_CALLER_FIELDS = {
+    "main": "main_calls",
+    "subagent": "subagent_calls",
+    "mod": "mod_calls",
+    "unknown": "unknown_caller_calls",
+}
+
 
 def _aggregate(rows: list[dict]) -> dict:
     by_tool: dict[str, dict] = defaultdict(
@@ -289,10 +298,12 @@ def _aggregate(rows: list[dict]) -> dict:
     # —una casilla propia, ni repartidas ni descartadas—, que es lo que de verdad se sabe de ellas.
     # `mod_calls`: cuántas de `calls` pidió el mod del plugin y no el modelo (REQ-015 de
     # claude-plugin-and-mods). Siguen siendo uso: se cuentan aparte, no se quitan.
+    # The four caller columns (REQ-014 of usage-log-project-and-own-repo-exclusion) come from
+    # `attribution.caller_column`, the one rule: they add up to `calls`.
     by_client: dict[str, dict] = defaultdict(
         lambda: {
             "calls": 0,
-            "mod_calls": 0,
+            **dict.fromkeys(_CALLER_FIELDS.values(), 0),
             "backend_calls": 0,
             "saved": 0,
             "net": 0,
@@ -336,6 +347,7 @@ def _aggregate(rows: list[dict]) -> dict:
         "chars_returned": 0,
         "estimated_events": 0,  # cuántos no traían token real y hubo que estimar
         "fallback_events": 0,  # respondió un respaldo: la medición pudo contaminarla un swap
+        **dict.fromkeys(_CALLER_FIELDS.values(), 0),
     }
     # Causa de cada fallo o salto (`configuration`, `model`, `cooldown`…): una de configuración
     # tiene que verse en el panel para que alguien la arregle (REQ-019).
@@ -393,8 +405,10 @@ def _aggregate(rows: list[dict]) -> dict:
         client = r.get("client")
         c = by_client[client if isinstance(client, str) and client else "unknown"]
         c["calls"] += 1
-        if attribution.is_mod_call(r):
-            c["mod_calls"] += 1
+        caller_field = _CALLER_FIELDS[attribution.caller_column(r)]
+        c[caller_field] += 1
+        total[caller_field] += 1
+        if caller_field == "mod_calls":
             mod_calls += 1
         c["backend_calls"] += acc["backend_calls"]
         c["saved"] += acc["saved"]
@@ -469,7 +483,7 @@ def _aggregate(rows: list[dict]) -> dict:
         {
             "client": name,
             "calls": v["calls"],
-            "mod_calls": v["mod_calls"],
+            **{field: v[field] for field in _CALLER_FIELDS.values()},
             "backend_calls": v["backend_calls"],
             "tokens_saved": v["saved"],
             "tokens_net": v["net"],
@@ -526,11 +540,38 @@ def _split_tests(rows: list[dict]) -> tuple[list[dict], list[dict]]:
     return kept, tests
 
 
-def _usage_rows(rows: list[dict], include: bool) -> tuple[list[dict], dict]:
-    """Las filas que cuentan como uso y los contadores que lo explican (REQ-011, REQ-012)."""
+def _include_self(value: str | None) -> bool:
+    """`include_self=1` (or `true`) turns the own-repo switch on, with the same rule as
+    `include_tests` (usage-log-project-and-own-repo-exclusion, REQ-009)."""
+    return _include_tests(value)
+
+
+def _without_self(rows: list[dict]) -> list[dict]:
+    """The rows that are not from the own repo, with the ONE rule (`attribution.project_kind`).
+    A row without the field (`unknown`) stays: nothing says it is the own repo."""
+    return [r for r in rows if attribution.project_kind(r) != "self"]
+
+
+def _usage_rows(
+    rows: list[dict], include: bool, include_self: bool = True
+) -> tuple[list[dict], dict]:
+    """Las filas que cuentan como uso y los contadores que lo explican (REQ-011, REQ-012).
+
+    Tests go first and the own repo after them (REQ-009 of usage-log-project-and-own-repo-
+    exclusion): `excluded_self` counts only what the second filter removed, so `shown +
+    excluded_tests + excluded_self` is the whole range. `self_in_range` counts every `self` row of
+    the range, also the ones that are tests too, as `tests_in_range` counts every test.
+    """
     kept, tests = _split_tests(rows)
-    shown = rows if include else kept
-    return shown, {"excluded_tests": 0 if include else len(tests), "tests_in_range": len(tests)}
+    after_tests = rows if include else kept
+    shown = after_tests if include_self else _without_self(after_tests)
+    return shown, {
+        "excluded_tests": 0 if include else len(tests),
+        "tests_in_range": len(tests),
+        "excluded_self": len(after_tests) - len(shown),
+        "self_in_range": sum(1 for r in rows if attribution.project_kind(r) == "self"),
+        "unknown_project": sum(1 for r in shown if attribution.project_kind(r) == "unknown"),
+    }
 
 
 @app.get("/api/events")
@@ -538,11 +579,12 @@ def events(
     from_: str | None = Query(None, alias="from"),
     to: str | None = Query(None),
     include_tests: str | None = Query(None),
+    include_self: str | None = Query(None),
 ):
     # Sin `lang`: las filas son datos del log y se sirven tal cual (REQ-033).
     range_from, range_to = _resolve_range(from_, to)
     rows, files_read = _load(range_from, range_to)
-    rows, counts = _usage_rows(rows, _include_tests(include_tests))
+    rows, counts = _usage_rows(rows, _include_tests(include_tests), _include_self(include_self))
     rows.reverse()  # más recientes primero
     return JSONResponse(
         {
@@ -567,15 +609,19 @@ def stats(
     include_tests: str | None = Query(None),
     lang: str | None = Query(None),
     session: str | None = Query(None),
+    include_self: str | None = Query(None),
 ):
     language = _lang(lang)
     range_from, range_to = _resolve_range(from_, to)
     rows, _files_read = _load(range_from, range_to)
+    # With `session=` the own-repo filter does not apply (REQ-010): the mod's status line asks for
+    # its own session's saving, and inside this repo it would always be 0.
+    keep_self = bool(session) or _include_self(include_self)
     if session:
         # The mod's status line (REQ-017 of claude-plugin-and-mods): only that session's lines,
         # for the usage and for the cost alike. Lines without a key (older, other clients) drop.
         rows = [r for r in rows if _session_matches(r, session)]
-    usage, counts = _usage_rows(list(rows), _include_tests(include_tests))
+    usage, counts = _usage_rows(list(rows), _include_tests(include_tests), keep_self)
     data = _aggregate(usage)
     data.update(counts)
     data["open_test_windows"] = [
@@ -586,9 +632,12 @@ def stats(
     # `recompute-cost` en el directorio de logs: el panel nunca abre `~/.claude` (REQ-073).
     # El coste ve SIEMPRE todas las filas del rango y aparta las pruebas él mismo con `exclusion_reason`:
     # no depende del interruptor (REQ-014). Las imágenes son uso: siguen al interruptor.
+    # The own repo does leave the cost by default (REQ-011 of usage-log-project-and-own-repo-
+    # exclusion): a cost that kept it would contradict the KPIs of the same screen.
     now = _now()
     aggregates = recompute.read_aggregates(config.LOG_DIR)
-    data["cost"] = valuation.cost_block(rows, aggregates, now=now, language=language)
+    cost_rows = rows if keep_self else _without_self(rows)
+    data["cost"] = valuation.cost_block(cost_rows, aggregates, now=now, language=language)
     data["images"] = valuation.images_block(usage)
     # El contenido es `density.json` tal cual (sin las claves `_`): sus claves cambian con su lector.
     data["density_table"] = {
@@ -724,12 +773,20 @@ def _aggregate_hooks(rows: list[dict]) -> dict:
     }
 
 
+def _event_project_kind(event: dict) -> str:
+    """`self`, `other` or `unknown` of a hook telemetry event (`project_kind`, REQ-016), with the
+    same values as `attribution.project_kind` gives a usage row."""
+    kind = event.get("project_kind")
+    return kind if kind in attribution.PROJECT_KINDS else "unknown"
+
+
 @app.get("/api/hooks")
 def hooks(
     from_: str | None = Query(None, alias="from"),
     to: str | None = Query(None),
     include_tests: str | None = Query(None),
     lang: str | None = Query(None),
+    include_self: str | None = Query(None),
 ):
     """Lo que los hooks consultivos han sugerido, en el mismo rango que el resto del panel.
 
@@ -744,6 +801,8 @@ def hooks(
                 "enabled": False,
                 "reason": i18n.t_lang(_lang(lang), "panel.hooks.disabled"),
                 "excluded_tests": 0,
+                "excluded_self": 0,
+                "unknown_project": 0,
                 **_aggregate_hooks([]),
             }
         )
@@ -763,12 +822,20 @@ def hooks(
             before = len(rows)
             rows = [f for f in rows if windows.find(f.get("ts"), now=now) is None]
             excluded = before - len(rows)
+    # The own repo after the tests, as in `/api/stats` (REQ-012 of usage-log-project-and-own-repo-
+    # exclusion). An event without `project_kind` (older, or a hook input without a transcript)
+    # stays: nothing says it is the own repo.
+    after_tests = len(rows)
+    if not _include_self(include_self):
+        rows = [f for f in rows if _event_project_kind(f) != "self"]
     return JSONResponse(
         {
             "enabled": True,
             "log": str(path),
             "exists": path.is_file(),
             "excluded_tests": excluded,
+            "excluded_self": after_tests - len(rows),
+            "unknown_project": sum(1 for f in rows if _event_project_kind(f) == "unknown"),
             **_aggregate_hooks(rows),
         }
     )
@@ -1581,6 +1648,10 @@ a{color:var(--blue);text-decoration:none}
    para cerrarla está en su ⓘ. */
 .tdot{width:7px;height:7px;border-radius:50%;background:var(--amber);flex:0 0 auto;
   box-shadow:0 0 0 2px color-mix(in srgb,var(--amber) 28%,transparent)}
+/* What the own-repo switch leaves out, beside its label: a number, no text. */
+.tcount{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--tx2);
+  background:var(--panel2);border:1px solid var(--bd);border-radius:999px;padding:0 6px;
+  line-height:16px}
 .ver{font-family:var(--mono);font-size:10px;font-weight:700;color:var(--acc);
   background:color-mix(in srgb,var(--acc) 10%,transparent);
   border:1px solid color-mix(in srgb,var(--acc) 30%,transparent);
@@ -1964,6 +2035,14 @@ footer{color:var(--faint);font-size:11.5px;margin-top:26px;padding-top:18px;bord
         <span data-i18n="tests.label"></span><span class="tdot" id="testsDot" hidden></span></button>
       <button class="ibtn" id="testsInfo" data-group="tests" aria-haspopup="dialog"
         data-i18n-title="tests.info_title" data-i18n-aria="tests.info_aria"></button>
+      <!-- Own-repo switch (usage-log-project-and-own-repo-exclusion, REQ-013): off, the panel leaves
+           out the delegations of the own repo; on, the three requests carry include_self=1. The
+           number is what is left out; the rule lives in its ⓘ. -->
+      <button id="self" class="btn" data-i18n-title="self.title" aria-pressed="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="5" r="2"/><circle cx="6" cy="19" r="2"/><circle cx="18" cy="8" r="2"/><path d="M6 7v10"/><path d="M18 10a6 6 0 0 1-6 6H6"/></svg>
+        <span data-i18n="self.label"></span><span class="tcount" id="selfCount" hidden></span></button>
+      <button class="ibtn" id="selfInfo" data-group="self" aria-haspopup="dialog"
+        data-i18n-title="self.info_title" data-i18n-aria="self.info_aria"></button>
       <button id="auto" class="btn on" data-i18n-title="auto.title">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 0 1 15.4-6.4L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-15.4 6.4L3 16"/><path d="M3 21v-5h5"/></svg>
         <span data-i18n="auto.label"></span></button>
@@ -2126,6 +2205,7 @@ footer{color:var(--faint);font-size:11.5px;margin-top:26px;padding-top:18px;bord
     <section id="dlgQuota" data-group="cost" style="--hc:var(--violet)"><h4 data-i18n="quota.title"></h4><div id="dlgQuotaBody"></div></section>
     <section id="dlgImages" data-group="cost" style="--hc:var(--cyan)"><h4 data-i18n="images.title"></h4><div id="dlgImagesBody"></div></section>
     <section id="dlgTests" data-group="tests" style="--hc:var(--amber)"><h4 data-i18n="dialog.tests.title"></h4><div id="dlgTestsBody"></div></section>
+    <section id="dlgSelf" data-group="self" style="--hc:var(--amber)"><h4 data-i18n="dialog.self.title"></h4><div id="dlgSelfBody"></div></section>
     <section id="dlgHooks" data-group="hooks" style="--hc:var(--amber)"><h4 data-i18n="dialog.card.title"></h4>
       <div data-i18n-html="dialog.hooks.body_html"></div></section>
     <section id="dlgSystem" data-group="system" style="--hc:var(--amber)"><h4 data-i18n="dialog.card.title"></h4>
@@ -2226,7 +2306,7 @@ function fmtCompact(n){
 // «1 estimado / 4 estimados»: la cifra con su formato y la palabra concordada del catálogo
 // (`<key>.one` y `<key>.other`), sin «(s)».
 function plural(n, key){ return fmtNum(n, 0) + ' ' + T(key + (n === 1 ? '.one' : '.other')); }
-const state = {events:[], stats:null, hooks:null, system:null, range:'today', auto:true, tests:false, charts:{},
+const state = {events:[], stats:null, hooks:null, system:null, range:'today', auto:true, tests:false, self:false, charts:{},
   page:0, status:null, running:{}, backendUp:undefined, inflight:[],
   activity:null, lastEvent:null, backendOrigin:null, backendHost:null};
 const cssv = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
@@ -2343,11 +2423,14 @@ function computeRange(preset){
 // La query de las tres peticiones del panel. Pura, para que node la pruebe: rango e interruptor
 // «Pruebas» van juntos y una petición no puede salir con otro conjunto que las demás. `lang` es el
 // idioma del selector: el servidor redacta en él lo que manda ya escrito (D6).
-function buildQuery(range, includeTests, lang){
+// `includeSelf` is the own-repo switch (usage-log-project-and-own-repo-exclusion, REQ-013): it goes
+// last and is optional, so a call with three arguments keeps leaving the own repo out.
+function buildQuery(range, includeTests, lang, includeSelf){
   const qs = new URLSearchParams();
   if(range && range.from) qs.set('from', range.from);
   if(range && range.to) qs.set('to', range.to);
   if(includeTests) qs.set('include_tests', '1');
+  if(includeSelf) qs.set('include_self', '1');
   if(lang) qs.set('lang', lang);
   return qs.toString();
 }
@@ -2356,7 +2439,7 @@ function langQuery(){ return 'lang=' + encodeURIComponent(LANG); }
 
 async function fetchData(){
   try{
-    const q = buildQuery(computeRange(state.range), state.tests, LANG);
+    const q = buildQuery(computeRange(state.range), state.tests, LANG, state.self);
     // Los KPIs vienen de /api/stats y NO se recalculan aquí: es la única implementación de las
     // cuentas (la de Python). Además /api/events viene topado a MAX_EVENTS, así que sumar sobre
     // esta lista subestimaría en rangos grandes mientras el pie muestra el total real.
@@ -2406,25 +2489,38 @@ function renderClients(s){
 
   const totalCalls = rows.reduce((a,c)=>a+c.calls,0);
   document.getElementById('clientsHead').textContent = plural(rows.length, 'unit.client');
-  // Las del mod del plugin (`toolu_plugin_…`) van dentro de las delegaciones y se dicen aparte.
-  const modCell = c => (c.mod_calls||0)
-    ? ' <span style="color:var(--mut)">· ' + T('clients.mod_calls', {n: F.format(c.mod_calls)}) + '</span>'
-    : '';
+  // Who asked, in three columns (usage-log-project-and-own-repo-exclusion, REQ-015): main thread,
+  // subagents and the plugin's mod (`toolu_plugin_…`), all inside the delegations. The fourth,
+  // the rows without real thread data, only shows when some row has any. The mod cell keeps its
+  // «N del mod» as a tooltip.
+  const showUnknown = rows.some(c => (c.unknown_caller_calls||0) > 0);
+  const callerCell = (n, title) => n
+    ? '<td class="num"' + (title ? ' title="' + escHooks(title) + '"' : '') + '>' + F.format(n) + '</td>'
+    : '<td class="num" style="color:var(--mut)">0</td>';
+  const callerCells = c =>
+    callerCell(c.main_calls||0) + callerCell(c.subagent_calls||0)
+    + callerCell(c.mod_calls||0, T('clients.mod_calls', {n: F.format(c.mod_calls||0)}))
+    + (showUnknown ? callerCell(c.unknown_caller_calls||0) : '');
 
   const body = rows.map(c=>{
     const p = totalCalls ? (c.calls/totalCalls*100) : 0;
     return '<tr><td class="mono" title="' + escHooks(c.client) + '">' + escHooks(labelFor('client', c.client)) + '</td>'
-      + '<td class="num">' + F.format(c.calls) + modCell(c) + '</td>'
+      + '<td class="num">' + F.format(c.calls) + '</td>'
       + '<td class="num" style="color:var(--tx2)">' + F.format(c.backend_calls) + '</td>'
       + '<td class="num" style="color:var(--green)">' + F.format(c.tokens_net) + '</td>'
-      + '<td class="num" style="color:var(--cyan)">' + F1.format(p) + ' %</td></tr>';
+      + '<td class="num" style="color:var(--cyan)">' + F1.format(p) + ' %</td>'
+      + callerCells(c) + '</tr>';
   }).join('');
 
   document.getElementById('clientsBody').innerHTML =
     '<div style="overflow-x:auto"><table>'
     + '<thead><tr><th>' + T('clients.col.client') + '</th><th>' + T('clients.col.delegations') + '</th>'
     + '<th>' + T('clients.col.backend_calls') + '</th><th>' + T('clients.col.net') + '</th>'
-    + '<th>' + T('clients.col.share') + '</th></tr></thead>'
+    + '<th>' + T('clients.col.share') + '</th>'
+    + '<th>' + T('clients.col.main') + '</th><th>' + T('clients.col.subagent') + '</th>'
+    + '<th>' + T('clients.col.mod') + '</th>'
+    + (showUnknown ? '<th>' + T('clients.col.unknown') + '</th>' : '')
+    + '</tr></thead>'
     + '<tbody>' + body + '</tbody></table></div>';
 }
 
@@ -2509,6 +2605,31 @@ function renderTestsInfo(s){
   document.getElementById('dlgTestsBody').innerHTML = paragraphsHtml(testsText(s), true)
     .replace(/`([^`]+)`/g, '<code>$1</code>');
   document.getElementById('testsDot').hidden = !((s && s.open_test_windows)||[]).length;
+  // The two filter switches are painted together, from the same `/api/stats` answer.
+  renderSelfInfo(s);
+}
+
+// --- Own repo: the text of its ⓘ and the number on the switch (REQ-013) ---
+function selfText(j){
+  if(!j) return [];
+  const L = [];
+  const excluded = j.excluded_self||0, inRange = j.self_in_range||0, unknown = j.unknown_project||0;
+  if(excluded) L.push(T('self.line.excluded', {n: plural(excluded, 'unit.delegation')}));
+  else if(inRange) L.push(T('self.line.included', {n: plural(inRange, 'unit.delegation')}));
+  else L.push(T('self.line.none'));
+  if(unknown) L.push(T('self.line.unknown', {n: plural(unknown, 'unit.delegation')}));
+  L.push(T('self.line.rule'));
+  L.push(T('self.line.session'));
+  return L;
+}
+
+function renderSelfInfo(s){
+  document.getElementById('dlgSelfBody').innerHTML = paragraphsHtml(selfText(s), true)
+    .replace(/`([^`]+)`/g, '<code>$1</code>');
+  const excluded = (s && s.excluded_self)||0;
+  const count = document.getElementById('selfCount');
+  count.hidden = !excluded;
+  count.textContent = excluded ? F.format(excluded) : '';
 }
 
 function costText(j){
@@ -3683,6 +3804,19 @@ document.getElementById('tests').onclick=()=>{
   try{ localStorage.setItem('ld-tests', state.tests ? '1' : '0'); }catch(e){}
   fetchData();
 };
+// Own-repo switch (REQ-013): off by default, so the panel opens with the own repo left out; it is
+// remembered per browser (`ld-self`), like «Pruebas».
+function paintSelfToggle(){
+  const b = document.getElementById('self');
+  b.classList.toggle('on', state.self); b.setAttribute('aria-pressed', String(state.self));
+}
+try{ state.self = localStorage.getItem('ld-self') === '1'; }catch(e){ state.self = false; }
+paintSelfToggle();
+document.getElementById('self').onclick=()=>{
+  state.self = !state.self; paintSelfToggle();
+  try{ localStorage.setItem('ld-self', state.self ? '1' : '0'); }catch(e){}
+  fetchData();
+};
 // Selector de idioma (REQ-020). Lo ya pintado se repinta al momento con los datos que hay; lo que
 // redacta el servidor (causas, motivos, resúmenes de tools) llega con el refresco que se pide ya
 // (REQ-025: como muy tarde en el siguiente refresco). No toca el rango, los filtros ni la sesión.
@@ -3727,6 +3861,7 @@ const INFO_GROUPS = {
   hooks:{title:'info.hooks', icon:ICON.info, color:'var(--amber)'},
   system:{title:'info.system', icon:ICON.gen, color:'var(--amber)'},
   tests:{title:'info.tests', icon:ICON.info, color:'var(--amber)'},
+  self:{title:'info.self', icon:ICON.info, color:'var(--amber)'},
 };
 function openInfo(group, section){
   const g = INFO_GROUPS[group] || INFO_GROUPS.cost;
