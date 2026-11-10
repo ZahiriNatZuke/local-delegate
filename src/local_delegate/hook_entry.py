@@ -209,6 +209,11 @@ def record_read(entry: object, environ) -> None:
     `POST /api/hook/record-read` (con el entorno que manda el mod, `RECORD_ENV`). Corre el
     `record_decision` del script de esa vía, el mismo que escribe la línea del hook, viendo
     `environ` por `hook_common.run_with_environ`: no lee ni toca `os.environ` cuando le pasan otro.
+
+    The line carries the project of its session (REQ-016, D13): the entry has no `transcript_path`,
+    so `hook_common.project_of_session` finds the session's transcript from its `session_id` under
+    the PROCESS's projects root, and `project_identity` hashes it with the PROCESS's `LOG_DIR` salt,
+    as the usage row does. Neither comes from `environ`, which the mod sends.
     """
     if not isinstance(entry, dict):
         return
@@ -217,9 +222,24 @@ def record_read(entry: object, environ) -> None:
     module = _load_hook_module(script)
     # El `hook_common` que importó el script (módulo suelto), no el del paquete: es el que lee.
     common = _load_hook_module("hook_common")
+    common.run_with_environ(environ, _record_decision, common, module, entry)
+
+
+def _session_project(common, session_id: object) -> dict:
+    """`caller_project`/`caller_project_kind` of the session's transcript, or `{}`; never raises."""
+    try:
+        transcript = common.project_of_session(session_id)
+        return {} if transcript is None else common.project_identity(transcript)
+    except Exception:
+        return {}
+
+
+def _record_decision(common, module, entry: dict) -> None:
+    # The variable goes into the LOOSE `hook_common`, the one `record_decision` and `context_of` read.
+    project = _session_project(common, entry.get("session_id"))
     # `record_or_raise`: a line that cannot be written raises here instead of passing for written,
     # so the endpoint answers 500 and the CLI exits 1 (the mod then retries or logs the loss).
-    common.run_with_environ(environ, common.record_or_raise, module.record_decision, entry)
+    common.record_or_raise(common.run_with_session_project, project, module.record_decision, entry)
 
 
 def _record_read(state: dict) -> None:
