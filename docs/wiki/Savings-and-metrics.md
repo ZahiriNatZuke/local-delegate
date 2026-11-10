@@ -300,6 +300,10 @@ del panel (`acct`), atadas por un test de paridad:
 - **Qué es un fallo**: el campo `ok` existe y vale exactamente `false`. Un evento con `ok: null` o
   sin la clave **no** es un fallo. Ese mismo predicado es el que usan el KPI «Errores» (la tasa de error), el punto
   rojo de la tabla de actividad y los errores por herramienta de `/api/stats`.
+- **Un `local_extract` sin datos es un fallo** aunque el backend contestara bien: si la respuesta
+  no era un objeto JSON y la tool devolvió `_local_delegate.error`, la fila va con `ok: false`,
+  `error: "invalid_json"` y `error_class: "model"` (conserva `finish_reason`, por ejemplo
+  `length`), y no suma ahorro. Las filas anteriores a este cambio dicen `ok: true` (issue #649).
 - **El neto puede ser negativo**: una delegación que devuelve más de lo que leyó resta. El KPI, la
   chispa y «Ahorro por herramienta» lo enseñan con su signo (una barra negativa sale a la izquierda
   del 0); no se recorta.

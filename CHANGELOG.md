@@ -106,6 +106,14 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   va en `_local_delegate.section_only_keys` con aviso: lee ese rango. El valor nunca se reescribe
   y la instrucción del modelo no cambia (pedirle cada elemento con su línea lo dejaba sin tokens
   a mitad de la lista y sin JSON válido).
+- **Un `local_extract` que responde con error ya no consta como acierto en el log de uso (#649).**
+  Cuando el modelo contestaba algo que no era un objeto JSON (cortado por `max_tokens`, prosa o una
+  lista), la tool devolvía `_local_delegate.error`, pero la fila decía `ok: true` porque se escribía
+  antes de parsear; el panel y `local_status` la contaban como acierto y su entrada leída por `path`
+  como contexto conservado. Ahora la tool retiene su fila hasta saber el resultado y, si es un
+  error, la escribe con `ok: false`, `error: "invalid_json"` y `error_class: "model"`: entra en
+  «Errores» y no suma ahorro. Un fallo del backend conserva su propio error. Las demás tools no
+  tienen este hueco: devuelven el texto del modelo (con aviso si salió cortado), no un error propio.
 - **`local_commit_msg` ya no entrega sin aviso un mensaje troceado que invierte el sentido del
   cambio (#636).** Con un diff de ~27 KB en 3 partes, la condición cambiada solo estaba en una
   parte, y el paso que redacta el mensaje veía las notas de las partes y la lista de ficheros, ni
