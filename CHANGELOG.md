@@ -21,6 +21,18 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   tratarlo con otro nombre). Un proceso («partición», «retención») no la recibe: el código suele
   hacerlo con otro nombre, y en la prueba en vivo marcaba una respuesta correcta. La respuesta que niega la premisa no lleva nada. De paso, «sesión» ya se
   reconoce en un fichero con `session` (la `s` simple del español es doble en inglés).
+- **`local_lint_summary` ya no da como fallo propio el fichero que cita el mensaje de un test de
+  pytest, ni gasta la salida en los ficheros sin fallos (#641).** Con la salida de pytest de 24
+  ficheros (1 fallo, 660 pasados) el resumen sumaba un segundo fallo en un fichero que solo salía
+  citado en el `AssertionError` del único fallo, y luego una línea «sin errores» por cada fichero
+  limpio hasta cortarse por `max_tokens`. La causa estaba en lo que le daba el programa: la lista
+  de todos los ficheros que nombra el log, con el citado primero por ser el más nombrado. Ahora el
+  programa lee los fallos reales del log (las líneas `FAILED`/`ERROR` del resumen de pytest, con el
+  `fichero:línea` de cada traza, y solo si cuadran con la línea de totales) y se los da al modelo
+  en lugar de esa lista. Además comprueba la respuesta contra ellos y, si da entrada a un fichero
+  sin fallos, deja fuera un fichero con fallos o cuenta mal sus fallos, añade un aviso con los
+  fallos reales. Una respuesta correcta y los logs de otras herramientas (ruff, ESLint) quedan
+  igual que antes.
 - **El mod de lectura ya no entrega como resumen el aviso de Claude Code de que la llamada pasó a
   segundo plano (#631).** Cuando `local_summarize` espera más de 2 min (el turno común ocupado, por
   ejemplo), Claude Code la pasa a segundo plano y contesta a quien la llamó con un texto suyo

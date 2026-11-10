@@ -140,6 +140,9 @@ de diccionario.
     zlib (`fanout`, `idx`, `ofs`, `varint`, `packs`, `deltas`, `inflate`, `inflated`, `inflater`,
     `indexes`, `bit`, `shift`, `clone`, `orig`), `regular` (de `_regular_file`, «fichero
     normal», no un FIFO) y los de sus tests (`bomb`, `zip`, `pulled`, `rebuilt`).
+23. Con los fallos de pytest que lee `lint_patterns.py` (#641, 2026-11-10) el detector informó de
+    5 palabras sin clasificar, a mano, todas a inglés: `xdist` (el plugin de pytest), `locations`,
+    `miscounted` y, de sus tests, `collection` y `disagrees`.
 
 ## Heurísticas (no usan datos ajenos)
 
