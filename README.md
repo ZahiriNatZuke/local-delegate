@@ -167,7 +167,7 @@ al contexto de Claude, y de ahí sale el ahorro.
 |---|---|---|
 | `local_summarize` | Resume texto o archivo; `focus` opcional para decir qué conservar (p. ej. «cifras de configuración») | mecánico / largo (auto) |
 | `local_classify` | Devuelve UNA etiqueta de una lista | mecánico |
-| `local_extract` | Extrae campos → **objeto validado** con exactamente las claves pedidas (las que falten o vengan como «N/A», `null`), no una cadena que haya que parsear; con `path`, números de línea reales para un campo que los pida | mecánico / largo (auto) |
+| `local_extract` | Extrae campos → **objeto validado** con exactamente las claves pedidas (las que falten o vengan como «N/A», `null`), no una cadena que haya que parsear; con `path`, números de línea reales para un campo que los pida; una entrada pequeña con tabla va al modelo largo y `_local_delegate.role_reason` lo dice | mecánico / largo (auto; también con tabla) |
 | `local_boilerplate` | Genera código desde una spec y lo **escribe en `target`**; devuelve solo un recibo | código |
 | `local_delegate` | Escape genérico texto→texto | mecánico (o el que pases) |
 | `local_lint_summary` | Resume logs de lint/tests/CI | mecánico / largo (auto) |
@@ -260,6 +260,7 @@ cámbialos por los de tu backend.
 | `LOCAL_DELEGATE_MAX_IMAGE_MB` | `8` | Tope de tamaño de imagen para `local_describe_image` |
 | `LOCAL_DELEGATE_DUMP_CHUNK_NOTES` | *(vacío: apagado)* | Carpeta local donde cada operación troceada deja la salida de cada paso; solo para medir, nunca sale de la máquina |
 | `LOCAL_DELEGATE_LONG_INPUT_CHARS` | `6000` | Umbral mecánico↔largo |
+| `LOCAL_DELEGATE_EXTRACT_TABLE_LONG` | `1` | `local_extract` manda al modelo largo una entrada por debajo del umbral que trae una tabla HTML o Markdown, y lo dice en `role_reason` (respuesta y log). Tarda más y puede cargar el modelo; `0` lo apaga |
 | `LOCAL_DELEGATE_CHUNK_CHARS` | `3500` | Tamaño de trozo al partir documentos largos (`local_translate`, `local_delegate`) |
 | `LOCAL_DELEGATE_CHUNK_MAX_TOKENS` | `2048` | Techo de `max_tokens` por trozo |
 | `LOCAL_DELEGATE_CHUNK_MIN_CHARS` | `400` | Trozo mínimo: por debajo ya no se vuelve a partir |

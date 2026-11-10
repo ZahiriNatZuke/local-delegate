@@ -6,6 +6,36 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Cambiado
+
+- **`local_extract` manda al modelo de contexto largo una entrada pequeña que trae una tabla
+  (#586).** Con una tabla HTML (`<table`/`<tr`) o Markdown (con su línea separadora) por debajo de
+  `LOCAL_DELEGATE_LONG_INPUT_CHARS`, el modelo mecánico contestaba con el valor de otra fila: en 8
+  de las 16 tablas pequeñas medidas, y también con un solo campo pedido (7 de 8 claves). El rol
+  `long` no cruzó en ninguna de esas 8 por el propio `local_extract` (0 de 8 casos, 0 de 44 claves
+  falladas en las limpias). Va también con un solo campo. La respuesta lo dice en
+  `_local_delegate.role_reason` (`{"role": "long", "reason": "table", "notice": …}`, también en
+  una respuesta de error y nunca en `warning`) y la fila del log de uso lleva
+  `role_reason: "table"`, también las de una llamada cortada (plazo propio, cola saturada,
+  excepción). El prompt no cambia; la llamada toma los parámetros y el respaldo del rol `long`.
+  - **Lo que cuesta.** Mediana de inferencia de 2,944 s medida con el modelo largo frente a 0,84 s
+    con el mecánico; de 10 a 13 s más si el modelo largo no estaba cargado, y el p90 histórico de
+    la espera con cambio de modelo es de 31,9 s. Si el modelo largo falla, el respaldo es el de su
+    cadena, el modelo de `code` (el de carga más cara), no el del mecánico. Mientras el backend
+    cambia de modelo, los demás clientes que lo comparten (otra máquina, otras sesiones) lo ven
+    arrancando, y la siguiente llamada mecánica paga la vuelta. La regla la aplica el proceso MCP
+    de cada cliente: una máquina remota con esta versión también provoca el cambio en el backend
+    compartido.
+  - **Cómo se apaga.** `LOCAL_DELEGATE_EXTRACT_TABLE_LONG=0` en el entorno del servidor (se lee al
+    arrancar; hay que reiniciarlo) devuelve el enrutado de antes, solo por tamaño.
+  - **Lo que la regla no ve.** CSV, TSV, una tabla GFM sin tuberías externas (un solo `|` por
+    línea), el separador `|-|-|` y las rejillas hechas con `<div>` se quedan en el modelo
+    mecánico y pueden cruzar. Un `<tr` dentro de un JSON, un bloque de código o un diff sí sube.
+  - **Lo que queda fuera.** El caso que abrió el #586 (una página de 33 KB, que ya iba al rol
+    `long`, con el valor de una fila que nadie pidió) **no queda arreglado**, y no hay aviso de
+    valor cruzado: el detector dio un aviso en falso en su prueba y vuelve a diseño. Un cruce que
+    quede sigue saliendo en silencio.
+
 ### Corregido
 
 - **El mod de lectura ya no entrega como resumen el aviso de Claude Code de que la llamada pasó a
