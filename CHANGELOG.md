@@ -23,6 +23,17 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   80 % del fichero, así que un tramo corto de un fichero que había crecido podía volver resumido.
   Ahora se cuenta al momento; lo que dijo una lectura anterior solo vale si el fichero no se puede
   leer.
+- **La banda del mod dice «cargando» mientras llama-swap arranca un modelo, no «modelo local
+  caído» (#628).** Con el backend en otra máquina y otra sesión cambiando de modelo, la banda pasó
+  minutos en ` ○ CAÍDO ` con el backend vivo: `/api/backend` daba `available: false` y, como
+  `/running` solo se pedía si `/v1/models` había respondido, el modelo en `starting` ni se veía.
+  Ahora el daemon pide `/running` también cuando `/v1/models` falla con el backend atendiendo la
+  conexión (sin respuesta a tiempo, error HTTP o un cuerpo que no es la lista), y la banda pinta un
+  modelo en `starting` como ` ◔ CARGANDO ` (` ◔ LOADING `; en la línea, `◔ <modelo> cargando`; en
+  Desktop, «Cargando modelo») con el modelo que arranca, salvo que esta sesión esté delegando.
+  «Caído» queda para un backend que no responde: apagado, sin ruta, sin DNS o con la credencial
+  rechazada, `/running` no se pide y la banda pasa a ` ○ CAÍDO ` en los mismos dos sondeos que
+  antes. `available` sigue diciendo solo si `/v1/models` respondió con su lista.
 - **`local_explain_code` ya no da por falsa una cita de línea correcta descrita en prosa (#627).**
   Con `path` y `question`, una respuesta en párrafos («los logs de uso (línea 65)») llevaba el
   aviso «no te fíes de esos números» sobre líneas buenas: cada cita se comprobaba contra los

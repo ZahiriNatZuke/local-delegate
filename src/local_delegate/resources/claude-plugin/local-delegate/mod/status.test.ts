@@ -1147,3 +1147,124 @@ test('no answer from /api/backend is not a probe: the held state stays', { optio
   await $.session.measure(measureInput())
   expect((await line($)).line).toContain('● qwen3-8b listo')
 })
+
+// --- Issue #628: a model that is starting is «loading», never «down» ------------------------------
+//
+// Seen with the backend on another machine while another session switched models: `/api/backend`
+// said `available: false` and the band read «modelo local caído» with the backend alive. Now the
+// daemon still asks `/running` when the probe of `/v1/models` failed but the backend took the
+// connection, and a model in `starting` reads as loading. «Down» stays for a backend that does not
+// answer, in the same two probes as before.
+
+const STARTING = [{ model: 'gemma4-26b', state: 'starting' }]
+
+/** `/api/backend` when `/v1/models` gave no answer in time but `/running` did (issue #628). */
+function slowModels(running: { model: string; state: string }[] = STARTING) {
+  return json({ available: false, running, running_ok: true, models: [], models_stale: true, cause: 'no_response' })
+}
+
+const LOADING: Daemon = { ...UP, backend: () => backend(true, STARTING) }
+const SLOW_LOADING: Daemon = { ...UP, backend: () => slowModels() }
+
+test('a failed probe that shows a model starting is loading, never down', { options: LINE }, async ($, on) => {
+  let daemon: Daemon = UP
+  const seen = engine(on, { LOCAL_DELEGATE_WEB_TOKEN: TOKEN }, () => daemon)
+  await $.session.measure(measureInput())
+  expect((await line($)).line).toContain('● qwen3-8b listo')
+  // `/v1/models` stops answering in time while another session's model starts: probe after probe
+  // fails, as in a run of model switches, and the band never says «down».
+  daemon = SLOW_LOADING
+  await seen.clock.advance(30000)
+  for (let probe = 0; probe < 5; probe++) {
+    expect((await line($)).line).not.toContain('caído')
+    await seen.clock.advance(1000)
+  }
+  const loading = await line($)
+  expect(loading.line).toContain('· ◔ gemma4-26b cargando ·')
+  expect(colorOf(loading.texts, '◔')).toBe('warning')
+  // While it loads the band keeps the quick pace, so «ready» comes within a second.
+  const before = seen.fetches.length
+  daemon = { ...UP, backend: () => backend(true, [{ model: 'gemma4-26b', state: 'ready' }]) }
+  await seen.clock.advance(1000)
+  expect(since(seen, before)).toEqual(['/api/backend', '/api/inflight'])
+  expect((await line($)).line).toContain('● gemma4-26b listo')
+})
+
+test('a backend that goes off while a model was starting is down in the same two probes', { options: LINE }, async ($, on) => {
+  let daemon: Daemon = LOADING
+  const seen = engine(on, { LOCAL_DELEGATE_WEB_TOKEN: TOKEN }, () => daemon)
+  await $.session.measure(measureInput())
+  // Guard: the band was saying «loading», so what follows is not the plain ready-to-down case.
+  expect((await line($)).line).toContain('◔ gemma4-26b cargando')
+  daemon = DOWN
+  await seen.clock.advance(1000)
+  expect((await line($)).line).not.toContain('caído')
+  await seen.clock.advance(1000)
+  expect((await line($)).line).toContain('○ modelo local caído')
+  expect((await line($)).line).not.toContain('cargando')
+})
+
+test('a backend that goes off after failed probes that showed a model starting is down at once', { options: LINE }, async ($, on) => {
+  let daemon: Daemon = SLOW_LOADING
+  engine(on, { LOCAL_DELEGATE_WEB_TOKEN: TOKEN }, () => daemon)
+  await $.session.measure(measureInput())
+  await $.session.measure(measureInput())
+  expect((await line($)).line).toContain('◔ gemma4-26b cargando')
+  // Those probes already count as failures: the first one with nothing starting is «down».
+  daemon = DOWN
+  await $.session.measure(measureInput())
+  expect((await line($)).line).toContain('○ modelo local caído')
+})
+
+test('a model that is starting reads as loading in each surface, naming the one that starts', { options: QUIET }, async ($, on) => {
+  const both = [{ model: 'qwen3-8b', state: 'ready' }, ...STARTING]
+  engine(on, { LOCAL_DELEGATE_WEB_TOKEN: TOKEN }, () => ({ ...UP, backend: () => backend(true, both) }))
+  await $.session.measure(measureInput())
+
+  const drawnBar = await bar($)
+  expect(drawnBar.chip.text).toBe(' ◔ CARGANDO ')
+  expect(drawnBar.chip.props).toMatchObject({ inverse: true, bold: true, color: 'warning' })
+  expect(drawnBar.left).toBe(' ◔ CARGANDO  gemma4-26b · 3 delegaciones · 12,3k tokens ahorrados ≈ $0,18')
+  expectNoEmptyRows(drawnBar.boxes, drawnBar.texts)
+
+  const drawn = await desk($)
+  expectPlainDesktop(drawn)
+  expect(drawn.left.text).toBe('local-delegate · ◔ Cargando modelo · gemma4-26b · 3 delegaciones · 12,3k tokens ahorrados ≈ $0,18')
+  expect(span(drawn.texts, '◔')?.props.color).toBe('warning')
+})
+
+test('loading in English, in each surface', { options: { ...QUIET, language: 'en' } }, async ($, on) => {
+  engine(on, { LOCAL_DELEGATE_WEB_TOKEN: TOKEN }, () => SLOW_LOADING)
+  await $.session.measure(measureInput())
+  await $.session.measure(measureInput())
+  expect((await bar($)).left).toBe(' ◔ LOADING  gemma4-26b · 3 delegations · 12.3k tokens saved ≈ $0.18')
+  expect((await desk($)).left.text.startsWith('local-delegate · ◔ Loading model · gemma4-26b · 3 delegations')).toBe(true)
+})
+
+test('line: loading in English, and without a model name', { options: { ...LINE, language: 'en' } }, async ($, on) => {
+  let daemon: Daemon = LOADING
+  engine(on, { LOCAL_DELEGATE_WEB_TOKEN: TOKEN }, () => daemon)
+  await $.session.measure(measureInput())
+  expect((await line($)).line).toContain('· ◔ gemma4-26b loading ·')
+  daemon = { ...UP, backend: () => backend(true, [{ state: 'starting' } as any]) }
+  await $.session.measure(measureInput())
+  expect((await line($)).line).toContain('· ◔ local model loading ·')
+})
+
+test('while this session delegates, a model that is starting is still «delegating»', { options: LINE }, async ($, on) => {
+  engine(on, { LOCAL_DELEGATE_WEB_TOKEN: TOKEN }, () => ({ ...BUSY, backend: LOADING.backend }))
+  await $.session.measure(measureInput())
+  const { line: text } = await line($)
+  expect(text).toContain('◐ gemma4-26b delegando · local_summarize 4 s')
+  expect(text).not.toContain('cargando')
+})
+
+test('several sessions: a model starting for another session is loading, then «in use» once it is ready', { options: LINE }, async ($, on) => {
+  let daemon: Daemon = { ...OTHERS_ONLY, backend: LOADING.backend }
+  const seen = engine(on, { LOCAL_DELEGATE_WEB_TOKEN: TOKEN }, () => daemon)
+  await $.session.measure(measureInput())
+  expect((await line($)).line).toContain('◔ gemma4-26b cargando')
+  daemon = { ...OTHERS_ONLY, backend: () => backend(true, [{ model: 'gemma4-26b', state: 'ready' }]) }
+  await seen.clock.advance(1000)
+  expect((await line($)).line).toContain('● gemma4-26b listo · en uso por otra sesión')
+})
