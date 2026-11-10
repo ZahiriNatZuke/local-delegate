@@ -173,7 +173,7 @@ al contexto de Claude, y de ahí sale el ahorro.
 | `local_lint_summary` | Resume logs de lint/tests/CI | mecánico / largo (auto) |
 | `local_commit_msg` | Mensaje de commit desde un diff; con `path` toma el idioma del repo y avisa si no pudo; con un diff enorme acaba a tiempo con lo leído y lo avisa | código |
 | `local_translate` | Traduce texto o archivo | mecánico / largo (auto) |
-| `local_explain_code` | Explica código en prosa; con `path` y pregunta avisa de líneas citadas dudosas y de una premisa que el código no sostiene | código |
+| `local_explain_code` | Explica código en prosa; con `path` y pregunta avisa de líneas citadas dudosas y de una premisa que el código no sostiene, aunque la respuesta la sitúe junto a código real | código |
 | `local_describe_image` | Describe una imagen o responde una pregunta sobre ella (imagen→texto) | visión |
 | `local_status` | Diagnóstico de solo lectura: backend, catálogo, log, VRAM, RAM de sistema | — (no llama al backend de chat) |
 
