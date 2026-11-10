@@ -6701,7 +6701,9 @@ def _lint_inventory_line(header: str, items: list[str], max_chars: int) -> str:
     return f"{header} {', '.join(shown)}{tail}"
 
 
-def _lint_inventory(log: str, max_chars: int, with_counts: bool = False) -> str:
+def _lint_inventory(
+    log: str, max_chars: int, with_counts: bool = False, with_files: bool = True
+) -> str:
     """B2e: los ficheros y códigos de regla del log, calculados por programa, sin recuentos.
 
     En el lint troceado el reduce solo veía los parciales, y en vivo (B2d-2, tanda C) devolvió dos
@@ -6715,12 +6717,20 @@ def _lint_inventory(log: str, max_chars: int, with_counts: bool = False) -> str:
     summary of a ruff log of 14 k characters got 2 of 15 figures wrong (D101 6 instead of 5, D400
     4 instead of 3) by counting them itself (`evidence/lint-counts/live.md`). The chunked reduce
     keeps the inventory without figures.
+
+    Issue #641: without `with_files` there is no line of files. On a pytest log with failures the
+    model gets those as facts (`_lint_failure_facts`); the list of every file the log names put a
+    file cited in an assertion message first and invited one entry per clean file.
     """
     half = max_chars // 2
-    files = _lint_inventory_line(
-        "Ficheros que nombra el log (los más nombrados primero):",
-        lint_patterns.files_by_frequency(log),
-        half,
+    files = (
+        _lint_inventory_line(
+            "Ficheros que nombra el log (los más nombrados primero):",
+            lint_patterns.files_by_frequency(log),
+            half,
+        )
+        if with_files
+        else ""
     )
     if with_counts:
         header = (
@@ -6735,13 +6745,17 @@ def _lint_inventory(log: str, max_chars: int, with_counts: bool = False) -> str:
     return "\n".join(line for line in (files, codes) if line)
 
 
-def _lint_not_mentioned(answer: str, log: str) -> str:
+def _lint_not_mentioned(
+    answer: str, log: str, failures: list[lint_patterns.PytestFailure] | None = None
+) -> str:
     """B2e fallback: what of the inventory the summary does not name, added by the program.
 
     One line and no figures, so that the reader knows which files and rules of the log were left
-    out. B2e put it in the chunked lint; B2f also in the single call of the `long` role.
+    out. B2e put it in the chunked lint; B2f also in the single call of the `long` role. Issue
+    #641: on a pytest log with `failures`, only their files count, not the clean ones.
     """
-    missing = lint_patterns.not_mentioned(answer, log)
+    files = _lint_failing_files(failures) if failures else None
+    missing = lint_patterns.not_mentioned(answer, log, files=files)
     if not missing:
         return answer
     line = i18n.t("mcp.lint.not_mentioned", items=", ".join(missing))
@@ -6759,6 +6773,84 @@ def _lint_invented(answer: str, log: str) -> str:
     if not invented:
         return answer
     warning = i18n.t("mcp.warning.lint_invented_files", files=", ".join(invented))
+    return f"{answer.rstrip()}\n\n{WARNING_MARKER}{warning}]"
+
+
+#: Issue #641: how many failures the facts of the prompt name one by one (the rest are counted).
+LINT_FACT_FAILURES = 10
+#: Issue #641: how many items each list of the mismatch warning names (the rest are counted).
+LINT_WARNING_ITEMS = 5
+
+
+def _lint_failing_files(failures: list[lint_patterns.PytestFailure]) -> list[str]:
+    """The files with failures, each once, in the order of the failures."""
+    return list(dict.fromkeys(failure.file for failure in failures))
+
+
+def _lint_failure_item(failure: lint_patterns.PytestFailure) -> str:
+    return f"{failure.node} ({failure.location})" if failure.location else failure.node
+
+
+def _lint_failure_facts(failures: list[lint_patterns.PytestFailure]) -> str:
+    """Issue #641: the failures of a pytest log, read by the program, as facts for the model.
+
+    In place of the list of every file the log names: with that list the model of the issue gave
+    a failure to the file cited in the assertion message (named more than the failing one) and an
+    entry to each of the 22 clean files until `max_tokens` cut it. Not alone: the answer is then
+    checked against the same failures (`_lint_check_failures`), since a prompt rule that passed
+    tests and review failed live before (#621, reverted in #624).
+    """
+    lines = [f"- {_lint_failure_item(f)}" for f in failures[:LINT_FACT_FAILURES]]
+    if len(failures) > LINT_FACT_FAILURES:
+        lines.append(f"- y {len(failures) - LINT_FACT_FAILURES} fallos más")
+    return (
+        "Fallos reales del log, leídos por el programa en el resumen de pytest "
+        f"({len(failures)} en total; «nodo (fichero:línea)»):\n"
+        + "\n".join(lines)
+        + "\nSon los únicos tests que fallan. Da una entrada solo a sus ficheros, con el número "
+        "de fallos de esta lista. Un fichero que sale dentro del mensaje de un fallo es contexto "
+        "de ese fallo, no es un fallo propio. Los ficheros sin fallos no se listan."
+    )
+
+
+def _lint_capped(items: list[str]) -> str:
+    """The first `LINT_WARNING_ITEMS` items, and how many more there are."""
+    shown = ", ".join(items[:LINT_WARNING_ITEMS])
+    more = len(items) - LINT_WARNING_ITEMS
+    if more > 0:
+        shown += i18n.t("mcp.warning.lint_failures_more", count=more)
+    return shown
+
+
+def _lint_check_failures(answer: str, failures: list[lint_patterns.PytestFailure]) -> str:
+    """Issue #641: a visible warning when the summary does not match the failures of the log.
+
+    The program read them (`lint_patterns.pytest_failures`); the summary is checked against them
+    (`lint_patterns.failure_mismatch`): an entry for a file without failures (the cited file of
+    the issue, a clean one), a failing file it does not name, or another number of failures for a
+    file. The warning gives the real failures, so the reader has them even when the model failed.
+    A matching answer, and any log without pytest failures, come back as they were.
+    """
+    if not failures:
+        return answer
+    mismatch = lint_patterns.failure_mismatch(answer, failures)
+    details = ""
+    if mismatch.phantom:
+        details += i18n.t("mcp.warning.lint_failures_phantom", files=_lint_capped(mismatch.phantom))
+    if mismatch.missing:
+        details += i18n.t("mcp.warning.lint_failures_missing", files=_lint_capped(mismatch.missing))
+    if mismatch.miscounted:
+        details += i18n.t(
+            "mcp.warning.lint_failures_miscounted", files=", ".join(mismatch.miscounted)
+        )
+    if not details:
+        return answer
+    warning = i18n.t(
+        "mcp.warning.lint_failures_mismatch",
+        count=len(failures),
+        failures=_lint_capped([_lint_failure_item(f) for f in failures]),
+        details=details,
+    )
     return f"{answer.rstrip()}\n\n{WARNING_MARKER}{warning}]"
 
 
@@ -6780,7 +6872,12 @@ def _lint_no_findings(verdict: str, path: str | None, chars_in: int) -> str:
     return text
 
 
-def _lint_single_user(content: str, log: str, role: str) -> str:
+def _lint_single_user(
+    content: str,
+    log: str,
+    role: str,
+    failures: list[lint_patterns.PytestFailure] | None = None,
+) -> str:
     """The user prompt of the single `local_lint_summary` call.
 
     B2f: with the `long` role the inventory of files and rule codes of the log (computed by the
@@ -6797,10 +6894,16 @@ def _lint_single_user(content: str, log: str, role: str) -> str:
     affinity cell `local_lint_summary -> gemma4-26b-a4b` serves the mechanical call with the
     26B and the mechanical prompt, and without the inventory the 26B named no rule code in 9 of
     9 Spanish answers (`evidence/B2-affinity/live.md`); `evidence/affinity-by-language/live.md`.
+
+    Issue #641: on a pytest log with `failures`, those go first as facts and the line of files
+    goes away (`_lint_failure_facts`). Any other log gets the prompt of before.
     """
     base = f"Resume la siguiente salida de linter/tests:\n\n{content}"
     budget = int(_map_budget(config.max_chars_for_role(role)) * 0.25)
-    inventory = _lint_inventory(log, budget, with_counts=True)
+    inventory = _lint_inventory(log, budget, with_counts=True, with_files=not failures)
+    if failures:
+        facts = _lint_failure_facts(failures)
+        inventory = f"{facts}\n{inventory}" if inventory else facts
     if not inventory:
         return base
     return f"{inventory}\n\nLa lista de arriba sale del log de abajo.{_LINT_COUNTS_CLAUSE} {base}"
@@ -6840,13 +6943,30 @@ def _lint_map_user(piece: str) -> str:
     return f"{head}\n\nResume la siguiente salida de linter/tests:\n\n{piece}"
 
 
-def _lint_final_inventory(log: str, max_chars: int) -> tuple[str, int]:
+def _lint_final_inventory(
+    log: str, max_chars: int, failures: list[lint_patterns.PytestFailure] | None = None
+) -> tuple[str, int]:
     """The inventory of the final step of the chunked lint, and how many files are left out.
 
     Wave lint-large-logs: the `LINT_TOP_FILES` most named files (with their number of diagnostics
     when the format lets the program count it) and the codes of the whole log with their count.
     The prompt asks for one entry per listed file only; `_lint_other_files` adds the rest.
+
+    Issue #641: on a pytest log with `failures`, the facts of those failures in place of the
+    files, and no file is "left out": the others are clean, or only cited in a message.
     """
+    code_header = (
+        "Códigos de regla o error del log entero, con las veces que aparece cada uno (contadas "
+        "por el programa; los más frecuentes primero):"
+    )
+    if failures:
+        facts = _lint_failure_facts(failures)
+        codes = _lint_inventory_line(
+            code_header,
+            [f"{code}: {count}" for code, count in lint_patterns.code_counts(log)],
+            max_chars - len(facts) - 1,
+        )
+        return "\n".join(line for line in (facts, codes) if line), 0
     files = lint_patterns.files_by_frequency(log)
     top = files[:LINT_TOP_FILES]
     per_file = lint_patterns.per_file_code_counts(log)
@@ -6887,8 +7007,7 @@ def _lint_final_inventory(log: str, max_chars: int) -> tuple[str, int]:
     # is measured whole, and one over the budget regroups instead of reducing (B2e).
     code_items = [f"{code}: {count}" for code, count in lint_patterns.code_counts(log)]
     codes = _lint_inventory_line(
-        "Códigos de regla o error del log entero, con las veces que aparece cada uno (contadas "
-        "por el programa; los más frecuentes primero):",
+        code_header,
         code_items,
         max_chars - sum(len(line) + 1 for line in lines) - len(rule) - 1,
     )
@@ -8406,6 +8525,9 @@ def local_lint_summary(
     # B2d-4: the program, not the model, compacts the lines with the same problem and counts them.
     content, _groups = compact_repeated_lines(content)
     system = _lint_system(max_words)
+    # Issue #641: the failing tests of a pytest log, read by the program: facts for the model and
+    # the check of its answer. `[]` for any other log, which then goes as before.
+    failures = lint_patterns.pytest_failures(log)
 
     if len(content) > config.max_chars_for_role(role):
         # Un log de CI es justo el caso donde truncar duele: los errores interesantes suelen
@@ -8417,7 +8539,7 @@ def local_lint_summary(
         # Wave lint-large-logs: the final step gets an entry only for the most named files, with
         # the counts of the program, and the program adds how many files are left out.
         inventory, left_out = _lint_final_inventory(
-            log, int(_map_budget(config.max_chars_for_role(role)) * 0.25)
+            log, int(_map_budget(config.max_chars_for_role(role)) * 0.25), failures
         )
 
         def _build_reduce(joined: str) -> str:
@@ -8435,7 +8557,8 @@ def local_lint_summary(
             # cifras, para que el lector sepa qué ficheros y reglas del log quedaron fuera.
             # Issue #525: and the reverse, the files the summary names that the log does not.
             checked = _lint_invented(answer, log)
-            return _lint_not_mentioned(_lint_other_files(checked, left_out), log)
+            checked = _lint_not_mentioned(_lint_other_files(checked, left_out), log, failures)
+            return _lint_check_failures(checked, failures)
 
         return _chat_map_reduce(
             model,
@@ -8458,7 +8581,7 @@ def local_lint_summary(
 
     # B2f: con el rol largo, el inventario delante del log y la línea «sin mencionar» detrás, como
     # en el troceado; el rol mecánico, como antes.
-    user = _lint_single_user(content, log, role)
+    user = _lint_single_user(content, log, role, failures)
     result = _chat(
         model,
         system,
@@ -8472,9 +8595,14 @@ def local_lint_summary(
         raw_len=raw_len,
         path=path,
         # Issue #525: both roles flag the files the summary names that the log does not.
-        postprocess=(lambda answer, _t: _lint_not_mentioned(_lint_invented(answer, log), log))
+        # Issue #641: and an answer that does not match the failures of a pytest log.
+        postprocess=(
+            lambda answer, _t: _lint_check_failures(
+                _lint_not_mentioned(_lint_invented(answer, log), log, failures), failures
+            )
+        )
         if role == "long"
-        else (lambda answer, _t: _lint_invented(answer, log)),
+        else (lambda answer, _t: _lint_check_failures(_lint_invented(answer, log), failures)),
     )
     return _truncation_prefix(content, truncated_in, raw_len) + result
 
