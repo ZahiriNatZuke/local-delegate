@@ -54,6 +54,11 @@ export const READ_SHORT_BYTES = 32 * 1024
 const READ_SERVER = 'local-delegate'
 const READ_SUMMARY_TOOL = 'local_summarize'
 const READ_ERROR_PREFIX = '[local-delegate error]'
+// Issue #631: what Claude Code answers in place of the tool's result when it moves a call that is
+// still running to the background (after 120 s, or to let a message in). It comes as an ordinary
+// text block with no error flag, and the real result goes later to the session as a notification
+// the mod never sees: there is no summary to deliver.
+const READ_BACKGROUNDED = /^MCP tool "[^"\n]*" (?:is still running after \d+s\. It )?was moved to the background as task /
 // `local_delegate.hook`, never `-m local_delegate hook`: that road goes through `entrypoint`, which
 // imports the server and the MCP SDK (654 ms of imports, evidence/F4-live.md). `test_read_classifier`
 // runs these very arguments and fails if they load `local_delegate.server` or `mcp`.
@@ -795,11 +800,12 @@ async function readBeat($, common, sessionId) {
   }
 }
 
-/** The file's line count: from an earlier `Read`, else counted here (never shown to the model). */
+/**
+ * The file's line count, counted now (its text is never shown to the model): a file that changed
+ * after it was read no longer has the lines that read saw (issue #631, «19 of its 25 lines» for a
+ * file that had grown to 356). What an earlier `Read` said stays for a file that cannot be read here.
+ */
 async function readTotalLines($, entry, path) {
-  if (entry.total) {
-    return entry.total
-  }
   try {
     const text = await $.fs.read(path)
     if (typeof text === 'string') {
@@ -807,7 +813,7 @@ async function readTotalLines($, entry, path) {
       entry.total = Math.max(lines, 1)
     }
   } catch {
-    entry.total = null
+    // unreadable here: the count of an earlier `Read`, if there was one
   }
   return entry.total
 }
@@ -835,13 +841,16 @@ async function readNoteRealRead($, common, sessionId, key, classified, ran, coun
   }
 }
 
-/** Asks `local_summarize` for the file; the summary's text, or null when it fails. */
+/**
+ * Asks `local_summarize` for the file; the summary's text, or null when it fails or when the client
+ * moved the call to the background and answered with its notice instead (issue #631).
+ */
 async function readSummarize($, path) {
   try {
     const result = await $.mcp.call(READ_SERVER, READ_SUMMARY_TOOL, { path })
     // `common.js` unwraps FastMCP's `{ "result": … }` (shared with the commands).
     const text = toolResultText(result)
-    if (!text || (result && result.isError) || text.startsWith(READ_ERROR_PREFIX)) {
+    if (!text || (result && result.isError) || text.startsWith(READ_ERROR_PREFIX) || READ_BACKGROUNDED.test(text)) {
       return null
     }
     return text

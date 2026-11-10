@@ -180,12 +180,20 @@ def test_the_client_that_does_not_answer_does_not_hang_the_tool():
 
 
 def test_the_timeout_expires_and_not_before():
-    """Complemento del anterior: que no devuelva None por no haber preguntado siquiera."""
+    """Complemento del anterior: que no devuelva None por no haber preguntado siquiera.
+
+    Deterministic (it failed on the Windows CI with `assert 1.9999999999999716 >= 2`): the check
+    is the one anyio makes to expire the deadline, `now >= start + timeout`, on the same clock.
+    The deadline starts after `t0`, so the end can never fall before `t0 + timeout`. Subtracting
+    the two readings instead loses a rounding step when the wait lasts exactly the timeout, which
+    the 15.6 ms tick of that clock on Windows makes possible.
+    """
+    timeout = questions.config.ASK_TIMEOUT
     t0 = time.monotonic()
     anyio.run(_run, _mount(None, try_it), silent)
-    elapsed = time.monotonic() - t0
-    assert elapsed >= 2, (
-        f"volvió en {elapsed:.1f}s, antes del plazo: no llegó a preguntar de verdad"
+    end = time.monotonic()
+    assert end >= t0 + timeout, (
+        f"volvió en {end - t0:.3f}s, antes del plazo de {timeout}s: no llegó a preguntar de verdad"
     )
 
 

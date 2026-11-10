@@ -8,6 +8,21 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ### Corregido
 
+- **El mod de lectura ya no entrega como resumen el aviso de Claude Code de que la llamada pasó a
+  segundo plano (#631).** Cuando `local_summarize` espera más de 2 min (el turno común ocupado, por
+  ejemplo), Claude Code la pasa a segundo plano y contesta a quien la llamó con un texto suyo
+  («MCP tool … is still running after 120s. It was moved to the background as task …»), como un
+  resultado normal y sin marca de error; el mod lo ponía bajo la cabecera de resumen. Ahora lo
+  trata como un resumen que falló: la lectura pasa literal y queda registrada como
+  `summary_failed`, igual que con un error de la tool. El resumen que termina después lo notifica
+  Claude Code a la sesión, no al mod.
+- **La cabecera de un resumen cuenta las líneas que el fichero tiene ahora (#631).** El mod
+  guardaba el total de líneas de la primera lectura real del fichero y lo reutilizaba toda la
+  sesión: un Markdown leído cuando tenía 25 líneas y resumido después con 356 salía como «puedes
+  leer literal hasta 19 de sus 25 líneas». El mismo total viejo decidía si un tramo llegaba al
+  80 % del fichero, así que un tramo corto de un fichero que había crecido podía volver resumido.
+  Ahora se cuenta al momento; lo que dijo una lectura anterior solo vale si el fichero no se puede
+  leer.
 - **`local_explain_code` ya no da por falsa una cita de línea correcta descrita en prosa (#627).**
   Con `path` y `question`, una respuesta en párrafos («los logs de uso (línea 65)») llevaba el
   aviso «no te fíes de esos números» sobre líneas buenas: cada cita se comprobaba contra los
