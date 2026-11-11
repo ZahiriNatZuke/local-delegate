@@ -312,10 +312,15 @@ def test_neither_the_name_nor_the_list_entry_reaches_any_surface(world):
     }
     stats, _ = _api("/api/stats", **span, lang="es")
     shown = {g["name"] for g in stats["by_project"] if g["name"]}
-    assert shown == {SELF_DIR, OTHER_DIR}, "guard: by_project serves the local names"
+    assert shown == {
+        package_common.label_of_folder(SELF_DIR),
+        package_common.label_of_folder(OTHER_DIR),
+    }, "guard: by_project serves the local names"
     rest = {k: v for k, v in stats.items() if k != "by_project"}
     _assert_no_marker(json.dumps(rest), "/api/stats")
-    groups = [{k: v for k, v in g.items() if k != "name"} for g in stats["by_project"]]
+    groups = [
+        {k: v for k, v in g.items() if k not in {"name", "path"}} for g in stats["by_project"]
+    ]
     _assert_no_marker(json.dumps(groups), "/api/stats by_project")
     for extra in ({}, {"project": own_hash}):
         events_answer, text = _api("/api/events", **span, **extra)

@@ -718,13 +718,21 @@ en cada evento de la telemetría de hooks, `project` y `project_kind`. **El log 
 nombre ni la ruta del proyecto**: la evidencia de los issues públicos sale de ahí.
 
 **El nombre legible: `project-names.json`.** Para enseñar un nombre, el panel lee un mapa local
-aparte, `LOG_DIR/project-names.json` (`{"version": 1, "names": {"<hash>": "<nombre>"}}`). Se escribe
+aparte, `LOG_DIR/project-names.json`
+(`{"version": 2, "names": {"<hash>": {"name": …, "label": …, "path": …}}}`): `name` es la
+carpeta codificada de `~/.claude/projects` (la que entra en el hash, como `C--work-webshop`),
+`label` el nombre que se enseña (la última carpeta de la ruta real, `webshop`) y `path` esa ruta,
+si se conoce. La ruta sale del `cwd` del hook o de la llamada cuando codifica exactamente a la
+carpeta del proyecto (tras un `cd` a una subcarpeta ya no coincide y se descarta), o si no del
+campo `cwd` de la primera línea que lo traiga del transcript, leyendo como mucho 64 KB y sin
+guardar nada más. Sin ruta, `label` es la carpeta codificada sin el prefijo de unidad
+(`work-webshop`). Un mapa de la versión 1 (solo el nombre) se sigue leyendo. Se escribe
 donde y cuando se calcula el hash —el daemon, el servidor stdio, cada hook y `recompute-cost`,
 cada uno en el `LOG_DIR` de su propio entorno, nunca en uno que mande una petición—, con un
 cerrojo de fichero y un reemplazo atómico: nunca queda a medias aunque escriban varios procesos a
 la vez. Si el cerrojo está ocupado, esa vez no se escribe y la siguiente delegación lo intenta otra
-vez. Tiene tope: 1000 proyectos y 512 KiB; un nombre con caracteres de control o de más de 255 no
-se apunta. Un mapa ausente, ilegible o corrupto se lee como vacío y se rehace en la siguiente
+vez. Tiene tope: 1000 proyectos y 2 MiB; un nombre con caracteres de control o de más de 255 no
+se apunta, ni una ruta de más de 1024. Un mapa ausente, ilegible o corrupto se lee como vacío y se rehace en la siguiente
 escritura. **Nunca sale de la máquina** por sí solo (no va al log, a la telemetría ni a ningún
 informe); no lo compartas junto a un log. Ojo: si publicas el panel en la red
 (`LOCAL_DELEGATE_WEB_HOST`), quien lo abra con el token ve los nombres en `by_project`, igual que
@@ -732,11 +740,16 @@ ya ve las rutas de `/api/events`.
 
 **Las filas de antes del mapa.** Las filas de la 0.51.0 ya traen `caller_project` pero el mapa no
 existía. La primera vez que el panel ve un hash sin nombre, recorre una vez los **nombres** de los
-directorios de `~/.claude/projects` (la raíz del proceso; nunca lee un transcript), calcula el hash
-de cada uno con la sal local y apunta solo los que coinciden con hashes del log. Una pasada por
+directorios de `~/.claude/projects` (la raíz del proceso), calcula el hash de cada uno con la sal
+local y apunta solo los que coinciden con hashes del log; de cada uno que coincide lee solo el
+campo `cwd` de la cabecera de su transcript más reciente (64 KB como mucho) para el nombre. Una pasada por
 hash y proceso, con tope de 5000 directorios y medio segundo; sin sal no hace nada (ni la crea).
 
-**En el panel.** Un hash sin nombre en el mapa sale como **«Proyecto sin nombre»**, y las filas sin
+**En el panel.** Se enseña el `label`; si dos proyectos del rango dan el mismo (sin distinguir
+mayúsculas), se añade la carpeta padre (`work/webshop`), y si aun así coinciden, la ruta completa
+(o la carpeta codificada si no hay ruta). Al pasar el ratón, el `title` enseña la ruta completa si
+se conoce, o el hash. En `/api/stats`, `by_project[].name` es ese nombre a enseñar y
+`by_project[].path` la ruta o `null`. Un hash sin nombre en el mapa sale como **«Proyecto sin nombre»**, y las filas sin
 proyecto (las anteriores a la 0.51.0, Codex, el chat) forman el grupo **«Sin proyecto»**. El nombre
 es el de una carpeta, texto no confiable: el panel lo escapa siempre y lo pone en el selector como
 texto. El filtro no se recuerda: al recargar, el panel vuelve a enseñarlo todo.

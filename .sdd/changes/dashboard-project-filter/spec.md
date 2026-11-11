@@ -32,6 +32,14 @@ API and `local_status`; the measurement scripts keep excluding the own repo.
 - **E10 — `session=` gets no breakdown.** `/api/stats?session=` (the mod's status line) returns
   `by_project: []` and neither reads nor backfills the map, so nothing is spent on it when
   nobody opens the panel (E5).
+- **E11 — The shown name is a readable label, not the encoded folder** (revision after the
+  coordinator's look at the screenshots; replaces E7 for what is shown). The map keeps, per
+  hash, `name` (the encoded folder that enters the hash), `label` (the last folder of the real
+  path) and `path`. The path comes from the hook's or the call's `cwd` when it encodes exactly
+  to the folder, else from the `cwd` field of the first line that has one in the head of the
+  transcript (64 KB at most, nothing else kept); without one the label is the folder without
+  its drive prefix. Labels that collide in the range show the parent folder too, then the
+  whole path; the tooltip is the path when known.
 
 ## Requirements
 
@@ -109,6 +117,13 @@ API and `local_status`; the measurement scripts keep excluding the own repo.
   the removal, without dead anchors to the old section.
   - Request: "wiki y README"
   - Verify: review diff of CHANGELOG.md, README.md and docs/
+- **REQ-018** — The panel shows the readable label of each project (E11): from the hook's
+  `cwd` or the transcript head on the live path, from the newest transcript's head (byte
+  cap) in the backfill, the folder without its drive otherwise; colliding labels show the
+  parent folder; the tooltip is the escaped path. The log still carries no name.
+  - Request: "El mapa guarda, además del nombre que entra en el hash, un `label` legible"
+  - Verify: test tests/test_project_names.py, tests/test_metrics_project_filter.py and
+    tests/test_dashboard_project_filter.py
 - **REQ-017** — Screenshots of the panel with test data in light and dark mode, served by the
   metrics app on a test port, show the card and the selector legibly.
   - Request: "Capturas en claro y oscuro"

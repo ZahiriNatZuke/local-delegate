@@ -54,3 +54,6 @@ stopped and what remains. -->
   names for 0.51.0 rows. Remaining: plan review, verification, result and security review, PR.
 - L3 2026-11-11 Reviews, full suite and gates done; PR #661 opened, not merged. Remaining: live
   check by the coordinator and merge.
+- L4 2026-11-11 Revision on the same PR after the coordinator saw the screenshots: readable
+  label from the real path (REQ-018, E11). The SDD state machine cannot reopen a closed change,
+  so the revision is recorded here, in the spec, plan, verification and review.

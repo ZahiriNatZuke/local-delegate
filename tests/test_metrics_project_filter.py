@@ -25,6 +25,7 @@ from local_delegate.web import metrics
 SESSION = "0f8e2a41-5b6c-4d7e-9f80-a1b2c3d4e5f6"
 P_A = "a1b2c3d4e5f60718"
 P_B = "0718a1b2c3d4e5f6"
+P_C = "c3d4e5f60718a1b2"
 
 
 @pytest.fixture
@@ -209,7 +210,7 @@ def test_by_project_counts_each_project_most_delegations_first_with_its_name(log
     groups = stats["by_project"]
     assert [g["project"] for g in groups] == [P_B, P_A, "none"]  # 3, 2 and 1 (the tests leave)
     assert [g["calls"] for g in groups] == [3, 2, 1]
-    assert [g["name"] for g in groups] == ["C--work-shop", None, None]
+    assert [g["name"] for g in groups] == ["work-shop", None, None]  # the drive prefix goes
     assert sum(g["calls"] for g in groups) == stats["total"]["calls"]
     assert sum(g["tokens_net"] for g in groups) == stats["total"]["net"]
     assert sum(g["tokens_saved"] for g in groups) == stats["total"]["saved"]
@@ -270,9 +271,10 @@ def test_the_old_rows_get_their_name_from_the_projects_root(logs, tmp_path):
     shop = common.project_hash("D--work-shop", salt)
     _write(logs, [_row(1, **_main("other", shop)), _row(2, **_main("other", P_A))])
     groups = {g["project"]: g["name"] for g in _get("/api/stats")["by_project"]}
-    assert groups == {shop: "D--work-shop", P_A: None}
+    assert groups == {shop: "work-shop", P_A: None}
     stored = json.loads((logs / "project-names.json").read_text(encoding="utf-8"))["names"]
-    assert stored == {shop: "D--work-shop"}  # only the hashes of the log, not every directory
+    # Only the hashes of the log, not every directory; no transcript there, so no path.
+    assert stored == {shop: {"label": "work-shop", "name": "D--work-shop", "path": None}}
 
 
 # --- /api/hooks -----------------------------------------------------------------------------------
@@ -403,7 +405,7 @@ def test_an_incomplete_pass_is_tried_again(logs, monkeypatch):
     assert first[shop] is None
     state["busy"] = False
     second = {g["project"]: g["name"] for g in _get("/api/stats")["by_project"]}
-    assert second[shop] == "D--work-shop"
+    assert second[shop] == "work-shop"
 
 
 def test_the_mods_status_line_neither_reads_nor_fills_the_map(logs, monkeypatch):
@@ -416,3 +418,49 @@ def test_the_mods_status_line_neither_reads_nor_fills_the_map(logs, monkeypatch)
     assert stats["by_project"] == []
     assert touched == []
     assert not (logs / "project-names.json").exists()
+
+
+def test_two_projects_with_the_same_label_show_their_parent_folder(logs):
+    _names(
+        logs,
+        {
+            P_A: {"name": "C--work-webshop", "label": "webshop", "path": "C:\\work\\webshop"},
+            P_B: {"name": "C--home-webshop", "label": "webshop", "path": "C:\\home\\webshop"},
+            P_C: {"name": "C--work-blog", "label": "blog", "path": "C:\\work\\blog"},
+        },
+    )
+    _write(
+        logs,
+        [
+            _row(1, **_main("other", P_A)),
+            _row(2, **_main("other", P_B)),
+            _row(3, **_main("other", P_C)),
+        ],
+    )
+    groups = {g["project"]: (g["name"], g["path"]) for g in _get("/api/stats")["by_project"]}
+    assert groups == {
+        P_A: ("work/webshop", "C:\\work\\webshop"),
+        P_B: ("home/webshop", "C:\\home\\webshop"),
+        P_C: ("blog", "C:\\work\\blog"),
+    }
+
+
+def test_a_collision_the_parent_does_not_solve_shows_the_whole_path_or_the_folder(logs):
+    _names(
+        logs,
+        {
+            P_A: {"name": "C--a-x-shop", "label": "shop", "path": "C:\\a\\x\\shop"},
+            P_B: {"name": "D--b-x-shop", "label": "shop", "path": "D:\\b\\x\\shop"},
+            P_C: {"name": "E--shop", "label": "Shop", "path": None},
+        },
+    )
+    _write(
+        logs,
+        [
+            _row(1, **_main("other", P_A)),
+            _row(2, **_main("other", P_B)),
+            _row(3, **_main("other", P_C)),
+        ],
+    )
+    groups = {g["project"]: g["name"] for g in _get("/api/stats")["by_project"]}
+    assert groups == {P_A: "C:\\a\\x\\shop", P_B: "D:\\b\\x\\shop", P_C: "E--shop"}

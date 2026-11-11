@@ -342,10 +342,10 @@ El botón **Pruebas** de la barra del panel las vuelve a enseñar; su ⓘ dice c
 y cada evento de la telemetría de hooks, `project`. El panel enseña la tarjeta **Por proyecto**
 (delegaciones y ahorro de cada repo, de mayor a menor) y, en la barra de filtros, un selector de
 **proyecto** que filtra todo el panel; por defecto lo enseña todo. El nombre legible sale de un mapa
-local aparte, `LOG_DIR/project-names.json` (hash → nombre de la carpeta del proyecto), que se
+local aparte, `LOG_DIR/project-names.json` (hash → la última carpeta de la ruta real del proyecto,
+como `webshop`, con la carpeta padre si dos coinciden y la ruta completa al pasar el ratón), que se
 escribe al calcular el hash y nunca sale de la máquina; las filas de antes de existir el mapa se
-nombran solas la primera vez que abres el panel, con los nombres de las carpetas de
-`~/.claude/projects`. Un hash sin nombre sale como «Proyecto sin nombre» y las filas sin proyecto,
+nombran solas la primera vez que abres el panel, desde las carpetas de `~/.claude/projects`. Un hash sin nombre sale como «Proyecto sin nombre» y las filas sin proyecto,
 como «Sin proyecto». La tarjeta «Quién delegó» separa hilo principal, subagentes y mod. Quien tenga
 el log **y** `project-salt` puede confirmar un nombre de proyecto por fuerza bruta: no compartas ese
 fichero (ni `project-names.json`) junto a un log. Detalle en

@@ -111,10 +111,11 @@ def _run_en(tmp_path, functions, body, prelude):
     return _run(tmp_path, functions, body, _globals() + "\n" + prelude, lang="en")
 
 
-def _group(project: str, name, calls: int, net: int = 100) -> dict:
+def _group(project: str, name, calls: int, net: int = 100, path=None) -> dict:
     return {
         "project": project,
         "name": name,
+        "path": path,
         "calls": calls,
         "tokens_saved": net,
         "tokens_net": net,
@@ -158,6 +159,21 @@ def test_a_hostile_name_reaches_the_card_escaped_and_the_option_as_text(tmp_path
     assert "&lt;img src=x onerror=&quot;window.__xss=1&quot;&gt;&amp;&quot;&#39;" in r["body"]
     # The option gets it through `textContent`, which never parses markup: it stays the raw text.
     assert r["options"][1] == [P_A, HOSTILE]
+
+
+def test_the_tooltip_is_the_escaped_path_when_known_and_else_the_hash(tmp_path):
+    """Mutant: the path goes into `title` without `escHooks` (a quote would close the attribute)."""
+    hostile_path = '/work/a" onmouseover="window.__xss=1'
+    r = _projects(
+        tmp_path,
+        [_group(P_A, "webshop", 2, path="/work/webshop"), _group(P_B, None, 1)],
+    )
+    rows = r["body"].split("<tbody>", 1)[1].split("</tr>")
+    assert 'title="/work/webshop">webshop<' in rows[0]
+    assert f'title="{P_B}"' in rows[1]
+    bad = _projects(tmp_path, [_group(P_A, "a", 2, path=hostile_path)])
+    assert 'onmouseover="' not in bad["body"]
+    assert "a&quot; onmouseover=&quot;window.__xss=1" in bad["body"]
 
 
 def test_the_chosen_project_stays_an_option_and_its_row_is_marked(tmp_path):

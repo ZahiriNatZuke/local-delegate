@@ -39,8 +39,13 @@ def logs(tmp_path, monkeypatch):
     return folder
 
 
-def _map(folder: Path) -> dict:
+def _entries(folder: Path) -> dict:
     return json.loads((folder / common.PROJECT_NAMES_FILE).read_text(encoding="utf-8"))["names"]
+
+
+def _map(folder: Path) -> dict:
+    """`{hash: folder name}` of the map on disk (the name that enters the hash)."""
+    return {k: v["name"] for k, v in _entries(folder).items()}
 
 
 def _hash(n: int) -> str:
@@ -390,3 +395,136 @@ def test_the_backfill_says_whether_its_pass_was_complete(logs, tmp_path, monkeyp
     assert outcome == {"complete": False}  # the budget was spent before the directory
     assert common.backfill_project_names({shop}, root=root, directory=logs, outcome=outcome) == 1
     assert outcome == {"complete": True}
+
+
+# --- The readable label: the last folder of the real path ----------------------------------------
+
+
+def _transcript(folder: Path, name: str, lines: list, *, pad: int = 0) -> Path:
+    folder.mkdir(parents=True, exist_ok=True)
+    path = folder / name
+    text = "x" * pad + "\n" if pad else ""
+    text += "".join(json.dumps(line) + "\n" for line in lines)
+    path.write_text(text, encoding="utf-8")
+    return path
+
+
+def test_the_hooks_cwd_gives_the_label_and_the_path(logs, tmp_path):
+    transcript = tmp_path / "projects" / "D--work-webshop" / "s.jsonl"
+    fields = common.project_identity(
+        str(transcript), root=tmp_path / "projects", cwd="D:\\work\\webshop"
+    )
+    assert _entries(logs) == {
+        fields["caller_project"]: {
+            "label": "webshop",
+            "name": "D--work-webshop",
+            "path": "D:\\work\\webshop",
+        }
+    }
+    assert "webshop" not in json.dumps(fields)  # the fields still carry no name
+
+
+def test_a_cwd_of_another_folder_is_ignored_and_the_transcript_head_is_used(logs, tmp_path):
+    """A `cd` into a subfolder changes the hook's `cwd`: it no longer encodes to the project's
+    folder, so the label comes from the first line of the transcript that has a `cwd`."""
+    root = tmp_path / "projects"
+    transcript = _transcript(
+        root / "-home-ana-shop",
+        "s.jsonl",
+        [{"type": "summary", "text": "PRIVATE-TEXT"}, {"cwd": "/home/ana/shop", "msg": "PRIVATE"}],
+    )
+    fields = common.project_identity(str(transcript), root=root, cwd="/home/ana/shop/src")
+    stored = _entries(logs)[fields["caller_project"]]
+    assert stored == {"label": "shop", "name": "-home-ana-shop", "path": "/home/ana/shop"}
+    assert "PRIVATE" not in (logs / common.PROJECT_NAMES_FILE).read_text(encoding="utf-8")
+
+
+def test_without_a_cwd_the_label_is_the_folder_without_its_drive(logs, tmp_path):
+    root = tmp_path / "projects"
+    transcript = _transcript(root / "C--work-webshop", "s.jsonl", [{"type": "user"}])
+    fields = common.project_identity(str(transcript), root=root)
+    assert _entries(logs)[fields["caller_project"]] == {
+        "label": "work-webshop",
+        "name": "C--work-webshop",
+        "path": None,
+    }
+
+
+def test_the_transcript_is_read_only_up_to_its_byte_cap(tmp_path):
+    folder = tmp_path / "p"
+    near = _transcript(folder, "near.jsonl", [{"cwd": "/a/b"}], pad=1000)
+    far = _transcript(folder, "far.jsonl", [{"cwd": "/a/b"}], pad=common.PROJECT_CWD_MAX_BYTES)
+    assert common.transcript_cwd(near) == "/a/b"
+    assert common.transcript_cwd(far) is None
+    assert common.transcript_cwd(far, max_bytes=common.PROJECT_CWD_MAX_BYTES * 2) == "/a/b"
+    # A line cut by the cap is never parsed, even if its start looks like a `cwd`.
+    cut = folder / "cut.jsonl"
+    cut.write_text('{"cwd": "/a/b", "pad": "' + "y" * 100 + '"}\n', encoding="utf-8")
+    assert common.transcript_cwd(cut, max_bytes=20) is None
+    assert common.transcript_cwd(folder / "missing.jsonl") is None
+
+
+def test_an_entry_without_a_path_gains_one_later_and_keeps_its_name(logs):
+    assert common.record_project_name(_hash(1), "D--work-Shop")
+    assert _entries(logs)[_hash(1)]["path"] is None
+    common._NAMES_SEEN.clear()  # another process
+    assert common.record_project_name(_hash(1), "D--work-shop", cwd="D:\\work\\shop")
+    assert _entries(logs)[_hash(1)] == {
+        "label": "shop",
+        "name": "D--work-Shop",
+        "path": "D:\\work\\shop",
+    }
+    common._NAMES_SEEN.clear()
+    assert not common.record_project_name(_hash(1), "D--work-shop", cwd="D:\\work\\shop")
+
+
+@pytest.mark.parametrize("path", ["D:\\work\\shop\u202e", "D:\\work\\" + "x" * 1100, 7])
+def test_a_bad_cwd_gives_no_path(logs, path):
+    assert common.record_project_name(_hash(1), "D--work-shop", cwd=path)
+    assert _entries(logs)[_hash(1)]["path"] is None
+
+
+def test_a_version_1_map_is_still_read(logs):
+    (logs / common.PROJECT_NAMES_FILE).write_text(
+        json.dumps({"version": 1, "names": {_hash(1): "C--work-shop"}}), encoding="utf-8"
+    )
+    assert common.read_project_entries() == {
+        _hash(1): {"name": "C--work-shop", "label": "work-shop", "path": None}
+    }
+
+
+def test_the_backfill_takes_the_label_from_the_newest_transcript_head(logs, tmp_path):
+    (logs / common.PROJECT_SALT_FILE).write_text(SALT, encoding="ascii")
+    root = tmp_path / "projects"
+    folder = root / "D--work-webshop"
+    old = _transcript(folder, "old.jsonl", [{"cwd": "D:\\work\\webshop"}])
+    os.utime(old, (1_000_000, 1_000_000))
+    _transcript(folder, "new.jsonl", [{"cwd": "D:\\work\\webshop", "text": "PRIVATE"}])
+    digest = common.project_hash("D--work-webshop", SALT)
+    assert common.backfill_project_names({digest}, root=root) == 1
+    assert _entries(logs)[digest] == {
+        "label": "webshop",
+        "name": "D--work-webshop",
+        "path": "D:\\work\\webshop",
+    }
+    assert "PRIVATE" not in (logs / common.PROJECT_NAMES_FILE).read_text(encoding="utf-8")
+
+
+def test_the_backfill_reads_no_further_than_its_byte_cap(logs, tmp_path):
+    """The newest transcript has its `cwd` beyond the cap: the label falls back to the folder,
+    although an older transcript had it near the start (only the newest is read)."""
+    (logs / common.PROJECT_SALT_FILE).write_text(SALT, encoding="ascii")
+    root = tmp_path / "projects"
+    folder = root / "D--work-webshop"
+    old = _transcript(folder, "old.jsonl", [{"cwd": "D:\\work\\webshop"}])
+    os.utime(old, (1_000_000, 1_000_000))
+    _transcript(
+        folder, "new.jsonl", [{"cwd": "D:\\work\\webshop"}], pad=common.PROJECT_CWD_MAX_BYTES
+    )
+    digest = common.project_hash("D--work-webshop", SALT)
+    assert common.backfill_project_names({digest}, root=root) == 1
+    assert _entries(logs)[digest] == {
+        "label": "work-webshop",
+        "name": "D--work-webshop",
+        "path": None,
+    }

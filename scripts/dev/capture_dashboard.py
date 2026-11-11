@@ -360,10 +360,10 @@ SEED_AND_MOCK = """({DENSITY, PRICES_CHECKED}) => {
       // the rows without a project, so the two fallback labels show too. They add up to 120.
       project: null,
       by_project: [
-        {project: '3f9a1c27b84e0d65', name: 'C--work-webshop', calls: 52, tokens_saved: 51200, tokens_net: 47310},
-        {project: 'a07e5b19c2d43f88', name: 'C--work-api-gateway', calls: 31, tokens_saved: 33480, tokens_net: 30920},
-        {project: '5c2d8e6f71a90b34', name: null, calls: 22, tokens_saved: 24440, tokens_net: 22240},
-        {project: 'none', name: null, calls: 15, tokens_saved: 11180, tokens_net: 10640},
+        {project: '3f9a1c27b84e0d65', name: 'webshop', path: '/home/ana/work/webshop', calls: 52, tokens_saved: 51200, tokens_net: 47310},
+        {project: 'a07e5b19c2d43f88', name: 'api-gateway', path: '/home/ana/work/api-gateway', calls: 31, tokens_saved: 33480, tokens_net: 30920},
+        {project: '5c2d8e6f71a90b34', name: null, path: null, calls: 22, tokens_saved: 24440, tokens_net: 22240},
+        {project: 'none', name: null, path: null, calls: 15, tokens_saved: 11180, tokens_net: 10640},
       ],
       // Las tres tarjetas de coste-api-y-cuota se esconden si falta su clave: sin ellas la
       // captura saldría como antes. «Imágenes» se deriva de los mismos eventos de ejemplo.

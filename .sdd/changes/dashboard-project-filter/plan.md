@@ -40,6 +40,10 @@ mirror needed: no new figure is computed in the browser). The names map lives be
   - Files or modules: none in the repo
   - Verification: screenshots in the scratchpad; full pytest with -n 2
   - Depends on: T1, T2, T3, T4, T5, T6
+- [x] T8 — Readable label, path and collisions (REQ-018), after the PR was opened
+  - Files or modules: src/local_delegate/resources/hooks/hook_common.py, src/local_delegate/transcripts.py, src/local_delegate/web/metrics.py, tests, docs
+  - Verification: tests/test_project_names.py, tests/test_metrics_project_filter.py, tests/test_dashboard_project_filter.py; screenshots again
+  - Depends on: T7
 
 ## Test strategy
 

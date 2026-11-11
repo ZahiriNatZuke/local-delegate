@@ -574,11 +574,37 @@ def _of_project(rows: list[dict], project: str | None, field: str = "caller_proj
     return [r for r in rows if _row_project(r, field) == project]
 
 
-def _by_project(rows: list[dict], names: dict[str, str]) -> list[dict]:
+def _display_labels(projects, entries: dict[str, dict]) -> dict[str, str]:
+    """The label each project of `projects` shows: its `label`, and where two share one (in any
+    case), the parent folder too (`work/webshop`); if that still collides, the whole path (or the
+    folder name when the path is unknown)."""
+    shown = {p: entries[p]["label"] for p in projects if p in entries}
+
+    def collisions() -> list[list[str]]:
+        groups: dict[str, list[str]] = {}
+        for project, label in shown.items():
+            groups.setdefault(label.lower(), []).append(project)
+        return [g for g in groups.values() if len(g) > 1]
+
+    for group in collisions():
+        for project in group:
+            entry = entries[project]
+            if entry["path"]:
+                shown[project] = "/".join(hook_common.path_segments(entry["path"])[-2:])
+            else:
+                shown[project] = entry["name"]
+    for group in collisions():
+        for project in group:
+            shown[project] = entries[project]["path"] or entries[project]["name"]
+    return shown
+
+
+def _by_project(rows: list[dict], entries: dict[str, dict]) -> list[dict]:
     """Delegations and saving per project, most delegations first (the net saving breaks ties).
 
-    `project` is the hash or `none`; `name` is the local name, or `null` when the map has none
-    (the panel then says "unnamed project"; for `none`, "no project").
+    `project` is the hash or `none`; `name` is the label to show (`_display_labels`), or `null`
+    when the map has none (the panel then says "unnamed project"; for `none`, "no project");
+    `path` is the project's real path when the map knows it, else `null`.
     """
     groups: dict[str, dict] = {}
     for r in rows:
@@ -588,10 +614,12 @@ def _by_project(rows: list[dict], names: dict[str, str]) -> list[dict]:
         g["calls"] += 1
         g["saved"] += acc["saved"]
         g["net"] += acc["net"]
+    labels = _display_labels(groups, entries)
     return [
         {
             "project": project,
-            "name": names.get(project),
+            "name": labels.get(project),
+            "path": (entries.get(project) or {}).get("path"),
             "calls": g["calls"],
             "tokens_saved": g["saved"],
             "tokens_net": g["net"],
@@ -607,10 +635,10 @@ def _by_project(rows: list[dict], names: dict[str, str]) -> list[dict]:
 _NAMES_BACKFILL_TRIED: dict[str, set[str]] = {}
 
 
-def _project_names(rows: list[dict]) -> dict[str, str]:
+def _project_names(rows: list[dict]) -> dict[str, dict]:
     """The local names, after naming once the hashes of `rows` the map lacks (the rows written
     before the map existed): `hook_common.backfill_project_names`, bounded and best effort."""
-    names = hook_common.read_project_names(config.LOG_DIR)
+    names = hook_common.read_project_entries(config.LOG_DIR)
     tried = _NAMES_BACKFILL_TRIED.setdefault(str(config.LOG_DIR), set())
     missing = {_row_project(r) for r in rows} - set(names) - tried - {NO_PROJECT}
     if missing:
@@ -623,7 +651,7 @@ def _project_names(rows: list[dict]) -> dict[str, str]:
         if outcome.get("complete"):
             tried.update(missing)
         if added:
-            names = hook_common.read_project_names(config.LOG_DIR)
+            names = hook_common.read_project_entries(config.LOG_DIR)
     return names
 
 
@@ -2693,7 +2721,8 @@ function renderTestsInfo(s){
 //
 // A project's name is the name of its folder, read from the local map `project-names.json`: it is
 // untrusted text, so it only reaches the page through `escHooks` or `textContent`. A hash without
-// a name says «unnamed project»; the rows without a project are the group `none`.
+// a name says «unnamed project»; the rows without a project are the group `none`. The tooltip is
+// the project's real path when the map knows it, else its hash.
 function projectLabel(p){
   if(!p || p.project === 'none') return T('project.none');
   return p.name ? String(p.name) : T('project.unnamed');
@@ -2712,7 +2741,7 @@ function renderProjects(s){
     const on = state.project && state.project === p.project;
     const named = p.project !== 'none' && p.name;
     return '<tr' + (on ? ' class="sel"' : '') + '>'
-      + '<td class="mono"' + (named ? '' : ' style="color:var(--mut)"') + ' title="' + escHooks(p.project === 'none' ? '' : p.project) + '">'
+      + '<td class="mono"' + (named ? '' : ' style="color:var(--mut)"') + ' title="' + escHooks(p.project === 'none' ? '' : (p.path || p.project)) + '">'
       + escHooks(projectLabel(p)) + '</td>'
       + '<td class="num">' + F.format(p.calls) + '</td>'
       + '<td class="num" style="color:var(--green)">' + F.format(p.tokens_net) + '</td>'

@@ -53,14 +53,21 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   Las mediciones de `scripts/measure_*.py` siguen apartando el propio repo (`--include-self` lo
   deja), por eso el log conserva `caller_project_kind`.
 - **Nombres legibles con un mapa local aparte, `LOG_DIR/project-names.json`.** Traduce el hash del
-  proyecto al nombre de su carpeta y se escribe donde y cuando se calcula el hash (daemon, servidor
+  proyecto a un nombre legible: la última carpeta de su ruta real (`webshop`, `local-delegate`), no
+  el nombre codificado de `~/.claude/projects` (`C--work-webshop`). La ruta sale del `cwd` del hook
+  o de la llamada si corresponde a la carpeta del proyecto, o del campo `cwd` de la primera línea
+  que lo traiga del transcript (como mucho 64 KB leídos, sin guardar nada más); si no se consigue,
+  se usa el nombre codificado sin el prefijo de unidad. Si dos proyectos dan el mismo nombre, el
+  panel enseña también la carpeta padre (`work/webshop`), y el `title` lleva la ruta completa. Se
+  escribe donde y cuando se calcula el hash (daemon, servidor
   stdio, hooks y `recompute-cost`, cada uno en el `LOG_DIR` de su propio entorno), con cerrojo de
   fichero y reemplazo atómico, sin perder nombres con varios procesos a la vez. Tope de 1000
-  proyectos y 512 KiB; ausente o corrupto, se lee vacío y se rehace. El log de uso sigue **sin**
+  proyectos y 2 MiB; ausente o corrupto, se lee vacío y se rehace. El log de uso sigue **sin**
   nombres y el mapa nunca sale de la máquina. Las filas de la 0.51.0, que ya traen el hash, se
   nombran solas la primera vez que el panel las ve: recorre una vez los nombres de las carpetas de
-  `~/.claude/projects` (nunca un transcript), con la sal local, con tope de directorios y de tiempo,
-  y sin sal no hace nada. Un hash sin nombre sale como «Proyecto sin nombre»; las filas sin
+  `~/.claude/projects` con la sal local, y de cada una que coincide lee solo el campo `cwd` del
+  transcript más reciente (64 KB como mucho), con tope de directorios y de tiempo; sin sal no hace
+  nada. Un hash sin nombre sale como «Proyecto sin nombre»; las filas sin
   proyecto, como «Sin proyecto». El nombre de una carpeta es texto no confiable: el panel lo escapa
   siempre.
 - **La regla de la tabla ve más formatos y `role_reason` dice cuál vio (#650).** Además de HTML

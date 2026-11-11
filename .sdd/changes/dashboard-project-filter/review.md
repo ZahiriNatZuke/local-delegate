@@ -43,6 +43,7 @@
 | F8 | too big map retried on every call | not raised | result reviewer H6 | suspected | marked as seen; test |
 | F9 | drop-down rebuilt on every refresh | not raised | result reviewer H7 | suspected | rebuilt only when the list changes |
 | F10 | hash regex accepted a final newline; C1 and bidi characters | security reviewer | result reviewer H10 | confirmed | fullmatch; C0, C1, separators, bidi and Cf rejected; tests |
+| F12 | the panel showed the encoded folder (C--work-webshop), not readable | coordinator | not raised | confirmed | label from the real path, parent folder on collisions, path in the tooltip (REQ-018) |
 | F11 | fast path for seen hashes held the thread lock | plan reviewer | not raised | suspected | check before taking the lock |
 
 ## Required follow-up
