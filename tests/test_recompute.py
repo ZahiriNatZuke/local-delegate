@@ -25,6 +25,7 @@ from test_transcripts import (
 )
 
 from local_delegate import cli, config, recompute
+from local_delegate.resources.hooks.hook_common import PROJECT_NAMES_FILE
 
 NOW = BASE + timedelta(days=1)
 MONTH = "202610"
@@ -103,6 +104,11 @@ def test_privacy(tmp_path):
     texts = _texts(log)
     assert recompute.FILE_NAME in texts
     assert f"attribution-{MONTH}.json" in texts  # guarda: el relleno se escribió
+    # The local map of names (dashboard-project-filter) is, on purpose, the one file that holds
+    # the project's directory name, and nothing else of the transcript.
+    names = texts.pop(PROJECT_NAMES_FILE)
+    assert project in names
+    assert SESSION not in names and TOOL_USE_ID not in names and "doc.md" not in names
     all_json_text = "\n".join(texts.values())
     assert MARKER not in all_json_text
     assert SESSION not in all_json_text
@@ -158,7 +164,16 @@ def test_idempotent_and_read_only(tmp_path):
 
     after = _tree_snapshot(claude)
     assert after == before
-    assert set(first) == set(second) == {recompute.FILE_NAME, f"attribution-{MONTH}.json"}
+    assert (
+        set(first)
+        == set(second)
+        == {
+            recompute.FILE_NAME,
+            f"attribution-{MONTH}.json",
+            PROJECT_NAMES_FILE,  # the local map of names, written where the hash is computed
+        }
+    )
+    assert first[PROJECT_NAMES_FILE] == second[PROJECT_NAMES_FILE]
     assert first[f"attribution-{MONTH}.json"] == second[f"attribution-{MONTH}.json"]
     a1, a2 = json.loads(first[recompute.FILE_NAME]), json.loads(second[recompute.FILE_NAME])
     assert a1["generated"] != a2["generated"]

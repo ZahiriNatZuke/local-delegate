@@ -540,37 +540,134 @@ def _split_tests(rows: list[dict]) -> tuple[list[dict], list[dict]]:
     return kept, tests
 
 
-def _include_self(value: str | None) -> bool:
-    """`include_self=1` (or `true`) turns the own-repo switch on, with the same rule as
-    `include_tests` (usage-log-project-and-own-repo-exclusion, REQ-009)."""
-    return _include_tests(value)
+# --- The project filter (dashboard-project-filter) -----------------------------------------------
+#
+# Every usage row and hook event may carry its project as a salted 16-hex hash (`caller_project`
+# in the usage log, `project` in the hook telemetry). The panel filters by it with `?project=`:
+# a hash keeps that project's rows, `none` keeps the rows without one (older rows, Codex, the
+# chat), and anything else filters nothing. The readable names come from the local map
+# `LOG_DIR/project-names.json` (`hook_common.read_project_names`), never from the log.
+
+#: `?project=` value of the rows without a project.
+NO_PROJECT = "none"
 
 
-def _without_self(rows: list[dict]) -> list[dict]:
-    """The rows that are not from the own repo, with the ONE rule (`attribution.project_kind`).
-    A row without the field (`unknown`) stays: nothing says it is the own repo."""
-    return [r for r in rows if attribution.project_kind(r) != "self"]
+def _project_filter(value: str | None) -> str | None:
+    """The hash or `none` of `?project=`, or `None` (no filter) for any other value."""
+    text = str(value or "").strip().lower()
+    if text == NO_PROJECT or hook_common.is_project_hash(text):
+        return text
+    return None
+
+
+def _row_project(row: dict, field: str = "caller_project") -> str:
+    """The project of a usage row (or of a hook event, with `field="project"`): its hash, or
+    `none` when it has no valid one."""
+    value = row.get(field)
+    return value if hook_common.is_project_hash(value) else NO_PROJECT
+
+
+def _of_project(rows: list[dict], project: str | None, field: str = "caller_project") -> list[dict]:
+    """The rows of `project` (`None` keeps them all)."""
+    if project is None:
+        return rows
+    return [r for r in rows if _row_project(r, field) == project]
+
+
+def _display_labels(projects, entries: dict[str, dict]) -> dict[str, str]:
+    """The label each project of `projects` shows: its `label`, and where two share one (in any
+    case), the parent folder too (`work/webshop`); if that still collides, the whole path (or the
+    folder name when the path is unknown)."""
+    shown = {p: entries[p]["label"] for p in projects if p in entries}
+
+    def collisions() -> list[list[str]]:
+        groups: dict[str, list[str]] = {}
+        for project, label in shown.items():
+            groups.setdefault(label.lower(), []).append(project)
+        return [g for g in groups.values() if len(g) > 1]
+
+    for group in collisions():
+        for project in group:
+            entry = entries[project]
+            if entry["path"]:
+                shown[project] = "/".join(hook_common.path_segments(entry["path"])[-2:])
+            else:
+                shown[project] = entry["name"]
+    for group in collisions():
+        for project in group:
+            shown[project] = entries[project]["path"] or entries[project]["name"]
+    return shown
+
+
+def _by_project(rows: list[dict], entries: dict[str, dict]) -> list[dict]:
+    """Delegations and saving per project, most delegations first (the net saving breaks ties).
+
+    `project` is the hash or `none`; `name` is the label to show (`_display_labels`), or `null`
+    when the map has none (the panel then says "unnamed project"; for `none`, "no project");
+    `path` is the project's real path when the map knows it, else `null`.
+    """
+    groups: dict[str, dict] = {}
+    for r in rows:
+        project = _row_project(r)
+        acc = _accounting(r)
+        g = groups.setdefault(project, {"calls": 0, "saved": 0, "net": 0})
+        g["calls"] += 1
+        g["saved"] += acc["saved"]
+        g["net"] += acc["net"]
+    labels = _display_labels(groups, entries)
+    return [
+        {
+            "project": project,
+            "name": labels.get(project),
+            "path": (entries.get(project) or {}).get("path"),
+            "calls": g["calls"],
+            "tokens_saved": g["saved"],
+            "tokens_net": g["net"],
+        }
+        for project, g in sorted(
+            groups.items(), key=lambda kv: (-kv[1]["calls"], -kv[1]["net"], kv[0])
+        )
+    ]
+
+
+#: Per `LOG_DIR`, the hashes the backfill of names already looked for in this process: a hash
+#: whose directory is gone is not searched for again on every refresh.
+_NAMES_BACKFILL_TRIED: dict[str, set[str]] = {}
+
+
+def _project_names(rows: list[dict]) -> dict[str, dict]:
+    """The local names, after naming once the hashes of `rows` the map lacks (the rows written
+    before the map existed): `hook_common.backfill_project_names`, bounded and best effort."""
+    names = hook_common.read_project_entries(config.LOG_DIR)
+    tried = _NAMES_BACKFILL_TRIED.setdefault(str(config.LOG_DIR), set())
+    missing = {_row_project(r) for r in rows} - set(names) - tried - {NO_PROJECT}
+    if missing:
+        outcome: dict = {}
+        added = hook_common.backfill_project_names(
+            missing, directory=config.LOG_DIR, outcome=outcome
+        )
+        # Only a pass that looked everywhere and wrote what it found settles these hashes; after
+        # a busy lock or a spent budget the next read tries them again.
+        if outcome.get("complete"):
+            tried.update(missing)
+        if added:
+            names = hook_common.read_project_entries(config.LOG_DIR)
+    return names
 
 
 def _usage_rows(
-    rows: list[dict], include: bool, include_self: bool = True
+    rows: list[dict], include: bool, project: str | None = None
 ) -> tuple[list[dict], dict]:
     """Las filas que cuentan como uso y los contadores que lo explican (REQ-011, REQ-012).
 
-    Tests go first and the own repo after them (REQ-009 of usage-log-project-and-own-repo-
-    exclusion): `excluded_self` counts only what the second filter removed, so `shown +
-    excluded_tests + excluded_self` is the whole range. `self_in_range` counts every `self` row of
-    the range, also the ones that are tests too, as `tests_in_range` counts every test.
+    Tests go first and the project after them: `excluded_tests` and `tests_in_range` count the
+    whole range, whatever project is chosen, as they did before the filter existed.
     """
     kept, tests = _split_tests(rows)
     after_tests = rows if include else kept
-    shown = after_tests if include_self else _without_self(after_tests)
-    return shown, {
+    return _of_project(after_tests, project), {
         "excluded_tests": 0 if include else len(tests),
         "tests_in_range": len(tests),
-        "excluded_self": len(after_tests) - len(shown),
-        "self_in_range": sum(1 for r in rows if attribution.project_kind(r) == "self"),
-        "unknown_project": sum(1 for r in shown if attribution.project_kind(r) == "unknown"),
     }
 
 
@@ -579,12 +676,13 @@ def events(
     from_: str | None = Query(None, alias="from"),
     to: str | None = Query(None),
     include_tests: str | None = Query(None),
-    include_self: str | None = Query(None),
+    project: str | None = Query(None),
 ):
     # Sin `lang`: las filas son datos del log y se sirven tal cual (REQ-033).
     range_from, range_to = _resolve_range(from_, to)
     rows, files_read = _load(range_from, range_to)
-    rows, counts = _usage_rows(rows, _include_tests(include_tests), _include_self(include_self))
+    chosen = _project_filter(project)
+    rows, counts = _usage_rows(rows, _include_tests(include_tests), chosen)
     rows.reverse()  # más recientes primero
     return JSONResponse(
         {
@@ -592,6 +690,7 @@ def events(
                 "chars_per_token": CHARS_PER_TOKEN,
                 "log_dir": str(config.LOG_DIR),
                 "count": len(rows),
+                "project": chosen,
                 **counts,
                 "files_read": files_read,
                 "range_from": range_from.isoformat(),
@@ -609,21 +708,30 @@ def stats(
     include_tests: str | None = Query(None),
     lang: str | None = Query(None),
     session: str | None = Query(None),
-    include_self: str | None = Query(None),
+    project: str | None = Query(None),
 ):
     language = _lang(lang)
     range_from, range_to = _resolve_range(from_, to)
     rows, _files_read = _load(range_from, range_to)
-    # With `session=` the own-repo filter does not apply (REQ-010): the mod's status line asks for
-    # its own session's saving, and inside this repo it would always be 0.
-    keep_self = bool(session) or _include_self(include_self)
     if session:
         # The mod's status line (REQ-017 of claude-plugin-and-mods): only that session's lines,
         # for the usage and for the cost alike. Lines without a key (older, other clients) drop.
         rows = [r for r in rows if _session_matches(r, session)]
-    usage, counts = _usage_rows(list(rows), _include_tests(include_tests), keep_self)
+    include = _include_tests(include_tests)
+    chosen = _project_filter(project)
+    usage, counts = _usage_rows(list(rows), include, chosen)
     data = _aggregate(usage)
     data.update(counts)
+    # The breakdown per project ignores the project filter (it is what the selector offers) and
+    # follows the tests switch, like every other figure.
+    data["project"] = chosen
+    # The mod's status line (`session=`) gets no breakdown: it neither reads nor backfills the
+    # map of names, so nothing is spent on it when nobody opens the panel.
+    if session:
+        data["by_project"] = []
+    else:
+        every_project = _usage_rows(list(rows), include)[0]
+        data["by_project"] = _by_project(every_project, _project_names(every_project))
     data["open_test_windows"] = [
         {"id": w.id, "start": test_windows.format_instant(w.start)}
         for w in test_windows.load(config.LOG_DIR).open_windows()
@@ -632,11 +740,11 @@ def stats(
     # `recompute-cost` en el directorio de logs: el panel nunca abre `~/.claude` (REQ-073).
     # El coste ve SIEMPRE todas las filas del rango y aparta las pruebas él mismo con `exclusion_reason`:
     # no depende del interruptor (REQ-014). Las imágenes son uso: siguen al interruptor.
-    # The own repo does leave the cost by default (REQ-011 of usage-log-project-and-own-repo-
-    # exclusion): a cost that kept it would contradict the KPIs of the same screen.
+    # The cost follows the project filter (dashboard-project-filter): a cost of every project
+    # beside the KPIs of one would contradict them.
     now = _now()
     aggregates = recompute.read_aggregates(config.LOG_DIR)
-    cost_rows = rows if keep_self else _without_self(rows)
+    cost_rows = _of_project(rows, chosen)
     data["cost"] = valuation.cost_block(cost_rows, aggregates, now=now, language=language)
     data["images"] = valuation.images_block(usage)
     # El contenido es `density.json` tal cual (sin las claves `_`): sus claves cambian con su lector.
@@ -773,20 +881,13 @@ def _aggregate_hooks(rows: list[dict]) -> dict:
     }
 
 
-def _event_project_kind(event: dict) -> str:
-    """`self`, `other` or `unknown` of a hook telemetry event (`project_kind`, REQ-016), with the
-    same values as `attribution.project_kind` gives a usage row."""
-    kind = event.get("project_kind")
-    return kind if kind in attribution.PROJECT_KINDS else "unknown"
-
-
 @app.get("/api/hooks")
 def hooks(
     from_: str | None = Query(None, alias="from"),
     to: str | None = Query(None),
     include_tests: str | None = Query(None),
     lang: str | None = Query(None),
-    include_self: str | None = Query(None),
+    project: str | None = Query(None),
 ):
     """Lo que los hooks consultivos han sugerido, en el mismo rango que el resto del panel.
 
@@ -801,8 +902,7 @@ def hooks(
                 "enabled": False,
                 "reason": i18n.t_lang(_lang(lang), "panel.hooks.disabled"),
                 "excluded_tests": 0,
-                "excluded_self": 0,
-                "unknown_project": 0,
+                "project": _project_filter(project),
                 **_aggregate_hooks([]),
             }
         )
@@ -822,20 +922,17 @@ def hooks(
             before = len(rows)
             rows = [f for f in rows if windows.find(f.get("ts"), now=now) is None]
             excluded = before - len(rows)
-    # The own repo after the tests, as in `/api/stats` (REQ-012 of usage-log-project-and-own-repo-
-    # exclusion). An event without `project_kind` (older, or a hook input without a transcript)
-    # stays: nothing says it is the own repo.
-    after_tests = len(rows)
-    if not _include_self(include_self):
-        rows = [f for f in rows if _event_project_kind(f) != "self"]
+    # The project after the tests, as in `/api/stats` (dashboard-project-filter). An event without
+    # `project` (older, or a hook input without a transcript) belongs to `none`.
+    chosen = _project_filter(project)
+    rows = _of_project(rows, chosen, field="project")
     return JSONResponse(
         {
             "enabled": True,
             "log": str(path),
             "exists": path.is_file(),
             "excluded_tests": excluded,
-            "excluded_self": after_tests - len(rows),
-            "unknown_project": sum(1 for f in rows if _event_project_kind(f) == "unknown"),
+            "project": chosen,
             **_aggregate_hooks(rows),
         }
     )
@@ -1651,10 +1748,6 @@ a{color:var(--blue);text-decoration:none}
    para cerrarla está en su ⓘ. */
 .tdot{width:7px;height:7px;border-radius:50%;background:var(--amber);flex:0 0 auto;
   box-shadow:0 0 0 2px color-mix(in srgb,var(--amber) 28%,transparent)}
-/* What the own-repo switch leaves out, beside its label: a number, no text. */
-.tcount{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--tx2);
-  background:var(--panel2);border:1px solid var(--bd);border-radius:999px;padding:0 6px;
-  line-height:16px}
 .ver{font-family:var(--mono);font-size:10px;font-weight:700;color:var(--acc);
   background:color-mix(in srgb,var(--acc) 10%,transparent);
   border:1px solid color-mix(in srgb,var(--acc) 30%,transparent);
@@ -1664,6 +1757,13 @@ select.btn{appearance:none;padding-right:28px;
   background-position:calc(100% - 16px) 55%,calc(100% - 11px) 55%;background-size:5px 5px;background-repeat:no-repeat}
 /* Selector de idioma: el código en mono, como la versión del MCP. */
 select.btn.lang{font-family:var(--mono);letter-spacing:.04em}
+/* Project filter in use: the colour of a pressed switch, without the `background` shorthand that
+   would wipe the arrow. The name of a folder can be long: it is cut, never wraps. */
+select.btn.picked{border-color:color-mix(in srgb,var(--acc) 55%,transparent);color:var(--acc);
+  background-color:color-mix(in srgb,var(--acc) 10%,transparent)}
+#project{max-width:240px;text-overflow:ellipsis;white-space:nowrap;overflow:hidden}
+/* The chosen project's row in the per-project card. */
+tbody tr.sel{background:color-mix(in srgb,var(--acc) 9%,transparent)}
 input[type=date].btn{font-family:var(--mono);font-weight:600;font-variant-numeric:tabular-nums}
 input[type=date]::-webkit-calendar-picker-indicator{cursor:pointer;opacity:.65;transition:opacity .13s}
 input[type=date]::-webkit-calendar-picker-indicator:hover{opacity:1}
@@ -2038,14 +2138,13 @@ footer{color:var(--faint);font-size:11.5px;margin-top:26px;padding-top:18px;bord
         <span data-i18n="tests.label"></span><span class="tdot" id="testsDot" hidden></span></button>
       <button class="ibtn" id="testsInfo" data-group="tests" aria-haspopup="dialog"
         data-i18n-title="tests.info_title" data-i18n-aria="tests.info_aria"></button>
-      <!-- Own-repo switch (usage-log-project-and-own-repo-exclusion, REQ-013): off, the panel leaves
-           out the delegations of the own repo; on, the three requests carry include_self=1. The
-           number is what is left out; the rule lives in its ⓘ. -->
-      <button id="self" class="btn" data-i18n-title="self.title" aria-pressed="false">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="5" r="2"/><circle cx="6" cy="19" r="2"/><circle cx="18" cy="8" r="2"/><path d="M6 7v10"/><path d="M18 10a6 6 0 0 1-6 6H6"/></svg>
-        <span data-i18n="self.label"></span><span class="tcount" id="selfCount" hidden></span></button>
-      <button class="ibtn" id="selfInfo" data-group="self" aria-haspopup="dialog"
-        data-i18n-title="self.info_title" data-i18n-aria="self.info_aria"></button>
+      <!-- Project filter (dashboard-project-filter): «all projects» by default; a project, or
+           «no project», and the three requests of fetchData carry project=<hash or none>. The
+           options come from `by_project` of /api/stats and are built with textContent: a
+           project's name is a folder name, untrusted text. -->
+      <select id="project" class="btn" data-i18n-title="project.title" data-i18n-aria="project.aria">
+        <option value="" data-i18n="project.all"></option>
+      </select>
       <button id="auto" class="btn on" data-i18n-title="auto.title">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 0 1 15.4-6.4L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-15.4 6.4L3 16"/><path d="M3 21v-5h5"/></svg>
         <span data-i18n="auto.label"></span></button>
@@ -2164,6 +2263,14 @@ footer{color:var(--faint);font-size:11.5px;margin-top:26px;padding-top:18px;bord
     <div id="clientsBody"></div>
   </div>
 
+  <!-- Delegations and saving per project (dashboard-project-filter), most delegations first. It
+       ignores the project filter: it is what the selector offers. -->
+  <div class="card tablecard" id="projectsCard" style="display:none">
+    <div class="panel-h" style="--hc:var(--green)"><h2 data-i18n="projects.title"></h2>
+      <span class="mut" id="projectsHead"></span></div>
+    <div id="projectsBody"></div>
+  </div>
+
   <!-- Los hooks consultivos sugieren; el usuario decide. Esta tarjeta cuenta lo primero y NO
        pretende medir lo segundo: no hay identificador que una una sugerencia con una delegación,
        y cruzarlos sería inventar una correlación. El texto del diálogo lo dice. -->
@@ -2208,7 +2315,6 @@ footer{color:var(--faint);font-size:11.5px;margin-top:26px;padding-top:18px;bord
     <section id="dlgQuota" data-group="cost" style="--hc:var(--violet)"><h4 data-i18n="quota.title"></h4><div id="dlgQuotaBody"></div></section>
     <section id="dlgImages" data-group="cost" style="--hc:var(--cyan)"><h4 data-i18n="images.title"></h4><div id="dlgImagesBody"></div></section>
     <section id="dlgTests" data-group="tests" style="--hc:var(--amber)"><h4 data-i18n="dialog.tests.title"></h4><div id="dlgTestsBody"></div></section>
-    <section id="dlgSelf" data-group="self" style="--hc:var(--amber)"><h4 data-i18n="dialog.self.title"></h4><div id="dlgSelfBody"></div></section>
     <section id="dlgHooks" data-group="hooks" style="--hc:var(--amber)"><h4 data-i18n="dialog.card.title"></h4>
       <div data-i18n-html="dialog.hooks.body_html"></div></section>
     <section id="dlgSystem" data-group="system" style="--hc:var(--amber)"><h4 data-i18n="dialog.card.title"></h4>
@@ -2309,7 +2415,7 @@ function fmtCompact(n){
 // «1 estimado / 4 estimados»: la cifra con su formato y la palabra concordada del catálogo
 // (`<key>.one` y `<key>.other`), sin «(s)».
 function plural(n, key){ return fmtNum(n, 0) + ' ' + T(key + (n === 1 ? '.one' : '.other')); }
-const state = {events:[], stats:null, hooks:null, system:null, range:'today', auto:true, tests:false, self:false, charts:{},
+const state = {events:[], stats:null, hooks:null, system:null, range:'today', auto:true, tests:false, project:'', projectNames:{}, charts:{},
   page:0, status:null, running:{}, backendUp:undefined, inflight:[],
   activity:null, lastEvent:null, backendOrigin:null, backendHost:null};
 const cssv = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
@@ -2426,14 +2532,14 @@ function computeRange(preset){
 // La query de las tres peticiones del panel. Pura, para que node la pruebe: rango e interruptor
 // «Pruebas» van juntos y una petición no puede salir con otro conjunto que las demás. `lang` es el
 // idioma del selector: el servidor redacta en él lo que manda ya escrito (D6).
-// `includeSelf` is the own-repo switch (usage-log-project-and-own-repo-exclusion, REQ-013): it goes
-// last and is optional, so a call with three arguments keeps leaving the own repo out.
-function buildQuery(range, includeTests, lang, includeSelf){
+// `project` is the project filter (dashboard-project-filter): a hash, `none` or empty (all of
+// them); it goes last and is optional, so a call with three arguments shows every project.
+function buildQuery(range, includeTests, lang, project){
   const qs = new URLSearchParams();
   if(range && range.from) qs.set('from', range.from);
   if(range && range.to) qs.set('to', range.to);
   if(includeTests) qs.set('include_tests', '1');
-  if(includeSelf) qs.set('include_self', '1');
+  if(project) qs.set('project', project);
   if(lang) qs.set('lang', lang);
   return qs.toString();
 }
@@ -2442,7 +2548,7 @@ function langQuery(){ return 'lang=' + encodeURIComponent(LANG); }
 
 async function fetchData(){
   try{
-    const q = buildQuery(computeRange(state.range), state.tests, LANG, state.self);
+    const q = buildQuery(computeRange(state.range), state.tests, LANG, state.project);
     // Los KPIs vienen de /api/stats y NO se recalculan aquí: es la única implementación de las
     // cuentas (la de Python). Además /api/events viene topado a MAX_EVENTS, así que sumar sobre
     // esta lista subestimaría en rangos grandes mientras el pie muestra el total real.
@@ -2457,6 +2563,7 @@ async function fetchData(){
     state.events = j.events||[]; state.meta = j.meta||{};
     try{ state.stats = await rs.json(); }catch(e){ state.stats = null; }
     renderClients(state.stats);
+    renderProjects(state.stats);
     renderCost(state.stats);
     renderTestsInfo(state.stats);
     try{ state.hooks = await rh.json(); }catch(e){ state.hooks = null; }
@@ -2608,31 +2715,74 @@ function renderTestsInfo(s){
   document.getElementById('dlgTestsBody').innerHTML = paragraphsHtml(testsText(s), true)
     .replace(/`([^`]+)`/g, '<code>$1</code>');
   document.getElementById('testsDot').hidden = !((s && s.open_test_windows)||[]).length;
-  // The two filter switches are painted together, from the same `/api/stats` answer.
-  renderSelfInfo(s);
 }
 
-// --- Own repo: the text of its ⓘ and the number on the switch (REQ-013) ---
-function selfText(j){
-  if(!j) return [];
-  const L = [];
-  const excluded = j.excluded_self||0, inRange = j.self_in_range||0, unknown = j.unknown_project||0;
-  if(excluded) L.push(T('self.line.excluded', {n: plural(excluded, 'unit.delegation')}));
-  else if(inRange) L.push(T('self.line.included', {n: plural(inRange, 'unit.delegation')}));
-  else L.push(T('self.line.none'));
-  if(unknown) L.push(T('self.line.unknown', {n: plural(unknown, 'unit.delegation')}));
-  L.push(T('self.line.rule'));
-  L.push(T('self.line.session'));
-  return L;
+// --- Per project: the breakdown card and the filter's options (dashboard-project-filter) ---
+//
+// A project's name is the name of its folder, read from the local map `project-names.json`: it is
+// untrusted text, so it only reaches the page through `escHooks` or `textContent`. A hash without
+// a name says «unnamed project»; the rows without a project are the group `none`. The tooltip is
+// the project's real path when the map knows it, else its hash.
+function projectLabel(p){
+  if(!p || p.project === 'none') return T('project.none');
+  return p.name ? String(p.name) : T('project.unnamed');
 }
 
-function renderSelfInfo(s){
-  document.getElementById('dlgSelfBody').innerHTML = paragraphsHtml(selfText(s), true)
-    .replace(/`([^`]+)`/g, '<code>$1</code>');
-  const excluded = (s && s.excluded_self)||0;
-  const count = document.getElementById('selfCount');
-  count.hidden = !excluded;
-  count.textContent = excluded ? F.format(excluded) : '';
+function renderProjects(s){
+  const rows = (s && s.by_project) || [];
+  renderProjectOptions(rows);
+  const card = document.getElementById('projectsCard');
+  if(!rows.length){ card.style.display='none'; return; }
+  card.style.display='';
+  const totalCalls = rows.reduce((a,p)=>a+p.calls,0);
+  document.getElementById('projectsHead').textContent = plural(rows.length, 'unit.project');
+  const body = rows.map(p=>{
+    const share = totalCalls ? (p.calls/totalCalls*100) : 0;
+    const on = state.project && state.project === p.project;
+    const named = p.project !== 'none' && p.name;
+    return '<tr' + (on ? ' class="sel"' : '') + '>'
+      + '<td class="mono"' + (named ? '' : ' style="color:var(--mut)"') + ' title="' + escHooks(p.project === 'none' ? '' : (p.path || p.project)) + '">'
+      + escHooks(projectLabel(p)) + '</td>'
+      + '<td class="num">' + F.format(p.calls) + '</td>'
+      + '<td class="num" style="color:var(--green)">' + F.format(p.tokens_net) + '</td>'
+      + '<td class="num" style="color:var(--cyan)">' + F1.format(share) + ' %</td></tr>';
+  }).join('');
+  document.getElementById('projectsBody').innerHTML =
+    '<div style="overflow-x:auto"><table>'
+    + '<thead><tr><th>' + T('projects.col.project') + '</th><th>' + T('projects.col.delegations') + '</th>'
+    + '<th>' + T('projects.col.net') + '</th><th>' + T('projects.col.share') + '</th></tr></thead>'
+    + '<tbody>' + body + '</tbody></table></div>';
+}
+
+// The selector's options, rebuilt from `by_project`. The chosen project stays an option even when
+// the range has none of its rows, so the filter in use is always visible.
+function renderProjectOptions(rows){
+  const sel = document.getElementById('project');
+  if(!sel) return;
+  const seen = new Set();
+  const opts = [];
+  for(const p of rows){
+    if(!p || typeof p.project !== 'string' || seen.has(p.project)) continue;
+    seen.add(p.project); opts.push(p);
+    if(p.name) state.projectNames[p.project] = String(p.name);
+  }
+  if(state.project && !seen.has(state.project)){
+    opts.push({project: state.project, name: null, keep: true});
+  }
+  const wanted = opts.map(p => [p.project,
+    projectLabel(p.keep ? {project: p.project, name: state.projectNames[p.project]} : p)]);
+  // Rebuilt only when the list changed: the automatic refresh would close an open drop-down.
+  const current = Array.from(sel.options).slice(1).map(o => [o.value, o.textContent]);
+  if(JSON.stringify(current) !== JSON.stringify(wanted)){
+    while(sel.options.length > 1) sel.remove(1);
+    for(const [value, label] of wanted){
+      const o = document.createElement('option');
+      o.value = value;
+      o.textContent = label;
+      sel.appendChild(o);
+    }
+  }
+  sel.value = state.project || '';
 }
 
 function costText(j){
@@ -3807,17 +3957,11 @@ document.getElementById('tests').onclick=()=>{
   try{ localStorage.setItem('ld-tests', state.tests ? '1' : '0'); }catch(e){}
   fetchData();
 };
-// Own-repo switch (REQ-013): off by default, so the panel opens with the own repo left out; it is
-// remembered per browser (`ld-self`), like «Pruebas».
-function paintSelfToggle(){
-  const b = document.getElementById('self');
-  b.classList.toggle('on', state.self); b.setAttribute('aria-pressed', String(state.self));
-}
-try{ state.self = localStorage.getItem('ld-self') === '1'; }catch(e){ state.self = false; }
-paintSelfToggle();
-document.getElementById('self').onclick=()=>{
-  state.self = !state.self; paintSelfToggle();
-  try{ localStorage.setItem('ld-self', state.self ? '1' : '0'); }catch(e){}
+// Project filter (dashboard-project-filter): every project by default, and not remembered, so the
+// panel never opens hiding most of the data behind a choice made days ago.
+document.getElementById('project').onchange=e=>{
+  state.project = e.currentTarget.value || '';
+  e.currentTarget.classList.toggle('picked', !!state.project);
   fetchData();
 };
 // Selector de idioma (REQ-020). Lo ya pintado se repinta al momento con los datos que hay; lo que
@@ -3835,7 +3979,7 @@ function applyStatic(){
   document.getElementById('lang').value = LANG;
 }
 function repaint(){
-  renderClients(state.stats); renderCost(state.stats); renderTestsInfo(state.stats);
+  renderClients(state.stats); renderProjects(state.stats); renderCost(state.stats); renderTestsInfo(state.stats);
   renderHooks(state.hooks); render(); updateLive(); renderFoot();
   renderBackend(); renderTools(); renderInflight(); renderBackendStats(state.backendStats);
   renderSystem(state.system);
@@ -3864,7 +4008,6 @@ const INFO_GROUPS = {
   hooks:{title:'info.hooks', icon:ICON.info, color:'var(--amber)'},
   system:{title:'info.system', icon:ICON.gen, color:'var(--amber)'},
   tests:{title:'info.tests', icon:ICON.info, color:'var(--amber)'},
-  self:{title:'info.self', icon:ICON.info, color:'var(--amber)'},
 };
 function openInfo(group, section){
   const g = INFO_GROUPS[group] || INFO_GROUPS.cost;
