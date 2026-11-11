@@ -1,0 +1,154 @@
+{
+  "schemaVersion": 1,
+  "slug": "extract-cross-filled-warning",
+  "title": "local_extract: aviso de valor cruzado entre claves (cross_filled_keys, #650)",
+  "mode": "standard",
+  "traceability": "strict",
+  "status": "closed",
+  "createdAt": "2026-11-11T10:19:06.079Z",
+  "updatedAt": "2026-11-11T11:24:34.277Z",
+  "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-11-11T10:35:40.697Z",
+      "evidence": "spec.md: 13 requisitos con verificación por test; diseño elegido con medición previa (research.md): 0 falsos positivos en holdout, respuestas grabadas y conjunto nuevo",
+      "actor": "user"
+    },
+    "plan": {
+      "status": "approved",
+      "updatedAt": "2026-11-11T10:35:41.497Z",
+      "evidence": "plan.md: 4 tareas trazadas a REQ-001..013; módulo propio sin tocar el detector de tablas ni el prompt",
+      "actor": "user"
+    },
+    "quality": {
+      "status": "approved",
+      "updatedAt": "2026-11-11T11:24:33.063Z",
+      "evidence": "PR #659 CI 22/22 green; suite local -n 2 7477 passed (fallo de nombres arreglado); sdd check ok",
+      "actor": "user"
+    },
+    "conformance": {
+      "status": "approved",
+      "updatedAt": "2026-11-11T11:24:33.660Z",
+      "evidence": "review.md deep: dos jueces y seguridad; hallazgos corregidos y añadidos al conjunto; conforms-with-notes",
+      "actor": "user"
+    },
+    "memory": {
+      "status": "approved",
+      "updatedAt": "2026-11-11T11:24:33.871Z",
+      "evidence": "handoff.md y brief.md L2; sin secretos ni datos personales",
+      "actor": "user"
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-11-11T10:19:06.079Z",
+      "reason": "SDD change created"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "researching",
+      "at": "2026-11-11T10:35:33.349Z",
+      "reason": "pedido entendido; partir del intento del 2026-11-10"
+    },
+    {
+      "type": "transition",
+      "from": "researching",
+      "to": "specifying",
+      "at": "2026-11-11T10:35:33.577Z",
+      "reason": "research.md con medición del diseño sobre holdout, respuestas grabadas y conjunto nuevo"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-11-11T10:35:40.697Z",
+      "evidence": "spec.md: 13 requisitos con verificación por test; diseño elegido con medición previa (research.md): 0 falsos positivos en holdout, respuestas grabadas y conjunto nuevo",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-11-11T10:35:40.976Z",
+      "reason": "spec aprobada"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "plan-review",
+      "at": "2026-11-11T10:35:41.221Z",
+      "reason": "plan con 4 tareas y mutantes de control positivo"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-11-11T10:35:41.497Z",
+      "evidence": "plan.md: 4 tareas trazadas a REQ-001..013; módulo propio sin tocar el detector de tablas ni el prompt",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "plan-review",
+      "to": "implementing",
+      "at": "2026-11-11T10:35:41.744Z",
+      "reason": "spec y plan aprobados"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-11-11T11:09:37.923Z",
+      "reason": "T1-T5 hechas; puerta de medición en verde"
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-11-11T11:24:33.063Z",
+      "evidence": "PR #659 CI 22/22 green; suite local -n 2 7477 passed (fallo de nombres arreglado); sdd check ok",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "verifying",
+      "to": "result-review",
+      "at": "2026-11-11T11:24:33.253Z",
+      "reason": "verificación completa"
+    },
+    {
+      "type": "gate",
+      "gate": "conformance",
+      "status": "approved",
+      "at": "2026-11-11T11:24:33.660Z",
+      "evidence": "review.md deep: dos jueces y seguridad; hallazgos corregidos y añadidos al conjunto; conforms-with-notes",
+      "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "memory",
+      "status": "approved",
+      "at": "2026-11-11T11:24:33.871Z",
+      "evidence": "handoff.md y brief.md L2; sin secretos ni datos personales",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "result-review",
+      "to": "closing",
+      "at": "2026-11-11T11:24:34.072Z",
+      "reason": "puertas aprobadas"
+    },
+    {
+      "type": "transition",
+      "from": "closing",
+      "to": "closed",
+      "at": "2026-11-11T11:24:34.277Z",
+      "reason": "PR #659 abierto en verde; lo mezcla la sesión principal"
+    }
+  ]
+}

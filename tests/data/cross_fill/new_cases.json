@@ -1,0 +1,364 @@
+{
+  "_readme": "Cross-fill warning set of #650 (SDD extract-cross-filled-warning). Invented data. Each answer is written by hand: 'crossed' lists the keys whose value comes from another row (the truth), 'must_flag' the crossed keys the detector is designed to catch (value in one row only, label fitting another requested key better). A flag on a key outside 'crossed' is a false positive.",
+  "cases": [
+    {
+      "id": "n01-product-sheet-repeated-en",
+      "format": "html", "lang": "en",
+      "source": "<table>\n<tr><th>Spec</th><th>Value</th></tr>\n<tr><td>Weight (kg)</td><td>12</td></tr>\n<tr><td>Max load (kg)</td><td>120</td></tr>\n<tr><td>Warranty (years)</td><td>2</td></tr>\n<tr><td>Price</td><td>12</td></tr>\n</table>\n",
+      "fields": ["weight", "maximum_load", "warranty_years", "cost"],
+      "answers": [
+        {"answer": {"weight": 12, "maximum_load": 120, "warranty_years": 2, "cost": 12}, "crossed": [], "must_flag": []},
+        {"answer": {"weight": 120, "maximum_load": 12, "warranty_years": 2, "cost": 12}, "crossed": ["weight", "maximum_load"], "must_flag": ["weight"]}
+      ]
+    },
+    {
+      "id": "n02-pricing-es-keys-en",
+      "format": "markdown", "lang": "es",
+      "source": "| Concepto | Valor |\n| --- | --- |\n| Precio mensual | 29 € |\n| Usuarios incluidos | 10 |\n| Almacenamiento | 200 GB |\n",
+      "fields": ["monthly_price", "included_users", "storage"],
+      "answers": [
+        {"answer": {"monthly_price": "29 €", "included_users": 10, "storage": "200 GB"}, "crossed": [], "must_flag": []},
+        {"answer": {"monthly_price": "200 GB", "included_users": 10, "storage": "29 €"}, "crossed": ["monthly_price", "storage"], "must_flag": []}
+      ]
+    },
+    {
+      "id": "n03-plans-csv-en",
+      "format": "csv", "lang": "en",
+      "source": "plan,seats,storage,support\nStarter,5,100 GB,Email\nGrowth,25,1 TB,Chat\nScale,100,5 TB,Phone\n",
+      "fields": ["starter_seats", "growth_seats", "scale_storage", "growth_support"],
+      "answers": [
+        {"answer": {"starter_seats": 5, "growth_seats": 25, "scale_storage": "5 TB", "growth_support": "Chat"}, "crossed": [], "must_flag": []},
+        {"answer": {"starter_seats": 5, "growth_seats": 100, "scale_storage": "1 TB", "growth_support": "Phone"}, "crossed": ["growth_seats", "scale_storage", "growth_support"], "must_flag": []}
+      ]
+    },
+    {
+      "id": "n04-two-key-labels-en",
+      "format": "html", "lang": "en",
+      "source": "<table>\n<tr><td>Monthly price</td><td>$15</td></tr>\n<tr><td>Annual price</td><td>$150</td></tr>\n<tr><td>Monthly active users</td><td>3,200</td></tr>\n<tr><td>Annual revenue</td><td>$1.2M</td></tr>\n</table>\n",
+      "fields": ["monthly_price", "annual_price", "monthly_active_users"],
+      "answers": [
+        {"answer": {"monthly_price": "$15", "annual_price": "$150", "monthly_active_users": 3200}, "crossed": [], "must_flag": []},
+        {"answer": {"monthly_price": "3,200", "annual_price": "$15", "monthly_active_users": "$1.2M"}, "crossed": ["monthly_price", "annual_price", "monthly_active_users"], "must_flag": ["monthly_price", "annual_price"]}
+      ]
+    },
+    {
+      "id": "n05-hotel-lines-es",
+      "format": "text", "lang": "es",
+      "source": "Nombre: Hotel Mirador\nHabitaciones: 48\nPlantas: 6\nDistancia a la playa: 300 m\nPrecio por noche: 85 USD\nCheck-in: 14:00\nCheck-out: 11:00\n",
+      "fields": ["nombre_hotel", "numero_habitaciones", "precio_noche", "hora_check_in", "hora_check_out"],
+      "answers": [
+        {"answer": {"nombre_hotel": "Hotel Mirador", "numero_habitaciones": 48, "precio_noche": "85 USD", "hora_check_in": "14:00", "hora_check_out": "11:00"}, "crossed": [], "must_flag": []},
+        {"answer": {"nombre_hotel": "Hotel Mirador", "numero_habitaciones": 6, "precio_noche": "300 m", "hora_check_in": "11:00", "hora_check_out": "14:00"}, "crossed": ["numero_habitaciones", "precio_noche", "hora_check_in", "hora_check_out"], "must_flag": ["hora_check_in"]}
+      ]
+    },
+    {
+      "id": "n06-synonym-repeated-es",
+      "format": "html", "lang": "es",
+      "source": "<table>\n<tr><td>Coste (EUR)</td><td>45</td></tr>\n<tr><td>Peso (g)</td><td>45</td></tr>\n<tr><td>Autonomía (h)</td><td>30</td></tr>\n<tr><td>Garantía (meses)</td><td>24</td></tr>\n</table>\n",
+      "fields": ["precio", "peso", "autonomia", "garantia"],
+      "answers": [
+        {"answer": {"precio": 45, "peso": 45, "autonomia": 30, "garantia": 24}, "crossed": [], "must_flag": []},
+        {"answer": {"precio": 45, "peso": 45, "autonomia": 24, "garantia": 30}, "crossed": ["autonomia", "garantia"], "must_flag": ["autonomia", "garantia"]}
+      ]
+    },
+    {
+      "id": "n07-transposed-md-en",
+      "format": "markdown", "lang": "en",
+      "source": "| Feature | Free | Pro | Team |\n|---|---|---|---|\n| Projects | 3 | 50 | Unlimited |\n| Storage | 2 GB | 100 GB | 1 TB |\n| Members | 1 | 5 | 50 |\n",
+      "fields": ["pro_projects", "pro_storage", "team_members", "team_storage"],
+      "answers": [
+        {"answer": {"pro_projects": 50, "pro_storage": "100 GB", "team_members": 50, "team_storage": "1 TB"}, "crossed": [], "must_flag": []},
+        {"answer": {"pro_projects": 50, "pro_storage": "1 TB", "team_members": 50, "team_storage": "100 GB"}, "crossed": ["pro_storage", "team_storage"], "must_flag": ["pro_storage", "team_storage"]}
+      ]
+    },
+    {
+      "id": "n08-inventory-tsv-en",
+      "format": "tsv", "lang": "en",
+      "source": "sku\tname\tstock\tprice\nA-100\tDesk lamp\t340\t24.90\nA-200\tFloor lamp\t75\t89.00\nA-300\tWall lamp\t12\t39.50\n",
+      "fields": ["desk_lamp_stock", "floor_lamp_price", "wall_lamp_stock"],
+      "answers": [
+        {"answer": {"desk_lamp_stock": 340, "floor_lamp_price": "89.00", "wall_lamp_stock": 12}, "crossed": [], "must_flag": []},
+        {"answer": {"desk_lamp_stock": 75, "floor_lamp_price": "89.00", "wall_lamp_stock": 12}, "crossed": ["desk_lamp_stock"], "must_flag": []}
+      ]
+    },
+    {
+      "id": "n09-transfer-limits-en",
+      "format": "html", "lang": "en",
+      "source": "<table>\n<tr><td>Upload limit per file</td><td>2 GB</td></tr>\n<tr><td>Download limit per day</td><td>50 GB</td></tr>\n<tr><td>File retention</td><td>30 days</td></tr>\n<tr><td>Daily backup</td><td>Included</td></tr>\n</table>\n",
+      "fields": ["upload_limit", "download_limit", "file_retention_days", "daily_backup"],
+      "answers": [
+        {"answer": {"upload_limit": "2 GB", "download_limit": "50 GB", "file_retention_days": 30, "daily_backup": "Included"}, "crossed": [], "must_flag": []},
+        {"answer": {"upload_limit": "50 GB", "download_limit": "2 GB", "file_retention_days": 30, "daily_backup": "Included"}, "crossed": ["upload_limit", "download_limit"], "must_flag": ["upload_limit", "download_limit"]}
+      ]
+    },
+    {
+      "id": "n10-pr-json-en",
+      "format": "json", "lang": "en",
+      "source": "{\"title\": \"Fix crash on empty sheet\", \"author\": \"mlopez\", \"reviewer\": \"jdiaz\", \"labels\": [\"bug\", \"export\"], \"milestone\": \"v2.4\"}\n",
+      "fields": ["author", "reviewer", "milestone"],
+      "answers": [
+        {"answer": {"author": "mlopez", "reviewer": "jdiaz", "milestone": "v2.4"}, "crossed": [], "must_flag": []},
+        {"answer": {"author": "jdiaz", "reviewer": "mlopez", "milestone": "v2.4"}, "crossed": ["author", "reviewer"], "must_flag": ["author", "reviewer"]}
+      ]
+    },
+    {
+      "id": "n11-plurals-accents-es",
+      "format": "markdown", "lang": "es",
+      "source": "| Característica | Valor |\n| --- | --- |\n| Ciudades cubiertas | 14 |\n| Compañías aliadas | 230 |\n| Sucursales | 9 |\n",
+      "fields": ["ciudades", "companias", "sucursales"],
+      "answers": [
+        {"answer": {"ciudades": 14, "companias": 230, "sucursales": 9}, "crossed": [], "must_flag": []},
+        {"answer": {"ciudades": 230, "companias": 14, "sucursales": 9}, "crossed": ["ciudades", "companias"], "must_flag": ["ciudades", "companias"]}
+      ]
+    },
+    {
+      "id": "n12-shop-csv-repeated-es",
+      "format": "csv", "lang": "es",
+      "source": "producto,precio,stock,descuento\nCamiseta,15,15,10%\nPantalón,30,8,15%\nGorra,10,40,5%\n",
+      "fields": ["precio_camiseta", "stock_camiseta", "precio_pantalon", "descuento_gorra"],
+      "answers": [
+        {"answer": {"precio_camiseta": 15, "stock_camiseta": 15, "precio_pantalon": 30, "descuento_gorra": "5%"}, "crossed": [], "must_flag": []},
+        {"answer": {"precio_camiseta": 30, "stock_camiseta": 15, "precio_pantalon": 30, "descuento_gorra": "15%"}, "crossed": ["precio_camiseta", "descuento_gorra"], "must_flag": ["precio_camiseta"]}
+      ]
+    },
+    {
+      "id": "n13-value-repeated-in-prose-en",
+      "format": "html", "lang": "en",
+      "source": "<p>Our Pro plan costs $49 per month.</p>\n<table>\n<tr><th>Item</th><th>Value</th></tr>\n<tr><td>Pro monthly price</td><td>$49</td></tr>\n<tr><td>Business monthly price</td><td>$99</td></tr>\n<tr><td>Pro seats</td><td>10</td></tr>\n</table>\n",
+      "fields": ["pro_monthly_price", "business_monthly_price", "pro_seats"],
+      "answers": [
+        {"answer": {"pro_monthly_price": "$49", "business_monthly_price": "$99", "pro_seats": 10}, "crossed": [], "must_flag": []},
+        {"answer": {"pro_monthly_price": "$99", "business_monthly_price": "$49", "pro_seats": 10}, "crossed": ["pro_monthly_price", "business_monthly_price"], "must_flag": ["pro_monthly_price"]}
+      ]
+    },
+    {
+      "id": "n14-config-lines-en",
+      "format": "text", "lang": "en",
+      "source": "max_connections = 200\nidle_timeout = 30s\nrequest_timeout = 120s\nlog_level = info\n",
+      "fields": ["max_connections", "idle_timeout", "request_timeout"],
+      "answers": [
+        {"answer": {"max_connections": 200, "idle_timeout": "30s", "request_timeout": "120s"}, "crossed": [], "must_flag": []},
+        {"answer": {"max_connections": 200, "idle_timeout": "120s", "request_timeout": "30s"}, "crossed": ["idle_timeout", "request_timeout"], "must_flag": ["idle_timeout", "request_timeout"]}
+      ]
+    },
+    {
+      "id": "n15-order-synonyms-es",
+      "format": "html", "lang": "es",
+      "source": "<table>\n<tr><td>Importe (USD)</td><td>120</td></tr>\n<tr><td>Envío (USD)</td><td>15</td></tr>\n<tr><td>Plazo de entrega (días)</td><td>5</td></tr>\n<tr><td>Impuestos (USD)</td><td>15</td></tr>\n</table>\n",
+      "fields": ["precio", "envio", "impuestos", "plazo_entrega"],
+      "answers": [
+        {"answer": {"precio": 120, "envio": 15, "impuestos": 15, "plazo_entrega": 5}, "crossed": [], "must_flag": []},
+        {"answer": {"precio": 15, "envio": 15, "impuestos": 15, "plazo_entrega": 120}, "crossed": ["precio", "plazo_entrega"], "must_flag": []}
+      ]
+    },
+    {
+      "id": "n16-gfm-no-outer-pipes-en",
+      "format": "markdown", "lang": "en",
+      "source": "Metric | Q1 | Q2\n--- | --- | ---\nRevenue | 1.2M | 1.5M\nChurn rate | 3.1% | 2.8%\nNew customers | 410 | 465\n",
+      "fields": ["revenue_q2", "churn_rate_q1", "new_customers_q2"],
+      "answers": [
+        {"answer": {"revenue_q2": "1.5M", "churn_rate_q1": "3.1%", "new_customers_q2": 465}, "crossed": [], "must_flag": []},
+        {"answer": {"revenue_q2": "1.2M", "churn_rate_q1": "465", "new_customers_q2": 410}, "crossed": ["revenue_q2", "churn_rate_q1", "new_customers_q2"], "must_flag": ["churn_rate_q1"]}
+      ]
+    },
+    {
+      "id": "n17-phone-specs-td-header-en",
+      "format": "html", "lang": "en",
+      "source": "<table>\n<tr><td>Spec</td><td>Value</td></tr>\n<tr><td>Screen size</td><td>6.1 in</td></tr>\n<tr><td>Battery</td><td>4,500 mAh</td></tr>\n<tr><td>Weight</td><td>172 g</td></tr>\n<tr><td>Thickness</td><td>7.9 mm</td></tr>\n</table>\n",
+      "fields": ["screen_size", "battery_capacity", "weight"],
+      "answers": [
+        {"answer": {"screen_size": "6.1 in", "battery_capacity": "4500 mAh", "weight": "172 g"}, "crossed": [], "must_flag": []},
+        {"answer": {"screen_size": "6.1 in", "battery_capacity": "172 g", "weight": "4,500 mAh"}, "crossed": ["battery_capacity", "weight"], "must_flag": ["battery_capacity", "weight"]}
+      ]
+    },
+    {
+      "id": "n18-user-limits-es",
+      "format": "markdown", "lang": "es",
+      "source": "| Límite | Valor |\n| --- | --- |\n| Usuarios con licencia | 120 |\n| Usuarios activos | 95 |\n| Usuarios invitados | 30 |\n",
+      "fields": ["usuarios_licencia", "usuarios_activos", "usuarios_invitados"],
+      "answers": [
+        {"answer": {"usuarios_licencia": 120, "usuarios_activos": 95, "usuarios_invitados": 30}, "crossed": [], "must_flag": []},
+        {"answer": {"usuarios_licencia": 95, "usuarios_activos": 30, "usuarios_invitados": 120}, "crossed": ["usuarios_licencia", "usuarios_activos", "usuarios_invitados"], "must_flag": ["usuarios_licencia", "usuarios_activos", "usuarios_invitados"]}
+      ]
+    },
+    {
+      "id": "n19-regions-csv-tie-en",
+      "format": "csv", "lang": "en",
+      "source": "region,sales,returns\nNorth,1200,45\nSouth,980,30\n",
+      "fields": ["north_sales", "south_sales", "north_returns"],
+      "answers": [
+        {"answer": {"north_sales": 1200, "south_sales": 980, "north_returns": 45}, "crossed": [], "must_flag": []},
+        {"answer": {"north_sales": 980, "south_sales": 980, "north_returns": 30}, "crossed": ["north_sales", "north_returns"], "must_flag": ["north_sales"]}
+      ]
+    },
+    {
+      "id": "n20-prose-and-lines-en",
+      "format": "text", "lang": "en",
+      "source": "The device weighs 1.2 kg and the battery lasts 10 hours.\nModel: Orion X\nColor: Graphite\nRelease year: 2025\n",
+      "fields": ["model", "color", "release_year", "weight"],
+      "answers": [
+        {"answer": {"model": "Orion X", "color": "Graphite", "release_year": 2025, "weight": "1.2 kg"}, "crossed": [], "must_flag": []},
+        {"answer": {"model": "Graphite", "color": "Orion X", "release_year": "10 hours", "weight": "1.2 kg"}, "crossed": ["model", "color", "release_year"], "must_flag": ["model", "color"]}
+      ]
+    },
+    {
+      "id": "n21-two-tables-same-labels-en",
+      "format": "html", "lang": "en",
+      "source": "<h2>Basic</h2>\n<table>\n<tr><td>Price</td><td>$10</td></tr>\n<tr><td>Storage</td><td>20 GB</td></tr>\n</table>\n<h2>Premium</h2>\n<table>\n<tr><td>Price</td><td>$25</td></tr>\n<tr><td>Storage</td><td>200 GB</td></tr>\n</table>\n",
+      "fields": ["basic_price", "premium_price", "basic_storage", "premium_storage"],
+      "answers": [
+        {"answer": {"basic_price": "$10", "premium_price": "$25", "basic_storage": "20 GB", "premium_storage": "200 GB"}, "crossed": [], "must_flag": []},
+        {"answer": {"basic_price": "$25", "premium_price": "$10", "basic_storage": "200 GB", "premium_storage": "20 GB"}, "crossed": ["basic_price", "premium_price", "basic_storage", "premium_storage"], "must_flag": []}
+      ]
+    },
+    {
+      "id": "n22-bullet-lines-en",
+      "format": "markdown", "lang": "en",
+      "source": "## Supplier terms\n\n- Lead time: 3 weeks\n- Minimum order: 500 units\n- Unit price: 1.80 USD\n- Shipping: FOB Shenzhen\n",
+      "fields": ["lead_time", "minimum_order_quantity", "unit_price"],
+      "answers": [
+        {"answer": {"lead_time": "3 weeks", "minimum_order_quantity": "500 units", "unit_price": "1.80 USD"}, "crossed": [], "must_flag": []},
+        {"answer": {"lead_time": "FOB Shenzhen", "minimum_order_quantity": "1.80 USD", "unit_price": "500 units"}, "crossed": ["lead_time", "minimum_order_quantity", "unit_price"], "must_flag": ["minimum_order_quantity", "unit_price"]}
+      ]
+    },
+    {
+      "id": "n23-list-values-md-en",
+      "format": "markdown", "lang": "en",
+      "source": "| Plan | Integrations |\n| --- | --- |\n| Starter | Slack, Email |\n| Pro | Slack, Email, Jira, GitHub |\n",
+      "fields": ["starter_integrations", "pro_integrations"],
+      "answers": [
+        {"answer": {"starter_integrations": ["Slack", "Email"], "pro_integrations": ["Slack", "Email", "Jira", "GitHub"]}, "crossed": [], "must_flag": []},
+        {"answer": {"starter_integrations": ["Jira", "GitHub"], "pro_integrations": ["Slack", "Email"]}, "crossed": ["starter_integrations", "pro_integrations"], "must_flag": ["starter_integrations"]}
+      ]
+    },
+    {
+      "id": "n24-rates-number-format-en",
+      "format": "markdown", "lang": "en",
+      "source": "| Tier | Rate |\n| --- | --- |\n| Bronze rate | 0.5% |\n| Silver rate | 1.25% |\n| Gold rate | 2% |\n",
+      "fields": ["bronze_rate", "silver_rate", "gold_rate"],
+      "answers": [
+        {"answer": {"bronze_rate": "0.5%", "silver_rate": 1.25, "gold_rate": "2%"}, "crossed": [], "must_flag": []},
+        {"answer": {"bronze_rate": 1.25, "silver_rate": "0.5%", "gold_rate": "2%"}, "crossed": ["bronze_rate", "silver_rate"], "must_flag": ["bronze_rate", "silver_rate"]}
+      ]
+    },
+    {
+      "id": "n25-kettle-synonym-row-en",
+      "format": "html", "lang": "en",
+      "source": "<table>\n<tr><td>Model</td><td>Aria 3</td></tr>\n<tr><td>Retail cost (USD)</td><td>59</td></tr>\n<tr><td>Noise level (dB)</td><td>59</td></tr>\n<tr><td>Boil time (min)</td><td>4</td></tr>\n</table>\n",
+      "fields": ["model", "price", "noise_level", "boil_time"],
+      "answers": [
+        {"answer": {"model": "Aria 3", "price": 59, "noise_level": 59, "boil_time": 4}, "crossed": [], "must_flag": []},
+        {"answer": {"model": "Aria 3", "price": "59 dB", "noise_level": 59, "boil_time": 4}, "crossed": [], "must_flag": []}
+      ]
+    },
+    {
+      "id": "n26-synonym-row-shares-a-generic-word-en",
+      "format": "markdown", "lang": "en",
+      "source": "| Item | Value |\n| --- | --- |\n| Retail cost (USD) | 59 |\n| Shipping cost (USD) | 8.50 |\n| Weight (kg) | 1.4 |\n",
+      "fields": ["price", "shipping_cost", "weight"],
+      "answers": [
+        {"answer": {"price": 59, "shipping_cost": "8.50", "weight": 1.4}, "crossed": [], "must_flag": []},
+        {"answer": {"price": 59, "shipping_cost": "8.50", "weight": "8.50"}, "crossed": ["weight"], "must_flag": ["weight"]}
+      ]
+    },
+    {
+      "id": "n27-generic-column-header-en",
+      "format": "markdown", "lang": "en",
+      "source": "| Item | Value |\n|---|---|\n| Retail cost | 59 |\n| Total | 120 |\n",
+      "fields": ["price", "total_value"],
+      "answers": [
+        {"answer": {"price": 59, "total_value": 120}, "crossed": [], "must_flag": []},
+        {"answer": {"price": 120, "total_value": 120}, "crossed": ["price"], "must_flag": ["price"]}
+      ]
+    },
+    {
+      "id": "n28-free-text-key-quotes-a-cell-en",
+      "format": "markdown", "lang": "en",
+      "source": "| Spec | Value |\n|---|---|\n| Weight | 12 kg |\n| Price | $40 |\n",
+      "fields": ["product_summary", "weight", "price"],
+      "answers": [
+        {"answer": {"product_summary": "Compact drill, 12 kg", "weight": null, "price": "$40"}, "crossed": [], "must_flag": []},
+        {"answer": {"product_summary": "Compact drill, 12 kg", "weight": "12 kg", "price": "$40"}, "crossed": [], "must_flag": []}
+      ]
+    },
+    {
+      "id": "n29-derived-keys-lines-en",
+      "format": "text", "lang": "en",
+      "source": "Product: Drill X200\nPrice: 49 USD\nFull name: John Smith\nAddress: 12 Main St, Springfield\nRelease date: 2024-03-15\n",
+      "fields": ["product", "price", "currency", "first_name", "full_name", "city", "address", "release_year", "release_date"],
+      "answers": [
+        {"answer": {"product": "Drill X200", "price": 49, "currency": "USD", "first_name": "John", "full_name": "John Smith", "city": "Springfield", "address": "12 Main St, Springfield", "release_year": 2024, "release_date": "2024-03-15"}, "crossed": [], "must_flag": []},
+        {"answer": {"product": "Drill X200", "price": 49, "currency": "USD", "first_name": "John", "full_name": "Drill X200", "city": "Springfield", "address": "12 Main St, Springfield", "release_year": 2024, "release_date": "2024-03-15"}, "crossed": ["full_name"], "must_flag": ["full_name"]}
+      ]
+    },
+    {
+      "id": "n30-summary-quotes-cells-en",
+      "format": "markdown", "lang": "en",
+      "source": "| Feature | Value |\n|---|---|\n| Custom domains | 25 |\n| Seats | 10 |\n",
+      "fields": ["features_summary", "custom_domains", "seats"],
+      "answers": [
+        {"answer": {"features_summary": "Up to 25 custom domains and 10 seats", "custom_domains": 25, "seats": 10}, "crossed": [], "must_flag": []},
+        {"answer": {"features_summary": "Up to 25 custom domains", "custom_domains": 25, "seats": 25}, "crossed": ["seats"], "must_flag": ["seats"]}
+      ]
+    },
+    {
+      "id": "n31-only-the-prose-keeps-it-quiet-en",
+      "format": "markdown", "lang": "en",
+      "source": "| Item | Value |\n|---|---|\n| Licensed users | 40 |\n| Custom domains | 25 |\n\nThe Pro plan comes with 40 seats.\n",
+      "fields": ["seats", "licensed_users", "custom_domains"],
+      "answers": [
+        {"answer": {"seats": 40, "licensed_users": 40, "custom_domains": 25}, "crossed": [], "must_flag": []}
+      ]
+    },
+    {
+      "id": "n32-list-item-also-in-prose-en",
+      "format": "markdown", "lang": "en",
+      "source": "| Plan | Integrations |\n| --- | --- |\n| Starter | Slack, Email |\n| Pro | Jira, GitHub |\n\nEvery plan connects to Jira.\n",
+      "fields": ["starter_integrations", "pro_integrations"],
+      "answers": [
+        {"answer": {"starter_integrations": ["Jira"], "pro_integrations": ["Jira", "GitHub"]}, "crossed": [], "must_flag": []},
+        {"answer": {"starter_integrations": ["GitHub"], "pro_integrations": ["Jira", "GitHub"]}, "crossed": ["starter_integrations"], "must_flag": ["starter_integrations"]}
+      ]
+    },
+    {
+      "id": "n33-overview-of-several-columns-en",
+      "format": "markdown", "lang": "en",
+      "source": "| Plan | Price | Storage | Support |\n|---|---|---|---|\n| Pro | $25 | 200 GB | Priority |\n| Basic | $10 | 20 GB | Email |\n",
+      "fields": ["pro_price", "pro_storage", "pro_overview"],
+      "answers": [
+        {"answer": {"pro_price": "$25", "pro_storage": "200 GB", "pro_overview": "$25, 200 GB, Priority support"}, "crossed": [], "must_flag": []},
+        {"answer": {"pro_price": "$25", "pro_storage": "200 GB", "pro_overview": ["$25", "200 GB"]}, "crossed": [], "must_flag": []},
+        {"answer": {"pro_price": "$25", "pro_storage": "$25", "pro_overview": null}, "crossed": ["pro_storage"], "must_flag": ["pro_storage"]}
+      ]
+    },
+    {
+      "id": "n34-synonym-key-and-a-longer-label-en",
+      "format": "text", "lang": "en",
+      "source": "Memory: 16 GB\nMemory speed: 3200 MHz\nStorage: 512 GB SSD\n",
+      "fields": ["ram", "memory_speed", "storage"],
+      "answers": [
+        {"answer": {"ram": "16 GB", "memory_speed": "3200 MHz", "storage": "512 GB SSD"}, "crossed": [], "must_flag": []},
+        {"answer": {"ram": "3200 MHz", "memory_speed": "3200 MHz", "storage": "512 GB SSD"}, "crossed": ["ram"], "must_flag": ["ram"]}
+      ]
+    },
+    {
+      "id": "n35-display-and-processor-synonyms-en",
+      "format": "markdown", "lang": "en",
+      "source": "| Spec | Value |\n|---|---|\n| Display | 6.1 in |\n| Display resolution | 2532 x 1170 |\n| Processor | A15 Bionic |\n| Processor cores | 6 |\n",
+      "fields": ["screen_size", "display_resolution", "cpu", "processor_cores"],
+      "answers": [
+        {"answer": {"screen_size": "6.1 in", "display_resolution": "2532 x 1170", "cpu": "A15 Bionic", "processor_cores": 6}, "crossed": [], "must_flag": []},
+        {"answer": {"screen_size": "2532 x 1170", "display_resolution": "2532 x 1170", "cpu": "A15 Bionic", "processor_cores": 6}, "crossed": ["screen_size"], "must_flag": ["screen_size"]}
+      ]
+    },
+    {
+      "id": "n36-generic-word-and-no-row-of-its-own-en",
+      "format": "markdown", "lang": "en",
+      "source": "| Item | Value |\n| --- | --- |\n| Retail cost (USD) | 59 |\n| Weight (kg) | 1.4 |\n\nShipping is quoted at checkout.\n",
+      "fields": ["price", "shipping_cost", "weight"],
+      "answers": [
+        {"answer": {"price": 59, "shipping_cost": null, "weight": 1.4}, "crossed": [], "must_flag": []}
+      ]
+    }
+  ]
+}

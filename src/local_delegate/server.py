@@ -51,6 +51,7 @@ from . import (
     config,
     cooldown,
     cost,
+    cross_fill,
     failures,
     git_history,
     grounding,
@@ -8573,6 +8574,9 @@ def local_extract(
     A location field naming one heading (`intro_heading_line`) that got the whole Markdown
     outline is cut to the only heading its singular name fits; with any doubt (a plural
     subject, no single heading) it is left as it came. Both go to `outline_copies`, with a warning.
+    A value found only in the row of another requested key (a table row, a JSON key or a `label:
+    value` line) is kept but reported in `cross_filled_keys` (`{key: {"row", "other_key"}}`), with
+    a warning: the model may have handed out the rows by position.
     A small input that carries a table (HTML `<table`/`<tr`, ARIA `role="table"`, `"grid"`,
     `"treegrid"` or `"row"`, a Markdown or GFM table with its delimiter row, three or more CSV
     or TSV rows) goes to the long-context model too, even with one field: the mechanical one
@@ -8818,6 +8822,8 @@ def local_extract(
                     section_only.append(name)
             else:
                 data[name] = _strip_extract_prefixes(data[name], total_lines)
+    # #650: a value that sits only in the row of another requested key; a warning, never a null.
+    cross_filled = cross_fill.cross_filled(content, fields, data, skip=location_fields)
     meta: dict = dict(truncation)
     # #586: its own key, never `warning`: going to `long` is not a failure (as `chunked.notice`).
     meta.update(role_meta)
@@ -8875,6 +8881,12 @@ def local_extract(
         late_notices.append(
             i18n.t("mcp.warning.extract_section_only", fields=", ".join(section_only))
         )
+    if cross_filled:
+        meta["cross_filled_keys"] = cross_filled
+        pairs = ", ".join(
+            f"{name} <- {info['row']} ({info['other_key']})" for name, info in cross_filled.items()
+        )
+        late_notices.append(i18n.t("mcp.warning.extract_cross_filled_keys", pairs=pairs))
     if late_notices:
         previous = meta.get("warning")
         joined = "; ".join(late_notices)

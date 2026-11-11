@@ -1,0 +1,1308 @@
+{
+ "_readme": "Real answers of the local models recorded on 2026-11-10 (SDD extract-cross-fill-and-routing, outputs/evaluation.json) over the inputs in inputs/. 'crossed' are the keys the hand review judged crossed (value from another row). A flag outside 'crossed' is a false positive.",
+ "crosses_586": [
+  {
+   "case": "01-pricing-table-en",
+   "key": "licensed_user_limits",
+   "row": "Custom domains",
+   "other_key": "custom_domain_limits"
+  },
+  {
+   "case": "06-limits-table-es",
+   "key": "limite_usuarios_con_licencia",
+   "row": "Límite de usuarios activos",
+   "other_key": "limite_usuarios_activos"
+  }
+ ],
+ "runs": [
+  {
+   "run": "g3-extract",
+   "model": "gemma3-4b",
+   "case": "01-pricing-table-en",
+   "file": "01-pricing-table-en.html",
+   "fields": [
+    "plans_with_monthly_price",
+    "licensed_user_limits",
+    "custom_domain_limits",
+    "storage_per_workspace",
+    "sso_availability"
+   ],
+   "answer": {
+    "plans_with_monthly_price": "Prices are loaded at runtime; contact sales for a quote.",
+    "licensed_user_limits": "1–5 (Standard), 1–3 per region (Enterprise)",
+    "custom_domain_limits": "1–5 (Standard), 1–3 per region (Enterprise)",
+    "storage_per_workspace": "50 GB (Standard), 2 TB (Enterprise)",
+    "sso_availability": "Included (Enterprise)"
+   },
+   "crossed": [
+    "licensed_user_limits"
+   ]
+  },
+  {
+   "run": "g3-extract",
+   "model": "gemma3-4b",
+   "case": "02-pricing-table-en-3fields",
+   "file": "01-pricing-table-en.html",
+   "fields": [
+    "plans_with_monthly_price",
+    "licensed_user_limits",
+    "self_hosted_options"
+   ],
+   "answer": {
+    "plans_with_monthly_price": "Standard, Enterprise",
+    "licensed_user_limits": "1–5, 1–3 per region",
+    "self_hosted_options": "Available on request"
+   },
+   "crossed": [
+    "licensed_user_limits"
+   ]
+  },
+  {
+   "run": "g3-extract",
+   "model": "gemma3-4b",
+   "case": "03-pr-view-es",
+   "file": "03-pr-view-es.json",
+   "fields": [
+    "review_verdict",
+    "comments_authors_and_gist",
+    "number_of_reviews",
+    "closes_issue",
+    "body_summary"
+   ],
+   "answer": {
+    "review_verdict": null,
+    "comments_authors_and_gist": null,
+    "number_of_reviews": 0,
+    "closes_issue": null,
+    "body_summary": "El exportador de informes ya no falla cuando la hoja está vacía: devuelve un CSV con solo la cabecera."
+   },
+   "crossed": []
+  },
+  {
+   "run": "g3-extract",
+   "model": "gemma3-4b",
+   "case": "04-pytest-log-en",
+   "file": "04-pytest-log-en.log",
+   "fields": [
+    "number_of_failed_tests",
+    "first_failed_test",
+    "total_duration_seconds",
+    "coverage_percent",
+    "python_version"
+   ],
+   "answer": {
+    "number_of_failed_tests": 4,
+    "first_failed_test": "tests/test_ledger.py::test_ledger_rounds_half_even",
+    "total_duration_seconds": 14.69,
+    "coverage_percent": null,
+    "python_version": "3.11"
+   },
+   "crossed": []
+  },
+  {
+   "run": "g3-extract",
+   "model": "gemma3-4b",
+   "case": "05-pr-view-es-booleans",
+   "file": "03-pr-view-es.json",
+   "fields": [
+    "includes_database_migration",
+    "mentions_windows",
+    "body_language"
+   ],
+   "answer": {
+    "includes_database_migration": false,
+    "mentions_windows": true,
+    "body_language": false
+   },
+   "crossed": []
+  },
+  {
+   "run": "g3-extract",
+   "model": "gemma3-4b",
+   "case": "06-limits-table-es",
+   "file": "06-limits-table-es.md",
+   "fields": [
+    "limite_usuarios_activos",
+    "limite_usuarios_con_licencia",
+    "limite_usuarios_invitados",
+    "limite_de_proyectos",
+    "almacenamiento_por_proyecto"
+   ],
+   "answer": {
+    "limite_usuarios_activos": 75,
+    "limite_usuarios_con_licencia": 75,
+    "limite_usuarios_invitados": 20,
+    "limite_de_proyectos": 40,
+    "almacenamiento_por_proyecto": 25
+   },
+   "crossed": [
+    "limite_usuarios_con_licencia"
+   ]
+  },
+  {
+   "run": "g3-extract",
+   "model": "gemma3-4b",
+   "case": "07-gateway-table-en",
+   "file": "07-gateway-table-en.md",
+   "fields": [
+    "max_upload_size",
+    "max_download_size",
+    "max_request_body_size",
+    "idle_timeout",
+    "request_timeout",
+    "connect_timeout"
+   ],
+   "answer": {
+    "max_upload_size": "250 MB",
+    "max_download_size": "4 GB",
+    "max_request_body_size": null,
+    "idle_timeout": "90 s",
+    "request_timeout": "30 s",
+    "connect_timeout": null
+   },
+   "crossed": []
+  },
+  {
+   "run": "g3-extract",
+   "model": "gemma3-4b",
+   "case": "08-managed-service-es",
+   "file": "08-managed-service-es.html",
+   "fields": [
+    "sso_disponible",
+    "frecuencia_backups",
+    "sla_soporte",
+    "retencion_logs",
+    "limite_llamadas_api",
+    "usuarios_con_licencia"
+   ],
+   "answer": {
+    "sso_disponible": "Incluido (SAML y OIDC)",
+    "frecuencia_backups": "Cada 6 horas",
+    "sla_soporte": "2 horas",
+    "retencion_logs": "400 días",
+    "limite_llamadas_api": null,
+    "usuarios_con_licencia": "5"
+   },
+   "crossed": []
+  },
+  {
+   "run": "g3-extract",
+   "model": "gemma3-4b",
+   "case": "09-allowances-table-en",
+   "file": "09-allowances-table-en.md",
+   "fields": [
+    "licensed_user_limits",
+    "storage_quota",
+    "sla_uptime",
+    "data_region",
+    "custom_domain_limits",
+    "staging_environments"
+   ],
+   "answer": {
+    "licensed_user_limits": "300",
+    "storage_quota": "1 TB",
+    "sla_uptime": "99.95%",
+    "data_region": "US, EU or APAC",
+    "custom_domain_limits": null,
+    "staging_environments": "12"
+   },
+   "crossed": []
+  },
+  {
+   "run": "g3-extract",
+   "model": "gemma3-4b",
+   "case": "10-spec-sheet-en",
+   "file": "10-spec-sheet-en.html",
+   "fields": [
+    "weight",
+    "color",
+    "warranty",
+    "battery_life"
+   ],
+   "answer": {
+    "weight": "1.24 kg",
+    "color": "Graphite",
+    "warranty": "3 years",
+    "battery_life": "17 hours"
+   },
+   "crossed": []
+  },
+  {
+   "run": "g3-extract",
+   "model": "gemma3-4b",
+   "case": "11-ficha-suministro-es",
+   "file": "11-ficha-suministro-es.md",
+   "fields": [
+    "titular",
+    "fecha_de_alta",
+    "ciudad",
+    "tarifa"
+   ],
+   "answer": {
+    "titular": "Cooperativa Arroyo Claro",
+    "fecha_de_alta": "2024-03-18",
+    "ciudad": "Villa Serrana",
+    "tarifa": "Nocturna reducida"
+   },
+   "crossed": []
+  },
+  {
+   "run": "g3-extract",
+   "model": "gemma3-4b",
+   "case": "12-capabilities-repeated-en",
+   "file": "12-capabilities-repeated-en.html",
+   "fields": [
+    "audit_log",
+    "single_sign_on",
+    "priority_support",
+    "custom_roles",
+    "ip_allowlist"
+   ],
+   "answer": {
+    "audit_log": "Not included",
+    "single_sign_on": "Not included",
+    "priority_support": "Not included",
+    "custom_roles": "Included",
+    "ip_allowlist": "Not included"
+   },
+   "crossed": [
+    "ip_allowlist"
+   ]
+  },
+  {
+   "run": "g3-extract",
+   "model": "gemma3-4b",
+   "case": "13-aviso-obras-es",
+   "file": "13-aviso-obras-es.txt",
+   "fields": [
+    "fecha_inicio",
+    "fecha_fin",
+    "responsable",
+    "presupuesto",
+    "ubicacion_temporal",
+    "fecha_de_inspeccion"
+   ],
+   "answer": {
+    "fecha_inicio": "14 de abril de 2026",
+    "fecha_fin": "2 de mayo de 2026",
+    "responsable": "Mirta Olazábal",
+    "presupuesto": null,
+    "ubicacion_temporal": "depósito de Canelón Chico",
+    "fecha_de_inspeccion": null
+   },
+   "crossed": []
+  },
+  {
+   "run": "g3-extract",
+   "model": "gemma3-4b",
+   "case": "14-service-conf-en",
+   "file": "14-service-conf-en.conf",
+   "fields": [
+    "db_host",
+    "db_port",
+    "cache_host",
+    "cache_port",
+    "queue_host",
+    "queue_port",
+    "db_timeout_seconds"
+   ],
+   "answer": {
+    "db_host": "pg-staging.internal.example",
+    "db_port": 5433,
+    "cache_host": "redis-staging.internal.example",
+    "cache_port": null,
+    "queue_host": "mq-staging.internal.example",
+    "queue_port": 5673,
+    "db_timeout_seconds": null
+   },
+   "crossed": []
+  },
+  {
+   "run": "g3-extract",
+   "model": "gemma3-4b",
+   "case": "17-plans-transposed-en",
+   "file": "17-plans-transposed-en.html",
+   "fields": [
+    "studio_seats",
+    "studio_storage",
+    "factory_storage",
+    "hobby_monthly_builds",
+    "studio_bandwidth",
+    "factory_seats"
+   ],
+   "answer": {
+    "studio_seats": 15,
+    "studio_storage": 200,
+    "factory_storage": 5,
+    "hobby_monthly_builds": 100,
+    "studio_bandwidth": null,
+    "factory_seats": 250
+   },
+   "crossed": []
+  },
+  {
+   "run": "g3-extract",
+   "model": "gemma3-4b",
+   "case": "18-thumbnailer-py",
+   "file": "18-thumbnailer-py.py.txt",
+   "fields": [
+    "function_names",
+    "shell_command_used",
+    "http_port",
+    "database_table_name"
+   ],
+   "answer": {
+    "function_names": "make_thumbnail",
+    "shell_command_used": "magick convert",
+    "http_port": null,
+    "database_table_name": null
+   },
+   "crossed": []
+  },
+  {
+   "run": "g3-extract",
+   "model": "gemma3-4b",
+   "case": "21-pricing-table-en-near-miss",
+   "file": "01-pricing-table-en.html",
+   "fields": [
+    "storage_per_user",
+    "api_requests_per_day",
+    "custom_domains",
+    "audit_log_retention",
+    "build_log_retention"
+   ],
+   "answer": {
+    "storage_per_user": "2 TB",
+    "api_requests_per_day": "6 000",
+    "custom_domains": "1–3 per region",
+    "audit_log_retention": "365 days",
+    "build_log_retention": null
+   },
+   "crossed": [
+    "storage_per_user",
+    "api_requests_per_day"
+   ]
+  },
+  {
+   "run": "g3-extract",
+   "model": "gemma3-4b",
+   "case": "22-limits-table-es-near-miss",
+   "file": "06-limits-table-es.md",
+   "fields": [
+    "limite_usuarios_activos",
+    "limite_de_tableros",
+    "almacenamiento_por_usuario",
+    "retencion_de_la_papelera",
+    "retencion_de_copias"
+   ],
+   "answer": {
+    "limite_usuarios_activos": "75",
+    "limite_de_tableros": null,
+    "almacenamiento_por_usuario": "25 GB",
+    "retencion_de_la_papelera": "45 días",
+    "retencion_de_copias": null
+   },
+   "crossed": [
+    "almacenamiento_por_usuario"
+   ]
+  },
+  {
+   "run": "g3-extract",
+   "model": "gemma3-4b",
+   "case": "23-managed-service-es-near-miss",
+   "file": "08-managed-service-es.html",
+   "fields": [
+    "copias_de_seguridad",
+    "tiempo_de_respuesta_del_soporte",
+    "tiempo_de_restauracion",
+    "puestos_incluidos",
+    "puestos_adicionales"
+   ],
+   "answer": {
+    "copias_de_seguridad": "Semanales",
+    "tiempo_de_respuesta_del_soporte": "48 horas",
+    "tiempo_de_restauracion": null,
+    "puestos_incluidos": "5",
+    "puestos_adicionales": "120"
+   },
+   "crossed": [
+    "puestos_adicionales"
+   ]
+  },
+  {
+   "run": "g3-extract",
+   "model": "gemma3-4b",
+   "case": "24-allowances-table-en-near-miss",
+   "file": "09-allowances-table-en.md",
+   "fields": [
+    "seats",
+    "disk_quota",
+    "bandwidth_quota",
+    "uptime_guarantee",
+    "support_response_time",
+    "sandbox_environments"
+   ],
+   "answer": {
+    "seats": 8,
+    "disk_quota": "20 GB",
+    "bandwidth_quota": null,
+    "uptime_guarantee": "99.5%",
+    "support_response_time": null,
+    "sandbox_environments": 12
+   },
+   "crossed": []
+  },
+  {
+   "run": "g3-extract",
+   "model": "gemma3-4b",
+   "case": "25-gateway-table-en-near-miss",
+   "file": "07-gateway-table-en.md",
+   "fields": [
+    "max_upload_size",
+    "max_message_size",
+    "max_concurrent_connections",
+    "max_concurrent_streams",
+    "idle_timeout",
+    "connect_timeout"
+   ],
+   "answer": {
+    "max_upload_size": "250 MB",
+    "max_message_size": null,
+    "max_concurrent_connections": "1200",
+    "max_concurrent_streams": null,
+    "idle_timeout": "90 s",
+    "connect_timeout": null
+   },
+   "crossed": []
+  },
+  {
+   "run": "g3-extract",
+   "model": "gemma3-4b",
+   "case": "26-plans-transposed-en-near-miss",
+   "file": "17-plans-transposed-en.html",
+   "fields": [
+    "hobby_seats",
+    "hobby_storage",
+    "studio_monthly_builds",
+    "factory_monthly_builds",
+    "enterprise_seats",
+    "studio_price"
+   ],
+   "answer": {
+    "hobby_seats": "1",
+    "hobby_storage": "5 GB",
+    "studio_monthly_builds": "4 000",
+    "factory_monthly_builds": "60 000",
+    "enterprise_seats": "250",
+    "studio_price": null
+   },
+   "crossed": [
+    "enterprise_seats"
+   ]
+  },
+  {
+   "run": "g3-proxy",
+   "model": "gemma3-4b",
+   "case": "01-pricing-table-en",
+   "file": "01-pricing-table-en.html",
+   "fields": [
+    "plans_with_monthly_price",
+    "licensed_user_limits",
+    "custom_domain_limits",
+    "storage_per_workspace",
+    "sso_availability"
+   ],
+   "answer": {
+    "plans_with_monthly_price": "Prices are loaded at runtime; contact sales for a quote.",
+    "licensed_user_limits": "1–5 per region, 1–3 per region",
+    "custom_domain_limits": "1–5, 1–3 per region",
+    "storage_per_workspace": "50 GB, 2 TB",
+    "sso_availability": "Included"
+   },
+   "crossed": [
+    "licensed_user_limits"
+   ]
+  },
+  {
+   "run": "g3-proxy",
+   "model": "gemma3-4b",
+   "case": "02-pricing-table-en-3fields",
+   "file": "01-pricing-table-en.html",
+   "fields": [
+    "plans_with_monthly_price",
+    "licensed_user_limits",
+    "self_hosted_options"
+   ],
+   "answer": {
+    "plans_with_monthly_price": [
+     "Standard",
+     "Enterprise"
+    ],
+    "licensed_user_limits": "1–5, 1–3 per region",
+    "self_hosted_options": "Available on request"
+   },
+   "crossed": [
+    "licensed_user_limits"
+   ]
+  },
+  {
+   "run": "g3-proxy",
+   "model": "gemma3-4b",
+   "case": "03-pr-view-es",
+   "file": "03-pr-view-es.json",
+   "fields": [
+    "review_verdict",
+    "comments_authors_and_gist",
+    "number_of_reviews",
+    "closes_issue",
+    "body_summary"
+   ],
+   "answer": {
+    "review_verdict": null,
+    "comments_authors_and_gist": null,
+    "number_of_reviews": 0,
+    "closes_issue": false,
+    "body_summary": "El exportador de informes ya no falla cuando la hoja está vacía: devuelve un CSV con solo la cabecera."
+   },
+   "crossed": []
+  },
+  {
+   "run": "g3-proxy",
+   "model": "gemma3-4b",
+   "case": "05-pr-view-es-booleans",
+   "file": "03-pr-view-es.json",
+   "fields": [
+    "includes_database_migration",
+    "mentions_windows",
+    "body_language"
+   ],
+   "answer": {
+    "includes_database_migration": false,
+    "mentions_windows": true,
+    "body_language": false
+   },
+   "crossed": []
+  },
+  {
+   "run": "g3-proxy",
+   "model": "gemma3-4b",
+   "case": "06-limits-table-es",
+   "file": "06-limits-table-es.md",
+   "fields": [
+    "limite_usuarios_activos",
+    "limite_usuarios_con_licencia",
+    "limite_usuarios_invitados",
+    "limite_de_proyectos",
+    "almacenamiento_por_proyecto"
+   ],
+   "answer": {
+    "limite_usuarios_activos": "75",
+    "limite_usuarios_con_licencia": "75",
+    "limite_usuarios_invitados": "20",
+    "limite_de_proyectos": "40",
+    "almacenamiento_por_proyecto": "25 GB"
+   },
+   "crossed": [
+    "limite_usuarios_con_licencia"
+   ]
+  },
+  {
+   "run": "g3-proxy",
+   "model": "gemma3-4b",
+   "case": "08-managed-service-es",
+   "file": "08-managed-service-es.html",
+   "fields": [
+    "sso_disponible",
+    "frecuencia_backups",
+    "sla_soporte",
+    "retencion_logs",
+    "limite_llamadas_api",
+    "usuarios_con_licencia"
+   ],
+   "answer": {
+    "sso_disponible": "Incluido (SAML y OIDC)",
+    "frecuencia_backups": "Cada 6 horas",
+    "sla_soporte": "2 horas",
+    "retencion_logs": "400 días",
+    "limite_llamadas_api": null,
+    "usuarios_con_licencia": "5"
+   },
+   "crossed": []
+  },
+  {
+   "run": "g3-proxy",
+   "model": "gemma3-4b",
+   "case": "09-allowances-table-en",
+   "file": "09-allowances-table-en.md",
+   "fields": [
+    "licensed_user_limits",
+    "storage_quota",
+    "sla_uptime",
+    "data_region",
+    "custom_domain_limits",
+    "staging_environments"
+   ],
+   "answer": {
+    "licensed_user_limits": "8",
+    "storage_quota": "1 TB",
+    "sla_uptime": "99.95%",
+    "data_region": "US, EU or APAC",
+    "custom_domain_limits": null,
+    "staging_environments": "1, 12"
+   },
+   "crossed": []
+  },
+  {
+   "run": "g3-proxy",
+   "model": "gemma3-4b",
+   "case": "12-capabilities-repeated-en",
+   "file": "12-capabilities-repeated-en.html",
+   "fields": [
+    "audit_log",
+    "single_sign_on",
+    "priority_support",
+    "custom_roles",
+    "ip_allowlist"
+   ],
+   "answer": {
+    "audit_log": "Included",
+    "single_sign_on": "Included",
+    "priority_support": "Included",
+    "custom_roles": "Included",
+    "ip_allowlist": "Not mentioned"
+   },
+   "crossed": []
+  },
+  {
+   "run": "g3-proxy",
+   "model": "gemma3-4b",
+   "case": "14-service-conf-en",
+   "file": "14-service-conf-en.conf",
+   "fields": [
+    "db_host",
+    "db_port",
+    "cache_host",
+    "cache_port",
+    "queue_host",
+    "queue_port",
+    "db_timeout_seconds"
+   ],
+   "answer": {
+    "db_host": "pg-staging.internal.example",
+    "db_port": 5433,
+    "cache_host": "redis-staging.internal.example",
+    "cache_port": null,
+    "queue_host": "mq-staging.internal.example",
+    "queue_port": 5673,
+    "db_timeout_seconds": null
+   },
+   "crossed": []
+  },
+  {
+   "run": "g3-proxy",
+   "model": "gemma3-4b",
+   "case": "17-plans-transposed-en",
+   "file": "17-plans-transposed-en.html",
+   "fields": [
+    "studio_seats",
+    "studio_storage",
+    "factory_storage",
+    "hobby_monthly_builds",
+    "studio_bandwidth",
+    "factory_seats"
+   ],
+   "answer": {
+    "studio_seats": 15,
+    "studio_storage": 200,
+    "factory_storage": 5,
+    "hobby_monthly_builds": 100,
+    "studio_bandwidth": null,
+    "factory_seats": 250
+   },
+   "crossed": []
+  },
+  {
+   "run": "g4-proxy",
+   "model": "gemma4-26b-a4b",
+   "case": "01-pricing-table-en",
+   "file": "01-pricing-table-en.html",
+   "fields": [
+    "plans_with_monthly_price",
+    "licensed_user_limits",
+    "custom_domain_limits",
+    "storage_per_workspace",
+    "sso_availability"
+   ],
+   "answer": {
+    "plans_with_monthly_price": "Prices are loaded at runtime; contact sales for a quote.",
+    "licensed_user_limits": null,
+    "custom_domain_limits": {
+     "Standard": "1–5",
+     "Enterprise": "1–3 per region"
+    },
+    "storage_per_workspace": {
+     "Standard": "50 GB",
+     "Enterprise": "2 TB"
+    },
+    "sso_availability": {
+     "Standard": "—",
+     "Enterprise": "Included"
+    }
+   },
+   "crossed": []
+  },
+  {
+   "run": "g4-proxy",
+   "model": "gemma4-26b-a4b",
+   "case": "02-pricing-table-en-3fields",
+   "file": "01-pricing-table-en.html",
+   "fields": [
+    "plans_with_monthly_price",
+    "licensed_user_limits",
+    "self_hosted_options"
+   ],
+   "answer": {
+    "plans_with_monthly_price": "Prices are loaded at runtime; contact sales for a quote.",
+    "licensed_user_limits": null,
+    "self_hosted_options": "Available on request"
+   },
+   "crossed": []
+  },
+  {
+   "run": "g4-proxy",
+   "model": "gemma4-26b-a4b",
+   "case": "03-pr-view-es",
+   "file": "03-pr-view-es.json",
+   "fields": [
+    "review_verdict",
+    "comments_authors_and_gist",
+    "number_of_reviews",
+    "closes_issue",
+    "body_summary"
+   ],
+   "answer": {
+    "review_verdict": null,
+    "comments_authors_and_gist": [],
+    "number_of_reviews": 0,
+    "closes_issue": "#412",
+    "body_summary": "El exportador de informes se ha corregido para que, en caso de hoja vacía, devuelva un CSV únicamente con la cabecera en lugar de fallar. Se ha verificado mediante pruebas en Windows y Linux."
+   },
+   "crossed": []
+  },
+  {
+   "run": "g4-proxy",
+   "model": "gemma4-26b-a4b",
+   "case": "04-pytest-log-en",
+   "file": "04-pytest-log-en.log",
+   "fields": [
+    "number_of_failed_tests",
+    "first_failed_test",
+    "total_duration_seconds",
+    "coverage_percent",
+    "python_version"
+   ],
+   "answer": {
+    "number_of_failed_tests": 4,
+    "first_failed_test": "test_ledger_rounds_half_even",
+    "total_duration_seconds": 14.69,
+    "coverage_percent": null,
+    "python_version": "3.11"
+   },
+   "crossed": []
+  },
+  {
+   "run": "g4-proxy",
+   "model": "gemma4-26b-a4b",
+   "case": "05-pr-view-es-booleans",
+   "file": "03-pr-view-es.json",
+   "fields": [
+    "includes_database_migration",
+    "mentions_windows",
+    "body_language"
+   ],
+   "answer": {
+    "includes_database_migration": false,
+    "mentions_windows": true,
+    "body_language": false
+   },
+   "crossed": []
+  },
+  {
+   "run": "g4-proxy",
+   "model": "gemma4-26b-a4b",
+   "case": "06-limits-table-es",
+   "file": "06-limits-table-es.md",
+   "fields": [
+    "limite_usuarios_activos",
+    "limite_usuarios_con_licencia",
+    "limite_usuarios_invitados",
+    "limite_de_proyectos",
+    "almacenamiento_por_proyecto"
+   ],
+   "answer": {
+    "limite_usuarios_activos": 75,
+    "limite_usuarios_con_licencia": null,
+    "limite_usuarios_invitados": 20,
+    "limite_de_proyectos": 40,
+    "almacenamiento_por_proyecto": "25 GB"
+   },
+   "crossed": []
+  },
+  {
+   "run": "g4-proxy",
+   "model": "gemma4-26b-a4b",
+   "case": "07-gateway-table-en",
+   "file": "07-gateway-table-en.md",
+   "fields": [
+    "max_upload_size",
+    "max_download_size",
+    "max_request_body_size",
+    "idle_timeout",
+    "request_timeout",
+    "connect_timeout"
+   ],
+   "answer": {
+    "max_upload_size": "250 MB",
+    "max_download_size": "4 GB",
+    "max_request_body_size": null,
+    "idle_timeout": "90 s",
+    "request_timeout": "30 s",
+    "connect_timeout": null
+   },
+   "crossed": []
+  },
+  {
+   "run": "g4-proxy",
+   "model": "gemma4-26b-a4b",
+   "case": "08-managed-service-es",
+   "file": "08-managed-service-es.html",
+   "fields": [
+    "sso_disponible",
+    "frecuencia_backups",
+    "sla_soporte",
+    "retencion_logs",
+    "limite_llamadas_api",
+    "usuarios_con_licencia"
+   ],
+   "answer": {
+    "sso_disponible": "Incluido (SAML y OIDC)",
+    "frecuencia_backups": "Cada 6 horas",
+    "sla_soporte": "2 horas",
+    "retencion_logs": "400 días",
+    "limite_llamadas_api": null,
+    "usuarios_con_licencia": "120"
+   },
+   "crossed": []
+  },
+  {
+   "run": "g4-proxy",
+   "model": "gemma4-26b-a4b",
+   "case": "09-allowances-table-en",
+   "file": "09-allowances-table-en.md",
+   "fields": [
+    "licensed_user_limits",
+    "storage_quota",
+    "sla_uptime",
+    "data_region",
+    "custom_domain_limits",
+    "staging_environments"
+   ],
+   "answer": {
+    "licensed_user_limits": {
+     "Starter": 8,
+     "Scale": 300
+    },
+    "storage_quota": {
+     "Starter": "20 GB",
+     "Scale": "1 TB"
+    },
+    "sla_uptime": {
+     "Starter": "99.5%",
+     "Scale": "99.95%"
+    },
+    "data_region": {
+     "Starter": "US only",
+     "Scale": "US, EU or APAC"
+    },
+    "custom_domain_limits": null,
+    "staging_environments": {
+     "Starter": 1,
+     "Scale": 12
+    }
+   },
+   "crossed": []
+  },
+  {
+   "run": "g4-proxy",
+   "model": "gemma4-26b-a4b",
+   "case": "10-spec-sheet-en",
+   "file": "10-spec-sheet-en.html",
+   "fields": [
+    "weight",
+    "color",
+    "warranty",
+    "battery_life"
+   ],
+   "answer": {
+    "weight": "1.24 kg",
+    "color": "Graphite",
+    "warranty": "3 years",
+    "battery_life": "17 hours"
+   },
+   "crossed": []
+  },
+  {
+   "run": "g4-proxy",
+   "model": "gemma4-26b-a4b",
+   "case": "11-ficha-suministro-es",
+   "file": "11-ficha-suministro-es.md",
+   "fields": [
+    "titular",
+    "fecha_de_alta",
+    "ciudad",
+    "tarifa"
+   ],
+   "answer": {
+    "titular": "Cooperativa Arroyo Claro",
+    "fecha_de_alta": "2024-03-18",
+    "ciudad": "Villa Serrana",
+    "tarifa": "Nocturna reducida"
+   },
+   "crossed": []
+  },
+  {
+   "run": "g4-proxy",
+   "model": "gemma4-26b-a4b",
+   "case": "12-capabilities-repeated-en",
+   "file": "12-capabilities-repeated-en.html",
+   "fields": [
+    "audit_log",
+    "single_sign_on",
+    "priority_support",
+    "custom_roles",
+    "ip_allowlist"
+   ],
+   "answer": {
+    "audit_log": "Included",
+    "single_sign_on": "Included",
+    "priority_support": "Included",
+    "custom_roles": "Included",
+    "ip_allowlist": "Not found"
+   },
+   "crossed": []
+  },
+  {
+   "run": "g4-proxy",
+   "model": "gemma4-26b-a4b",
+   "case": "13-aviso-obras-es",
+   "file": "13-aviso-obras-es.txt",
+   "fields": [
+    "fecha_inicio",
+    "fecha_fin",
+    "responsable",
+    "presupuesto",
+    "ubicacion_temporal",
+    "fecha_de_inspeccion"
+   ],
+   "answer": {
+    "fecha_inicio": "14 de abril de 2026",
+    "fecha_fin": "2 de mayo de 2026",
+    "responsable": "Mirta Olazábal",
+    "presupuesto": null,
+    "ubicacion_temporal": "depósito de Canelón Chico",
+    "fecha_de_inspeccion": null
+   },
+   "crossed": []
+  },
+  {
+   "run": "g4-proxy",
+   "model": "gemma4-26b-a4b",
+   "case": "14-service-conf-en",
+   "file": "14-service-conf-en.conf",
+   "fields": [
+    "db_host",
+    "db_port",
+    "cache_host",
+    "cache_port",
+    "queue_host",
+    "queue_port",
+    "db_timeout_seconds"
+   ],
+   "answer": {
+    "db_host": "pg-staging.internal.example",
+    "db_port": "5433",
+    "cache_host": "redis-staging.internal.example",
+    "cache_port": null,
+    "queue_host": "mq-staging.internal.example",
+    "queue_port": "5673",
+    "db_timeout_seconds": null
+   },
+   "crossed": []
+  },
+  {
+   "run": "g4-proxy",
+   "model": "gemma4-26b-a4b",
+   "case": "17-plans-transposed-en",
+   "file": "17-plans-transposed-en.html",
+   "fields": [
+    "studio_seats",
+    "studio_storage",
+    "factory_storage",
+    "hobby_monthly_builds",
+    "studio_bandwidth",
+    "factory_seats"
+   ],
+   "answer": {
+    "studio_seats": 15,
+    "studio_storage": "200 GB",
+    "factory_storage": "5 TB",
+    "hobby_monthly_builds": 100,
+    "studio_bandwidth": null,
+    "factory_seats": 250
+   },
+   "crossed": []
+  },
+  {
+   "run": "g4-proxy",
+   "model": "gemma4-26b-a4b",
+   "case": "18-thumbnailer-py",
+   "file": "18-thumbnailer-py.py.txt",
+   "fields": [
+    "function_names",
+    "shell_command_used",
+    "http_port",
+    "database_table_name"
+   ],
+   "answer": {
+    "function_names": [
+     "is_supported",
+     "build_command",
+     "make_thumbnail"
+    ],
+    "shell_command_used": "magick convert",
+    "http_port": null,
+    "database_table_name": null
+   },
+   "crossed": []
+  },
+  {
+   "run": "g4-proxy",
+   "model": "gemma4-26b-a4b",
+   "case": "21-pricing-table-en-near-miss",
+   "file": "01-pricing-table-en.html",
+   "fields": [
+    "storage_per_user",
+    "api_requests_per_day",
+    "custom_domains",
+    "audit_log_retention",
+    "build_log_retention"
+   ],
+   "answer": {
+    "storage_per_user": null,
+    "api_requests_per_day": null,
+    "custom_domains": "1–5",
+    "audit_log_retention": "30 days",
+    "build_log_retention": null
+   },
+   "crossed": []
+  },
+  {
+   "run": "g4-proxy",
+   "model": "gemma4-26b-a4b",
+   "case": "22-limits-table-es-near-miss",
+   "file": "06-limits-table-es.md",
+   "fields": [
+    "limite_usuarios_activos",
+    "limite_de_tableros",
+    "almacenamiento_por_usuario",
+    "retencion_de_la_papelera",
+    "retencion_de_copias"
+   ],
+   "answer": {
+    "limite_usuarios_activos": "75",
+    "limite_de_tableros": "No disponible",
+    "almacenamiento_por_usuario": "No disponible",
+    "retencion_de_la_papelera": "45 días",
+    "retencion_de_copias": "No disponible"
+   },
+   "crossed": []
+  },
+  {
+   "run": "g4-proxy",
+   "model": "gemma4-26b-a4b",
+   "case": "23-managed-service-es-near-miss",
+   "file": "08-managed-service-es.html",
+   "fields": [
+    "copias_de_seguridad",
+    "tiempo_de_respuesta_del_soporte",
+    "tiempo_de_restauracion",
+    "puestos_incluidos",
+    "puestos_adicionales"
+   ],
+   "answer": {
+    "copias_de_seguridad": {
+     "Plan Inicial": "Semanales",
+     "Plan Corporativo": "Cada 6 horas"
+    },
+    "tiempo_de_respuesta_del_soporte": {
+     "Plan Inicial": "48 horas",
+     "Plan Corporativo": "2 horas"
+    },
+    "tiempo_de_restauracion": "No disponible",
+    "puestos_incluidos": {
+     "Plan Inicial": "5",
+     "Plan Corporativo": "120"
+    },
+    "puestos_adicionales": "No disponible"
+   },
+   "crossed": []
+  },
+  {
+   "run": "g4-proxy",
+   "model": "gemma4-26b-a4b",
+   "case": "24-allowances-table-en-near-miss",
+   "file": "09-allowances-table-en.md",
+   "fields": [
+    "seats",
+    "disk_quota",
+    "bandwidth_quota",
+    "uptime_guarantee",
+    "support_response_time",
+    "sandbox_environments"
+   ],
+   "answer": {
+    "seats": "8 (Starter), 300 (Scale)",
+    "disk_quota": "20 GB (Starter), 1 TB (Scale)",
+    "bandwidth_quota": null,
+    "uptime_guarantee": "99.5% (Starter), 99.95% (Scale)",
+    "support_response_time": null,
+    "sandbox_environments": "1 (Starter), 12 (Scale)"
+   },
+   "crossed": []
+  },
+  {
+   "run": "g4-proxy",
+   "model": "gemma4-26b-a4b",
+   "case": "25-gateway-table-en-near-miss",
+   "file": "07-gateway-table-en.md",
+   "fields": [
+    "max_upload_size",
+    "max_message_size",
+    "max_concurrent_connections",
+    "max_concurrent_streams",
+    "idle_timeout",
+    "connect_timeout"
+   ],
+   "answer": {
+    "max_upload_size": "250 MB",
+    "max_message_size": null,
+    "max_concurrent_connections": "1200",
+    "max_concurrent_streams": null,
+    "idle_timeout": "90 s",
+    "connect_timeout": null
+   },
+   "crossed": []
+  },
+  {
+   "run": "g4-proxy",
+   "model": "gemma4-26b-a4b",
+   "case": "26-plans-transposed-en-near-miss",
+   "file": "17-plans-transposed-en.html",
+   "fields": [
+    "hobby_seats",
+    "hobby_storage",
+    "studio_monthly_builds",
+    "factory_monthly_builds",
+    "enterprise_seats",
+    "studio_price"
+   ],
+   "answer": {
+    "hobby_seats": 1,
+    "hobby_storage": "5 GB",
+    "studio_monthly_builds": 4000,
+    "factory_monthly_builds": 60000,
+    "enterprise_seats": null,
+    "studio_price": null
+   },
+   "crossed": []
+  },
+  {
+   "run": "g4-extract",
+   "model": "gemma4-26b-a4b",
+   "case": "15-pricing-page-large-en",
+   "file": "15-pricing-page-large-en.html",
+   "fields": [
+    "plans_with_monthly_price",
+    "licensed_user_limits",
+    "self_hosted_options",
+    "api_rate_limits"
+   ],
+   "answer": {
+    "plans_with_monthly_price": "Prices are loaded at runtime; contact sales for a quote.",
+    "licensed_user_limits": null,
+    "self_hosted_options": "Enterprise: Available on request",
+    "api_rate_limits": "Standard: 600 requests per minute; Enterprise: 6,000 requests per minute"
+   },
+   "crossed": []
+  },
+  {
+   "run": "g4-extract",
+   "model": "gemma4-26b-a4b",
+   "case": "16-manual-plan-equipo-large-es",
+   "file": "16-manual-plan-equipo-large-es.md",
+   "fields": [
+    "limite_usuarios_activos",
+    "limite_usuarios_con_licencia",
+    "limite_usuarios_invitados",
+    "limite_de_proyectos",
+    "almacenamiento_por_proyecto"
+   ],
+   "answer": {
+    "limite_usuarios_activos": "Plan Básico: 10, Plan Equipo: 75",
+    "limite_usuarios_con_licencia": null,
+    "limite_usuarios_invitados": "Plan Básico: 3, Plan Equipo: 20",
+    "limite_de_proyectos": "Plan Básico: 5, Plan Equipo: 40",
+    "almacenamiento_por_proyecto": "Plan Básico: 2 GB, Plan Equipo: 25 GB"
+   },
+   "crossed": []
+  },
+  {
+   "run": "g4-extract",
+   "model": "gemma4-26b-a4b",
+   "case": "19-pricing-page-noisy-en-3fields",
+   "file": "19-pricing-page-noisy-en.html",
+   "fields": [
+    "plans_with_monthly_price",
+    "licensed_user_limits",
+    "self_hosted_options"
+   ],
+   "answer": {
+    "plans_with_monthly_price": "Prices are loaded at runtime; contact sales for a quote.",
+    "licensed_user_limits": null,
+    "self_hosted_options": "Available on request (Enterprise plan)"
+   },
+   "crossed": []
+  },
+  {
+   "run": "g4-extract",
+   "model": "gemma4-26b-a4b",
+   "case": "20-pricing-page-noisy-en-5fields",
+   "file": "19-pricing-page-noisy-en.html",
+   "fields": [
+    "plans_with_monthly_price",
+    "licensed_user_limits",
+    "custom_domain_limits",
+    "storage_per_workspace",
+    "sso_availability"
+   ],
+   "answer": {
+    "plans_with_monthly_price": "Standard: contact sales, Enterprise: contact sales",
+    "licensed_user_limits": null,
+    "custom_domain_limits": "Standard: 1–5, Enterprise: 1–3 per region",
+    "storage_per_workspace": "Standard: 50 GB, Enterprise: 2 TB",
+    "sso_availability": "Standard: No, Enterprise: Included"
+   },
+   "crossed": []
+  }
+ ]
+}
