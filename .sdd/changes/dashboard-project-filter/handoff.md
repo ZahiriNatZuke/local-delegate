@@ -2,24 +2,27 @@
 
 ## Current state
 
-- SDD status:
-- Last completed gate:
-- Current revision:
+- SDD status: closed
+- Last completed gate: memory
+- Current revision: branch feat/dashboard-project-filter, PR #661 (not merged)
 
 ## What changed
 
-- Summarize completed work without reproducing the full Git history.
+- Own-repo switch removed from panel, API and local_status; local map project-names.json written by
+  project_fields with lazy bounded backfill; by-project card and project filter across the panel.
 
 ## Decisions
 
-- Record decisions that a future session cannot reliably derive from code alone.
+- E1-E10 in spec.md (raw folder name shown, session= gets no breakdown, quota and inflight do not
+  follow the filter, names visible on a panel published on the network).
 
 ## Next action
 
-- State the single best next step and any prerequisite context.
+- Coordinator: live check against the installed daemon (backfill over the real projects root, map
+  written by the installed hooks), then merge for 0.52.0.
 
 ## Memory
 
-- Canonical note:
-- Indexes updated:
+- Canonical note: none from this agent; the coordinator records the day's journal in the vault
+- Indexes updated: none
 

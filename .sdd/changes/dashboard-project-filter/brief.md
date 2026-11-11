@@ -52,3 +52,5 @@ stopped and what remains. -->
   written down (recorded deviation: the decisions were all fixed by the user, so the spec was
   written from the request and the code at hand); then the coordinator added the backfill of
   names for 0.51.0 rows. Remaining: plan review, verification, result and security review, PR.
+- L3 2026-11-11 Reviews, full suite and gates done; PR #661 opened, not merged. Remaining: live
+  check by the coordinator and merge.

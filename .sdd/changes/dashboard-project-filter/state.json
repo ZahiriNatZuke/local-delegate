@@ -4,9 +4,9 @@
   "title": "Panel: desglose y filtro por proyecto con nombres locales; fuera el conmutador del propio repo",
   "mode": "standard",
   "traceability": "strict",
-  "status": "result-review",
+  "status": "closed",
   "createdAt": "2026-11-11T12:25:28.266Z",
-  "updatedAt": "2026-11-11T13:03:25.644Z",
+  "updatedAt": "2026-11-11T13:04:45.725Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -33,10 +33,10 @@
       "actor": "user"
     },
     "memory": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-11-11T13:04:45.652Z",
+      "evidence": "handoff.md filled; durable decisions live in spec.md E1-E10; vault journal left to the coordinator",
+      "actor": "user"
     }
   },
   "history": [
@@ -127,6 +127,28 @@
       "at": "2026-11-11T13:03:25.644Z",
       "evidence": "result review deep: REQ-001..017 implemented and verified; F1-F11 resolved; security reviewer no exploitable findings",
       "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "result-review",
+      "to": "closing",
+      "at": "2026-11-11T13:04:45.577Z",
+      "reason": "conformance approved; PR #661 opened"
+    },
+    {
+      "type": "gate",
+      "gate": "memory",
+      "status": "approved",
+      "at": "2026-11-11T13:04:45.652Z",
+      "evidence": "handoff.md filled; durable decisions live in spec.md E1-E10; vault journal left to the coordinator",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "closing",
+      "to": "closed",
+      "at": "2026-11-11T13:04:45.725Z",
+      "reason": "PR #661 opened; merge and live check belong to the coordinator"
     }
   ]
 }
