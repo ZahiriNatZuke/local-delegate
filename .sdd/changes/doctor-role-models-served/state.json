@@ -1,0 +1,147 @@
+{
+  "schemaVersion": 1,
+  "slug": "doctor-role-models-served",
+  "title": "doctor: cada rol tiene su modelo servido",
+  "mode": "lite",
+  "traceability": "strict",
+  "status": "closed",
+  "createdAt": "2026-11-11T10:19:15.753Z",
+  "updatedAt": "2026-11-11T10:59:44.698Z",
+  "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-11-11T10:20:26.489Z",
+      "evidence": "Self-review: 5 observable REQs; cause read in checks.py, probes.py, web/metrics.py; vision optional decided",
+      "actor": "doctor-role-models-agent"
+    },
+    "plan": {
+      "status": "approved",
+      "updatedAt": "2026-11-11T10:20:26.650Z",
+      "evidence": "Self-review: every REQ maps to T1-T3; memo avoids a second probe",
+      "actor": "doctor-role-models-agent"
+    },
+    "quality": {
+      "status": "approved",
+      "updatedAt": "2026-11-11T10:58:52.541Z",
+      "evidence": "Full suite -n 2: 7290 passed, 30 skipped; 2 failures fixed (BackendView field pin, lexicon test name) and rerun green; ruff check and format clean; 3 positive controls",
+      "actor": "doctor-role-models-agent"
+    },
+    "conformance": {
+      "status": "approved",
+      "updatedAt": "2026-11-11T10:58:52.745Z",
+      "evidence": "review.md: 2 judges, conforms after F1-F9; F10-F11 accepted and recorded",
+      "actor": "doctor-role-models-agent"
+    },
+    "memory": {
+      "status": "approved",
+      "updatedAt": "2026-11-11T10:59:44.563Z",
+      "evidence": "Sin nota aparte: lo durable va en el CHANGELOG, el PR #656 y review.md; la jornada del vault la escribe la sesion principal",
+      "actor": "doctor-role-models-agent"
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-11-11T10:19:15.753Z",
+      "reason": "SDD change created"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "specifying",
+      "at": "2026-11-11T10:20:26.407Z",
+      "reason": "brief and cause recorded"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-11-11T10:20:26.489Z",
+      "evidence": "Self-review: 5 observable REQs; cause read in checks.py, probes.py, web/metrics.py; vision optional decided",
+      "actor": "doctor-role-models-agent"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-11-11T10:20:26.569Z",
+      "reason": "spec approved"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-11-11T10:20:26.650Z",
+      "evidence": "Self-review: every REQ maps to T1-T3; memo avoids a second probe",
+      "actor": "doctor-role-models-agent"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "plan-review",
+      "at": "2026-11-11T10:20:26.729Z",
+      "reason": "plan approved"
+    },
+    {
+      "type": "transition",
+      "from": "plan-review",
+      "to": "implementing",
+      "at": "2026-11-11T10:20:26.807Z",
+      "reason": "plan approved"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-11-11T10:58:52.351Z",
+      "reason": "T1-T3 done; full suite green after two fixes"
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-11-11T10:58:52.541Z",
+      "evidence": "Full suite -n 2: 7290 passed, 30 skipped; 2 failures fixed (BackendView field pin, lexicon test name) and rerun green; ruff check and format clean; 3 positive controls",
+      "actor": "doctor-role-models-agent"
+    },
+    {
+      "type": "transition",
+      "from": "verifying",
+      "to": "result-review",
+      "at": "2026-11-11T10:58:52.633Z",
+      "reason": "quality approved"
+    },
+    {
+      "type": "gate",
+      "gate": "conformance",
+      "status": "approved",
+      "at": "2026-11-11T10:58:52.745Z",
+      "evidence": "review.md: 2 judges, conforms after F1-F9; F10-F11 accepted and recorded",
+      "actor": "doctor-role-models-agent"
+    },
+    {
+      "type": "transition",
+      "from": "result-review",
+      "to": "closing",
+      "at": "2026-11-11T10:59:44.375Z",
+      "reason": "conformance approved; PR #656 open"
+    },
+    {
+      "type": "gate",
+      "gate": "memory",
+      "status": "approved",
+      "at": "2026-11-11T10:59:44.563Z",
+      "evidence": "Sin nota aparte: lo durable va en el CHANGELOG, el PR #656 y review.md; la jornada del vault la escribe la sesion principal",
+      "actor": "doctor-role-models-agent"
+    },
+    {
+      "type": "transition",
+      "from": "closing",
+      "to": "closed",
+      "at": "2026-11-11T10:59:44.698Z",
+      "reason": "PR #656 open with suite green; merge and live check by the main session"
+    }
+  ]
+}

@@ -1,0 +1,147 @@
+{
+  "schemaVersion": 1,
+  "slug": "llamaswap-cmd-single-parser",
+  "title": "llama-swap: un solo lector del cmd",
+  "mode": "lite",
+  "traceability": "strict",
+  "status": "closed",
+  "createdAt": "2026-11-11T10:17:46.707Z",
+  "updatedAt": "2026-11-11T10:36:58.859Z",
+  "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-11-11T10:18:35.576Z",
+      "evidence": "Self-review: 4 observable REQs from the brief; repro r3 cases; doctor/status already flag the estimate",
+      "actor": "user"
+    },
+    "plan": {
+      "status": "approved",
+      "updatedAt": "2026-11-11T10:18:35.799Z",
+      "evidence": "Self-review: adapter keeps signatures; footprint already imported (no cycle); tests first",
+      "actor": "user"
+    },
+    "quality": {
+      "status": "approved",
+      "updatedAt": "2026-11-11T10:36:46.207Z",
+      "evidence": "Full suite -n 2: 7291 passed, 30 skipped; ruff check and format clean on touched files; sdd check green",
+      "actor": "user"
+    },
+    "conformance": {
+      "status": "approved",
+      "updatedAt": "2026-11-11T10:36:46.794Z",
+      "evidence": "review.md: 2 judges, conforms after F1/F2/F4/F7/G1/G3; F3/F5/F6 accepted and recorded",
+      "actor": "user"
+    },
+    "memory": {
+      "status": "approved",
+      "updatedAt": "2026-11-11T10:36:58.608Z",
+      "evidence": "Sin nota aparte: lo durable va en el CHANGELOG, el PR y review.md; la jornada del vault la escribe la sesión principal",
+      "actor": "user"
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-11-11T10:17:46.707Z",
+      "reason": "SDD change created"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "specifying",
+      "at": "2026-11-11T10:18:35.356Z",
+      "reason": "cause located: two cmd parsers, split vs footprint tokenizer"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-11-11T10:18:35.576Z",
+      "evidence": "Self-review: 4 observable REQs from the brief; repro r3 cases; doctor/status already flag the estimate",
+      "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-11-11T10:18:35.799Z",
+      "evidence": "Self-review: adapter keeps signatures; footprint already imported (no cycle); tests first",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-11-11T10:18:36.008Z",
+      "reason": "spec approved"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "plan-review",
+      "at": "2026-11-11T10:18:36.226Z",
+      "reason": "plan written"
+    },
+    {
+      "type": "transition",
+      "from": "plan-review",
+      "to": "implementing",
+      "at": "2026-11-11T10:18:36.445Z",
+      "reason": "plan approved"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-11-11T10:36:45.879Z",
+      "reason": "T1-T4 done; full suite green"
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-11-11T10:36:46.207Z",
+      "evidence": "Full suite -n 2: 7291 passed, 30 skipped; ruff check and format clean on touched files; sdd check green",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "verifying",
+      "to": "result-review",
+      "at": "2026-11-11T10:36:46.508Z",
+      "reason": "quality approved"
+    },
+    {
+      "type": "gate",
+      "gate": "conformance",
+      "status": "approved",
+      "at": "2026-11-11T10:36:46.794Z",
+      "evidence": "review.md: 2 judges, conforms after F1/F2/F4/F7/G1/G3; F3/F5/F6 accepted and recorded",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "result-review",
+      "to": "closing",
+      "at": "2026-11-11T10:36:58.361Z",
+      "reason": "conformance approved; PR to be opened"
+    },
+    {
+      "type": "gate",
+      "gate": "memory",
+      "status": "approved",
+      "at": "2026-11-11T10:36:58.608Z",
+      "evidence": "Sin nota aparte: lo durable va en el CHANGELOG, el PR y review.md; la jornada del vault la escribe la sesión principal",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "closing",
+      "to": "closed",
+      "at": "2026-11-11T10:36:58.859Z",
+      "reason": "handoff filled; PR opened, not merged"
+    }
+  ]
+}

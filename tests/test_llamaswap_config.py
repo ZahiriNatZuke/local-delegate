@@ -142,6 +142,51 @@ def test_parse_cmd_flags_ctx_and_cache_types():
     assert flags["cache_type_v"] == "q4_0"
 
 
+# The same `cmd` read by `llamaswap_config` and by `footprint.cmd_flags` gives the same values
+# (SDD `llamaswap-cmd-single-parser`): before, `cmd.split()` did not understand quotes nor `=`.
+_SHARED_COMMANDS = [
+    "llama-server --port ${PORT} -m D:/m/x.gguf --ctx-size=32768",
+    'llama-server --port ${PORT} -m "D:/Mis modelos/x.gguf" -c 32768',
+    "llama-server -m 'D:/m/x.gguf' --ctx-size 32768 -ctk q8_0 --cache-type-v=q4_0",
+    "llama-server --model=D:\\modelos\\x.gguf -c ${CTX}",
+]
+
+
+@pytest.mark.parametrize("cmd", _SHARED_COMMANDS)
+def test_parse_cmd_flags_matches_footprint(cmd):
+    from local_delegate import footprint
+
+    ours = lc._parse_cmd_flags(cmd)
+    theirs = footprint.cmd_flags(cmd)
+    for key in ("model", "ctx_size", "cache_type_k", "cache_type_v"):
+        expected = None if theirs[key] is None else str(theirs[key])
+        assert ours.get(key) == expected, key
+
+
+@pytest.mark.parametrize(
+    ("cmd", "path"),
+    [
+        ('llama-server -m "D:/Mis modelos/x.gguf" -c 1', "D:/Mis modelos/x.gguf"),
+        ("llama-server -m 'D:/m/x.gguf' -c 1", "D:/m/x.gguf"),
+        ("llama-server --model=/models/foo.gguf", "/models/foo.gguf"),
+    ],
+)
+def test_parse_model_gguf_path_quotes_and_equals(cmd, path):
+    assert lc.parse_model_gguf_path(cmd) == Path(path)
+
+
+def test_estimate_model_vram_finds_a_quoted_path_with_spaces(monkeypatch, tmp_path):
+    folder = tmp_path / "Mis modelos"
+    folder.mkdir()
+    p = folder / "m.gguf"
+    _write_fake_gguf_with_size(monkeypatch, p, 2 * GIB)
+    entry = {"cmd": f'llama-server --port 1 -m "{p}" -ngl 99'}
+    est = lc.estimate_model_vram("m", entry)
+    assert est.error is None
+    assert est.gguf_path == p
+    assert est.method == "flat-fallback"
+
+
 # --- read_gguf_arch_info ---------------------------------------------------------------
 
 

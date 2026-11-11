@@ -13,7 +13,7 @@ from pathlib import Path
 
 import pytest
 
-from local_delegate import test_windows
+from local_delegate import i18n, test_windows
 from local_delegate.resources.hooks import hook_common
 
 ROOT = Path(__file__).parents[1]
@@ -147,6 +147,24 @@ def test_exclude_self_is_the_default_of_the_command(world, capsys):
 def test_the_two_options_cannot_go_together(world):
     with pytest.raises(SystemExit):
         world.main("--include-self", "--exclude-self")
+
+
+@pytest.mark.parametrize(
+    ("lang", "expected"),
+    [
+        ("en", "leave out the sessions of the repo's own project (the default)"),
+        ("es", "quitar las sesiones del propio repo (por defecto)"),
+    ],
+)
+def test_the_own_repo_options_are_explained_in_the_process_language(
+    monkeypatch, capsys, lang, expected
+):
+    """REQ-024 (follow-up of its amendment): the help of the two options comes from the catalog."""
+    monkeypatch.setenv("LOCAL_DELEGATE_LANG", lang)
+    i18n.reset()
+    with pytest.raises(SystemExit):
+        measure_plugin_adoption.main(["--help"])
+    assert expected in " ".join(capsys.readouterr().out.split())
 
 
 def test_the_list_of_the_log_dir_marks_a_clone_as_own(world):
