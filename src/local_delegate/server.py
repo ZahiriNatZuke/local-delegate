@@ -7793,6 +7793,10 @@ def _string_literal_notice(content: str, *, kind: str) -> Callable[[str, bool], 
     return _notice
 
 
+#: #630/#650: the table formats on which the figures of a summary are judged (see below).
+_FIGURE_TABLE_FORMATS = frozenset({"html", "aria", "markdown"})
+
+
 def _grounding_notice(
     content: str, before: Callable[[str, bool], str]
 ) -> Callable[[str, bool], str]:
@@ -7803,9 +7807,11 @@ def _grounding_notice(
     changed: the caller is told what to check against the source. Judged on what the model wrote,
     before the other notices add their own text. The figures are judged only on an input with a
     table: elsewhere a summary counts on its own («3 errores» of a lint log) and the warning would
-    be noise (36 of 90 stored live summaries, all counts; 0 of the 20 with a table).
+    be noise (36 of 90 stored live summaries, all counts; 0 of the 20 with a table). Those 20
+    were HTML or Markdown tables: #650 keeps the figures to those formats (and ARIA, HTML too),
+    so a CI log with tabs, read as TSV, does not bring the counting noise back.
     """
-    figures = table_detect.has_table(content)
+    figures = table_detect.table_format(content, delimited=False) in _FIGURE_TABLE_FORMATS
 
     def _notice(text: str, truncated: bool) -> str:
         found = grounding.check(text, content, language=_summary_language(), figures=figures)
@@ -7892,7 +7898,80 @@ def _single_call_cap(base: int, chars: int, model: str, system: str, user: str) 
     return max(base, min(base + extra, ceiling))
 
 
+#: #586: why the operation in course has a role other than its size's (`"table"`), or `None`.
+#: `_log_event` reads it for the rows the operation writes from its own thread; the rows the
+#: middleware writes for a stopped call take it from the call's token (`_log_stopped`).
+_ROLE_REASON: contextvars.ContextVar[str | None] = contextvars.ContextVar(
+    "local_delegate_role_reason", default=None
+)
+
+#: #586, decision D12: how many fields a small input with a table must ask for to go to `long`.
+#: Measured with one field asked alone, 7 of the 8 keys that crossed rows crossed again: 1.
+_TABLE_LONG_MIN_FIELDS = 1
+
+#: #586: the value of `role_reason` when the table rule raised the role.
+_ROLE_REASON_TABLE = "table"
+
+
+def _table_role(probe_len: int, content: str, enabled: bool) -> tuple[str, str, str | None]:
+    """(role, model, table format) by size, or `long` and the format for a small input with a table.
+
+    #586 (`local_extract`) and #650 (`local_summarize`). The format (`table_detect.table_format`)
+    is `None` when the size alone decided: above the threshold an input is already `long`.
+    """
+    role, model = _role_for_size(probe_len)
+    if role == "mechanical" and enabled:
+        found = table_detect.table_format(content)
+        if found is not None:
+            return "long", config.models_by_role()["long"], found
+    return role, model, None
+
+
+def _extract_role(probe_len: int, content: str, fields: list[str]) -> tuple[str, str, str | None]:
+    """(role, model, table format) of a `local_extract` call: by size, or `long` for a small table.
+
+    `_role_for_size` stays as it is (four tools share it); only extract and summarize wrap it.
+    """
+    enabled = config.EXTRACT_TABLE_LONG and len(fields) >= _TABLE_LONG_MIN_FIELDS
+    return _table_role(probe_len, content, enabled)
+
+
+def _mark_role_reason() -> None:
+    """The table rule raised the role: every row of the operation carries `role_reason`."""
+    _ROLE_REASON.set(_ROLE_REASON_TABLE)
+    token = cancellation.current()
+    if token is not None:
+        token.role_reason = _ROLE_REASON_TABLE
+
+
+def _with_table_role_notice(text: str, table_format: str | None) -> str:
+    """#650: a summary the table rule sent to `long` says so, with the format it saw, at the end."""
+    if table_format is None:
+        return text
+    notice = i18n.t("mcp.warning.summarize_role_reason_table", format=table_format)
+    return f"{text.rstrip()}\n\n{WARNING_MARKER}{notice}]"
+
+
+def _role_reason_scope(fn: Callable[..., Any]) -> Callable[..., Any]:
+    """`fn` run inside its own `_ROLE_REASON` scope, so the reason never leaks to the next call.
+
+    `functools.wraps`: the SDK builds the tool's schema from the signature, which follows
+    `__wrapped__`, and `inspect.getsource` reaches the body the same way.
+    """
+
+    @functools.wraps(fn)
+    def wrapper(*args: Any, **kwargs: Any) -> Any:
+        scope = _ROLE_REASON.set(None)
+        try:
+            return fn(*args, **kwargs)
+        finally:
+            _ROLE_REASON.reset(scope)
+
+    return wrapper
+
+
 @mcp.tool(annotations=_annotations(TOOL_TITLES["local_summarize"]))
+@_role_reason_scope
 def local_summarize(
     text: str | None = None,
     path: str | None = None,
@@ -7907,7 +7986,10 @@ def local_summarize(
     Use it to summarize large files/documents: pass 'path' and the file is read server-side, so
     the full content does NOT enter Claude's context (only the short summary comes back).
     Alternatively pass 'text'. Routes automatically to the mechanical model (short inputs) or to
-    the long-context model (large documents).
+    the long-context model (large documents). A short input that carries a table (HTML, ARIA,
+    Markdown/GFM, CSV or TSV) goes to the long-context model too, which keeps rows apart: slower,
+    and the summary ends with a warning naming the format; `LOCAL_DELEGATE_SUMMARIZE_TABLE_LONG=0`
+    turns this off.
 
     Args:
         text: Text to summarize (use this or 'path').
@@ -7918,8 +8000,11 @@ def local_summarize(
     """
     probe = path and Path(path).is_file()
     probe_len = Path(path).stat().st_size if probe else len(text or "")
-    role, model = _role_for_size(probe_len)
     content, truncated_in, raw_len = _read_input(text, path, _NO_TRUNCATE)
+    # #650: the role is decided after reading, because the table rule needs the content.
+    role, model, table_format = _table_role(probe_len, content, config.SUMMARIZE_TABLE_LONG)
+    if table_format is not None:
+        _mark_role_reason()
     clean_focus = sections.sanitize_focus(focus)
     # #558: the significant words of the focus, to name the sections that treat it and to warn when
     # the summary mentions none of them. Empty without focus: nothing below changes then.
@@ -7935,7 +8020,10 @@ def local_summarize(
     kind = _source_kind(path)
     # #630: the check of the summary against the input runs on every path, with the #539 notice.
     literal_notice = _grounding_notice(content, _string_literal_notice(content, kind=kind))
-    structured = config.STRUCTURED_SUMMARY and role == "long" and kind != "code"
+    # #650: by size only; a small input the table rule raised keeps the single call.
+    structured = (
+        config.STRUCTURED_SUMMARY and role == "long" and table_format is None and kind != "code"
+    )
     structure = sections.detect(content) if structured else None
     if structure is not None:
         return _truncation_prefix(content, truncated_in, raw_len) + _structured_summary(
@@ -7973,7 +8061,8 @@ def local_summarize(
 
     def _notices(text: str, truncated: bool) -> str:
         missing = _focus_missing(text, content, terms, literal)
-        return _with_focus_warning(literal_notice(text, truncated), missing)
+        noticed = _with_focus_warning(literal_notice(text, truncated), missing)
+        return _with_table_role_notice(noticed, table_format)
 
     if len(content) > config.max_chars_for_role(role):
         # No cabe: se resume por partes y luego se resumen los resúmenes. Antes esto se
@@ -8444,56 +8533,6 @@ def _extract_location_shortcut(
     return shortcut
 
 
-#: #586: why the operation in course has a role other than its size's (`"table"`), or `None`.
-#: `_log_event` reads it for the rows the operation writes from its own thread; the rows the
-#: middleware writes for a stopped call take it from the call's token (`_log_stopped`).
-_ROLE_REASON: contextvars.ContextVar[str | None] = contextvars.ContextVar(
-    "local_delegate_role_reason", default=None
-)
-
-#: #586, decision D12: how many fields a small input with a table must ask for to go to `long`.
-#: Measured with one field asked alone, 7 of the 8 keys that crossed rows crossed again: 1.
-_TABLE_LONG_MIN_FIELDS = 1
-
-#: #586: the value of `role_reason` when the table rule raised the role.
-_ROLE_REASON_TABLE = "table"
-
-
-def _extract_role(probe_len: int, content: str, fields: list[str]) -> tuple[str, str, str | None]:
-    """(role, model, reason) of a `local_extract` call: by size, or `long` for a small table.
-
-    `_role_for_size` stays as it is (four tools share it); only extract wraps it. The reason is
-    `None` when the size alone decided: above the threshold an input is already `long`.
-    """
-    role, model = _role_for_size(probe_len)
-    if (
-        role == "mechanical"
-        and config.EXTRACT_TABLE_LONG
-        and len(fields) >= _TABLE_LONG_MIN_FIELDS
-        and table_detect.has_table(content)
-    ):
-        return "long", config.models_by_role()["long"], _ROLE_REASON_TABLE
-    return role, model, None
-
-
-def _role_reason_scope(fn: Callable[..., Any]) -> Callable[..., Any]:
-    """`fn` run inside its own `_ROLE_REASON` scope, so the reason never leaks to the next call.
-
-    `functools.wraps`: the SDK builds the tool's schema from the signature, which follows
-    `__wrapped__`, and `inspect.getsource` reaches the body the same way.
-    """
-
-    @functools.wraps(fn)
-    def wrapper(*args: Any, **kwargs: Any) -> Any:
-        scope = _ROLE_REASON.set(None)
-        try:
-            return fn(*args, **kwargs)
-        finally:
-            _ROLE_REASON.reset(scope)
-
-    return wrapper
-
-
 @mcp.tool(annotations=_annotations(TOOL_TITLES["local_extract"]))
 @_deferred_usage_rows
 @_role_reason_scope
@@ -8534,11 +8573,14 @@ def local_extract(
     A location field naming one heading (`intro_heading_line`) that got the whole Markdown
     outline is cut to the only heading its singular name fits; with any doubt (a plural
     subject, no single heading) it is left as it came. Both go to `outline_copies`, with a warning.
-    A small input that carries a table (an HTML `<table`/`<tr` tag, or a Markdown table with its
-    separator line) goes to the long-context model too, even with one field: the mechanical one
-    answered with the value of another row. Then `_local_delegate.role_reason` says so
-    (`{"role": "long", "reason": "table", "notice": ...}`), also on an `error` answer, and the
-    call is slower and may have to load that model. CSV, TSV and `<div>` grids are not seen.
+    A small input that carries a table (HTML `<table`/`<tr`, ARIA `role="table"`, `"grid"`,
+    `"treegrid"` or `"row"`, a Markdown or GFM table with its delimiter row, three or more CSV
+    or TSV rows) goes to the long-context model too, even with one field: the mechanical one
+    answered with the value of another row. Then `_local_delegate.role_reason` says so (`{"role": "long", "reason":
+    "table", "format": "html"|"aria"|"markdown"|"csv"|"tsv", "notice": ...}`), also on an
+    `error` answer, and the call is slower and may have to load that model. Not seen: a CSV of
+    two columns, a TSV row that starts with an empty cell, tables aligned with spaces and
+    `<div>` grids that only have class names.
     `LOCAL_DELEGATE_EXTRACT_TABLE_LONG=0` turns this off.
 
     Args:
@@ -8554,16 +8596,14 @@ def local_extract(
     # Entera (B2c): lo que no cabe en una llamada se trocea en vez de truncarse.
     content, _truncated_in, raw_len = _read_input(text, path, _NO_TRUNCATE)
     # #586: the role is decided after reading, because the table rule needs the content.
-    role, model, role_reason = _extract_role(probe_len, content, fields)
+    role, model, table_format = _extract_role(probe_len, content, fields)
     role_meta: dict = {}
-    if role_reason is not None:
-        _ROLE_REASON.set(role_reason)
-        token = cancellation.current()
-        if token is not None:
-            token.role_reason = role_reason
+    if table_format is not None:
+        _mark_role_reason()
         role_meta["role_reason"] = {
             "role": role,
-            "reason": role_reason,
+            "reason": _ROLE_REASON_TABLE,
+            "format": table_format,
             "notice": i18n.t("mcp.warning.extract_role_reason_table"),
         }
     max_chars = config.max_chars_for_role(role)

@@ -41,7 +41,8 @@ RAM van más rápidos, pero Windows desaloja al modelo pequeño de la VRAM para 
 | `LOCAL_DELEGATE_MODEL_CODE` | `qwen36-35b-a3b` | código |
 | `LOCAL_DELEGATE_MODEL_VISION` | `gemma4-12b` | visión (imagen→texto, `local_describe_image`) |
 | `LOCAL_DELEGATE_LONG_INPUT_CHARS` | `6000` | umbral mecánico↔largo |
-| `LOCAL_DELEGATE_EXTRACT_TABLE_LONG` | `1` | `local_extract` manda al rol `long` una entrada por debajo del umbral que trae una tabla HTML o Markdown, también con un solo campo, y lo dice en `role_reason` (respuesta y log). Tarda más, puede cargar el modelo largo y su respaldo es el de `code`; `0` lo apaga. Lo lee el servidor al arrancar; ver [Tools](Tools#local_extract) |
+| `LOCAL_DELEGATE_EXTRACT_TABLE_LONG` | `1` | `local_extract` manda al rol `long` una entrada por debajo del umbral que trae una tabla (HTML, ARIA, Markdown/GFM, CSV o TSV), también con un solo campo, y lo dice en `role_reason` (respuesta, con el `format` visto, y log). Tarda más, puede cargar el modelo largo y su respaldo es el de `code`; `0` lo apaga. Lo lee el servidor al arrancar; ver [Tools](Tools#local_extract) |
+| `LOCAL_DELEGATE_SUMMARIZE_TABLE_LONG` | `1` | La misma regla para `local_summarize` (#650): una entrada pequeña con tabla va al rol `long`, el resumen acaba con un aviso que nombra el formato y la fila del log lleva `role_reason`. `0` lo apaga. Lo lee el servidor al arrancar; ver [Tools](Tools#local_summarize) |
 | `LOCAL_DELEGATE_STRUCTURED_SUMMARY` | `0` | `local_summarize` sigue la estructura de un Markdown (solo modelo largo); experimental, ver [Tools](Tools#resumen-por-secciones-experimental-apagado) |
 | `LOCAL_DELEGATE_MAX_CHARS_MECHANICAL` / `_LONG` / `_CODE` | `20000` / `48000` / `20000` | tope de chars de entrada **por rol**: por encima, las tools que reducen (`local_summarize`, `local_lint_summary`, `local_commit_msg`, `local_explain_code`, `local_extract`) hacen map-reduce y las que transforman trocean |
 | `LOCAL_DELEGATE_MAX_IMAGE_MB` | `8` | tope de tamaño de imagen para `local_describe_image` |
@@ -496,7 +497,7 @@ Dos casos aparte:
 | Tool | Rol |
 | --- | --- |
 | `local_classify` | `mechanical` |
-| `local_summarize`, `local_extract`, `local_lint_summary`, `local_translate` | `mechanical` o `long`, **según el tamaño de la entrada**: por encima de `LOCAL_DELEGATE_LONG_INPUT_CHARS` (6000), `long`. En `local_extract`, también `long` una entrada más pequeña que trae una tabla (`LOCAL_DELEGATE_EXTRACT_TABLE_LONG`, `role_reason`) |
+| `local_summarize`, `local_extract`, `local_lint_summary`, `local_translate` | `mechanical` o `long`, **según el tamaño de la entrada**: por encima de `LOCAL_DELEGATE_LONG_INPUT_CHARS` (6000), `long`. En `local_extract` y `local_summarize`, también `long` una entrada más pequeña que trae una tabla (`LOCAL_DELEGATE_EXTRACT_TABLE_LONG`, `LOCAL_DELEGATE_SUMMARIZE_TABLE_LONG`, `role_reason`) |
 | `local_commit_msg`, `local_explain_code`, `local_boilerplate` | `code` |
 | `local_describe_image` | `vision` |
 | `local_delegate` | `mechanical` (sin modelo explícito; con él, ninguno) |
@@ -650,8 +651,9 @@ que no es dato viaja bajo la clave reservada `_local_delegate` para no ensuciar 
 { "host": "127.0.0.1", "port": null, "_local_delegate": { "chunked": { "pieces": 3, "null_fields": ["port"], "notice": "…" }, "warning": "…" } }
 
 // entrada pequeña con tabla (#586): fue al rol `long` por la tabla, no por el tamaño;
-// también en una respuesta con `error`/`raw`, y nunca en `warning`
-{ "seats": "5", "_local_delegate": { "role_reason": { "role": "long", "reason": "table", "notice": "…" } } }
+// también en una respuesta con `error`/`raw`, y nunca en `warning`; `format` (#650) es el que
+// vio el detector: html, aria, markdown, csv o tsv
+{ "seats": "5", "_local_delegate": { "role_reason": { "role": "long", "reason": "table", "format": "csv", "notice": "…" } } }
 ```
 
 `role_reason` solo aparece si la regla de la tabla subió el rol: no con una entrada que ya iba a

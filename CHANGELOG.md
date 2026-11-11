@@ -20,6 +20,38 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   lista, sale `unknown`. Usa el mismo sondeo que `backend`: `doctor` sigue preguntando una sola vez
   al backend.
 
+### Cambiado
+
+- **La regla de la tabla ve más formatos y `role_reason` dice cuál vio (#650).** Además de HTML
+  (`<table`/`<tr`) y de Markdown con su línea `--`, ahora cuentan como tabla una tabla GFM sin
+  tuberías externas (`Seats | Domains` sobre `--- | ---`), el separador compacto `|-|-|`, un
+  `role="table"`, `"grid"`, `"treegrid"` o `"row"` de ARIA, y tres o más filas seguidas de CSV
+  (dos o más comas o puntos y coma por fila) o de TSV, con el mismo número de separadores fuera de
+  comillas y sin pinta de prosa ni de código (ni sangría, ni marca de lista o comentario, ni
+  `{ } [ ] ; =`, ni `: `, ni llamadas, ni celdas de más de 8 palabras). En un CSV, el modelo
+  mecánico rellenaba una celda vacía con la vecina. `_local_delegate.role_reason` de
+  `local_extract` lleva ahora `format` (`html`, `aria`, `markdown`, `csv` o `tsv`). Sobre todas las
+  fuentes Python y Markdown del repo y los ficheros de sus SDD, la regla nueva no ve CSV ni TSV en
+  ningún `.py`, `.md`, `.json`, `.log` ni `.yaml`, y no pierde ninguna tabla que viera la de antes.
+  Una coma entre dos dígitos (coma decimal, miles, milisegundos de un log) no cuenta como estilo
+  de CSV, así la prosa con cifras no pasa por tabla. Sigue sin ver un CSV de dos columnas, filas
+  con celdas entre comillas que ocupan varias líneas, una fila TSV que empieza con la celda vacía,
+  una tabla GFM detrás de `> ` o del `+` de un diff, tablas alineadas con espacios y rejillas de
+  `<div>` que solo lo dicen con clases (`row`, `cell`, `grid`, que también maquetan páginas sin
+  tabla); del lado de subir de más, una enumeración corta en prosa en tres líneas seguidas puede
+  pasar por CSV, y una página que solo nombra `role="row"` por ARIA. La regla sigue siendo lineal
+  y sin expresiones regulares. El aviso de cifras de `local_summarize` (#630) se queda en las
+  tablas HTML, ARIA y Markdown (también GFM): un CSV o un TSV, como un log de CI con tabuladores,
+  no lo abre.
+- **`local_summarize` manda al modelo de contexto largo una entrada pequeña con tabla (#650).**
+  La misma regla y el mismo detector que `local_extract`. El resumen termina con un
+  `[local-delegate warning: …]` que nombra el formato visto, la fila del log de uso lleva
+  `role_reason: "table"` (también las de una llamada cortada) y ese resumen no toma el camino por
+  secciones aunque `LOCAL_DELEGATE_STRUCTURED_SUMMARY=1`, que lo abre solo el tamaño. Cuesta lo
+  mismo que en `local_extract`: más latencia y quizá cargar el modelo largo en el backend
+  compartido. `LOCAL_DELEGATE_SUMMARIZE_TABLE_LONG=0` lo apaga (se lee al arrancar); cada tool
+  tiene su interruptor. El prompt no cambia.
+
 ### Corregido
 
 - **Un `session_id` con un salto de línea al final ya no pasa por UUID** al buscar el proyecto de
