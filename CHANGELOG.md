@@ -6,6 +6,20 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Añadido
+
+- **`doctor` comprueba que cada rol tenga su modelo servido**: el check nuevo `service.role_models`
+  («modelo de cada rol») compara el id de modelo de `mechanical`, `long`, `code` y `vision` con la
+  lista de `BASE_URL/models`, sea llama-swap o un backend en la nube. Si falta el de un rol de
+  texto da `[WARN]` con el id que falta y la variable `LOCAL_DELEGATE_MODEL_*` que lo cambia; si
+  solo falta el de visión queda en `[OK]` con la nota, porque solo lo usa `local_describe_image`.
+  Un alias cuenta si `/models` lo lista, y un id de Ollama sin etiqueta cuenta si sale como
+  `<id>:latest`. Los roles son los del daemon, que ahora los manda en `/api/backend`
+  (`role_models`), porque las variables pueden estar solo en su lanzador; con un daemon de una
+  versión anterior se usan los de la consola y el detalle lo dice. Con el backend caído o sin la
+  lista, sale `unknown`. Usa el mismo sondeo que `backend`: `doctor` sigue preguntando una sola vez
+  al backend.
+
 ### Cambiado
 
 - **La regla de la tabla ve más formatos y `role_reason` dice cuál vio (#650).** Además de HTML
@@ -37,6 +51,30 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   mismo que en `local_extract`: más latencia y quizá cargar el modelo largo en el backend
   compartido. `LOCAL_DELEGATE_SUMMARIZE_TABLE_LONG=0` lo apaga (se lee al arrancar); cada tool
   tiene su interruptor. El prompt no cambia.
+
+### Corregido
+
+- **Un `session_id` con un salto de línea al final ya no pasa por UUID** al buscar el proyecto de
+  una sesión (`hook_common.project_of_session`): el `$` de la expresión también aceptaba la línea
+  partida; ahora se compara el identificador entero.
+- **El contador de fidelidad de `local_lint_summary` (`scripts/score_lint_fidelity.py`) ya no
+  tarda segundos en un log con un tramo largo sin espacios**: buscaba ficheros y nodos de pytest
+  con expresiones de coste cuadrático (5 s y 11 s con 5 000 puntos seguidos); ahora usa la
+  búsqueda lineal de `lint_patterns` y un recorrido propio desde cada `::`, con el mismo resultado.
+- **Las líneas y opciones nuevas de exclusión del propio repo de `scripts/measure_adoption.py` y
+  `scripts/measure_plugin_adoption.py` salen del catálogo**, en español y en inglés según el idioma
+  del proceso. El resto de los textos de `measure_adoption.py` sigue solo en español.
+- **Un solo lector del `cmd` de llama-swap.** El contexto del modelo, la ruta del GGUF y los tipos
+  de caché se leían partiendo el `cmd` por espacios, sin entender comillas ni `--flag=valor`, y no
+  coincidían con lo que leía la huella del modelo. Con `--ctx-size=32768` el contexto se daba por
+  supuesto (8192) y las llamadas que no cabían en 8192 tokens iban sin razonamiento aunque el modelo
+  tuviera 32K; con `-m "D:/Mis modelos/x.gguf"` o `-m 'D:/m/x.gguf'`, `init-llamaswap`,
+  `check-llamaswap` y `residency --pin` decían «archivo no encontrado» con la ruta cortada. Ahora
+  todo pasa por el mismo lector, que también ve las formas cortas `-ctk`/`-ctv` en la estimación
+  de VRAM y, si el flag sale en su forma corta y en la larga, se queda con la última, como
+  llama-server. Un `-c ${macro}` (o un valor que no sea solo dígitos) sigue contando como contexto
+  supuesto, sin inventar un número; `doctor` y `local_status` ya lo avisan cuando el rol tiene
+  razonamiento con presupuesto configurado.
 
 ## [0.51.0] - 2026-11-10
 

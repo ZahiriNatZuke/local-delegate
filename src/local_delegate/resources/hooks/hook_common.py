@@ -839,7 +839,7 @@ _NOT_ALNUM = re.compile(r"[^A-Za-z0-9]")
 #: Claude Code names a main transcript `<session id>.jsonl`, and the id is a UUID (all 353 of this
 #: machine on 2026-11-10). Anything else never becomes a path.
 _SESSION_UUID = re.compile(
-    r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+    r"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}"
 )
 _SALTS: dict[str, str] = {}
 _SELF_ENTRIES: dict[str, tuple[str, ...]] = {}
@@ -1079,7 +1079,7 @@ def project_of_session(
     ambiguous result is cached per root and session; "not found" and a spent budget are not, so a
     session that shows up later is found the next time.
     """
-    if not isinstance(session_id, str) or not _SESSION_UUID.match(session_id):
+    if not isinstance(session_id, str) or not _SESSION_UUID.fullmatch(session_id):
         return None
     base = Path(root) if root is not None else projects_root()
     key = (str(base), session_id)

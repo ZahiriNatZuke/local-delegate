@@ -55,10 +55,13 @@ PRODUCT_LINE = re.compile(
 NUMBER = re.compile(r"(?<![\w.])\d+(?:[.,]\d+)*(?![\w])")
 #: A file name or path with a known extension, and a rule or error code: the same expressions
 #: `local_lint_summary` builds its chunked inventory with (B2e), imported so they cannot drift.
+#: A log is searched for `FILE` with `files_in` and `strip_files`, in linear time.
 FILE = lint_patterns.FILE
 CODE = lint_patterns.CODE
-#: A pytest node id (`tests/test_x.py::test_name[param]`): its file and the rest of the id.
-PYTEST_NODE = re.compile(r"((?:[\w.~-]+[/\\])*[\w.-]+\.py)::(\S+)")
+#: The characters of a pytest node id (`tests/test_x.py::test_name[param]`), see `pytest_nodes`.
+_NODE_DIR_CHAR = re.compile(r"[\w.~-]")
+_NODE_FILE_CHAR = re.compile(r"[\w.-]")
+_NODE_TEST = re.compile(r"\S+")
 #: A status mark of a report (`[ OK ]`, `[WARN]`, `[FALT]`, `[ -- ]`).
 STATUS = re.compile(r"\[[^\]\n]{1,6}\]")
 SENTENCE_SPLIT = re.compile(r"(?<=[.!?])\s+")
@@ -88,6 +91,65 @@ LOG_NUMBER_WORD = re.compile(
 
 
 _norm_path = lint_patterns.norm_path
+
+
+def files_in(text: str) -> list[str]:
+    """`FILE.findall(text)`, in linear time (`lint_patterns.file_spans`): `findall` of `FILE` is
+    quadratic on a long run without spaces, like the dots of a `unittest` progress line."""
+    return [text[start:end] for start, end in lint_patterns.file_spans(text)]
+
+
+def strip_files(text: str) -> str:
+    """`FILE.sub(" ", text)`, in linear time."""
+    parts: list[str] = []
+    last = 0
+    for start, end in lint_patterns.file_spans(text):
+        parts += [text[last:start], " "]
+        last = end
+    parts.append(text[last:])
+    return "".join(parts)
+
+
+def _node_file_start(text: str, separator: int) -> int | None:
+    """Where the file of a pytest node id that ends at `separator` (a `::`) starts, or `None`.
+
+    The file is `D* F` right before the `::`, `D` = `[\\w.~-]+[/\\\\]`, `F` = `[\\w.-]+\\.py`. A
+    regex takes the leftmost start that reaches the `::`: `F` runs left to a `~`, a slash or a
+    character outside the path; each slash before it adds a `D` while that `D` is not empty.
+    """
+    start = separator
+    while start > 0 and _NODE_FILE_CHAR.match(text, start - 1):
+        start -= 1
+    if separator - start < 4 or not text.startswith(".py", separator - 3):
+        return None
+    while start > 0 and text[start - 1] in "/\\":
+        segment = start - 1
+        while segment > 0 and _NODE_DIR_CHAR.match(text, segment - 1):
+            segment -= 1
+        if segment == start - 1:
+            break
+        start = segment
+    return start
+
+
+def pytest_nodes(text: str) -> list[tuple[str, str]]:
+    """The (file, rest of the id) of each pytest node id of `text`, in linear time: from each `::`
+    to the left and to the right. What `findall` of
+    `((?:[\\w.~-]+[/\\\\])*[\\w.-]+\\.py)::(\\S+)` gives, without its quadratic cost on a long run
+    (`tests/test_score_lint_fidelity_linear.py` holds them equal)."""
+    nodes: list[tuple[str, str]] = []
+    at = 0
+    while (separator := text.find("::", at)) != -1:
+        start = _node_file_start(text, separator)
+        test = _NODE_TEST.match(text, separator + 2) if start is not None else None
+        if test is None:
+            at = separator + 1
+            continue
+        nodes.append((text[start:separator], test.group()))
+        at = test.end()
+    return nodes
+
+
 #: A Markdown escape (`build\_corpus.py`, B2e): the model writes it, the reader sees `_`.
 MARKDOWN_ESCAPE = re.compile(r"\\([_*`-])")
 #: A `tsc` position behind a file (`login.page.ts(52,24)`, B2e): two figures, not `52,24`.
@@ -136,11 +198,11 @@ def log_facts(log: str) -> dict:
     in_words = {str(NUMBER_WORDS[w.lower()]) for w in LOG_NUMBER_WORD.findall(log)}
     numbers |= in_words
     word_numbers |= in_words
-    files = Counter(_norm_path(f) for f in FILE.findall(log))
+    files = Counter(_norm_path(f) for f in files_in(log))
     codes = Counter(CODE.findall(log))
     statuses = Counter(s.strip("[] ").upper() for s in STATUS.findall(log))
     lines = [line for line in log.splitlines() if line.strip()]
-    with_file = sum(1 for line in lines if FILE.search(line))
+    with_file = sum(1 for line in lines if lint_patterns.file_spans(line))
     derived = {len(lines), with_file, len(files), len(codes)}
     derived |= set(files.values()) | set(codes.values()) | set(statuses.values())
     # B2d-4: the tool compacts a dense block of lines equal but for one token and tells the model
@@ -149,7 +211,7 @@ def log_facts(log: str) -> dict:
     for size in compact_repeated_lines(log)[1]:
         derived |= {size, size - LINT_REPEAT_KEEP}
     # B2d-4: tests per file of a pytest log, each test once however many times the log names it.
-    nodes = {(_norm_path(f), test) for f, test in PYTEST_NODE.findall(log)}
+    nodes = {(_norm_path(f), test) for f, test in pytest_nodes(log)}
     if nodes:
         derived |= set(Counter(f for f, _test in nodes).values()) | {len(nodes)}
     return {
@@ -166,7 +228,7 @@ def count_inventions(answer: str, log: str, extra_allowed: tuple[str, ...] = ())
     facts = log_facts(log)
     log_norm = _norm_path(log)
     # Numbers inside a file token (`x.py:12`) are checked as part of the path, not alone.
-    without_files = FILE.sub(" ", text)
+    without_files = strip_files(text)
     allowed = set(facts["numbers"]) | {str(n) for n in facts["derived_counts"]}
     allowed |= {_norm_number(n) for n in extra_allowed}
     invented_numbers = [n for n in NUMBER.findall(without_files) if _norm_number(n) not in allowed]
@@ -178,7 +240,7 @@ def count_inventions(answer: str, log: str, extra_allowed: tuple[str, ...] = ())
         for w in NUMBER_WORD.findall(without_files)
         if str(NUMBER_WORDS[w.lower()]) not in word_allowed
     ]
-    invented_files = [f for f in FILE.findall(text) if _norm_path(f) not in log_norm]
+    invented_files = [f for f in files_in(text) if _norm_path(f) not in log_norm]
     repeated = [s for (_h, s), n in Counter(_sentences(text)).items() for _ in range(n - 1)]
     return {
         "invented_numbers": invented_numbers,

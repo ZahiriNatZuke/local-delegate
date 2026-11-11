@@ -907,6 +907,9 @@ def backend(lang: str | None = Query(None)):
             "running_ok": running_ok,
             "models": probe.models,
             "models_stale": probe.models_stale,
+            # The model of each role with the daemon's config, for `doctor`'s `service.role_models`:
+            # the variables may be only in the daemon's launcher, not in the console of `doctor`.
+            "role_models": {role: getattr(config, variable) for role, variable in _ROLES},
             **_cause_json(probe.cause, _probe_detail(probe, language), language),
             "origin": config.backend_origin(),
             "host": config.backend_host(),

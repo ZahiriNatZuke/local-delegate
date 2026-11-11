@@ -2,7 +2,7 @@
 
 Antes de este módulo cada subcomando sabía un pedazo del sistema: ``doctor`` solo miraba el
 backend, ``install`` escribía sin verificar y nadie miraba el daemon. Aquí vive **una sola
-definición de «estar a punto»**: los treinta y cuatro elementos del andamiaje, cada uno con un
+definición de «estar a punto»**: los treinta y cinco elementos del andamiaje, cada uno con un
 ``probe`` que responde en qué estado está. Los cinco de la entrega por plugin de Claude Code
 viven en ``checks_plugin``, pero se registran aquí como los demás.
 
@@ -13,7 +13,7 @@ Tres reglas ordenan el módulo:
 2. **Lo que no se pudo comprobar es ``unknown``, nunca ``missing``.** Un cliente que no está
    instalado o un fichero ilegible por permisos no significan «falta»: si se reportaran así,
    un ``fix`` posterior sobrescribiría configuración ajena.
-3. **Es una lista, no un framework.** Treinta y cuatro checks son una tupla de objetos con una
+3. **Es una lista, no un framework.** Treinta y cinco checks son una tupla de objetos con una
    función; no hay registro dinámico, ni entry points, ni herencia. Si hiciera falta algo de eso,
    el diseño se revisa antes de seguir.
 
@@ -39,6 +39,7 @@ from urllib.parse import urlsplit
 
 from . import (
     attribution,
+    backend_params,
     checks_plugin,
     claude_plugin,
     clients,
@@ -276,7 +277,18 @@ def _default_backend_models() -> failures.BackendView:
     seen = daemon.query_backend(host, port, timeout=timeout)
     if seen is not None:
         if seen.get("available"):
-            return failures.BackendView(True, "", None, "daemon")
+            # `models` of `/api/backend` is the list of `/v1/models` (`[{id, status}]`), and
+            # `role_models` the model of each role with the DAEMON's config, which is the one the
+            # tools use: the variables may be only in its launcher. An older daemon may send
+            # neither, and then the ids stay unknown or the roles are this console's.
+            ids = failures.model_ids(seen.get("models"))
+            roles = seen.get("role_models")
+            daemon_roles = (
+                {r: m for r, m in roles.items() if isinstance(r, str) and isinstance(m, str)}
+                if isinstance(roles, dict)
+                else None
+            )
+            return failures.BackendView(True, "", None, "daemon", ids, daemon_roles)
         # Un daemon de una versión anterior manda `causa`/`detalle` y el valor viejo de la causa
         # (REQ-006): se leen las dos claves y el valor se pasa al formato nuevo.
         cause = legacy_names.new_value(
@@ -519,6 +531,16 @@ class Context:
     daemon_registration: Callable[[], dict | None] = field(
         default_factory=lambda f=_default_daemon_registration: f
     )
+    # What `backend_view` already asked, so `service.backend` and `service.role_models` share one
+    # probe of the backend per run: a second one doubled the wait on a slow or down backend. Out of
+    # `__init__`: a `dataclasses.replace` starts with an empty one, as a new context should.
+    _memo: dict = field(default_factory=dict, init=False, repr=False, compare=False)
+
+    def backend_view(self) -> failures.BackendView:
+        """`backend_models()`, asked once per context."""
+        if "backend" not in self._memo:
+            self._memo["backend"] = self.backend_models()
+        return self._memo["backend"]
 
     @property
     def claude_dir(self) -> Path:
@@ -1765,8 +1787,110 @@ def _probe_daemon(ctx: Context) -> Result:
     return Result(MISSING, i18n.t("doctor.probe.daemon.nobody", host=host, port=port), serve_hint())
 
 
+#: Each role of `backend_params.ROLES` with the `config` attribute that holds its model id and the
+#: variable that sets it (`config.MODEL_*`). A role added to `ROLES` without a row here breaks
+#: `test_every_role_has_its_variable` in CI, so it cannot be skipped in silence.
+ROLE_MODEL_VARS: dict[str, tuple[str, str]] = {
+    "mechanical": ("MODEL_MECHANICAL", "LOCAL_DELEGATE_MODEL_MECHANICAL"),
+    "long": ("MODEL_LONG", "LOCAL_DELEGATE_MODEL_LONG"),
+    "code": ("MODEL_CODE", "LOCAL_DELEGATE_MODEL_CODE"),
+    "vision": ("MODEL_VISION", "LOCAL_DELEGATE_MODEL_VISION"),
+}
+
+#: Roles whose model missing is not a warning: vision only serves `local_describe_image`, and a
+#: backend without an image model (a cloud one, a small GPU) is a valid setup for every other tool.
+OPTIONAL_ROLES = frozenset({"vision"})
+
+
+def role_models() -> dict[str, str]:
+    """The model id of each role with THIS process's config, in `ROLES` order.
+
+    A role with an empty id is left out. Defensive: `config._env` gives the default to an empty
+    variable, so today every role has an id; a config that could switch a role off would land here.
+    """
+    models = {}
+    for role in backend_params.ROLES:
+        model = (getattr(config, ROLE_MODEL_VARS[role][0], "") or "").strip()
+        if model:
+            models[role] = model
+    return models
+
+
+def _is_served(model: str, served: set[str]) -> bool:
+    """`model` is in `/models`, or Ollama lists it with its implicit tag (`llama3.1:latest`).
+
+    Ollama answers a request for `llama3.1` with `llama3.1:latest`, and its `/v1/models` lists only
+    the tagged id: without this, the config this project documents for Ollama would be a `warn`.
+    """
+    return model in served or (":" not in model and f"{model}:latest" in served)
+
+
+def _probe_role_models(ctx: Context) -> Result:
+    """Each role's model id against the ids `/models` lists, local backend or cloud alike.
+
+    `warn` when a text role's model is not served: each of its tools would fail with the backend's
+    «model not found». Vision missing alone stays `ok`, named in the detail. An alias counts when
+    `/models` lists it (llama-swap lists them with `includeAliasesInList`). Without the list
+    (backend down or rejecting the key, an older daemon), `unknown`: `service.backend` says why.
+
+    The roles come from whoever gave the list: the daemon sends its own (`role_models` of
+    `/api/backend`), which are the ones its tools use; the variables may live only in its launcher,
+    as the backend key does. An older daemon does not send them, and then they are this console's
+    and the detail says so.
+    """
+    view = ctx.backend_view()
+    if not view.healthy:
+        return Result(UNKNOWN, i18n.t("doctor.probe.role_models.no_backend"))
+    if view.models is None:
+        key = "no_list_daemon" if view.source == "daemon" else "no_list"
+        return Result(UNKNOWN, i18n.t(f"doctor.probe.role_models.{key}"))
+    if view.role_models is not None:
+        roles = {
+            role: view.role_models[role].strip()
+            for role in backend_params.ROLES
+            if (view.role_models.get(role) or "").strip()
+        }
+        whose = "doctor.probe.role_models.from_daemon"
+    else:
+        roles = role_models()
+        whose = "doctor.probe.role_models.from_console" if view.source == "daemon" else None
+    served = set(view.models)
+    missing: list[tuple[str, str, str]] = []
+    checked: list[str] = []
+    for role, model in roles.items():
+        if _is_served(model, served):
+            checked.append(f"{role}: {model}")
+        else:
+            missing.append((role, model, ROLE_MODEL_VARS[role][1]))
+    required = [m for m in missing if m[0] not in OPTIONAL_ROLES]
+    optional = [m for m in missing if m[0] in OPTIONAL_ROLES]
+    parts = [
+        i18n.t("doctor.probe.role_models.missing", role=role, model=model)
+        for role, model, _variable in required
+    ]
+    if not required:
+        parts.append(i18n.t("doctor.probe.role_models.all_served", roles=", ".join(checked) or "-"))
+    parts.extend(
+        i18n.t("doctor.probe.role_models.missing", role=role, model=model)
+        + " "
+        + i18n.t("doctor.probe.role_models.optional")
+        for role, model, _variable in optional
+    )
+    detail = "; ".join(parts)
+    if whose:
+        detail = f"{detail} {i18n.t(whose)}"
+    if required:
+        variables = ", ".join(variable for _role, _model, variable in required)
+        return Result(
+            WARN,
+            detail,
+            i18n.t("doctor.probe.role_models.fix", variables=variables, url=config.BASE_URL),
+        )
+    return Result(OK, detail)
+
+
 def _probe_backend_models(ctx: Context) -> Result:
-    view = ctx.backend_models()
+    view = ctx.backend_view()
     if view.healthy:
         return Result(OK, i18n.t("doctor.probe.backend.answers", url=config.BASE_URL))
     # REQ-016: la severidad sale de la causa y de quién la vio, no de un prefijo del texto.
@@ -2994,7 +3118,7 @@ def _probe_read_overlap(ctx):
 
 
 # --- El registro --------------------------------------------------------------
-# Treinta y cuatro elementos, en orden de grupo. Una tupla: si esto necesitara alguna vez cargarse
+# Treinta y cinco elementos, en orden de grupo. Una tupla: si esto necesitara alguna vez cargarse
 # solo, el problema no sería el registro sino el diseño.
 #
 # El número se dice en cinco sitios de este módulo y llegó a decir «once» con doce checks ya
@@ -3083,6 +3207,8 @@ CHECKS: tuple[Check, ...] = (
     Check("mod.read_overlap", "scaffold", "doctor.check.mod.read_overlap", _probe_read_overlap),
     Check("service.daemon", "service", "doctor.check.service.daemon", _probe_daemon),
     Check("service.backend", "service", "doctor.check.service.backend", _probe_backend_models),
+    # Right after `service.backend`, and with its same view (`Context.backend_view`): one probe.
+    Check("service.role_models", "service", "doctor.check.service.role_models", _probe_role_models),
     # En `service` y no en `scaffold` aunque lea las entradas MCP: sale a la red, y el grupo
     # `scaffold` no sale a la red por contrato — es lo que permite a `install` correr su reporte
     # sin tocar nada externo (ver `_SCAFFOLD_GROUPS` en cli.py). Además se lee junto al backend,
@@ -3125,7 +3251,7 @@ CHECKS: tuple[Check, ...] = (
 
 
 def run_all(ctx: Context, *, groups: tuple[str, ...] | None = None) -> list[tuple[Check, Result]]:
-    """Corre los treinta y cuatro probes. Un probe que falle es ``unknown``, nunca tumba el diagnóstico.
+    """Corre los treinta y cinco probes. Un probe que falle es ``unknown``, nunca tumba el diagnóstico.
 
     Con ``groups`` se corren solo los de esos grupos, en el mismo orden del registro. Lo pide
     ``install``: su reporte final habla del andamiaje que acaba de escribir, y correr también
@@ -3139,7 +3265,7 @@ def run_all(ctx: Context, *, groups: tuple[str, ...] | None = None) -> list[tupl
             continue
         try:
             result = check.probe(ctx)
-        except Exception as exc:  # un check roto no debe impedir ver los otros treinta y tres
+        except Exception as exc:  # un check roto no debe impedir ver los otros treinta y cuatro
             result = Result(UNKNOWN, i18n.t("doctor.probe.failed", error=exc))
         results.append((check, result))
     return results

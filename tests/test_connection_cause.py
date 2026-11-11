@@ -370,8 +370,10 @@ def test_the_texts_are_the_ones_in_the_req_011_table():
 
 def test_backend_view_has_the_req_016_fields():
     view = BackendView(healthy=False, detail="d", cause="credential", source="daemon")
-    assert view._fields == ("healthy", "detail", "cause", "source")
-    assert tuple(view) == (False, "d", "credential", "daemon")
+    # The REQ-016 fields first and in their order; `models` and `role_models` (for
+    # `service.role_models`) come after, with defaults, so a positional 4-field view still works.
+    assert view._fields == ("healthy", "detail", "cause", "source", "models", "role_models")
+    assert tuple(view) == (False, "d", "credential", "daemon", None, None)
 
 
 # --- Valores viejos (REQ-006) -------------------------------------------------------------------

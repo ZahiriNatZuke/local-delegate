@@ -239,27 +239,18 @@ _CACHE_TYPE_BYTES: dict[str, float] = {
 _DEFAULT_CACHE_BYTES = _CACHE_TYPE_BYTES["f16"]  # default real de llama-server sin el flag
 
 
+_CMD_KEYS = ("model", "ctx_size", "cache_type_k", "cache_type_v")
+
+
 def _parse_cmd_flags(cmd: str) -> dict[str, str]:
-    """Tokeniza 'cmd' (ya plegado a una línea por PyYAML) y extrae los flags que importan."""
-    tokens = cmd.split()
-    wanted = {
-        "--model": "model",
-        "-m": "model",
-        "--ctx-size": "ctx_size",
-        "-c": "ctx_size",
-        "--cache-type-k": "cache_type_k",
-        "--cache-type-v": "cache_type_v",
-    }
-    flags: dict[str, str] = {}
-    i = 0
-    while i < len(tokens):
-        key = wanted.get(tokens[i])
-        if key and i + 1 < len(tokens):
-            flags[key] = tokens[i + 1]
-            i += 2
-        else:
-            i += 1
-    return flags
+    """The flags of `cmd` that matter here, as text; only the keys present.
+
+    A thin view over `footprint.cmd_flags`, the single `cmd` parser of the package: quotes,
+    `--flag=value` and the short and long form of each flag are read the same everywhere. A
+    `${macro}` stays as text, so whoever wants a number sees it is not one.
+    """
+    flags = footprint.cmd_flags(cmd)
+    return {key: str(flags[key]) for key in _CMD_KEYS if flags.get(key) is not None}
 
 
 def parse_model_gguf_path(cmd: str) -> Path | None:
@@ -544,9 +535,9 @@ def _context_sizes(data: object) -> dict[str, int]:
 def model_context_size(model: str) -> tuple[int, bool]:
     """`(n_ctx, is_estimate)` of `model` from the llama-swap config. It never raises.
 
-    Reads the model's `cmd` with `load_config` and `_parse_cmd_flags` (`--ctx-size N` or `-c N`).
-    Without PyYAML, without a config, without the model or with a value that is not a positive
-    integer it returns `(ESTIMATED_CONTEXT, True)`. Cached by `(path, st_mtime_ns, st_size,
+    Reads the model's `cmd` with `load_config` and `_parse_cmd_flags` (`--ctx-size N`,
+    `--ctx-size=N` or `-c N`, quoted or not). Without PyYAML, without a config, without the
+    model or with a value that is not a positive integer it returns `(ESTIMATED_CONTEXT, True)`. Cached by `(path, st_mtime_ns, st_size,
     st_ino)`: a change of the config is seen on the next call without a restart.
     """
     estimate = (ESTIMATED_CONTEXT, True)

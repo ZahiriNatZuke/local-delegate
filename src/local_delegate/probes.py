@@ -295,7 +295,14 @@ def backend_probe() -> failures.BackendView:
         text = failures.detail(cause, host=host, endpoint=endpoint, exception=exc)
         return failures.BackendView(False, text, cause.value, "direct")
     if response.is_success:
-        return failures.BackendView(True, "", None, "direct")
+        # The ids are for `service.role_models`; a body that is not the list leaves them unknown
+        # and the health as it always was (a 2xx is enough for `service.backend`).
+        try:
+            body = response.json()
+        except ValueError:
+            body = None
+        ids = failures.model_ids(body.get("data") if isinstance(body, dict) else None)
+        return failures.BackendView(True, "", None, "direct", ids)
     cause = failures.connection_cause(response.status_code, loopback=loopback)
     text = failures.detail(cause, host=host, status=response.status_code)
     return failures.BackendView(False, text, cause.value, "direct")
