@@ -46,7 +46,7 @@ from collections.abc import Sequence
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
-from local_delegate import attribution, config, cost, test_windows
+from local_delegate import attribution, config, cost, i18n, test_windows
 from local_delegate.resources.hooks import hook_common
 
 #: Desde aquí hay `tool_use_id` en el log de uso (REQ-024).
@@ -370,13 +370,13 @@ def _parse_args(argv: Sequence[str] | None) -> argparse.Namespace:
         "--exclude-self",
         dest="include_self",
         action="store_false",
-        help="leave out the sessions of the repo's own project (the default)",
+        help=i18n.t("cli.script.measure_plugin_adoption.help.exclude_self"),
     )
     own.add_argument(
         "--include-self",
         dest="include_self",
         action="store_true",
-        help="count them too: the figure comparable with the earlier cuts",
+        help=i18n.t("cli.script.measure_plugin_adoption.help.include_self"),
     )
     ap.set_defaults(include_self=False)
     return ap.parse_args(argv)

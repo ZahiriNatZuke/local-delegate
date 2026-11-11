@@ -383,7 +383,19 @@ def test_a_uuid_session_in_one_directory_is_found(hc, tmp_path):
 
 @pytest.mark.parametrize(
     "session_id",
-    ["..", f"../{SESSION}", f"x/{SESSION}", f"x\\{SESSION}", "not-a-uuid", "", None, 7],
+    [
+        "..",
+        f"../{SESSION}",
+        f"x/{SESSION}",
+        f"x\\{SESSION}",
+        # `$` of a regex also matches before a final line break: the shape is checked whole.
+        f"{SESSION}\n",
+        f"{SESSION}x",
+        "not-a-uuid",
+        "",
+        None,
+        7,
+    ],
 )
 def test_an_id_without_uuid_shape_forms_no_path(hc, tmp_path, monkeypatch, session_id):
     root = _session_world(tmp_path, "D--work-shop")

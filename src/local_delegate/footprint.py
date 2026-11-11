@@ -36,6 +36,7 @@ _SHAPES: dict[str, tuple[str, ...]] = {
 _INTEGERS = frozenset({"n_cpu_moe", "ctx_size"})
 # Un valor que empieza por «-» es otro flag solo si sigue una letra o otro guion: «-1» es un valor.
 _IS_FLAG = re.compile(r"^-(?:-|[A-Za-z])")
+_INTEGER = re.compile(r"-?[0-9]+")
 
 
 def _tokens(cmd: str | Sequence[str]) -> list[str]:
@@ -82,6 +83,9 @@ def _values_by_flag(tokens: Sequence[str]) -> dict[str, str | None]:
             i += 1
             continue
         name, same, value = token.partition("=")
+        # The dict keeps the order of the LAST occurrence: `cmd_flags` uses it to let the last of
+        # the short and the long form win, as llama-server does.
+        values.pop(name, None)
         if same:
             values[name] = value
             i += 1
@@ -96,10 +100,8 @@ def _values_by_flag(tokens: Sequence[str]) -> dict[str, str | None]:
 
 
 def _int_or_text(value: str) -> int | str:
-    try:
-        return int(value)
-    except ValueError:
-        return value
+    # Only plain ASCII digits: `int()` would also take `32_768`, `+5`, ` 5` or full-width digits.
+    return int(value) if _INTEGER.fullmatch(value) else value
 
 
 def cmd_flags(cmd: str | Sequence[str]) -> dict[str, Any]:
@@ -110,9 +112,11 @@ def cmd_flags(cmd: str | Sequence[str]) -> dict[str, Any]:
     guiones iniciales y con `_` (`--reasoning-budget` -> `reasoning_budget`).
     """
     values = _values_by_flag(_tokens(cmd))
+    order = {flag: position for position, flag in enumerate(values)}
     output: dict[str, Any] = {}
     for key, shapes in _SHAPES.items():
-        value = next((values[f] for f in shapes if values.get(f) is not None), None)
+        given = [f for f in shapes if values.get(f) is not None]
+        value = values[max(given, key=order.__getitem__)] if given else None
         output[key] = _int_or_text(value) if value is not None and key in _INTEGERS else value
     output["reasoning"] = None
     for flag, value in values.items():

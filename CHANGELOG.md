@@ -20,6 +20,30 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   lista, sale `unknown`. Usa el mismo sondeo que `backend`: `doctor` sigue preguntando una sola vez
   al backend.
 
+### Corregido
+
+- **Un `session_id` con un salto de línea al final ya no pasa por UUID** al buscar el proyecto de
+  una sesión (`hook_common.project_of_session`): el `$` de la expresión también aceptaba la línea
+  partida; ahora se compara el identificador entero.
+- **El contador de fidelidad de `local_lint_summary` (`scripts/score_lint_fidelity.py`) ya no
+  tarda segundos en un log con un tramo largo sin espacios**: buscaba ficheros y nodos de pytest
+  con expresiones de coste cuadrático (5 s y 11 s con 5 000 puntos seguidos); ahora usa la
+  búsqueda lineal de `lint_patterns` y un recorrido propio desde cada `::`, con el mismo resultado.
+- **Las líneas y opciones nuevas de exclusión del propio repo de `scripts/measure_adoption.py` y
+  `scripts/measure_plugin_adoption.py` salen del catálogo**, en español y en inglés según el idioma
+  del proceso. El resto de los textos de `measure_adoption.py` sigue solo en español.
+- **Un solo lector del `cmd` de llama-swap.** El contexto del modelo, la ruta del GGUF y los tipos
+  de caché se leían partiendo el `cmd` por espacios, sin entender comillas ni `--flag=valor`, y no
+  coincidían con lo que leía la huella del modelo. Con `--ctx-size=32768` el contexto se daba por
+  supuesto (8192) y las llamadas que no cabían en 8192 tokens iban sin razonamiento aunque el modelo
+  tuviera 32K; con `-m "D:/Mis modelos/x.gguf"` o `-m 'D:/m/x.gguf'`, `init-llamaswap`,
+  `check-llamaswap` y `residency --pin` decían «archivo no encontrado» con la ruta cortada. Ahora
+  todo pasa por el mismo lector, que también ve las formas cortas `-ctk`/`-ctv` en la estimación
+  de VRAM y, si el flag sale en su forma corta y en la larga, se queda con la última, como
+  llama-server. Un `-c ${macro}` (o un valor que no sea solo dígitos) sigue contando como contexto
+  supuesto, sin inventar un número; `doctor` y `local_status` ya lo avisan cuando el rol tiene
+  razonamiento con presupuesto configurado.
+
 ## [0.51.0] - 2026-11-10
 
 Mediciones más honestas y menos respuestas equivocadas en silencio. Cada fila del log de uso guarda

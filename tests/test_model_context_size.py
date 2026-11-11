@@ -45,6 +45,38 @@ def test_ctx_size_short_flag(tmp_path, monkeypatch):
     assert lc.model_context_size("gemma3-4b") == (4096, False)
 
 
+@pytest.mark.parametrize(
+    "flag", ["--ctx-size=32768", "-c 32768", "--ctx-size 32768", "-c=32768", '-c "32768"']
+)
+def test_ctx_size_every_shape_of_the_flag(tmp_path, monkeypatch, flag):
+    # `--ctx-size=32768` used to fall to the 8192 estimate (`cmd.split()` did not see the `=`).
+    _config(tmp_path, monkeypatch, f'llama-server -m "D:/Mis modelos/m.gguf" {flag} --jinja')
+    assert lc.model_context_size("gemma3-4b") == (32768, False)
+
+
+@pytest.mark.parametrize("flag", ["-c ${CTX}", "--ctx-size=${CTX}", "-c", "-c -1"])
+def test_ctx_size_variable_or_no_value_stays_estimate(tmp_path, monkeypatch, flag):
+    # A macro is not expanded and no number is invented: the estimate, flagged as such.
+    _config(tmp_path, monkeypatch, f"llama-server -m m.gguf {flag} --jinja")
+    assert lc.model_context_size("gemma3-4b") == (8192, True)
+
+
+@pytest.mark.parametrize(
+    ("flags", "n_ctx"),
+    [("-c 4096 --ctx-size 32768", 32768), ("--ctx-size 32768 -c 4096", 4096)],
+)
+def test_ctx_size_the_last_form_wins(tmp_path, monkeypatch, flags, n_ctx):
+    # As in llama-server, the last one wins, whatever its form (short or long).
+    _config(tmp_path, monkeypatch, f"llama-server -m m.gguf {flags}")
+    assert lc.model_context_size("gemma3-4b") == (n_ctx, False)
+
+
+@pytest.mark.parametrize("value", ["32_768", "+32768", "３２７６８"])
+def test_ctx_size_only_plain_digits_count(tmp_path, monkeypatch, value):
+    _config(tmp_path, monkeypatch, f"llama-server -m m.gguf -c {value}")
+    assert lc.model_context_size("gemma3-4b") == (8192, True)
+
+
 def test_ctx_size_missing_flag_is_estimate(tmp_path, monkeypatch):
     _config(tmp_path, monkeypatch, "llama-server -m m.gguf")
     assert lc.model_context_size("gemma3-4b") == (8192, True)
