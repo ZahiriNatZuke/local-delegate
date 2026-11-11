@@ -8,7 +8,10 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [0.52.0] - 2026-11-11
 
-Menos valores cambiados de fila sin aviso y un diagnóstico que ve el modelo que falta. `local_extract`
+El panel se filtra por proyecto, menos valores cambiados de fila sin aviso y un diagnóstico que ve
+el modelo que falta. El panel trae la tarjeta «Por proyecto» y un filtro de proyecto con nombres
+legibles sacados de un mapa local (el log sigue sin nombres), y pierde el conmutador «Propio repo»
+de la 0.51.0, que solo servía a quien desarrolla local-delegate (#661). `local_extract`
 avisa cuando el valor de una clave sale de la fila de otra clave pedida (`cross_filled_keys`, #650);
 la regla de la tabla ve también CSV, TSV, GFM sin tuberías externas, el separador `|-|-|` y las
 tablas de ARIA, y `role_reason` dice qué formato vio; `local_summarize` manda al modelo de contexto
@@ -28,6 +31,9 @@ mal.
 - No hace falta cambiar la configuración. Opcional: `LOCAL_DELEGATE_SUMMARIZE_TABLE_LONG=0` para
   que `local_summarize` vuelva al enrutado por tamaño (el de `local_extract` sigue siendo
   `LOCAL_DELEGATE_EXTRACT_TABLE_LONG=0`).
+- **Panel:** las cifras vuelven a incluir el uso del propio repo (ya no hay conmutador). Las filas
+  de la 0.51.0 se nombran solas la primera vez que abres el panel; las anteriores salen en «Sin
+  proyecto». Quien use la API con `include_self` puede quitarlo: ya no hace nada.
 
 ### Añadido
 
@@ -64,6 +70,35 @@ mal.
 
 ### Cambiado
 
+- **El panel se filtra por proyecto y ya no aparta el propio repo (#661).** Fuera el conmutador «Propio
+  repo» de la 0.51.0: solo le servía a quien desarrolla local-delegate. **Por defecto el panel lo
+  enseña todo.** En su lugar, la tarjeta nueva **Por proyecto** (delegaciones, tokens netos y
+  reparto de cada repo, de mayor a menor) y un selector de **proyecto** en la barra de filtros que
+  filtra todo el panel: KPIs, gráficos, tablas, actividad, coste equivalente y tarjeta de hooks. El
+  filtro no se recuerda al recargar. `/api/stats`, `/api/events` y `/api/hooks` aceptan
+  `project=<hash>` o `project=none` (las filas sin proyecto) y dicen el filtro aplicado en
+  `project`; `/api/stats` trae `by_project`. Se retiran `include_self`, `excluded_self`,
+  `self_in_range` y `unknown_project` de la API, y la línea «del propio repo» de `local_status`.
+  Las mediciones de `scripts/measure_*.py` siguen apartando el propio repo (`--include-self` lo
+  deja), por eso el log conserva `caller_project_kind`.
+- **Nombres legibles con un mapa local aparte, `LOG_DIR/project-names.json`.** Traduce el hash del
+  proyecto a un nombre legible: la última carpeta de su ruta real (`webshop`, `local-delegate`), no
+  el nombre codificado de `~/.claude/projects` (`C--work-webshop`). La ruta sale del `cwd` del hook
+  o de la llamada si corresponde a la carpeta del proyecto, o del campo `cwd` de la primera línea
+  que lo traiga del transcript (como mucho 64 KB leídos, sin guardar nada más); si no se consigue,
+  se usa el nombre codificado sin el prefijo de unidad. Si dos proyectos dan el mismo nombre, el
+  panel enseña también la carpeta padre (`work/webshop`), y el `title` lleva la ruta completa. Se
+  escribe donde y cuando se calcula el hash (daemon, servidor
+  stdio, hooks y `recompute-cost`, cada uno en el `LOG_DIR` de su propio entorno), con cerrojo de
+  fichero y reemplazo atómico, sin perder nombres con varios procesos a la vez. Tope de 1000
+  proyectos y 2 MiB; ausente o corrupto, se lee vacío y se rehace. El log de uso sigue **sin**
+  nombres y el mapa nunca sale de la máquina. Las filas de la 0.51.0, que ya traen el hash, se
+  nombran solas la primera vez que el panel las ve: recorre una vez los nombres de las carpetas de
+  `~/.claude/projects` con la sal local, y de cada una que coincide lee solo el campo `cwd` del
+  transcript más reciente (64 KB como mucho), con tope de directorios y de tiempo; sin sal no hace
+  nada. Un hash sin nombre sale como «Proyecto sin nombre»; las filas sin
+  proyecto, como «Sin proyecto». El nombre de una carpeta es texto no confiable: el panel lo escapa
+  siempre.
 - **La regla de la tabla ve más formatos y `role_reason` dice cuál vio (#650, #658).** Además de HTML
   (`<table`/`<tr`) y de Markdown con su línea `--`, ahora cuentan como tabla una tabla GFM sin
   tuberías externas (`Seats | Domains` sobre `--- | ---`), el separador compacto `|-|-|`, un

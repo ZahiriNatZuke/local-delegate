@@ -834,6 +834,12 @@
     },
     {
       "file": "src/local_delegate/resources/hooks/hook_common.py",
+      "text": "Cf",
+      "kind": "machine_name",
+      "reason": "categoría Unicode de los caracteres de formato (`unicodedata.category`), que no valen en un nombre de proyecto"
+    },
+    {
+      "file": "src/local_delegate/resources/hooks/hook_common.py",
       "text": "Local",
       "kind": "path",
       "reason": "segmento de ruta de `LOG_DIR` en Windows (`AppData/Local`), copia de `platformdirs` que el hook no puede importar"

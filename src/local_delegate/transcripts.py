@@ -219,7 +219,9 @@ def _project_of_file(index: Index, file: Path, root: Path, log_dir: Path | None)
     try:
         project = hook_common.project_directory(file, root)
         if project is not None and project not in index.project_fields:
-            index.project_fields[project] = hook_common.project_fields(project, directory=log_dir)
+            index.project_fields[project] = hook_common.project_fields(
+                project, directory=log_dir, transcript=file
+            )
     except Exception:
         return None
     return project

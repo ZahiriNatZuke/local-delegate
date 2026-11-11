@@ -143,6 +143,12 @@ de diccionario.
 23. Con los fallos de pytest que lee `lint_patterns.py` (#641, 2026-11-10) el detector informó de
     5 palabras sin clasificar, a mano, todas a inglés: `xdist` (el plugin de pytest), `locations`,
     `miscounted` y, de sus tests, `collection` y `disagrees`.
+24. Con el mapa local de nombres de proyecto y el filtro del panel (SDD `dashboard-project-filter`,
+    2026-11-11) el detector informó de 4 palabras sin clasificar, a mano, todas a inglés:
+    `atomically` (de `_write_names_atomically` en `hook_common.py`) y, de sus tests, `abcdef`,
+    `shop` y `xss`. Con los nombres legibles (`label`) se añadieron `collisions` (de
+    `metrics.py`) y `settled` (de `_settled` en `hook_common.py`) y, de sus tests, `collision`,
+    `gains`, `solve` y `webshop`.
 
 ## Heurísticas (no usan datos ajenos)
 

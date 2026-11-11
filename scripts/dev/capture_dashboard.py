@@ -290,7 +290,7 @@ SEED_AND_MOCK = """({DENSITY, PRICES_CHECKED}) => {
   const MOCKS = {
     '/api/events': {meta: {chars_per_token: 4, log_dir: 'D:\\\\datos\\\\local-delegate',
       count: events.length, excluded_tests: 0, tests_in_range: 0,
-      excluded_self: 18, self_in_range: 18, unknown_project: 15, files_read: ['usage-202607.jsonl'],
+      project: null, files_read: ['usage-202607.jsonl'],
       range_from: events[0].ts, range_to: events[events.length - 1].ts}, events},
     // Un modelo procesando (sale en inflight), otro montado en reposo, el resto frío. Sin
     // `running_ok: true` las filas caerían en «montado»/«frío» (backend que no es llama-swap) y la
@@ -355,9 +355,16 @@ SEED_AND_MOCK = """({DENSITY, PRICES_CHECKED}) => {
          main_calls: 0, subagent_calls: 0, mod_calls: 0, unknown_caller_calls: 15,
          tokens_saved: 7180, tokens_net: 6640, tokens_in: 8640, tokens_generated: 690},
       ],
-      // Own-repo switch (REQ-009): the example leaves out 18 delegations of the own repo, the
-      // number the switch shows beside its label.
-      excluded_self: 18, self_in_range: 18, unknown_project: 15,
+      // «By project» and the project filter (dashboard-project-filter): invented folder names and
+      // hashes, never the ones of whoever regenerates the capture; one hash without a name and
+      // the rows without a project, so the two fallback labels show too. They add up to 120.
+      project: null,
+      by_project: [
+        {project: '3f9a1c27b84e0d65', name: 'webshop', path: '/home/ana/work/webshop', calls: 52, tokens_saved: 51200, tokens_net: 47310},
+        {project: 'a07e5b19c2d43f88', name: 'api-gateway', path: '/home/ana/work/api-gateway', calls: 31, tokens_saved: 33480, tokens_net: 30920},
+        {project: '5c2d8e6f71a90b34', name: null, path: null, calls: 22, tokens_saved: 24440, tokens_net: 22240},
+        {project: 'none', name: null, path: null, calls: 15, tokens_saved: 11180, tokens_net: 10640},
+      ],
       // Las tres tarjetas de coste-api-y-cuota se esconden si falta su clave: sin ellas la
       // captura saldría como antes. «Imágenes» se deriva de los mismos eventos de ejemplo.
       cost: COST, quota: QUOTA,
@@ -391,7 +398,7 @@ SEED_AND_MOCK = """({DENSITY, PRICES_CHECKED}) => {
       ];
       return {enabled: true, log: 'D:\\\\datos\\\\local-delegate\\\\hooks.jsonl', exists: true,
         total, suggested, rate: suggested / total,
-        excluded_tests: 0, excluded_self: 0, unknown_project: 0,
+        excluded_tests: 0, project: null,
         by_category: cats, by_event: [], by_day: [],
         // La puntería del hook de lectura. Su total es el de la categoría 'read' —130— y los
         // avisos son sus 'suggested' —41—, no números sueltos: un panel cuyas dos tablas no

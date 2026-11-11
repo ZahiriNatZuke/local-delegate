@@ -127,7 +127,7 @@ con saltos pudo contaminarla un swap.
   lleva ninguno de los dos. `caller_project` son 16 hexadecimales de
   `sha256("local-delegate-project:" + sal + ":" + nombre del directorio)`, nunca el nombre ni la
   ruta; si la sal no se puede leer ni crear, la fila lleva solo el tipo. `self` es el
-  [propio repo](#el-propio-repo). Una fila sin los dos campos (las anteriores a este cambio, las de
+  [propio repo](#el-propio-repo-en-las-mediciones). Una fila sin los dos campos (las anteriores a este cambio, las de
   clientes sin el hook `record-call`) cuenta como `unknown` y nunca se aparta. El campo `path` de la
   fila sigue en claro, como antes: el proyecto va con hash, la ruta del fichero delegado no.
 - **Espera frente a lentitud** (solo si el backend manda `timings`, como llama-server; si no, se
@@ -663,8 +663,8 @@ KPIs, las tablas, los gráficos, las imágenes y la tarjeta de hooks; **encendid
 peticiones del panel llevan `include_tests=1` y las enseñan. El estado se recuerda en el navegador.
 Su ⓘ dice cuántas filas quedaron fuera en el rango y nombra las ventanas abiertas; si hay alguna,
 el botón lleva un punto. El **coste equivalente y la cuota no dependen de este interruptor**: los
-dos ven siempre todas las pruebas y las apartan ellos mismos. El coste sí sigue al interruptor
-[«Propio repo»](#el-propio-repo); la cuota, a ninguno. Lo vivo (el indicador EN CURSO / EN VIVO y
+dos ven siempre todas las pruebas y las apartan ellos mismos. El coste sí sigue al filtro de
+[proyecto](#por-proyecto); la cuota, a ninguno. Lo vivo (el indicador EN CURSO / EN VIVO y
 `/api/inflight`) tampoco se filtra.
 
 ### Los medidores
@@ -678,7 +678,7 @@ Los dos leen el `LOG_DIR` de `config` (el mismo `test-windows.json` que el panel
 ventanas solos; `--include-tests` las desactiva. `measure_cooldown.py` aplica además los tramos de
 `--exclude` (con la misma regla de instantes), y su salida dice cuánto quitó cada fuente.
 `measure_adoption.py` aparta también, en el log de uso, las filas del cliente `mcp`, y por defecto
-el [propio repo](#el-propio-repo) (`--exclude-self`); `--include-self` lo deja.
+el [propio repo](#el-propio-repo-en-las-mediciones) (`--exclude-self`); `--include-self` lo deja.
 
 **El corte de 90 días de la ventana abierta el 2026-09-15 (el 2026-12-14) se saca con las dos
 cifras:**
@@ -695,35 +695,74 @@ mezcla eventos viejos cuya sesión ya no tiene transcript (`unknown`, se quedan)
 recientes del propio repo (se apartan). `measure_cooldown.py` cuenta saltos y fallos del backend y
 no aparta el propio repo, así que su cifra no cambia con esta versión.
 
-## El propio repo
+## Por proyecto
 
-Desarrollar local-delegate delega mucho, y ese uso no dice nada de si la herramienta sirve fuera
-del repo. Por eso cada fila del log de uso y cada evento de la telemetría de hooks guardan **desde
-qué proyecto** se pidieron, y el panel y las mediciones apartan **por defecto** el propio repo,
-igual que apartan las pruebas. Al actualizar, **las cifras bajan** en una máquina donde se
-desarrolla el repo: es el cambio buscado. La cifra anterior sale con el interruptor «Propio repo»
-del panel (o `include_self=1` en la API) y con `--include-self` en los scripts.
+Cada fila del log de uso y cada evento de la telemetría de hooks guardan **desde qué proyecto** de
+Claude Code se pidieron. El panel lo usa para dos cosas: la tarjeta **Por proyecto** (delegaciones,
+tokens netos y reparto de cada repo, de mayor a menor) y el selector de **proyecto** de la barra de
+filtros, que filtra todo el panel. **Por defecto el panel lo enseña todo**, sea del proyecto que
+sea. No siguen el filtro lo que no sale del log de uso: la cuota, lo que está en curso
+(`/api/inflight`), el sistema y el backend, ni los contadores de la ⓘ de «Pruebas»
+(`excluded_tests` y `tests_in_range`, que cuentan el rango entero).
 
-**Qué cuenta como propio repo (`self`).** El tipo se decide con el nombre del directorio de
-proyecto de Claude Code (`~/.claude/projects/<nombre>`, que es la ruta del `cwd` de la sesión con
-cada separador cambiado por `-`). Se normalizan el nombre y cada entrada igual: todo carácter fuera
-de `[A-Za-z0-9]` en ASCII, también `ñ` y las vocales con tilde, pasa a `-`, y todo a minúsculas
-(`Diseño` → `dise-o`). Es `self` si el nombre contiene, **como tramo completo** (con `-` o el
-principio a la izquierda y `-` o el final a la derecha), `local-delegate` o alguna entrada de
-[`self-projects.json`](Configuration.md#proyecto-de-cada-fila-project-salt-y-self-projectsjson). El
-repo, un worktree suyo y un subdirectorio dan `self`; un clon con otro nombre, solo con la lista;
-la entrada `app` no marca `webapp` ni `happy`. Todo lo demás es `other`, y una fila o un evento sin
-el campo es `unknown`: **lo desconocido siempre se cuenta**. Un proyecto ajeno con `local-delegate`
-como tramo de su ruta también saldría `self`; es el límite de la regla por nombre.
-
-**Qué se guarda.** En la fila, `caller_project` (hash con sal, 16 hexadecimales) y
-`caller_project_kind`; en cada evento de la telemetría de hooks, `project` y `project_kind`, con la
-misma regla y del mismo directorio: los hooks, del `transcript_path` de su entrada (nunca del
-`cwd`); la línea del mod (`hook record-read`), del `session_id` que ya trae, buscando el único
+**Qué es un proyecto.** El nombre del directorio de proyecto de Claude Code
+(`~/.claude/projects/<nombre>`, que es la ruta del `cwd` de la sesión con cada separador cambiado
+por `-`, como `D--trabajo-tienda`). Los hooks lo sacan del `transcript_path` de su entrada (nunca
+del `cwd`); la línea del mod (`hook record-read`), del `session_id` que ya trae, buscando el único
 `<raíz de proyectos>/*/<id>.jsonl` (con forma de UUID, tope de 50 ms; si no está o está en dos
-directorios, la línea sale sin los dos campos). La respuesta de `hook classify` no cambia. Ni el
-nombre del proyecto ni el contenido de `self-projects.json` aparecen en el log, el relleno, la
-telemetría, `local_status` ni la API.
+directorios, la línea sale sin proyecto). La respuesta de `hook classify` no cambia.
+
+**Qué se guarda en el log.** En la fila, `caller_project` (hash con sal, 16 hexadecimales) y
+`caller_project_kind` (`self` u `other`, solo para las [mediciones](#el-propio-repo-en-las-mediciones));
+en cada evento de la telemetría de hooks, `project` y `project_kind`. **El log nunca lleva el
+nombre ni la ruta del proyecto**: la evidencia de los issues públicos sale de ahí.
+
+**El nombre legible: `project-names.json`.** Para enseñar un nombre, el panel lee un mapa local
+aparte, `LOG_DIR/project-names.json`
+(`{"version": 2, "names": {"<hash>": {"name": …, "label": …, "path": …}}}`): `name` es la
+carpeta codificada de `~/.claude/projects` (la que entra en el hash, como `C--work-webshop`),
+`label` el nombre que se enseña (la última carpeta de la ruta real, `webshop`) y `path` esa ruta,
+si se conoce. La ruta sale del `cwd` del hook o de la llamada cuando codifica exactamente a la
+carpeta del proyecto (tras un `cd` a una subcarpeta ya no coincide y se descarta), o si no del
+campo `cwd` de la primera línea que lo traiga del transcript, leyendo como mucho 64 KB y sin
+guardar nada más. Sin ruta, `label` es la carpeta codificada sin el prefijo de unidad
+(`work-webshop`). Un mapa de la versión 1 (solo el nombre) se sigue leyendo. Se escribe
+donde y cuando se calcula el hash —el daemon, el servidor stdio, cada hook y `recompute-cost`,
+cada uno en el `LOG_DIR` de su propio entorno, nunca en uno que mande una petición—, con un
+cerrojo de fichero y un reemplazo atómico: nunca queda a medias aunque escriban varios procesos a
+la vez. Si el cerrojo está ocupado, esa vez no se escribe y la siguiente delegación lo intenta otra
+vez. Tiene tope: 1000 proyectos y 2 MiB; un nombre con caracteres de control o de más de 255 no
+se apunta, ni una ruta de más de 1024. Un mapa ausente, ilegible o corrupto se lee como vacío y se rehace en la siguiente
+escritura. **Nunca sale de la máquina** por sí solo (no va al log, a la telemetría ni a ningún
+informe); no lo compartas junto a un log. Ojo: si publicas el panel en la red
+(`LOCAL_DELEGATE_WEB_HOST`), quien lo abra con el token ve los nombres en `by_project`, igual que
+ya ve las rutas de `/api/events`.
+
+**Las filas de antes del mapa.** Las filas de la 0.51.0 ya traen `caller_project` pero el mapa no
+existía. La primera vez que el panel ve un hash sin nombre, recorre una vez los **nombres** de los
+directorios de `~/.claude/projects` (la raíz del proceso), calcula el hash de cada uno con la sal
+local y apunta solo los que coinciden con hashes del log; de cada uno que coincide lee solo el
+campo `cwd` de la cabecera de su transcript más reciente (64 KB como mucho) para el nombre. Una pasada por
+hash y proceso, con tope de 5000 directorios y medio segundo; sin sal no hace nada (ni la crea).
+
+**En el panel.** Se enseña el `label`; si dos proyectos del rango dan el mismo (sin distinguir
+mayúsculas), se añade la carpeta padre (`work/webshop`), y si aun así coinciden, la ruta completa
+(o la carpeta codificada si no hay ruta). Al pasar el ratón, el `title` enseña la ruta completa si
+se conoce, o el hash. En `/api/stats`, `by_project[].name` es ese nombre a enseñar y
+`by_project[].path` la ruta o `null`. Un hash sin nombre en el mapa sale como **«Proyecto sin nombre»**, y las filas sin
+proyecto (las anteriores a la 0.51.0, Codex, el chat) forman el grupo **«Sin proyecto»**. El nombre
+es el de una carpeta, texto no confiable: el panel lo escapa siempre y lo pone en el selector como
+texto. El filtro no se recuerda: al recargar, el panel vuelve a enseñarlo todo.
+
+**En la API.** `/api/stats`, `/api/events` y `/api/hooks` aceptan `project=<hash>` (solo ese
+proyecto), `project=none` (las filas sin proyecto) y nada más: otro valor no filtra. Las tres
+respuestas dicen el filtro aplicado (`project`, o `meta.project` en `/api/events`). El coste
+equivalente sigue el filtro; la cuota, no. `/api/stats` trae además `by_project`: `project`, `name`
+(o `null`), `calls`, `tokens_saved` y `tokens_net` de cada proyecto, que **no** sigue el filtro de
+proyecto (es lo que ofrece el selector) pero sí el de pruebas. Con `session=` (la barra de estado
+del mod) se cuentan las filas de esa sesión, sea del proyecto que sea, y `by_project` sale vacío:
+esa petición no lee ni rellena el mapa de nombres. Desde esta versión ya no
+existen `include_self`, `excluded_self`, `self_in_range` ni `unknown_project`.
 
 **La sal y quién puede revertir el hash.** La sal es `LOG_DIR/project-salt`, 64 hexadecimales
 aleatorios con permisos solo del usuario, creada la primera vez que hace falta. El hash impide leer
@@ -732,20 +771,10 @@ nombre por fuerza bruta**: los nombres de proyecto son cortos y previsibles. No 
 fichero junto a un log. Cada máquina tiene su sal, así que los hashes de la PC y de la Mac no se
 comparan entre sí.
 
-**Un solo `LOG_DIR` para todos.** La sal y la lista las leen el daemon, el servidor stdio, cada
-hook, `recompute-cost` y los scripts, cada uno de su `LOG_DIR`. Si `LOCAL_DELEGATE_LOG_DIR` se
-define en el lanzador de Claude Code y no en el daemon, o al revés, la sal y la lista difieren entre
-filas y eventos, igual que ya se partía el log. La lista se lee una vez por proceso: tras editarla,
-reinicia el daemon.
-
-**En el panel.** Junto a «Pruebas», el interruptor **«Propio repo»**: apagado (por defecto) aparta
-las filas `self` de los KPIs, las tablas, los gráficos, el coste equivalente y la tarjeta de hooks;
-encendido, las tres peticiones (`/api/stats`, `/api/events`, `/api/hooks`) llevan `include_self=1`.
-El estado se recuerda en el navegador (`ld-self`) y el número de lo apartado se ve al lado; su ⓘ
-explica la regla. Las respuestas traen `excluded_self` (lo que quitó este filtro, después del de
-pruebas), `self_in_range` (todas las filas `self` del rango, también las que son prueba) y
-`unknown_project` (filas mostradas sin tipo). Con `session=` (la barra de estado del mod) el filtro
-no se aplica: una sesión del propio repo da sus cifras. La cuota no cambia.
+**Un solo `LOG_DIR` para todos.** La sal, el mapa y la lista las leen el daemon, el servidor stdio,
+cada hook, `recompute-cost` y los scripts, cada uno de su `LOG_DIR`. Si `LOCAL_DELEGATE_LOG_DIR` se
+define en el lanzador de Claude Code y no en el daemon, o al revés, la sal difiere entre filas y
+eventos (y el mismo proyecto sale en dos grupos), igual que ya se partía el log.
 
 **Quién delegó, en tres columnas.** El total de `/api/stats` y cada fila de `by_client` traen
 `main_calls`, `subagent_calls`, `mod_calls` y `unknown_caller_calls`, que suman `calls`. La regla
@@ -754,14 +783,29 @@ de la fila si es un dato real (trae `caller_src`, o su cruce es `exact`, `window
 `unknown` en lo demás, también cuando el hilo lo puso el respaldo. La tarjeta «Quién delegó» las
 enseña como Hilo principal, Subagentes y Mod, y «Sin dato» solo cuando no es cero.
 
-**`local_status`** conserva sus cifras del mes y añade una línea con cuántos de esos eventos son del
-propio repo, solo si no es cero.
+**El histórico, con `recompute-cost`.** Las filas escritas antes de la 0.51.0 no llevan proyecto y
+caen en «Sin proyecto» hasta que el relleno se lo da: `local-delegate recompute-cost` lleva el
+proyecto a las entradas de `attribution-AAAAMM.json` de los transcripts que aún existen (y apunta
+su nombre en el mapa). Las que ya no tienen transcript ni clave de sesión se quedan sin proyecto y
+siguen contando.
 
-**El histórico se aparta con `recompute-cost`.** Las filas escritas antes de actualizar no llevan
-proyecto y cuentan como `unknown` hasta que el relleno se lo da. **Tras actualizar, lanza
-`local-delegate recompute-cost`**: lleva el proyecto a las entradas de `attribution-AAAAMM.json` de
-los transcripts que aún existen. Las que ya no tienen transcript ni clave de sesión se quedan
-`unknown` y siguen contando.
+### El propio repo en las mediciones
+
+Los scripts de medición de adopción (`scripts/`, herramientas de quien desarrolla local-delegate,
+fuera del paquete) siguen apartando **por defecto** el uso del propio repo: desarrollar
+local-delegate delega mucho, y ese uso no dice nada de si la herramienta sirve fuera del repo. El
+panel y `local_status` no lo apartan ni lo mencionan.
+
+**Qué cuenta como propio repo (`self`).** Se normalizan el nombre del directorio de proyecto y cada
+entrada igual: todo carácter fuera de `[A-Za-z0-9]` en ASCII, también `ñ` y las vocales con tilde,
+pasa a `-`, y todo a minúsculas (`Diseño` → `dise-o`). Es `self` si el nombre contiene, **como
+tramo completo** (con `-` o el principio a la izquierda y `-` o el final a la derecha),
+`local-delegate` o alguna entrada de
+[`self-projects.json`](Configuration.md#proyecto-de-cada-fila-project-salt-project-namesjson-y-self-projectsjson).
+El repo, un worktree suyo y un subdirectorio dan `self`; un clon con otro nombre, solo con la
+lista; la entrada `app` no marca `webapp` ni `happy`. Todo lo demás es `other`, y una fila o un
+evento sin el campo es `unknown`: **lo desconocido siempre se cuenta**. La lista se lee una vez por
+proceso.
 
 **Los scripts.** `scripts/measure_adoption.py` aparta el propio repo en las filas del log y en los
 eventos de hooks; un evento viejo sin `project_kind` se resuelve por su sesión con la raíz de
@@ -795,7 +839,7 @@ uv run python scripts/measure_plugin_adoption.py --install 2026-10-22T20:00:00Z 
   uso con el transcript principal de cada sesión en `~/.claude/projects`.
 - **Qué no cuenta**: las llamadas del mod, las pruebas (la regla común y las ventanas de
   `test-window`), los subagentes, las sesiones `-p` o del SDK y, por defecto, las sesiones del
-  [propio repo](#el-propio-repo) (`--include-self` las cuenta). Las delegaciones de subagentes y
+  [propio repo](#el-propio-repo-en-las-mediciones) (`--include-self` las cuenta). Las delegaciones de subagentes y
   del mod salen aparte, en `with_subagent_delegation` y `with_mod_delegation`.
 - **Periodos**: la base va del 2026-10-08 (antes faltan los `tool_use_id`) hasta `--install`, el
   instante en que se instaló la 0.40.0; el después, los 14 días siguientes. Desde la 0.50.0
@@ -1073,15 +1117,15 @@ caducidad de 30 min sigue de red de seguridad.
 |---|---|
 | `GET /` | Dashboard HTML |
 | `GET /api/daemon` | Estado, PID y URLs del daemon HTTP |
-| `GET /api/events?from=&to=&include_tests=&include_self=` | Eventos en el rango (más recientes primero, tope 5000) + `meta` (incluye `files_read`, `excluded_tests`, `tests_in_range`, `excluded_self`, `self_in_range` y `unknown_project`). Sin `include_tests=1`, sin las pruebas; sin `include_self=1`, sin el [propio repo](#el-propio-repo). Sin parámetros: últimos 30 días. `from`/`to` son ISO 8601. Cada fila llega **fundida** con el relleno de `recompute-cost` (o el respaldo) y con su `density`, `family` y `marks` resueltas (y `caller_origin`: `line`, `backfill` o `fallback`): el JS no funde ni resuelve nada |
-| `GET /api/stats?from=&to=&include_tests=&include_self=&session=` | Agregados del mismo conjunto que `/api/events` (`excluded_tests`, `tests_in_range` y `open_test_windows` dicen qué se apartó y qué ventanas siguen abiertas; `excluded_self`, `self_in_range` y `unknown_project`, lo mismo para el propio repo, y filas mostradas + `excluded_tests` + `excluded_self` = filas del rango; el coste sigue a `include_self`) (por tool, por modelo, por origen del cómputo, por cliente, totales): `tokens_context_saved` (el **bruto**, ya sin fallos), `tokens_returned`, `tokens_context_net` (el **neto** del KPI), el desglose `chars_saved_text`, `bytes_saved_image`, `chars_saved_output` y `chars_returned`, `tokens_local_input`, `tokens_generated_local`, `backend_calls` y `estimated_events`. `by_tool`, `by_backend` y `by_client` llevan `tokens_net` junto a `tokens_saved`. Además: `cost` (la cifra o el motivo de que no la haya —`figure` y `reason`—, la barra de cobertura `bar`, el respaldo `fallback`, el origen de `N` `n_origin`, la densidad usada `density`, los modelos sin precio `unpriced`, lo que queda fuera de la base `outside_base`, el desglose `breakdown` y la fecha de la tabla `table`), `quota` (estado por tipo de ventana, `five_hour` y `seven_day`, con `status` `calibrated` o `uncalibrated`, `reason`, `points`, `rejection_points`, `discards`, `drift`, `reset`, `median_C`, `warning`, `a_pct`, `b_pct` y `pct_reason`; y `has_aggregates` y `command`), `images` (`n`, `bytes`, `chars_returned`), `density_table` y `mod_calls` (las llamadas que pidió el mod del plugin, también por cliente en `by_client`; ver [Delegaciones del mod](#delegaciones-del-mod-y-adopción-del-plugin)). El total y cada fila de `by_client` traen además `main_calls`, `subagent_calls`, `mod_calls` y `unknown_caller_calls`, que suman `calls`. Los tokens son de Claude, por densidad. Con `session=<id de sesión de Claude Code>` solo cuenta las delegaciones de esa sesión (lo usa la barra de estado del mod): la línea del log no guarda el id, sino su clave de un solo sentido `caller_session_key` (sha256 truncado), y el daemon calcula la misma clave del id que recibe; las líneas sin clave (anteriores a la 0.41, o de clientes sin el hook `record-call`) no cuentan. Con `session=` el propio repo no se aparta: la sesión da sus cifras sin parámetros nuevos. **No** aplica el tope de 5000 de `/api/events`: alimenta los KPIs del panel |
+| `GET /api/events?from=&to=&include_tests=&project=` | Eventos en el rango (más recientes primero, tope 5000) + `meta` (incluye `files_read`, `excluded_tests`, `tests_in_range` y `project`, el filtro aplicado). Sin `include_tests=1`, sin las pruebas; con `project=<hash>` o `project=none`, solo ese [proyecto](#por-proyecto). Sin parámetros: últimos 30 días. `from`/`to` son ISO 8601. Cada fila llega **fundida** con el relleno de `recompute-cost` (o el respaldo) y con su `density`, `family` y `marks` resueltas (y `caller_origin`: `line`, `backfill` o `fallback`): el JS no funde ni resuelve nada |
+| `GET /api/stats?from=&to=&include_tests=&project=&session=` | Agregados del mismo conjunto que `/api/events` (`excluded_tests`, `tests_in_range` y `open_test_windows` dicen qué se apartó y qué ventanas siguen abiertas; `project` es el filtro aplicado y el coste lo sigue; `by_project` da `project`, `name`, `calls`, `tokens_saved` y `tokens_net` de cada proyecto del rango, sin el filtro de proyecto) (por tool, por modelo, por origen del cómputo, por cliente, totales): `tokens_context_saved` (el **bruto**, ya sin fallos), `tokens_returned`, `tokens_context_net` (el **neto** del KPI), el desglose `chars_saved_text`, `bytes_saved_image`, `chars_saved_output` y `chars_returned`, `tokens_local_input`, `tokens_generated_local`, `backend_calls` y `estimated_events`. `by_tool`, `by_backend` y `by_client` llevan `tokens_net` junto a `tokens_saved`. Además: `cost` (la cifra o el motivo de que no la haya —`figure` y `reason`—, la barra de cobertura `bar`, el respaldo `fallback`, el origen de `N` `n_origin`, la densidad usada `density`, los modelos sin precio `unpriced`, lo que queda fuera de la base `outside_base`, el desglose `breakdown` y la fecha de la tabla `table`), `quota` (estado por tipo de ventana, `five_hour` y `seven_day`, con `status` `calibrated` o `uncalibrated`, `reason`, `points`, `rejection_points`, `discards`, `drift`, `reset`, `median_C`, `warning`, `a_pct`, `b_pct` y `pct_reason`; y `has_aggregates` y `command`), `images` (`n`, `bytes`, `chars_returned`), `density_table` y `mod_calls` (las llamadas que pidió el mod del plugin, también por cliente en `by_client`; ver [Delegaciones del mod](#delegaciones-del-mod-y-adopción-del-plugin)). El total y cada fila de `by_client` traen además `main_calls`, `subagent_calls`, `mod_calls` y `unknown_caller_calls`, que suman `calls`. Los tokens son de Claude, por densidad. Con `session=<id de sesión de Claude Code>` solo cuenta las delegaciones de esa sesión (lo usa la barra de estado del mod): la línea del log no guarda el id, sino su clave de un solo sentido `caller_session_key` (sha256 truncado), y el daemon calcula la misma clave del id que recibe; las líneas sin clave (anteriores a la 0.41, o de clientes sin el hook `record-call`) no cuentan. Con `session=` la sesión da sus cifras, sea del proyecto que sea, sin parámetros nuevos. **No** aplica el tope de 5000 de `/api/events`: alimenta los KPIs del panel |
 | `GET /api/inflight` | Delegaciones en curso de todas las sesiones (`elapsed_s`, `backend`, `chunk/chunks` y, si la llamada espera dentro de local-delegate, `local_wait` con el motivo: `slot` o `turn`; con `turn`, también `turn_in_use` y `turn_position`; desde la 0.45.0, `state` = `running`, `retrying` o `queued` (y desde la 0.46.0 `waiting_backend`, con `backend_wait`), y `queue_position` en una espera de turno) + `last_event_ts` y `now` para el indicador de actividad. Con `?session=<id>` (la banda del mod) cada entrada lleva además `mine` y la respuesta `mine_count`: solo son de esa sesión las que ella lanzó (se compara la clave de un solo sentido, nunca el id); sin parámetro, la respuesta es la de siempre |
 | `GET /api/backend` | Sondeo del backend: `available`, `models` (con `status`; si no responde, la última lista buena de esa URL con `models_stale: true`), `running` y `running_ok` (si `/running` respondió; solo se pide cuando `/models` respondió), `causa`, `etiqueta` y `detalle` (los tres `null` si está conectado), y `origin`/`host` del endpoint |
 | `GET /api/status` | Versión, catálogo de modelos y tools, y un bloque `backend` con `available`, `models`, `models_stale`, `causa`, `etiqueta`, `detalle`, `origin` y `host` |
 | `GET /api/backend/stats` | Métricas de llama-swap (`/api/metrics/stats`). Sin datos trae `causa`, `etiqueta`, `detalle` y `status_http` |
 | `GET /api/llamaswap/status`, `POST /api/llamaswap/watch`, `GET /api/llamaswap/watch/<id>` | Estado de llama-swap para el CLI y `doctor`, y vigía de recarga de `llamaswap residency`. Ver [Daemon](Daemon.md#llama-swap-visto-desde-el-daemon) |
 | `GET /api/system` | RAM, VRAM y procesos del backend, más `platform`, `origin`, `host` y `panel_url` (panel de la máquina del backend; vacío si es local) |
-| `GET /api/hooks?from=&to=&include_tests=&include_self=` | Lo que los hooks consultivos **sugirieron** en el rango, sin los eventos que caen en una ventana de prueba salvo con `include_tests=1` (`excluded_tests` dice cuántos) y sin los de `project_kind: self` salvo con `include_self=1` (`excluded_self`; `unknown_project` cuenta los que no traen el campo, que no se apartan): `total`, `suggested`, `rate`, y desglose por evento, categoría y día. `enabled: false` cuando `LD_HOOK_TELEMETRY_LOG` no está definida |
+| `GET /api/hooks?from=&to=&include_tests=&project=` | Lo que los hooks consultivos **sugirieron** en el rango, sin los eventos que caen en una ventana de prueba salvo con `include_tests=1` (`excluded_tests` dice cuántos) y, con `project=<hash>` o `project=none`, solo los de ese proyecto (`project` es el filtro aplicado): `total`, `suggested`, `rate`, y desglose por evento, categoría y día. `enabled: false` cuando `LD_HOOK_TELEMETRY_LOG` no está definida |
 | `?lang=es\|en` | Lo aceptan `/api/stats`, `/api/hooks`, `/api/backend`, `/api/backend/stats` y `/api/status`: los textos que redacta el servidor (`reason`, `warning`, `pct_reason`, la etiqueta y el detalle de la causa, los roles y el resumen de cada tool) salen en ese idioma. Sin él, o con otro valor, en el del proceso del daemon |
 | `GET /favicon.svg` | Icono de marca — el **mismo** fichero que la landing y que el icono del header del panel, inyectado desde `resources/brand/favicon.svg` |
 
@@ -1090,7 +1134,7 @@ caducidad de 30 min sigue de red de seguridad.
 Los hooks consultivos escriben su propia telemetría —opt-in, activada con `LD_HOOK_TELEMETRY_LOG`,
 y **sin prompts, comandos ni rutas**: evento, categoría, tamaños, la sesión, la versión del script,
 el estado del bloqueo, el proyecto con hash y su tipo (`project` y `project_kind`, ver
-[El propio repo](#el-propio-repo)) y, en las lecturas, una huella de la ruta en vez de la ruta—. Ese registro existía desde
+[Por proyecto](#por-proyecto)) y, en las lecturas, una huella de la ruta en vez de la ruta—. Ese registro existía desde
 hacía tiempo y el dashboard no lo miraba.
 
 La tarjeta cuenta **cuántas veces un hook sugirió delegar**, en el mismo rango que el resto de la

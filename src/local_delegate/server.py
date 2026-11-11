@@ -10222,7 +10222,6 @@ def local_status() -> str:
     current_log = _current_log_path()
     n_events = 0
     n_tests = 0
-    n_self = 0
     backend_calls = 0
     saved_tokens = 0
     net_tokens = 0
@@ -10250,9 +10249,6 @@ def local_status() -> str:
                 n_tests += 1
                 continue
             n_events += 1
-            # REQ-021: the month's figures stay as they are; only say how many are this repo's.
-            if attribution.project_kind(rec) == "self":
-                n_self += 1
             acc = _accounting(rec)
             backend_calls += acc["backend_calls"]
             saved_tokens += acc["saved"]
@@ -10271,8 +10267,6 @@ def local_status() -> str:
         )
         + (i18n.t("mcp.status.log.tests_out", n=n_tests) if n_tests else "")
     )
-    if n_self:
-        lines.append(i18n.t("mcp.status.log.own_repo", n=n_self))
     for window in test_windows.load(config.LOG_DIR).open_windows():
         lines.append(
             i18n.t(
