@@ -47,6 +47,8 @@ loads without `server`.
 
 from __future__ import annotations
 
+from itertools import pairwise
+
 __all__ = ["has_table", "table_format"]
 
 #: The HTML tags that make a table. `<td`/`<th` are left out: they never come without a `<tr`.
@@ -79,6 +81,9 @@ _LINE_MARKERS = ("- ", "* ", "+ ", "> ", "#", "//", "--")
 #: The most words a cell may have; when every comma is followed by a blank, the prose cap.
 _MAX_CELL_WORDS = 8
 _MAX_CELL_WORDS_SPACED = 3
+
+#: The most delimiters a row may have: more is a long line of data or prose, not a row.
+_MAX_CELLS = 256
 
 
 def has_table(text: str) -> bool:
@@ -197,94 +202,98 @@ def _is_gfm_delimiter(line: str, header_cells: int) -> bool:
 
 
 def _has_delimited_rows(lines: list[str], delimiter: str, fewest: int) -> bool:
-    """`_MIN_ROWS` consecutive lines that are rows with the same number of `delimiter`."""
+    """`_MIN_ROWS` consecutive lines that are rows with the same number of `delimiter`.
+
+    Two steps, so a long text costs C-speed work per line: the raw count of `delimiter` picks
+    the runs of lines with the same count, and only the lines of such a run are read as rows
+    (each line once). A line with quotes is read at once: its quoted delimiters do not count.
+    """
     if not any(delimiter in line for line in lines):
         return False
-    run = 0
+    checked: dict[int, int | None] = {}
+
+    def row(index: int) -> int | None:
+        if index not in checked:
+            checked[index] = _row_delimiters(lines[index], delimiter, fewest)
+        return checked[index]
+
+    window: list[int] = []
     previous: int | None = None
-    for line in lines:
-        count = _row_delimiters(line, delimiter, fewest) if delimiter in line else None
-        if count is None:
-            run, previous = 0, None
+    for index, line in enumerate(lines):
+        if delimiter not in line:
+            window, previous = [], None
             continue
-        run = run + 1 if count == previous else 1
+        count = row(index) if '"' in line else line.count(delimiter)
+        if count is None or count < fewest:
+            window, previous = [], None
+            continue
+        if count != previous:
+            window = []
+        window.append(index)
         previous = count
-        if run >= _MIN_ROWS:
-            return True
+        if len(window) >= _MIN_ROWS:
+            # Read the run as rows; keep only what follows the last line that is not one.
+            bad = [position for position, at in enumerate(window) if row(at) != count]
+            if not bad:
+                return True
+            window = window[bad[-1] + 1 :]
     return False
 
 
 def _row_delimiters(line: str, delimiter: str, fewest: int) -> int | None:
     """How many `delimiter` a row has outside double quotes, or `None` if the line is not a row.
 
-    One pass over the line: the quote state, the delimiters, the words of the current cell and
-    the marks of code or prose.
+    The quoted parts are replaced by one word (`Q`), so the rest is read with `str` methods that
+    run in C: the delimiters, the marks of code or prose and the words of each cell.
     """
     line = line.rstrip("\r")
     if not line or line[0] in " \t" or line.startswith(_LINE_MARKERS) or _is_numbered(line):
         return None
     # Trailing blanks go, but not a trailing tab: it is the empty last cell of a TSV row.
     line = line.rstrip(" ") if delimiter == "\t" else line.rstrip()
-    last = len(line) - 1
-    count = 0
-    spaced = True
-    quoted = False
-    words = 0
-    most_words = 0
-    in_word = False
-    previous = ""
-    for index, char in enumerate(line):
-        if char == '"':
-            quoted = not quoted
-        elif quoted:
-            pass
-        elif char == delimiter:
-            count += 1
-            following = line[index + 1] if index < last else ""
-            # A comma between two digits (`4,2`, `1,234`, `10:00:00,123`) says nothing of style.
-            numeric = previous.isdigit() and following.isdigit()
-            if following and not numeric:
-                spaced = spaced and following == " "
-            most_words = max(most_words, words)
-            words, in_word = 0, False
-            previous = char
-            continue
-        elif _is_code_mark(char, line[index + 1 : index + 2], previous, delimiter):
-            return None
-        if not quoted and not char.isspace():
-            if not in_word:
-                words += 1
-                in_word = True
-                if words > _MAX_CELL_WORDS:
-                    return None  # a cell of prose: no need to read the rest of the line
-        elif not quoted:
-            in_word = False
-        previous = char
-    if quoted or count < fewest:
+    if '"' in line:
+        parts = line.split('"')
+        if len(parts) % 2 == 0:
+            return None  # a quote left open: a cell that spans lines, or not a row
+        line = "Q".join(parts[0::2])
+    count = line.count(delimiter)
+    if count < fewest or count > _MAX_CELLS:
         return None
+    if any(mark in line for mark in _CODE_CHARS if mark != delimiter) or ": " in line:
+        return None
+    if _has_glued_paren(line, delimiter):
+        return None
+    cells = line.split(delimiter)
+    spaced = True
+    for before, cell in pairwise(cells):
+        following = cell[:1]
+        # A comma between two digits (`4,2`, `1,234`, `10:00:00,123`) says nothing of style.
+        numeric = before[-1:].isdigit() and following.isdigit()
+        if following and not numeric:
+            spaced = spaced and following == " "
     prose = delimiter != "\t" and spaced
     if prose and line.endswith(delimiter):
         # A wrapped list of prose (`a, b, c,` or `a; b;` cut after the delimiter).
         return None
-    most_words = max(most_words, words)
     cap = _MAX_CELL_WORDS_SPACED if prose else _MAX_CELL_WORDS
-    if most_words > cap:
+    if any(len(cell.split()) > cap for cell in cells):
         return None
     return count
 
 
-def _is_code_mark(char: str, following: str, previous: str, delimiter: str) -> bool:
-    """Outside quotes, a mark of code or prose: `{ } [ ] ; =`, `: ` or a `(` glued to a word."""
-    if char in _CODE_CHARS:
+def _has_glued_paren(line: str, delimiter: str) -> bool:
+    """A `(` glued to what comes before it (a call, `@(`), not after a blank or the delimiter."""
+    if line.count("(") > _MAX_CELLS:
         return True
-    if char == ":":
-        return following == " "
-    return char == "(" and bool(previous) and not previous.isspace() and previous != delimiter
+    start = line.find("(")
+    while start != -1:
+        if start > 0 and not line[start - 1].isspace() and line[start - 1] != delimiter:
+            return True
+        start = line.find("(", start + 1)
+    return False
 
 
 def _is_numbered(line: str) -> bool:
     """A numbered list item: digits, then `. ` or `) `."""
-    index = 0
-    while index < len(line) and line[index].isdigit():
-        index += 1
-    return 0 < index and line[index : index + 2] in (". ", ") ")
+    rest = line.lstrip("0123456789")
+    return len(rest) < len(line) and rest[:2] in (". ", ") ")

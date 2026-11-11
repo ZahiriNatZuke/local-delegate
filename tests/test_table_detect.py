@@ -330,6 +330,8 @@ _HOSTILE = {
     "csv-rows-never-three": "'a,b,c\\na,b\\n' * 100_000",
     "csv-counts-change-each-line": "'a,b,c\\na,b,c,d\\n' * 71_429",
     "one-line-read-by-every-pass": "'a,b\\t\"c;\"' * 125_000",
+    "equal-counts-cells-too-long": "'a,b,c d e f g h i j k\\n' * 45_455",
+    "equal-counts-calls": "'f(a,b,c)\\n' * 111_112",
     "gfm-cells-mismatch": "'a|b\\n-|-|-\\n' * 100_000",
     "role-repeated": "'role=' * 200_000",
 }
