@@ -244,12 +244,31 @@ class BackendView(NamedTuple):
     `"direct"` (sondeo propio de esta consola). Importa para la pista de una credencial: no es lo
     mismo que falte la clave en la consola que en el lanzador del daemon (REQ-016). `cause` es
     `None` cuando está sano o cuando el daemon es antiguo y no la manda.
+
+    `models` are the ids `/models` listed, for the check `service.role_models`. `None` when they are
+    not known: the backend did not answer, its body had no list, or the daemon is older and does not
+    send them. `role_models` is the model of each role with the config of whoever probed: the
+    daemon's, when it sends them; ``None`` means «use this console's». Last and with defaults, so
+    every positional construction keeps working.
     """
 
     healthy: bool
     detail: str
     cause: str | None
     source: str
+    models: tuple[str, ...] | None = None
+    role_models: dict[str, str] | None = None
+
+
+def model_ids(entries: object) -> tuple[str, ...] | None:
+    """The ids of a `/models` list (`data` of the backend, `models` of the daemon), or ``None``.
+
+    The same tolerance as the panel's probe: an entry that is not an object, or has no string `id`,
+    is ignored. Not a list at all: ``None``, the ids are not known (never an empty «nothing served»).
+    """
+    if not isinstance(entries, list):
+        return None
+    return tuple(e["id"] for e in entries if isinstance(e, dict) and isinstance(e.get("id"), str))
 
 
 #: «No hay ruta»: los errno de la plataforma y, siempre, los de Winsock (10051 red inalcanzable,

@@ -339,7 +339,7 @@ legítimos (el CLI fuera del PATH si se instaló con `uvx`, o un cliente que no 
 
 Reinicia el cliente. Verifica con:
 
-- `local-delegate doctor` → comprueba de una vez las treinta y cuatro piezas (ver abajo), incluidos el
+- `local-delegate doctor` → comprueba de una vez las treinta y cinco piezas (ver abajo), incluidos el
   daemon y el backend, que el reporte de `install` no mira a propósito.
 - `local_status` → backend, catálogo y si el cómputo es local o remoto.
 - Un prompt tipo "resume este archivo en cinco viñetas" → debe aparecer la sugerencia del hook.
@@ -519,6 +519,7 @@ local-delegate doctor --home /tmp/x  # diagnostica contra un HOME simulado (solo
 | Andamiaje | autocompletado del shell | el de `install --shell-completion`, si está: lee el manifiesto `installed.json` y compara cada fichero con el que genera la versión instalada **en el idioma del manifiesto** (así el veredicto no cambia con el idioma de la sesión), y mira que cada perfil listado siga teniendo el bloque que lo carga. No lanza ningún shell. Sin nada instalado, `[ OK ]` «no instalado (opcional)»; fichero de otra versión o distinto, `warn` con `local-delegate update`; fichero ausente, bloque borrado o ficheros sin manifiesto, `warn` con `local-delegate install --shell-completion`; manifiesto, fichero o perfil ilegible, `unknown` |
 | Servicios | daemon | `http://127.0.0.1:9393/api/daemon` (versión y pid), y si sirve una versión **distinta de la instalada** |
 | Servicios | backend | `BASE_URL/models` |
+| Servicios | modelo de cada rol | que el id de modelo de cada rol (`mechanical`, `long`, `code`, `vision`) esté en la lista de `BASE_URL/models`, sea llama-swap o un backend en la nube; un alias cuenta si `/models` lo lista (llama-swap solo los lista con `includeAliasesInList`) y un id de Ollama sin etiqueta cuenta si sale como `<id>:latest`. Los ids de los roles son los del daemon (los manda en `/api/backend`), porque las variables pueden estar solo en su lanzador; con un daemon anterior se usan los de la consola y el detalle lo dice. Si falta el de un rol de texto, `[WARN]` con el id y la variable `LOCAL_DELEGATE_MODEL_*` que lo cambia; si solo falta el de visión, `[OK]` con la nota (solo lo usa `local_describe_image`). Sin respuesta del backend o con un daemon que no manda la lista, `unknown`. Usa el mismo sondeo que `backend` (desde la 0.52.0) |
 | Servicios | credencial del backend | si el proceso MCP que arranca **tu cliente** podrá autenticarse. Pregunta al backend **sin** credencial: si lo rechaza y alguna entrada MCP está en modo `stdio`, ese proceso no la tendrá y sus tools `local_*` responderán `401` — aunque el daemon vea el backend perfectamente |
 | Servicios | token del puerto del daemon | la **otra** puerta del mismo camino: si el puerto del daemon exige token, si las entradas MCP en modo `http` lo llevan. Pregunta al puerto y compara con lo que llevan las entradas de los tres clientes; sin cabecera, `warn` nombrando al cliente. Existe porque `install` sin `--web-token-env` deja la entrada sin `Authorization` y el cliente en `401` sin que nada lo dijera |
 | Servicios | versión de Claude Code | `claude --version` contra la mínima del plugin (2.1.292); por debajo, `[WARN]` e `install` sigue por settings. Es la versión del **CLI**: la pestaña Code de Claude Desktop y la extensión de VS Code no se pueden medir desde aquí, y piden **2.1.286** y **2.1.299** respectivamente (límite documentado; lo de VS Code no se verificó en vivo). Dentro de WSL no aplica |
@@ -542,7 +543,7 @@ Cuatro estados, y la diferencia entre los dos últimos importa:
 como «falta», un arreglo automático posterior sobrescribiría configuración que no es nuestra. El
 exit code es **0** sin avisos y **1** con al menos uno.
 
-De las treinta y cuatro comprobaciones, **«versión publicada» es la única que consulta PyPI**, con un timeout
+De las treinta y cinco comprobaciones, **«versión publicada» es la única que consulta PyPI**, con un timeout
 de dos segundos y degradando a `[ -- ]` si no hay red. Y lo hace **solo en `doctor`**: ni el
 reporte de `install` ni el diagnóstico interno de `update` salen a internet por ella —el primero
 porque instalar unos hooks no es motivo para hacerlo, y el segundo porque ya pregunta la versión
