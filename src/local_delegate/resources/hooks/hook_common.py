@@ -19,7 +19,9 @@ import os
 import re
 import sys
 import tempfile
+import threading
 import time
+import unicodedata
 import uuid
 from collections.abc import Mapping
 from datetime import UTC, datetime
@@ -1041,15 +1043,287 @@ def project_directory(transcript_path: object, root: Path | None = None) -> str 
     return parts[len(base_parts)]
 
 
+# --- The local names of the projects (dashboard-project-filter) -----------------------------------
+#
+# The usage log only carries the salted hash, so the dashboard keeps a separate map,
+# `LOG_DIR/project-names.json` (`{"version": 1, "names": {"<hash>": "<directory name>"}}`), to show
+# a readable name. It is written where and when the hash is computed (`project_fields`), by the
+# same process and in the same `LOG_DIR` of the process environment (D12 of the earlier change),
+# and it never leaves the machine: no usage row, hook event or backfill entry carries the name.
+#
+# Several processes (the daemon and its threads, the stdio server, one process per hook event,
+# `recompute-cost`) may add a name at the same moment. A writer takes a thread lock and a file
+# lock (`project-names.json.lock`), reads the map again under them, and replaces it whole with a
+# temporary file and `os.replace`: a reader sees the old map or the new one, never half of one.
+# Recording a name is best effort: if the lock is busy, the map is unreadable or full, nothing is
+# written and the tool, the hook or the backfill goes on (the panel then says "unnamed project").
+
+#: The map's file in `LOG_DIR`.
+PROJECT_NAMES_FILE = "project-names.json"
+#: Entries the map keeps at most: a new project beyond this stays without a name.
+PROJECT_NAMES_MAX_ENTRIES = 1000
+#: Above this size the map counts as empty when read, and is never written this big.
+PROJECT_NAMES_MAX_BYTES = 512 * 1024
+#: A directory name longer than this is not recorded (no file system gives a longer one).
+PROJECT_NAME_MAX_CHARS = 255
+#: How long a writer waits for the map's lock before giving up this time.
+PROJECT_NAMES_LOCK_WAIT_S = 0.25
+#: How many times `os.replace` is retried while a reader holds the map open (Windows).
+_REPLACE_ATTEMPTS = 5
+
+_PROJECT_HASH_SHAPE = re.compile(r"[0-9a-f]{16}")
+#: C0 and C1 controls, line and paragraph separators and the bidirectional overrides: none of them
+#: belongs in a folder name, and the last ones could make a name look like another on the panel.
+_CONTROL_CHARS = re.compile("[\x00-\x1f\x7f-\x9f\u2028\u2029\u202a-\u202e\u2066-\u2069]")
+#: Per map path, the hashes this process already found in the map (or gave up on): the hot path
+#: of a delegation reads the map at most once per project.
+_NAMES_SEEN: dict[str, set[str]] = {}
+_NAMES_LOCK = threading.Lock()
+
+
+def is_project_hash(value: object) -> bool:
+    """Whether `value` has the shape of `caller_project` (16 lower-case hex characters)."""
+    return isinstance(value, str) and _PROJECT_HASH_SHAPE.fullmatch(value) is not None
+
+
+def _valid_project_name(name: object) -> bool:
+    return (
+        isinstance(name, str)
+        and 0 < len(name) <= PROJECT_NAME_MAX_CHARS
+        and name.strip() not in {"", ".", ".."}
+        and _CONTROL_CHARS.search(name) is None
+        and not any(unicodedata.category(c) == "Cf" for c in name)
+    )
+
+
+def read_project_names(directory: Path | None = None) -> dict[str, str]:
+    """`{hash: name}` of `LOG_DIR/project-names.json`; `{}` if it is missing, too big or corrupt.
+
+    Only entries with a valid hash and a valid name are kept, at most
+    `PROJECT_NAMES_MAX_ENTRIES`. Never raises.
+    """
+    path = Path(directory if directory is not None else log_dir()) / PROJECT_NAMES_FILE
+    return _load_names(path, strict=False) or {}
+
+
+def _load_names(path: Path, *, strict: bool) -> dict[str, str] | None:
+    """The map at `path`. Missing, too big or corrupt: `{}`. Any other `OSError` (a file held by
+    an antivirus or a backup for a moment): `{}` when reading, `None` when `strict`, so a writer
+    never replaces a map it could not read with one that lost the other names."""
+    try:
+        with open(path, "rb") as stream:
+            data = stream.read(PROJECT_NAMES_MAX_BYTES + 1)
+    except FileNotFoundError:
+        return {}
+    except OSError:
+        return None if strict else {}
+    if len(data) > PROJECT_NAMES_MAX_BYTES:
+        return {}
+    try:
+        parsed = json.loads(data.decode("utf-8-sig"))
+    except (ValueError, RecursionError):
+        return {}
+    names = parsed.get("names") if isinstance(parsed, dict) else None
+    if not isinstance(names, dict):
+        return {}
+    kept: dict[str, str] = {}
+    for key, name in names.items():
+        if len(kept) >= PROJECT_NAMES_MAX_ENTRIES:
+            break
+        if is_project_hash(key) and _valid_project_name(name):
+            kept[key] = name
+    return kept
+
+
+def _write_names_atomically(path: Path, names: dict[str, str]) -> bool | None:
+    """Replace `path` whole with the map: `True`; `False` if it cannot be replaced now (a reader
+    holds it); `None` if it would be too big, which no retry fixes."""
+    data = json.dumps(
+        {"version": 1, "names": names}, ensure_ascii=False, sort_keys=True, indent=1
+    ).encode("utf-8")
+    if len(data) > PROJECT_NAMES_MAX_BYTES:
+        return None
+    descriptor, temporary = tempfile.mkstemp(
+        dir=path.parent, prefix=".project-names.", suffix=".tmp"
+    )
+    try:
+        with os.fdopen(descriptor, "wb") as stream:
+            stream.write(data)
+        with contextlib.suppress(OSError):
+            os.chmod(temporary, 0o600)
+        for attempt in range(_REPLACE_ATTEMPTS):
+            try:
+                os.replace(temporary, path)
+                return True
+            except PermissionError:
+                # Windows: a reader has the map open without delete sharing. It is a moment.
+                if attempt + 1 == _REPLACE_ATTEMPTS:
+                    return False
+                time.sleep(0.01 * (attempt + 1))
+        return False
+    finally:
+        with contextlib.suppress(OSError):
+            os.unlink(temporary)
+
+
+def record_project_name(project: str, name: str, *, directory: Path | None = None) -> bool:
+    """Add `project → name` to the local map if it is not there; `True` if this call wrote it.
+
+    A hash already in the map keeps its name (two directories that differ only in case share a
+    hash). Never raises: the name is a convenience of the dashboard, never a reason to fail.
+    """
+    if not is_project_hash(project) or not _valid_project_name(name):
+        return False
+    path = Path(directory if directory is not None else log_dir()) / PROJECT_NAMES_FILE
+    key = str(path)
+    if project in _NAMES_SEEN.get(key, ()):
+        return False  # fast path, without the lock: the daemon's threads never queue for it
+    try:
+        with _NAMES_LOCK:
+            seen = _NAMES_SEEN.setdefault(key, set())
+            if project in seen:
+                return False
+            current = read_project_names(path.parent)
+            if project in current or len(current) >= PROJECT_NAMES_MAX_ENTRIES:
+                seen.add(project)
+                return False
+            path.parent.mkdir(parents=True, exist_ok=True)
+            fd = _open_shared(path.with_name(PROJECT_NAMES_FILE + ".lock"), os.O_RDWR)
+            try:
+                with _exclusive(fd, PROJECT_NAMES_LOCK_WAIT_S) as locked:
+                    if not locked:
+                        return False  # another writer is busy: the next call tries again
+                    current = _load_names(path, strict=True)
+                    if current is None:
+                        return False  # unreadable for a moment: never write over it
+                    if project in current or len(current) >= PROJECT_NAMES_MAX_ENTRIES:
+                        seen.add(project)
+                        return False
+                    current[project] = name
+                    written = _write_names_atomically(path, current)
+                    if written is None:
+                        seen.add(project)  # too big to ever write: do not retry on every call
+                    if not written:
+                        return False
+                    seen.add(project)
+                    return True
+            finally:
+                os.close(fd)
+    except Exception:
+        return False
+
+
+#: How many project directories one backfill pass looks at, and for how long.
+PROJECT_NAMES_BACKFILL_MAX_DIRS = 5000
+PROJECT_NAMES_BACKFILL_BUDGET_S = 0.5
+
+
+def backfill_project_names(
+    hashes,
+    *,
+    root: Path | None = None,
+    directory: Path | None = None,
+    clock=time.monotonic,
+    budget_s: float | None = None,
+    outcome: dict | None = None,
+) -> int:
+    """Name the hashes of `hashes` that the map lacks, from the directory names under `root`.
+
+    For the rows written before the map existed (0.51.0): it walks the NAMES of the directories
+    right under `root` (by default `projects_root()`, the process's), hashes each with the local
+    salt exactly as `project_fields` does, and records the ones that match. It never reads a
+    transcript, never creates a salt (without one it does nothing), looks at most at
+    `PROJECT_NAMES_BACKFILL_MAX_DIRS` entries for at most `budget_s`, and writes the map once,
+    under its lock. Returns how many names it added; never raises.
+
+    With `outcome`, `outcome["complete"]` says whether the pass looked at every directory and,
+    if it found names, wrote them: `False` after the budget, the cap, a busy lock or a failed
+    write, so the caller can try those hashes again later.
+    """
+    if outcome is not None:
+        outcome["complete"] = False
+    try:
+        wanted = {h for h in hashes if is_project_hash(h)}
+        if not wanted:
+            return 0
+        folder = Path(directory if directory is not None else log_dir())
+        try:
+            salt = _read_salt(folder / PROJECT_SALT_FILE)
+        except FileNotFoundError:
+            return 0
+        if salt is None:
+            return 0
+        if budget_s is None:
+            budget_s = PROJECT_NAMES_BACKFILL_BUDGET_S
+        wanted -= set(read_project_names(folder))
+        found: dict[str, str] = {}
+        complete = True
+        start = clock()
+        base = Path(root) if root is not None else projects_root()
+        with os.scandir(base) as entries:
+            for seen, entry in enumerate(entries):
+                if not wanted:
+                    break
+                if seen >= PROJECT_NAMES_BACKFILL_MAX_DIRS or clock() - start > budget_s:
+                    complete = False
+                    break
+                try:
+                    if not entry.is_dir(follow_symlinks=False):
+                        continue
+                except OSError:
+                    continue
+                digest = project_hash(entry.name, salt)
+                if digest in wanted and _valid_project_name(entry.name):
+                    found[digest] = entry.name
+                    wanted.discard(digest)
+        added = _add_project_names(folder / PROJECT_NAMES_FILE, found) if found else 0
+        if outcome is not None:
+            outcome["complete"] = complete and added is not None
+        return added or 0
+    except Exception:
+        return 0
+
+
+def _add_project_names(path: Path, found: dict[str, str]) -> int | None:
+    """Add the entries of `found` the map lacks, in one write under the locks: how many it
+    added, or `None` if the lock was busy or the write failed."""
+    with _NAMES_LOCK:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        fd = _open_shared(path.with_name(PROJECT_NAMES_FILE + ".lock"), os.O_RDWR)
+        try:
+            with _exclusive(fd, PROJECT_NAMES_LOCK_WAIT_S) as locked:
+                if not locked:
+                    return None
+                current = _load_names(path, strict=True)
+                if current is None:
+                    return None
+                added = 0
+                for digest, name in found.items():
+                    if digest in current or len(current) >= PROJECT_NAMES_MAX_ENTRIES:
+                        continue
+                    current[digest] = name
+                    added += 1
+                if not added:
+                    return 0
+                if not _write_names_atomically(path, current):
+                    return None
+                _NAMES_SEEN.setdefault(str(path), set()).update(found)
+                return added
+        finally:
+            os.close(fd)
+
+
 def project_fields(name: str, *, directory: Path | None = None) -> dict:
     """`caller_project` and `caller_project_kind` of a project directory name.
 
-    Without a salt there is no hash, never an unsalted one: only the kind.
+    Without a salt there is no hash, never an unsalted one: only the kind. With a hash, the name
+    goes to the local map of names (`record_project_name`), never to the fields.
     """
     fields: dict = {}
     salt = project_salt(directory)
     if salt is not None:
         fields["caller_project"] = project_hash(name, salt)
+        record_project_name(fields["caller_project"], name, directory=directory)
     fields["caller_project_kind"] = project_kind_of(name, directory=directory)
     return fields
 

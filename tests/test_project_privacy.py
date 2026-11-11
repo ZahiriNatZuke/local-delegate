@@ -9,7 +9,13 @@ change touches is written by its real code path and then searched for both marke
 - the backfill (`recompute.run` → `attribution-AAAAMM.json`), by cross and by session key;
 - a hook event (the prompt hook run as its own process) and the mod's line (`record_read`);
 - the output of `local_status`;
-- the answers of `/api/stats`, `/api/events` and `/api/hooks`, with and without `include_self`.
+- the answers of `/api/stats`, `/api/events` and `/api/hooks`, with and without a project filter.
+
+Since dashboard-project-filter the name has exactly ONE home on purpose: the local map
+`LOG_DIR/project-names.json`, which `/api/stats` serves back as `by_project[].name` (the panel of
+this machine shows it). The test checks that the name is there and nowhere else: not in the log,
+the backfill, the telemetry, `local_status`, `/api/events`, `/api/hooks` or any other field of
+`/api/stats`; and not in a map under the `LOG_DIR` the mod's request names (D12).
 
 Each surface has a guard that it really carries the project (its kind and, where there is one, the
 16-hex hash), so an absent marker means "hashed", not "nothing was written". The markers have
@@ -287,27 +293,34 @@ def test_neither_the_name_nor_the_list_entry_reaches_any_surface(world):
         assert event.get("project_kind") == "self", "guard: the event carries the kind"
         assert event.get("project") == own_hash, "guard: the event carries the row's hash"
 
-    # 4. `local_status`: the own-repo line is there, the names are not.
+    # 4. `local_status`: no own-repo line any more, and no names.
     status = _status()
-    assert "del propio repo" in status or "from this repo" in status, "guard: the line is there"
+    assert "propio repo" not in status and "from this repo" not in status
     _assert_no_marker(status, "local_status")
 
-    # 5. The panel's API, with and without the own repo.
+    # 5. The local map: the one file that holds the names, written in the process's `LOG_DIR`,
+    #    never in the one the mod's request named (D12).
+    names = package_common.read_project_names(world.logs)
+    assert sorted(names.values()) == sorted([SELF_DIR, OTHER_DIR]), "guard: the map has both"
+    assert not (world.tmp / "request-data" / "project-names.json").exists()
+
+    # 6. The panel's API, with and without a project filter. The name only comes back as
+    #    `by_project[].name` of `/api/stats`, read from the map.
     span = {
         "from": (BASE - timedelta(days=1)).isoformat().replace("+00:00", "Z"),
         "to": (datetime.now(UTC) + timedelta(hours=1)).isoformat().replace("+00:00", "Z"),
     }
-    default, text = _api("/api/stats", **span, lang="es")
-    _assert_no_marker(text, "/api/stats")
-    assert default["excluded_self"] >= 1, "guard: the own rows were seen and left out"
-    included, text = _api("/api/stats", **span, include_self="1", lang="es")
-    _assert_no_marker(text, "/api/stats?include_self=1")
-    assert included["total"]["calls"] > default["total"]["calls"]
-    for extra in ({}, {"include_self": "1"}):
+    stats, _ = _api("/api/stats", **span, lang="es")
+    shown = {g["name"] for g in stats["by_project"] if g["name"]}
+    assert shown == {SELF_DIR, OTHER_DIR}, "guard: by_project serves the local names"
+    rest = {k: v for k, v in stats.items() if k != "by_project"}
+    _assert_no_marker(json.dumps(rest), "/api/stats")
+    groups = [{k: v for k, v in g.items() if k != "name"} for g in stats["by_project"]]
+    _assert_no_marker(json.dumps(groups), "/api/stats by_project")
+    for extra in ({}, {"project": own_hash}):
         events_answer, text = _api("/api/events", **span, **extra)
         assert events_answer["events"], "guard: /api/events answered rows"
         _assert_no_marker(text, f"/api/events {extra}")
-        _, text = _api("/api/hooks", **span, **extra, lang="es")
+        hooks_answer, text = _api("/api/hooks", **span, **extra, lang="es")
+        assert hooks_answer["total"] >= 1, "guard: the hook events were counted"
         _assert_no_marker(text, f"/api/hooks {extra}")
-    hooks_default, _ = _api("/api/hooks", **span)
-    assert hooks_default["excluded_self"] >= 1, "guard: the hook events were seen and left out"

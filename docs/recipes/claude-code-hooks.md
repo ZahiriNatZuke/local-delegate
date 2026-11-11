@@ -119,7 +119,7 @@ guarda quién pidió la delegación: `caller_kind` (`main` o `subagent`), `calle
 `caller_effort` y `caller_model`, que saca de la cola del transcript que señala la nota, y desde
 qué proyecto: `caller_project` (hash con sal del directorio de proyecto, nunca el nombre) y
 `caller_project_kind` (`self` u `other`, ver
-[El propio repo](../wiki/Savings-and-metrics.md#el-propio-repo)). El log no guarda el id de sesión
+[Por proyecto](../wiki/Savings-and-metrics.md#por-proyecto)). El log no guarda el id de sesión
 ni nada más del transcript.
 
 Con eso el panel puede valorar cada delegación con el precio del modelo que la pidió (ver

@@ -1,8 +1,10 @@
-"""`local_status` and this repo's own use (usage-log-project-and-own-repo-exclusion, REQ-021).
+"""`local_status` and this repo's own use (usage-log-project-and-own-repo-exclusion, REQ-021;
+dashboard-project-filter).
 
-The month's figures (events, net and gross saving) stay exactly as they are; one more line, in
-Spanish and English, says how many of those events are this repo's (`attribution.project_kind`),
-and only when that count is not zero. A test row is out of the events, so it is out of the count.
+The month's figures (events, net and gross saving) stay exactly as they are, with or without the
+project fields. Since dashboard-project-filter there is no line about "this repo's" events: it only
+meant something to whoever develops local-delegate, so `local_status` no longer says it, in
+Spanish or English. A test row is still out of the events.
 """
 
 from __future__ import annotations
@@ -68,11 +70,13 @@ def _without_kind(rows: list[dict]) -> list[dict]:
 
 
 @backend_mock.mock
-def test_the_line_counts_the_own_events_and_the_figures_do_not_change(monkeypatch, tmp_path):
+def test_there_is_no_own_repo_line_and_the_figures_do_not_change(monkeypatch, tmp_path):
+    """Mutant: the own-repo line comes back; the `self` rows are there, so it would show."""
     text = _status(monkeypatch, tmp_path, MONTH)
     assert "eventos: 4 " in text
     assert "(1 de pruebas fuera)" in text
-    assert f"{SELF_ES}: 2 de esos eventos" in text
+    assert SELF_ES not in text
+    assert "propio repo" not in text
     # The same month without the new fields: the events line (events, calls, net, gross) is the same.
     with_kind = _events_line(text, "eventos:")
     before = _events_line(_status(monkeypatch, tmp_path, _without_kind(MONTH)), "eventos:")
@@ -80,7 +84,7 @@ def test_the_line_counts_the_own_events_and_the_figures_do_not_change(monkeypatc
 
 
 @backend_mock.mock
-def test_without_own_events_there_is_no_line(monkeypatch, tmp_path):
+def test_the_figures_without_own_events(monkeypatch, tmp_path):
     rows = [_row(10, "other"), _row(11, None), _row(12, "self", client="mcp")]
     text = _status(monkeypatch, tmp_path, rows)
     assert "eventos: 2 " in text
@@ -88,9 +92,10 @@ def test_without_own_events_there_is_no_line(monkeypatch, tmp_path):
 
 
 @backend_mock.mock
-def test_the_line_is_in_english_too(monkeypatch, tmp_path):
+def test_no_own_repo_line_in_english_either(monkeypatch, tmp_path):
     monkeypatch.setenv("LOCAL_DELEGATE_LANG", "en")
     i18n.reset()
     text = _status(monkeypatch, tmp_path, MONTH)
     assert "events: 4 " in text
-    assert f"{SELF_EN}: 2 of those events" in text
+    assert SELF_EN not in text
+    assert "this repo" not in text

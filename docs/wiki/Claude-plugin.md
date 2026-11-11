@@ -97,7 +97,7 @@ si ese intento también falla queda el rastro. Así una línea que el daemon esc
 dos veces (prueba en vivo del 2026-10-23).
 
 La línea de una decisión lleva además `project` y `project_kind`, el proyecto con hash de la sesión
-y su tipo (ver [El propio repo](Savings-and-metrics.md#el-propio-repo)). El mod no los manda: los
+y su tipo (ver [Por proyecto](Savings-and-metrics.md#por-proyecto)). El mod no los manda: los
 resuelve `record-read` con el `session_id` que ya trae, buscando el único transcript
 `<raíz de proyectos>/*/<id>.jsonl` del proceso que escribe (el daemon o el de respaldo), nunca la
 raíz ni el `LOG_DIR` del entorno que manda el mod. Un id sin forma de UUID, una sesión que no se

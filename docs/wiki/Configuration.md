@@ -283,19 +283,20 @@ fijas `LOCAL_DELEGATE_LOG`, ese archivo se usa tal cual y la rotación se desact
 | `LOCAL_DELEGATE_LOG` | *(vacío = rotación activa)* | Si se fija, ruta de un `usage.jsonl` explícito sin rotar. El dashboard igual lo lee como fuente adicional aunque uses `LOG_DIR` para el resto |
 | `LOCAL_DELEGATE_FEEDBACK` | `1` | `0` apaga la línea "leído server-side: N chars ≈ M tokens de Claude" que se anexa al resultado cuando `source=path`. En `local_extract` no se anexa al texto sino que viaja dentro de `_local_delegate` (ver abajo): pegarla rompería el JSON. En `local_describe_image` dice solo los bytes |
 
-### Proyecto de cada fila: `project-salt` y `self-projects.json`
+### Proyecto de cada fila: `project-salt`, `project-names.json` y `self-projects.json`
 
 Cada fila del log lleva `caller_project` (hash con sal del directorio de proyecto de Claude Code) y
 `caller_project_kind` (`self` u `other`), y cada evento de la telemetría de hooks, `project` y
-`project_kind`. El panel y las mediciones apartan por defecto el propio repo (`self`). Qué se
-guarda, cómo se aparta y cómo volver a ver la cifra completa:
-[Savings & metrics](Savings-and-metrics.md#el-propio-repo). No hay variable de entorno nueva; hay
-dos ficheros en `LOG_DIR`:
+`project_kind`. El panel los usa para la tarjeta «Por proyecto» y su filtro de proyecto; las
+mediciones de `scripts/` apartan por defecto el propio repo (`self`). Detalle:
+[Savings & metrics](Savings-and-metrics.md#por-proyecto). No hay variable de entorno; hay tres
+ficheros en `LOG_DIR`:
 
 | Fichero | Qué es |
 |---|---|
 | `project-salt` | La sal del hash: 64 hexadecimales aleatorios, con permisos solo del usuario. Se crea sola la primera vez, de forma atómica y sin pisar una válida; una vacía o inválida se repara. **Quien tenga el log y este fichero puede confirmar un nombre de proyecto por fuerza bruta**: no lo compartas junto a un log. Si se borra, se crea otra y los hashes nuevos ya no casan con los viejos |
-| `self-projects.json` | Opcional. Otros proyectos que cuentan como propios, además de `local-delegate`: `{"names": ["mi-clon", "D:\\trabajo\\mi-fork"]}` |
+| `project-names.json` | El mapa local hash → nombre de la carpeta del proyecto que usa el panel para enseñar nombres: `{"version": 1, "names": {"<hash>": "<nombre>"}}`. Se escribe solo al calcular cada hash (con cerrojo y reemplazo atómico) y las filas viejas se nombran la primera vez que el panel las ve. Tope de 1000 proyectos y 512 KiB; ausente o corrupto, el panel enseña «Proyecto sin nombre». **Nunca sale de la máquina**: no lo compartas junto a un log. Borrarlo es seguro: se rehace |
+| `self-projects.json` | Opcional, solo para las mediciones de `scripts/`. Otros proyectos que cuentan como propios, además de `local-delegate`: `{"names": ["mi-clon", "D:\\trabajo\\mi-fork"]}` |
 
 Reglas de `self-projects.json`:
 
@@ -806,7 +807,7 @@ ruta; con una tubería, una redirección, comandos encadenados, un flag o `head`
 bloquea. Qué lee cada comando lo decide un solo clasificador (`read_classifier.py`), el mismo que
 usa el mod de lectura del plugin; cada evento de telemetría lleva su `via` y su `scope` y, si su
 entrada trae `transcript_path`, `project` y `project_kind` (ver
-[el proyecto de cada fila](#proyecto-de-cada-fila-project-salt-y-self-projectsjson)).
+[el proyecto de cada fila](#proyecto-de-cada-fila-project-salt-project-namesjson-y-self-projectsjson)).
 
 Nace apagado. Estas son las formas de que no bloquee:
 
