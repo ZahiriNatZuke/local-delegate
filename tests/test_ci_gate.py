@@ -413,7 +413,7 @@ def _steps(job: str) -> list[dict]:
 
 
 @pytest.mark.parametrize("job", BROWSER_JOBS)
-def test_the_browser_is_cached_and_apt_is_retried(job):
+def test_the_browser_is_cached_and_system_packages_are_retried(job):
     """Un mirror de apt lento no deja main en rojo sin cambio de código (2026-11-11).
 
     Ese día `lint` agotó los 5 min del `playwright install --with-deps` y `test-lang-es` salió con
@@ -433,35 +433,42 @@ def test_the_browser_is_cached_and_apt_is_retried(job):
     key = cache["with"]["key"]
     for part in ("runner.os", "steps.playwright.outputs.version", "steps.playwright.outputs.image"):
         assert part in key, f"la clave de la caché no incluye {part}: {key}"
-    assert "importlib.metadata" in by_id["playwright"]["run"]
+    assert 'm.version("playwright")' in by_id["playwright"]["run"]
 
     names = [s.get("name") for s in steps]
-    deps = steps[names.index("Install the browser system dependencies")]
+    packages = steps[names.index("Install the browser system dependencies")]
     browser = steps[names.index("Install browser for the dashboard UI tests")]
-    assert deps["run"].strip() == "bash scripts/ci_playwright_install_deps.sh"
-    assert "if" not in deps, "las dependencias del sistema no van en la caché: se instalan siempre"
+    assert packages["run"].strip() == "bash scripts/ci_playwright_system_packages.sh"
+    assert "if" not in packages, (
+        "las dependencias del sistema no van en la caché: se instalan siempre"
+    )
     assert browser["if"] == "steps.browser-cache.outputs.cache-hit != 'true'"
     assert browser["run"].strip() == "uv run playwright install chromium"
-    assert deps.get("timeout-minutes") and browser.get("timeout-minutes")
-    # Orden: versión, caché, apt, navegador, y todo antes de usar el navegador.
+    assert packages.get("timeout-minutes") and browser.get("timeout-minutes")
+    # Orden: versión, caché, navegador y al final las librerías del sistema, porque el script
+    # arranca Chromium para saber si hace falta apt.
     order = [
         names.index(n)
         for n in (
             "Resolve the Playwright version",
             "Cache the Playwright browser",
-            "Install the browser system dependencies",
             "Install browser for the dashboard UI tests",
+            "Install the browser system dependencies",
         )
     ]
     assert order == sorted(order)
 
 
-def test_the_apt_retry_is_bounded_and_fits_its_step():
+def test_the_system_package_retry_is_bounded_and_fits_its_step():
     """El script reintenta un número acotado de veces y su peor caso cabe en el tope del paso."""
-    text = (SCRIPTS / "ci_playwright_install_deps.sh").read_text(encoding="utf-8")
-    assert "playwright install-deps chromium" in text
-    assert "PLAYWRIGHT_DEPS_ATTEMPTS:-3" in text and "PLAYWRIGHT_DEPS_TIMEOUT:-120" in text
-    assert "timeout --kill-after=15" in text and "sleep $((15 * i))" in text
+    text = (SCRIPTS / "ci_playwright_system_packages.sh").read_text(encoding="utf-8")
+    assert '"$venv_bin/playwright" install-deps chromium' in text
+    # apt solo si Chromium no arranca con lo que trae la imagen (caída de DNS del 2026-11-11).
+    assert text.index("if chromium_launches; then") < text.index("for ((i = 1;")
+    # El tope corre como root: si no, el `apt-get` de `install-deps` sobrevive y deja el lock.
+    assert "sudo timeout --kill-after=15" in text and "sudo pkill -x apt-get" in text
+    assert "PLAYWRIGHT_INSTALL_ATTEMPTS:-3" in text and "PLAYWRIGHT_INSTALL_TIMEOUT:-120" in text
+    assert "sleep $((15 * i))" in text
     attempts, per_attempt, kill_after = 3, 120, 15
     worst_s = attempts * (per_attempt + kill_after) + sum(15 * i for i in range(1, attempts))
     for job in BROWSER_JOBS:

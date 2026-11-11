@@ -79,7 +79,9 @@ jobs:
       # main en rojo sin ningún cambio de código (aquí, 5 min de tope agotados; en `test-lang-es`,
       # `exited with code: 100`). Las dependencias del sistema (apt) se reintentan con un tope por
       # intento; el navegador se guarda en caché por SO, imagen y versión exacta de playwright
-      # (la del lock), y solo se descarga si la caché falla. `tests/test_ci_gate.py` ata la forma.
+      # (la del lock), y solo se descarga si la caché falla. Luego, si Chromium ya arranca con las
+      # librerías de la imagen (trae Google Chrome), apt ni se toca; si no, el script reintenta.
+      # `tests/test_ci_gate.py` ata la forma.
       - name: Sync deps (with the ui group)
         run: uv sync --group dev --group ui
 
@@ -96,14 +98,14 @@ jobs:
           path: ~/.cache/ms-playwright
           key: playwright-chromium-${{ runner.os }}-${{ runner.arch }}-${{ steps.playwright.outputs.image }}-${{ steps.playwright.outputs.version }}
 
-      - name: Install the browser system dependencies
-        timeout-minutes: 8
-        run: bash scripts/ci_playwright_install_deps.sh
-
       - name: Install browser for the dashboard UI tests
         if: steps.browser-cache.outputs.cache-hit != 'true'
         timeout-minutes: 4
         run: uv run playwright install chromium
+
+      - name: Install the browser system dependencies
+        timeout-minutes: 8
+        run: bash scripts/ci_playwright_system_packages.sh
 
       - name: Dashboard UI (Playwright)
         timeout-minutes: 5
@@ -252,7 +254,7 @@ jobs:
       - name: Sync deps (with the ui group)
         run: uv sync --group dev --group ui
 
-      # Las mismas tres piezas que en `lint` (caché del navegador y apt con reintento), por la misma
+      # Las mismas piezas que en `lint` (caché del navegador y apt solo si hace falta), por la misma
       # razón: el 2026-11-11 este paso salió con `exited with code: 100` de apt sin cambio de código.
       - name: Resolve the Playwright version
         id: playwright
@@ -267,14 +269,14 @@ jobs:
           path: ~/.cache/ms-playwright
           key: playwright-chromium-${{ runner.os }}-${{ runner.arch }}-${{ steps.playwright.outputs.image }}-${{ steps.playwright.outputs.version }}
 
-      - name: Install the browser system dependencies
-        timeout-minutes: 8
-        run: bash scripts/ci_playwright_install_deps.sh
-
       - name: Install browser for the dashboard UI tests
         if: steps.browser-cache.outputs.cache-hit != 'true'
         timeout-minutes: 4
         run: uv run playwright install chromium
+
+      - name: Install the browser system dependencies
+        timeout-minutes: 8
+        run: bash scripts/ci_playwright_system_packages.sh
 
       # Guarda de «esto llegó a comprobar algo»: si el runner pisara `LANG` o pusiera `LC_ALL` o
       # `LC_MESSAGES` (que ganan a `LANG`), el trabajo saldría en verde sin estar en español.
