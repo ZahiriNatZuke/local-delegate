@@ -155,7 +155,8 @@ auto-arranque de llama-swap es opt-in (ver tabla de configuración).
 ¿Qué versiones de `llama-server`/`llama-swap` usar y cómo disponer el workspace? Ver
 [Versiones del backend y workspace de referencia](./docs/wiki/Backend-versions.md) (sugerencia
 probada, no requisito). `local-delegate doctor` compara tu instalación contra esas versiones y, de
-paso, comprueba el resto del andamiaje —hooks, skill, memoria, entradas MCP y el daemon— sin
+paso, comprueba el resto del andamiaje —hooks, skill, memoria, entradas MCP, el daemon y que el
+modelo de cada rol esté en la lista del backend— sin
 escribir nada ([qué mira cada check](./docs/wiki/Integration-install.md#comprobar-la-instalación-local-delegate-doctor)).
 
 ## Tools
@@ -167,7 +168,7 @@ al contexto de Claude, y de ahí sale el ahorro.
 |---|---|---|
 | `local_summarize` | Resume texto o archivo; `focus` opcional para decir qué conservar (p. ej. «cifras de configuración»); avisa si el resumen trae siglas, palabras o cifras que la entrada no tiene | mecánico / largo (auto; una entrada pequeña con tabla va a largo) |
 | `local_classify` | Devuelve UNA etiqueta de una lista | mecánico |
-| `local_extract` | Extrae campos → **objeto validado** con exactamente las claves pedidas (las que falten o vengan como «N/A», `null`), no una cadena que haya que parsear; con `path`, números de línea reales para un campo que los pida; una entrada pequeña con tabla va al modelo largo y `_local_delegate.role_reason` lo dice | mecánico / largo (auto; también con tabla) |
+| `local_extract` | Extrae campos → **objeto validado** con exactamente las claves pedidas (las que falten o vengan como «N/A», `null`), no una cadena que haya que parsear; con `path`, números de línea reales para un campo que los pida; una entrada pequeña con tabla (HTML, ARIA, Markdown/GFM, CSV o TSV) va al modelo largo y `_local_delegate.role_reason` lo dice con su `format`; si el valor de una clave sale de la fila de otra clave pedida, avisa en `cross_filled_keys` | mecánico / largo (auto; también con tabla) |
 | `local_boilerplate` | Genera código desde una spec y lo **escribe en `target`**; devuelve solo un recibo | código |
 | `local_delegate` | Escape genérico texto→texto | mecánico (o el que pases) |
 | `local_lint_summary` | Resume logs de lint/tests/CI; con pytest parte de los fallos reales del log y avisa si el resumen no cuadra con ellos | mecánico / largo (auto) |

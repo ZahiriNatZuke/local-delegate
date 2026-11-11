@@ -6,9 +6,32 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+## [0.52.0] - 2026-11-11
+
+Menos valores cambiados de fila sin aviso y un diagnóstico que ve el modelo que falta. `local_extract`
+avisa cuando el valor de una clave sale de la fila de otra clave pedida (`cross_filled_keys`, #650);
+la regla de la tabla ve también CSV, TSV, GFM sin tuberías externas, el separador `|-|-|` y las
+tablas de ARIA, y `role_reason` dice qué formato vio; `local_summarize` manda al modelo de contexto
+largo una entrada pequeña con tabla, igual que `local_extract`; `doctor` comprueba que el modelo de
+cada rol esté en la lista del backend; y el `cmd` de llama-swap se lee con un solo lector que
+entiende comillas y `--flag=valor`, así un `--ctx-size=32768` o una ruta con espacios ya no se leen
+mal.
+
+### Cómo actualizar
+
+- **En la PC y en la Mac:** ejecuta `local-delegate update` o, si instalaste con versión fija,
+  reinstala con `uv tool install --force --no-cache "local-delegate-mcp[llamaswap]==0.52.0"` (con
+  tus extras). **Reinicia el daemon**: el check nuevo de `doctor` toma los roles del daemon, y uno
+  de la 0.51.0 no los manda (`doctor` usa entonces los de la consola y lo dice en el detalle). Haz
+  `/mcp` en Claude Code (o abre una sesión nueva): las sesiones abiertas siguen con el servidor MCP
+  de la 0.51.0 hasta entonces.
+- No hace falta cambiar la configuración. Opcional: `LOCAL_DELEGATE_SUMMARIZE_TABLE_LONG=0` para
+  que `local_summarize` vuelva al enrutado por tamaño (el de `local_extract` sigue siendo
+  `LOCAL_DELEGATE_EXTRACT_TABLE_LONG=0`).
+
 ### Añadido
 
-- **`local_extract` avisa de un valor que solo está en la fila de otra clave pedida (#650).** Si el
+- **`local_extract` avisa de un valor que solo está en la fila de otra clave pedida (#650, #659).** Si el
   valor de una clave (texto, número, o los textos y números de una lista o un objeto) sale de una
   sola fila o línea etiquetada de la entrada (fila de tabla HTML, Markdown, CSV o TSV, clave de un
   JSON o línea `etiqueta: valor`), ni el valor ni esa celda se repiten en otra parte, y otra clave
@@ -27,7 +50,7 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   casos a ciegas del #586 con respuestas escritas a mano, y sobre 58 respuestas reales grabadas de
   los modelos locales: 0 avisos en falso y 75 cruces detectados, los dos del #586 entre ellos. Los
   cruces con valores repetidos, empates o etiquetas en otro idioma siguen sin aviso.
-- **`doctor` comprueba que cada rol tenga su modelo servido**: el check nuevo `service.role_models`
+- **`doctor` comprueba que cada rol tenga su modelo servido (#656)**: el check nuevo `service.role_models`
   («modelo de cada rol») compara el id de modelo de `mechanical`, `long`, `code` y `vision` con la
   lista de `BASE_URL/models`, sea llama-swap o un backend en la nube. Si falta el de un rol de
   texto da `[WARN]` con el id que falta y la variable `LOCAL_DELEGATE_MODEL_*` que lo cambia; si
@@ -41,7 +64,7 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ### Cambiado
 
-- **La regla de la tabla ve más formatos y `role_reason` dice cuál vio (#650).** Además de HTML
+- **La regla de la tabla ve más formatos y `role_reason` dice cuál vio (#650, #658).** Además de HTML
   (`<table`/`<tr`) y de Markdown con su línea `--`, ahora cuentan como tabla una tabla GFM sin
   tuberías externas (`Seats | Domains` sobre `--- | ---`), el separador compacto `|-|-|`, un
   `role="table"`, `"grid"`, `"treegrid"` o `"row"` de ARIA, y tres o más filas seguidas de CSV
@@ -62,7 +85,7 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   y sin expresiones regulares. El aviso de cifras de `local_summarize` (#630) se queda en las
   tablas HTML, ARIA y Markdown (también GFM): un CSV o un TSV, como un log de CI con tabuladores,
   no lo abre.
-- **`local_summarize` manda al modelo de contexto largo una entrada pequeña con tabla (#650).**
+- **`local_summarize` manda al modelo de contexto largo una entrada pequeña con tabla (#650, #658).**
   La misma regla y el mismo detector que `local_extract`. El resumen termina con un
   `[local-delegate warning: …]` que nombra el formato visto, la fila del log de uso lleva
   `role_reason: "table"` (también las de una llamada cortada) y ese resumen no toma el camino por
@@ -73,17 +96,17 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ### Corregido
 
-- **Un `session_id` con un salto de línea al final ya no pasa por UUID** al buscar el proyecto de
+- **Un `session_id` con un salto de línea al final ya no pasa por UUID (#655)** al buscar el proyecto de
   una sesión (`hook_common.project_of_session`): el `$` de la expresión también aceptaba la línea
   partida; ahora se compara el identificador entero.
 - **El contador de fidelidad de `local_lint_summary` (`scripts/score_lint_fidelity.py`) ya no
-  tarda segundos en un log con un tramo largo sin espacios**: buscaba ficheros y nodos de pytest
+  tarda segundos en un log con un tramo largo sin espacios (#655)**: buscaba ficheros y nodos de pytest
   con expresiones de coste cuadrático (5 s y 11 s con 5 000 puntos seguidos); ahora usa la
   búsqueda lineal de `lint_patterns` y un recorrido propio desde cada `::`, con el mismo resultado.
 - **Las líneas y opciones nuevas de exclusión del propio repo de `scripts/measure_adoption.py` y
-  `scripts/measure_plugin_adoption.py` salen del catálogo**, en español y en inglés según el idioma
+  `scripts/measure_plugin_adoption.py` salen del catálogo (#655)**, en español y en inglés según el idioma
   del proceso. El resto de los textos de `measure_adoption.py` sigue solo en español.
-- **Un solo lector del `cmd` de llama-swap.** El contexto del modelo, la ruta del GGUF y los tipos
+- **Un solo lector del `cmd` de llama-swap (#654).** El contexto del modelo, la ruta del GGUF y los tipos
   de caché se leían partiendo el `cmd` por espacios, sin entender comillas ni `--flag=valor`, y no
   coincidían con lo que leía la huella del modelo. Con `--ctx-size=32768` el contexto se daba por
   supuesto (8192) y las llamadas que no cabían en 8192 tokens iban sin razonamiento aunque el modelo
@@ -94,14 +117,12 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   llama-server. Un `-c ${macro}` (o un valor que no sea solo dígitos) sigue contando como contexto
   supuesto, sin inventar un número; `doctor` y `local_status` ya lo avisan cuando el rol tiene
   razonamiento con presupuesto configurado.
-
-- **Los tests del proyecto de la sesión ya no fallan al azar en el CI de Windows.** La búsqueda del
-  transcript de una sesión (`hook_common.project_of_session`) tiene un tope de 50 ms, y un runner
-  de Windows cargado lo gasta recorriendo un solo directorio: la línea del mod salía sin
-  `project`/`project_kind` y fallaba `test_the_salt_and_the_list_come_from_the_process_log_dir` en
-  un PR que no tocaba nada de esto. El tope por defecto se lee ahora al llamar (antes quedaba fijado
-  al definir la función), los tests lo ensanchan y solo el test del tope usa el valor de producción,
-  que no cambia. El test del tope cuenta las entradas recorridas en vez de cronometrar.
+- **Tests más estables en el CI de Windows (#657).** La búsqueda del transcript de una sesión
+  (`hook_common.project_of_session`) tiene un tope de 50 ms que un runner de Windows cargado gasta
+  en un solo directorio, y `test_the_salt_and_the_list_come_from_the_process_log_dir` fallaba al
+  azar. El tope por defecto se lee ahora al llamar, los tests lo ensanchan y el test del tope cuenta
+  las entradas recorridas en vez de cronometrar. Sin cambio de comportamiento: el tope de
+  producción sigue en 50 ms.
 
 ## [0.51.0] - 2026-11-10
 
@@ -5025,7 +5046,8 @@ los ficheros de datos. Lo que lee el usuario sigue en español.
 - Empaquetado para PyPI (`local-delegate-mcp`) ejecutable con `uvx`; `server.json` para el
   registro oficial de MCP.
 
-[Unreleased]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.51.0...HEAD
+[Unreleased]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.52.0...HEAD
+[0.52.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.51.0...v0.52.0
 [0.51.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.50.0...v0.51.0
 [0.50.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.49.0...v0.50.0
 [0.49.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.48.0...v0.49.0
