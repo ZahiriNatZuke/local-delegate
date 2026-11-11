@@ -8,6 +8,16 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ### Corregido
 
+- **Un `session_id` con un salto de línea al final ya no pasa por UUID** al buscar el proyecto de
+  una sesión (`hook_common.project_of_session`): el `$` de la expresión también aceptaba la línea
+  partida; ahora se compara el identificador entero.
+- **El contador de fidelidad de `local_lint_summary` (`scripts/score_lint_fidelity.py`) ya no
+  tarda segundos en un log con un tramo largo sin espacios**: buscaba ficheros y nodos de pytest
+  con expresiones de coste cuadrático (5 s y 11 s con 5 000 puntos seguidos); ahora usa la
+  búsqueda lineal de `lint_patterns` y un recorrido propio desde cada `::`, con el mismo resultado.
+- **Las líneas y opciones nuevas de exclusión del propio repo de `scripts/measure_adoption.py` y
+  `scripts/measure_plugin_adoption.py` salen del catálogo**, en español y en inglés según el idioma
+  del proceso. El resto de los textos de `measure_adoption.py` sigue solo en español.
 - **Un solo lector del `cmd` de llama-swap.** El contexto del modelo, la ruta del GGUF y los tipos
   de caché se leían partiendo el `cmd` por espacios, sin entender comillas ni `--flag=valor`, y no
   coincidían con lo que leía la huella del modelo. Con `--ctx-size=32768` el contexto se daba por

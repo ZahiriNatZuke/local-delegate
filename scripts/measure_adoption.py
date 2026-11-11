@@ -42,7 +42,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 
 import measurement_boundaries
 
-from local_delegate import attribution, config, cost, legacy_names, test_windows
+from local_delegate import attribution, config, cost, i18n, legacy_names, test_windows
 from local_delegate.resources.hooks import hook_common
 
 #: El hook que escribe cada evento, para buscar su huella en el conjunto de ESE script: el de
@@ -332,20 +332,20 @@ def main() -> int:
         "--exclude-self",
         dest="include_self",
         action="store_false",
-        help="quitar el propio repo (por defecto)",
+        help=i18n.t("cli.script.measure_adoption.help.exclude_self"),
     )
     own.add_argument(
         "--include-self",
         dest="include_self",
         action="store_true",
-        help="contar tambien el propio repo: la cifra comparable con los cortes anteriores",
+        help=i18n.t("cli.script.measure_adoption.help.include_self"),
     )
     parser.set_defaults(include_self=False)
     parser.add_argument(
         "--projects",
         type=Path,
         default=None,
-        help="raiz de proyectos de Claude Code para los eventos viejos (~/.claude/projects)",
+        help=i18n.t("cli.script.measure_adoption.help.projects"),
     )
     args = parser.parse_args()
 
@@ -372,15 +372,19 @@ def main() -> int:
     own = result["excluded_self"]
     unknown = result["unknown_project"]
     if args.include_self:
-        print("Propio repo: incluido (--include-self)")
+        print(i18n.t("cli.script.measure_adoption.own_included"))
     else:
         print(
-            f"Propio repo fuera: {own['hooks']} eventos de hooks y {own['usage']} filas del log de "
-            f"uso (--include-self para contarlo)"
+            i18n.t(
+                "cli.script.measure_adoption.own_excluded", hooks=own["hooks"], usage=own["usage"]
+            )
         )
     print(
-        f"Sin proyecto conocido: {unknown['hooks']} eventos de hooks y {unknown['usage']} filas "
-        f"del log de uso (se quedan)"
+        i18n.t(
+            "cli.script.measure_adoption.unknown_project",
+            hooks=unknown["hooks"],
+            usage=unknown["usage"],
+        )
     )
     print()
     print(f"Lecturas vistas:        {result['reads']}")
@@ -397,11 +401,12 @@ def main() -> int:
     print(f"Delegaciones totales:   {result['total_delegations']}")
     print(f"  espontaneas:          {result['spontaneous_delegations']}")
     threads = result["delegations_by_caller"]
+    print(i18n.t("cli.script.measure_adoption.by_thread", **threads))
     print(
-        f"  por hilo:             principal {threads['main']}, subagentes {threads['subagent']}, "
-        f"mod {threads['mod']}, sin dato {threads['unknown']}"
+        i18n.t(
+            "cli.script.measure_adoption.by_project", kinds=result["delegations_by_project_kind"]
+        )
     )
-    print(f"  por proyecto:         {result['delegations_by_project_kind']}")
     print()
     print("Guarda de lectura acotada (REQ-F1-8):")
     print(f"  agrupables por fichero: {result['bounded_with_footprint']}")

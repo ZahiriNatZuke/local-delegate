@@ -13,7 +13,7 @@ from pathlib import Path
 
 import pytest
 
-from local_delegate import config
+from local_delegate import config, i18n
 
 ROOT = Path(__file__).parents[1]
 
@@ -231,6 +231,31 @@ def test_the_text_output_says_what_was_left_out(world, monkeypatch, capsys):
     out = capsys.readouterr().out
 
     assert "Propio repo fuera: 1 eventos de hooks y 1 filas del log de uso" in out
+
+
+def test_the_own_repo_lines_and_help_come_out_in_english(world, monkeypatch, capsys):
+    """REQ-024 (follow-up of its amendment): the lines and options of the own-repo exclusion
+    come from the catalog, so an English process gets them in English."""
+    monkeypatch.setenv("LOCAL_DELEGATE_LANG", "en")
+    i18n.reset()
+    world.read(SELF_SESSION)
+    world.delegation("self")
+    monkeypatch.setattr(sys, "argv", ["measure_adoption.py", "--projects", str(world.projects)])
+    assert measure_adoption.main() == 0
+    out = capsys.readouterr().out
+    assert "Own repo left out: 1 hook events and 1 usage log rows" in out
+    assert "No known project: " in out
+    assert "  by thread:            main " in out
+    assert "  by project:           " in out
+    for spanish in ("Propio repo", "Sin proyecto", "por hilo", "por proyecto"):
+        assert spanish not in out
+
+    monkeypatch.setattr(sys, "argv", ["measure_adoption.py", "--help"])
+    with pytest.raises(SystemExit):
+        measure_adoption.main()
+    help_text = " ".join(capsys.readouterr().out.split())
+    assert "leave out the repo's own project (the default)" in help_text
+    assert "root of the Claude Code projects, for the old events" in help_text
 
 
 def test_each_session_is_searched_once(world, monkeypatch):
