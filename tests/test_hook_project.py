@@ -38,6 +38,12 @@ TOKEN = "hook-project-token"
 LOOPBACK = ("127.0.0.1", 50000)
 TIMEOUT_S = 60
 CACHES = ("_SALTS", "_SELF_ENTRIES", "_SESSION_TRANSCRIPTS")
+#: The production budget of the transcript search, read before any fixture widens it.
+SEARCH_BUDGET_S = package_common.PROJECT_SEARCH_BUDGET_S
+#: The budget every test runs with: a loaded Windows CI runner spends 50 ms on a one-directory walk
+#: (PR #654), and a line without project would fail a test that is not about the budget. The test
+#: of the budget puts the production value back.
+WIDE_SEARCH_BUDGET_S = 30.0
 
 
 @pytest.fixture
@@ -54,6 +60,7 @@ def world(tmp_path, monkeypatch):
     for module in (loose, package_common):
         for name in CACHES:
             monkeypatch.setattr(module, name, {})
+        monkeypatch.setattr(module, "PROJECT_SEARCH_BUDGET_S", WIDE_SEARCH_BUDGET_S)
     telemetry = tmp_path / "telemetry.jsonl"
     monkeypatch.setattr(config, "HOOK_TELEMETRY_LOG", telemetry)
     return SimpleNamespace(
@@ -298,9 +305,10 @@ def test_the_projects_root_is_the_process_one_not_the_requests(world):
 class _SlowEntries:
     """`os.scandir` of a root whose entries take `delay_s` each, the session's directory last."""
 
-    def __init__(self, real, last: str, delay_s: float) -> None:
+    def __init__(self, real, last: str, delay_s: float, walked: list) -> None:
         self._entries = sorted(real, key=lambda e: e.name == last)
         self._delay_s = delay_s
+        self._walked = walked
 
     def __enter__(self):
         return self
@@ -311,6 +319,7 @@ class _SlowEntries:
     def __iter__(self):
         for entry in self._entries:
             time.sleep(self._delay_s)
+            self._walked.append(entry.name)
             yield entry
 
 
@@ -318,20 +327,41 @@ def test_a_slow_search_stops_at_its_budget_and_the_line_has_no_project(world, mo
     for letter in "abcdefg":
         (world.root / f"D--work-{letter}").mkdir()
     _session(world.root, REPO_DIR)
+    monkeypatch.setattr(world.loose, "PROJECT_SEARCH_BUDGET_S", SEARCH_BUDGET_S)
     real_scandir = os.scandir
+    walked: list[str] = []
 
     def slow(path):
         with real_scandir(path) as entries:
-            return _SlowEntries(list(entries), REPO_DIR, 0.040)
+            return _SlowEntries(list(entries), REPO_DIR, 0.040, walked)
 
     hook_entry._load_hook_module("suggest_delegate_read")  # its import is not the search's time
     monkeypatch.setattr(world.loose.os, "scandir", slow)
-    start = time.monotonic()
     line = _record(world, _entry(world))
-    elapsed = time.monotonic() - start
     assert "project" not in line and "project_kind" not in line
-    # Walking all eight entries takes 320 ms; the budget cuts it at the second one (~80 ms).
-    assert elapsed < 0.250, f"the search did not stop at its budget ({elapsed:.3f} s)"
+    # Each entry takes 40 ms and the session's directory is the eighth: the 50 ms budget cuts the
+    # walk before it. Counted, not timed, so a slow runner cannot turn it red or green.
+    assert walked, "the search walked nothing, so the test checks nothing"
+    assert REPO_DIR not in walked, f"the search did not stop at its budget ({len(walked)} entries)"
+
+
+def test_a_stalled_runner_still_gives_the_line_its_project(world, monkeypatch):
+    """The flake of PR #654: a loaded Windows runner stalls the walk of a one-directory root past
+    the 50 ms of production, and the line of a test that is not about the budget lost its project.
+    The tests run with a wide budget; this stall (60 ms) would spend the production one."""
+    transcript = _session(world.root, OTHER_DIR)
+    real_scandir = os.scandir
+    walked: list[str] = []
+
+    def stalled(path):
+        with real_scandir(path) as entries:
+            return _SlowEntries(list(entries), OTHER_DIR, 0.060, walked)
+
+    monkeypatch.setattr(world.loose.os, "scandir", stalled)
+    line = _record(world, _entry(world))
+    assert walked == [OTHER_DIR], "the stall did not reach the search, so the test checks nothing"
+    assert line["project_kind"] == "other"
+    assert line["project"] == _row_project(transcript)["caller_project"]
 
 
 def test_a_found_session_is_not_walked_again(world, monkeypatch):
