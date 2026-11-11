@@ -6,6 +6,20 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Añadido
+
+- **`doctor` comprueba que cada rol tenga su modelo servido**: el check nuevo `service.role_models`
+  («modelo de cada rol») compara el id de modelo de `mechanical`, `long`, `code` y `vision` con la
+  lista de `BASE_URL/models`, sea llama-swap o un backend en la nube. Si falta el de un rol de
+  texto da `[WARN]` con el id que falta y la variable `LOCAL_DELEGATE_MODEL_*` que lo cambia; si
+  solo falta el de visión queda en `[OK]` con la nota, porque solo lo usa `local_describe_image`.
+  Un alias cuenta si `/models` lo lista, y un id de Ollama sin etiqueta cuenta si sale como
+  `<id>:latest`. Los roles son los del daemon, que ahora los manda en `/api/backend`
+  (`role_models`), porque las variables pueden estar solo en su lanzador; con un daemon de una
+  versión anterior se usan los de la consola y el detalle lo dice. Con el backend caído o sin la
+  lista, sale `unknown`. Usa el mismo sondeo que `backend`: `doctor` sigue preguntando una sola vez
+  al backend.
+
 ## [0.51.0] - 2026-11-10
 
 Mediciones más honestas y menos respuestas equivocadas en silencio. Cada fila del log de uso guarda
