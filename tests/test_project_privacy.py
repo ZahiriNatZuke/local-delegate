@@ -56,6 +56,7 @@ S_SELF = "5a5a5a5a-1b1b-4c2c-8d3d-0e4e5f6a7b8c"
 S_OTHER = "6b6b6b6b-2c2c-4d3d-9e4e-1f5a6b7c8d9e"
 HOOKS = Path(config.__file__).parent / "resources" / "hooks"
 CACHES = ("_SALTS", "_SELF_ENTRIES", "_SESSION_TRANSCRIPTS")
+WIDE_SEARCH_BUDGET_S = 30.0
 HEX16 = re.compile(r"^[0-9a-f]{16}$")
 OLD_MONTH = "202610"
 NOW_OF_BACKFILL = BASE + timedelta(days=1)
@@ -93,6 +94,8 @@ def world(tmp_path, monkeypatch):
     for module in (loose, package_common):
         for name in CACHES:
             monkeypatch.setattr(module, name, {})
+        # A loaded Windows CI runner spends the 50 ms of production on the walk (PR #654).
+        monkeypatch.setattr(module, "PROJECT_SEARCH_BUDGET_S", WIDE_SEARCH_BUDGET_S)
     notes = tmp_path / "notes"
     monkeypatch.setattr(package_common, "call_notes_dir", lambda: notes)
     monkeypatch.setattr(attribution, "_projects_root", lambda: root)
