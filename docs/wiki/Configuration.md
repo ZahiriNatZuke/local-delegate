@@ -550,7 +550,8 @@ Se cuenta a 2 caracteres por token, no a 4, porque en código y en español la d
 doble. Si no cabe, **esa llamada** va sin razonamiento (`enable_thinking: false` y el `max_tokens`
 de la tool, sin presupuesto), con el resto de parámetros del rol, y el log marca
 `reasoning_skipped: "context"`. La entrada no se recorta. El `n_ctx` de cada modelo se lee de
-`--ctx-size`/`-c` en la config de llama-swap; si no se puede (sin el extra `[llamaswap]`, sin config
+`--ctx-size`/`-c` en la config de llama-swap (también `--ctx-size=N`; desde la 0.52.0, #654, con el
+mismo lector del `cmd` que la ruta del GGUF, que entiende comillas, y los tipos de caché); si no se puede (sin el extra `[llamaswap]`, sin config
 o sin el modelo en ella), se usa un estimado de **8192** y `doctor` y `local_status` lo avisan. El rol
 `vision` queda fuera de la comprobación: su entrada es una imagen. `set` avisa, sin rechazar, si el
 tope de entrada del rol (`LOCAL_DELEGATE_MAX_CHARS_<ROL>`) en tokens más
