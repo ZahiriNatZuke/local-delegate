@@ -321,6 +321,11 @@ LONG_INPUT_CHARS = _env_int("LOCAL_DELEGATE_LONG_INPUT_CHARS", 6000)
 # a shared backend, so `0` turns it off. Read at start: changing it needs a restart.
 EXTRACT_TABLE_LONG = _env_flag("LOCAL_DELEGATE_EXTRACT_TABLE_LONG", True)
 
+# #650: the same rule for `local_summarize`: a small input with a table goes to `long`, which keeps
+# the rows apart (the mechanical model filled an empty CSV cell with its neighbour's). **On by
+# default**, with the same cost; `0` turns it off. Read at start: changing it needs a restart.
+SUMMARIZE_TABLE_LONG = _env_flag("LOCAL_DELEGATE_SUMMARIZE_TABLE_LONG", True)
+
 # local_summarize sigue la estructura del documento cuando tiene títulos Markdown y el rol es
 # `long` (SDD resumen-por-secciones). Apagado, resume en prosa como antes, byte a byte. **Apagado
 # por defecto**: mejora mucho la salida de la tool (100 % de títulos, con introducción y

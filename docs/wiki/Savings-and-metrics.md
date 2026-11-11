@@ -171,8 +171,10 @@ con saltos pudo contaminarla un swap.
   `affinity_dropped` (el alternativo que se probó) y `affinity_dropped_class` (la clase del fallo).
   **Una fila con `routing: "affinity"` no es un respaldo**: no lleva ↪ ni cuenta en «con salto»,
   aunque tenga `model_requested`.
-- **Motivo del rol** (#586): `role_reason: "table"` cuando `local_extract` mandó al rol `long` una
-  entrada por debajo de `LOCAL_DELEGATE_LONG_INPUT_CHARS` porque trae una tabla. Va en toda fila
+- **Motivo del rol** (#586, #650): `role_reason: "table"` cuando `local_extract` o
+  `local_summarize` mandó al rol `long` una entrada por debajo de `LOCAL_DELEGATE_LONG_INPUT_CHARS`
+  porque trae una tabla (el formato no va en la fila). Cada tool tiene su interruptor
+  (`LOCAL_DELEGATE_SUMMARIZE_TABLE_LONG=0` para el resumen). Va en toda fila
   de la operación, también en las de una llamada cortada (plazo propio, cola saturada, excepción).
   No es `routing` (esa es la afinidad) y `model` sigue siendo el modelo que respondió: con la
   regla, el de `code` si falló el largo. Sin la regla (`LOCAL_DELEGATE_EXTRACT_TABLE_LONG=0`, una

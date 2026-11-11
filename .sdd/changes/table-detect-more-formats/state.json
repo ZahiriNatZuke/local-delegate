@@ -1,0 +1,140 @@
+{
+  "schemaVersion": 1,
+  "slug": "table-detect-more-formats",
+  "title": "Detector de tablas: GFM sin tuberías externas, |-|-|, CSV, TSV y ARIA; local_summarize sube a long con tabla (#650)",
+  "mode": "lite",
+  "traceability": "strict",
+  "status": "closed",
+  "createdAt": "2026-11-11T10:19:44.741Z",
+  "updatedAt": "2026-11-11T11:38:38.118Z",
+  "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-11-11T10:53:13.358Z",
+      "evidence": "spec.md: 15 requisitos con criterio y método; código inspeccionado y barrido del árbol del repo con el detector; revisión adversarial con 2 bloqueantes resueltos (REQ-013 cifras de #630, REQ-014 celda final vacía) y no bloqueantes escritos",
+      "actor": "user"
+    },
+    "plan": {
+      "status": "approved",
+      "updatedAt": "2026-11-11T10:53:14.157Z",
+      "evidence": "plan.md: T1-T5 cubren REQ-001..015; revisión adversarial (plan-reviewer) con bloqueantes resueltos en T5",
+      "actor": "user"
+    },
+    "quality": {
+      "status": "approved",
+      "updatedAt": "2026-11-11T11:38:29.833Z",
+      "evidence": "PR #658 CI 22/22 en verde en 30ed7e8e; suite local 7414 passed con -n 2 (2 fallos arreglados); 12 mutantes matados; sdd check ok",
+      "actor": "user"
+    },
+    "conformance": {
+      "status": "approved",
+      "updatedAt": "2026-11-11T11:38:37.320Z",
+      "evidence": "review.md standard: dos jueces, conforms-with-notes; el bloqueante del juez A (CHANGELOG) y los no bloqueantes resueltos; sdd check ok",
+      "actor": "user"
+    },
+    "memory": {
+      "status": "approved",
+      "updatedAt": "2026-11-11T11:38:37.874Z",
+      "evidence": "handoff.md y Log L2 de brief.md; sin secretos ni datos personales",
+      "actor": "user"
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-11-11T10:19:44.741Z",
+      "reason": "SDD change created"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-11-11T10:53:13.358Z",
+      "evidence": "spec.md: 15 requisitos con criterio y método; código inspeccionado y barrido del árbol del repo con el detector; revisión adversarial con 2 bloqueantes resueltos (REQ-013 cifras de #630, REQ-014 celda final vacía) y no bloqueantes escritos",
+      "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-11-11T10:53:14.157Z",
+      "evidence": "plan.md: T1-T5 cubren REQ-001..015; revisión adversarial (plan-reviewer) con bloqueantes resueltos en T5",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "specifying",
+      "at": "2026-11-11T11:00:57.466Z",
+      "reason": "spec y plan aprobados tras la revisión adversarial; implementación y tests de zona hechos"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-11-11T11:00:57.713Z",
+      "reason": "spec y plan aprobados tras la revisión adversarial; implementación y tests de zona hechos"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "implementing",
+      "at": "2026-11-11T11:00:57.972Z",
+      "reason": "spec y plan aprobados tras la revisión adversarial; implementación y tests de zona hechos"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-11-11T11:00:58.258Z",
+      "reason": "spec y plan aprobados tras la revisión adversarial; implementación y tests de zona hechos"
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-11-11T11:38:29.833Z",
+      "evidence": "PR #658 CI 22/22 en verde en 30ed7e8e; suite local 7414 passed con -n 2 (2 fallos arreglados); 12 mutantes matados; sdd check ok",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "verifying",
+      "to": "result-review",
+      "at": "2026-11-11T11:38:30.130Z",
+      "reason": "quality aprobada"
+    },
+    {
+      "type": "gate",
+      "gate": "conformance",
+      "status": "approved",
+      "at": "2026-11-11T11:38:37.320Z",
+      "evidence": "review.md standard: dos jueces, conforms-with-notes; el bloqueante del juez A (CHANGELOG) y los no bloqueantes resueltos; sdd check ok",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "result-review",
+      "to": "closing",
+      "at": "2026-11-11T11:38:37.631Z",
+      "reason": "conformance aprobada"
+    },
+    {
+      "type": "gate",
+      "gate": "memory",
+      "status": "approved",
+      "at": "2026-11-11T11:38:37.874Z",
+      "evidence": "handoff.md y Log L2 de brief.md; sin secretos ni datos personales",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "closing",
+      "to": "closed",
+      "at": "2026-11-11T11:38:38.118Z",
+      "reason": "puertas aprobadas; PR #658 en verde, sin mezclar (lo mezcla la sesión principal)"
+    }
+  ]
+}

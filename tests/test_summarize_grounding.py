@@ -17,8 +17,9 @@ import json
 
 import backend_mock
 import httpx2
+import pytest
 
-from local_delegate import config, grounding, server
+from local_delegate import config, grounding, server, table_detect
 
 #: A verification record with the shape of the issue: tables of evidence and an English list.
 SOURCE = """\
@@ -178,6 +179,9 @@ def _summarize(monkeypatch, tmp_path, answer: str, **kwargs):
     monkeypatch.setattr(config, "USAGE_LOG", tmp_path / "usage.jsonl")
     monkeypatch.setattr(config, "BASE_URL", "http://test-backend/v1")
     monkeypatch.setattr(server, "_summary_language", lambda: "es")
+    # #650: these tests count the #630 warning; the table rule's own notice is tested apart
+    # (`tests/test_summarize_table_routing.py`).
+    monkeypatch.setattr(config, "SUMMARIZE_TABLE_LONG", False)
 
     def _handler(request: httpx2.Request) -> httpx2.Response:
         json.loads(request.content)
@@ -234,6 +238,27 @@ def test_figures_are_judged_only_on_an_input_with_a_table(monkeypatch, tmp_path)
     path = _write(tmp_path, log + "\n| fichero | errores |\n|---|---|\n| a | 3 |\n")
     output = _summarize(monkeypatch, tmp_path, summary, path=str(path))
     assert "«5»" in output[output.index(server.WARNING_MARKER) :]
+
+
+@pytest.mark.parametrize(
+    "log",
+    [
+        # A CI log of `gh run view --log`: job, step and line, separated by tabs (TSV to #650).
+        (
+            "build\tSet up job\tCurrent runner version\n"
+            "build\tRun tests\t2 errores en src/a.py\n"
+            "build\tRun tests\t3 errores en src/b.py\n"
+        ),
+        "fichero,linea,regla\nsrc/a.py,1,E501\nsrc/b.py,2,F401\n",  # a CSV of findings
+    ],
+    ids=["tsv-ci-log", "csv-findings"],
+)
+def test_csv_and_tsv_do_not_open_the_figures_check(monkeypatch, tmp_path, log):
+    """#650: the figures stay on the formats #630 measured (HTML, Markdown): a count is no noise."""
+    assert table_detect.table_format(log) in ("csv", "tsv"), "the input is a table to #650"
+    path = _write(tmp_path, log)
+    output = _summarize(monkeypatch, tmp_path, "Hay 5 errores en dos ficheros.", path=str(path))
+    assert server.WARNING_MARKER not in output
 
 
 def test_the_structured_path_warns_too(monkeypatch, tmp_path):
