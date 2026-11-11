@@ -4,7 +4,8 @@
 role. Measured on 22 small inputs: the mechanical model answered with the value of another row in
 8 of the 16 that carry a table, and in none of the 6 without one. So the rule is "the input has a
 table", nothing about how many fields are asked for or how alike they are. `local_summarize` also
-judges the figures of a summary only on an input with a table (#630).
+judges the figures of a summary only on an input with an HTML, ARIA or Markdown table (#630; a
+CSV or TSV, such as a CI log with tabs, does not open that check).
 
 A text has a table, and `table_format` names it, when it carries:
 
@@ -21,18 +22,23 @@ A text has a table, and `table_format` names it, when it carries:
   like prose or code: no leading blank; no list, quote or comment marker at the start; none of
   `{ } [ ] ; =` (but the delimiter); no `: `; no `(` glued to what comes before it (a call,
   `@(`); no cell with more than 8 words, or 3 when every comma or semicolon is followed by a
-  blank, the way prose writes them, and then no delimiter at the end of the line either (the
-  cut of a wrapped list); and with semicolons, no `;` at the end of the line (a statement).
+  blank, the way prose writes them (a comma between two digits, `4,2` or `1,234`, does not
+  count either way), and then no delimiter at the end of the line either (the cut of a wrapped
+  list).
 
 The text is looked at as it is: a JSON is not parsed, so a `<tr` inside one of its strings counts,
-and so does a tag inside a code block or a diff. The error falls on the side of going up.
+and so does a tag inside a code block or a diff, or a page that only names `role="row"`. The
+error falls on the side of going up; so does a short enumeration of prose on three lines
+(`Red, green, blue and pink.`).
 
 What it does not see, on purpose and pinned by tests: a CSV of two columns (one comma per line
 is every other line of prose), a CSV whose rows have quoted cells that span lines, a TSV row
 whose first cell is empty (it starts with a tab, like indented code), a CSV written with a blank
-after each comma whose last cell is empty (`pro, 20,`, the cut of a wrapped list), tables
-aligned with spaces, and `<div>` grids that only say so with class names
-(`row`, `cell`, `grid`): those names also lay out pages that hold no table.
+after each comma whose last cell is empty (`pro, 20,`, the cut of a wrapped list), a CSV cell
+with `=`, `[` or `: ` outside quotes (a URL with `?id=5`), a GFM table behind `> ` or a diff's
+`+`, `role = "row"` with blanks around `=`, tables aligned with spaces, and `<div>` grids that
+only say so with class names (`row`, `cell`, `grid`): those names also lay out pages that hold
+no table.
 
 No regular expression and linear in the text's length: the input is not trusted, and the repo
 does not let a pattern that can backtrack run on it. Pure, with no import from the package, so it
@@ -80,8 +86,11 @@ def has_table(text: str) -> bool:
     return table_format(text) is not None
 
 
-def table_format(text: str) -> str | None:
-    """The format of the first kind of table found (`html`, `aria`, `markdown`, `csv`, `tsv`)."""
+def table_format(text: str, *, delimited: bool = True) -> str | None:
+    """The format of the first kind of table found (`html`, `aria`, `markdown`, `csv`, `tsv`).
+
+    `delimited=False` skips CSV and TSV, the slowest passes, for a caller that does not want them.
+    """
     if not text:
         return None
     low = text.lower()
@@ -92,6 +101,8 @@ def table_format(text: str) -> str | None:
     lines = text.split("\n")
     if _has_pipe_table(lines):
         return "markdown"
+    if not delimited:
+        return None
     for name, delimiter, fewest in _DELIMITED:
         if _has_delimited_rows(lines, delimiter, fewest):
             return name
@@ -229,8 +240,11 @@ def _row_delimiters(line: str, delimiter: str, fewest: int) -> int | None:
             pass
         elif char == delimiter:
             count += 1
-            if index < last:
-                spaced = spaced and line[index + 1] == " "
+            following = line[index + 1] if index < last else ""
+            # A comma between two digits (`4,2`, `1,234`, `10:00:00,123`) says nothing of style.
+            numeric = previous.isdigit() and following.isdigit()
+            if following and not numeric:
+                spaced = spaced and following == " "
             most_words = max(most_words, words)
             words, in_word = 0, False
             previous = char
@@ -241,14 +255,16 @@ def _row_delimiters(line: str, delimiter: str, fewest: int) -> int | None:
             if not in_word:
                 words += 1
                 in_word = True
+                if words > _MAX_CELL_WORDS:
+                    return None  # a cell of prose: no need to read the rest of the line
         elif not quoted:
             in_word = False
         previous = char
     if quoted or count < fewest:
         return None
     prose = delimiter != "\t" and spaced
-    if (prose or delimiter == ";") and line.endswith(delimiter):
-        # A wrapped list of prose (`a, b, c,` cut after a comma) or a statement that ends in `;`.
+    if prose and line.endswith(delimiter):
+        # A wrapped list of prose (`a, b, c,` or `a; b;` cut after the delimiter).
         return None
     most_words = max(most_words, words)
     cap = _MAX_CELL_WORDS_SPACED if prose else _MAX_CELL_WORDS

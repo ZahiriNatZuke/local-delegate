@@ -103,6 +103,19 @@ def test_without_a_table_it_stays_on_the_mechanical_model(backend, tmp_path):
     assert len(rows) == 1 and "role_reason" not in rows[0], rows
 
 
+def test_prose_with_commas_and_figures_stays_on_the_mechanical_model(backend, tmp_path):
+    prose = (
+        "La mediana bajó de 4,2 s a 2,9 s, y el p95 quedó en 7 s, según la medición.\n"
+        "El equipo, tras revisar los datos, decidió seguir con el plan, sin cambios.\n"
+        "Después, con calma, se escribió la nota, y se cerró el cambio, por fin.\n"
+    )
+    output = server.local_summarize(text=prose)
+
+    assert backend.models == [MECHANICAL]
+    assert server.WARNING_MARKER not in output
+    assert all("role_reason" not in row for row in _rows(tmp_path))
+
+
 def test_a_large_table_is_long_by_size_with_no_reason(backend, tmp_path):
     text = CSV + "\n".join(f"plan{n},{n},{n * 3}" for n in range(1, 800)) + "\n"
     assert len(text) > config.LONG_INPUT_CHARS
@@ -208,8 +221,7 @@ def test_the_docs_name_format_and_the_recipe_names_the_rule():
 )
 def test_each_surface_names_the_switch(relative):
     path = ROOT / relative
-    if not path.is_file():
-        pytest.skip(f"{relative} is not in the tree")
+    assert path.is_file(), f"{relative} is missing: the surface cannot be checked"
     assert VARIABLE in path.read_text(encoding="utf-8"), relative
 
 

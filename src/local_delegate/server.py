@@ -7811,7 +7811,7 @@ def _grounding_notice(
     were HTML or Markdown tables: #650 keeps the figures to those formats (and ARIA, HTML too),
     so a CI log with tabs, read as TSV, does not bring the counting noise back.
     """
-    figures = table_detect.table_format(content) in _FIGURE_TABLE_FORMATS
+    figures = table_detect.table_format(content, delimited=False) in _FIGURE_TABLE_FORMATS
 
     def _notice(text: str, truncated: bool) -> str:
         found = grounding.check(text, content, language=_summary_language(), figures=figures)
@@ -8573,10 +8573,10 @@ def local_extract(
     A location field naming one heading (`intro_heading_line`) that got the whole Markdown
     outline is cut to the only heading its singular name fits; with any doubt (a plural
     subject, no single heading) it is left as it came. Both go to `outline_copies`, with a warning.
-    A small input that carries a table (HTML `<table`/`<tr`, ARIA `role="table"`/`"row"`, a
-    Markdown or GFM table with its delimiter row, three or more CSV or TSV rows) goes to the
-    long-context model too, even with one field: the mechanical one answered with the value of
-    another row. Then `_local_delegate.role_reason` says so (`{"role": "long", "reason":
+    A small input that carries a table (HTML `<table`/`<tr`, ARIA `role="table"`, `"grid"`,
+    `"treegrid"` or `"row"`, a Markdown or GFM table with its delimiter row, three or more CSV
+    or TSV rows) goes to the long-context model too, even with one field: the mechanical one
+    answered with the value of another row. Then `_local_delegate.role_reason` says so (`{"role": "long", "reason":
     "table", "format": "html"|"aria"|"markdown"|"csv"|"tsv", "notice": ...}`), also on an
     `error` answer, and the call is slower and may have to load that model. Not seen: a CSV of
     two columns, a TSV row that starts with an empty cell, tables aligned with spaces and

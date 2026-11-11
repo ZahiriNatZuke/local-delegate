@@ -128,6 +128,7 @@ def test_an_empty_text_is_not_a_table():
         ("plan\tseats\nbasic\t5\npro\t20\n", "tsv"),  # two columns of TSV
         ("plan\tseats\tprice\nbasic\t5\t\npro\t20\t29\n", "tsv"),  # empty last cell (review)
         ("plan,seats,price\nbasic,5,\npro,20,29\n", "csv"),  # empty last cell of a CSV
+        ("nombre;precio;nota\nCafé;1,50;\nTé;1,20;\nMate;0,90;\n", "csv"),  # Excel es, last empty
         ("plan,seats,price\r\nbasic,5,9\r\npro,20,29\r\n", "csv"),
         ("Seats | Domains\n--- | ---\n5 | 1\n", "markdown"),  # GFM without outer pipes
         ("| Plan | Seats |\n|-|-|\n| Basic | 5 |\n", "markdown"),  # the compact separator
@@ -147,6 +148,7 @@ def test_an_empty_text_is_not_a_table():
         "tsv-two-columns",
         "tsv-empty-last-cell",
         "csv-empty-last-cell",
+        "csv-semicolon-empty-last-cell",
         "csv-crlf",
         "gfm-without-outer-pipes",
         "single-dash-separator",
@@ -242,6 +244,21 @@ _NOT_TABLES = {
         "The second one was slower; it worked; nobody complained.\n"
         "The third one was the best; it shipped; we celebrated.\n"
     ),
+    "prose-decimal-commas-es": (
+        "La mediana bajó de 4,2 s a 2,9 s, y el p95 quedó en 7 s.\n"
+        "El modelo largo tardó 1,8 s más, y el mecánico 0,4 s menos.\n"
+        "Con la tabla el error bajó a 0,5 por fila, y sin ella a 1,2.\n"
+    ),
+    "prose-thousands-en": (
+        "Processed 1,234,567 rows in 3.2 s and wrote them all.\n"
+        "Processed 2,345,678 rows in 4.1 s and wrote them all.\n"
+        "Processed 3,456,789 rows in 5.0 s and wrote them all.\n"
+    ),
+    "python-log-asctime-with-comma": (
+        "2026-11-11 10:00:00,123 INFO lote 1 listo, 100 filas\n"
+        "2026-11-11 10:00:01,456 INFO lote 2 listo, 200 filas\n"
+        "2026-11-11 10:00:02,789 INFO lote 3 listo, 300 filas\n"
+    ),
     "setext-heading-with-pipe": "cat file | grep x\n---\n\nmore text\n",
     "horizontal-rule": "a | b\n\n---\n",
 }
@@ -256,6 +273,11 @@ def test_short_spaced_enumerations_go_up_on_purpose():
     """The known error of the CSV rule, on the side of going up: short cells after `, `."""
     text = "Red, green, blue and pink.\nOne, two, three and four.\nSix, seven, eight and nine.\n"
     assert table_format(text) == "csv"
+
+
+def test_without_delimited_csv_and_tsv_are_not_looked_for():
+    assert table_format("plan,seats,price\nbasic,5,9\npro,20,29\n", delimited=False) is None
+    assert table_format("Plan | Seats\n--- | ---\nBasic | 5\n", delimited=False) == "markdown"
 
 
 def test_the_python_and_markdown_sources_of_the_repo_are_not_csv_or_tsv():
@@ -307,6 +329,7 @@ _HOSTILE = {
     "tsv-rows-never-three": "'a\\tb\\na\\tb\\tc\\n' * 100_000",
     "csv-rows-never-three": "'a,b,c\\na,b\\n' * 100_000",
     "csv-counts-change-each-line": "'a,b,c\\na,b,c,d\\n' * 71_429",
+    "one-line-read-by-every-pass": "'a,b\\t\"c;\"' * 125_000",
     "gfm-cells-mismatch": "'a|b\\n-|-|-\\n' * 100_000",
     "role-repeated": "'role=' * 200_000",
 }

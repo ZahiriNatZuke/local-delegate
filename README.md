@@ -165,7 +165,7 @@ al contexto de Claude, y de ahí sale el ahorro.
 
 | Tool | Qué hace | Rol de modelo (default) |
 |---|---|---|
-| `local_summarize` | Resume texto o archivo; `focus` opcional para decir qué conservar (p. ej. «cifras de configuración»); avisa si el resumen trae siglas, palabras o cifras que la entrada no tiene | mecánico / largo (auto) |
+| `local_summarize` | Resume texto o archivo; `focus` opcional para decir qué conservar (p. ej. «cifras de configuración»); avisa si el resumen trae siglas, palabras o cifras que la entrada no tiene | mecánico / largo (auto; una entrada pequeña con tabla va a largo) |
 | `local_classify` | Devuelve UNA etiqueta de una lista | mecánico |
 | `local_extract` | Extrae campos → **objeto validado** con exactamente las claves pedidas (las que falten o vengan como «N/A», `null`), no una cadena que haya que parsear; con `path`, números de línea reales para un campo que los pida; una entrada pequeña con tabla va al modelo largo y `_local_delegate.role_reason` lo dice | mecánico / largo (auto; también con tabla) |
 | `local_boilerplate` | Genera código desde una spec y lo **escribe en `target`**; devuelve solo un recibo | código |

@@ -91,7 +91,8 @@ y en todos los caminos (llamada única, map-reduce y por secciones), y avisa con
   palabras forman la sigla y que la entrada no expande así;
 - una palabra con letras que no son del idioma del resumen (`ç`, `ã`, `ê`… en un resumen en
   español; cualquier tilde en uno en inglés) y que no sale en la entrada («deviações»);
-- solo si la entrada trae una tabla (Markdown con su línea separadora, o HTML), una cifra que la
+- solo si la entrada trae una tabla HTML, ARIA o Markdown (también GFM; un CSV o un TSV, como un
+  log de CI con tabuladores, no abre esta revisión, #650), una cifra que la
   entrada no trae en ninguna grafía (`2 862` = `2862`, `2,5` = `2.5`, «tres» = `3`). Fuera de las
   tablas no se mira: un resumen cuenta por su cuenta («3 errores» de un log) y el aviso sería
   ruido.
@@ -220,11 +221,16 @@ Dos cosas que conviene saber y solo estaban en el código:
   - **Cómo se apaga**: `LOCAL_DELEGATE_EXTRACT_TABLE_LONG=0` en el entorno del servidor, que la
     lee al arrancar.
   - **Lo que no ve**: un CSV de dos columnas (una coma por línea es media prosa), filas con celdas
-    entre comillas que ocupan varias líneas, tablas alineadas con espacios y las rejillas de
+    entre comillas que ocupan varias líneas, una fila TSV que empieza con la celda vacía, un CSV
+    escrito con blanco tras cada coma y la última celda vacía, una fila con `=`, `[` o `: ` fuera
+    de comillas (una URL con `?id=5`) o con una celda de más de 8 palabras, una tabla GFM detrás
+    de `> ` o del `+` de un diff, tablas alineadas con espacios y las rejillas de
     `<div>` que solo lo dicen con clases (`row`, `cell`, `grid`, que también maquetan páginas sin
     tabla) siguen en el modelo mecánico y pueden cruzar. Del lado de subir de más: un `<tr` en una
     cadena de un JSON, un bloque de código o un diff también sube, y una enumeración corta en
-    prosa (`Rojo, verde, azul y rosa.` en tres líneas seguidas) puede pasar por CSV.
+    prosa (`Rojo, verde, azul y rosa.` en tres líneas seguidas) puede pasar por CSV, y una página
+    que solo nombra `role="row"` pasa por ARIA. Una coma entre dos dígitos (`4,2`, `1,234`) no
+    cuenta como estilo de CSV, así la prosa con cifras no sube.
   - **Lo que queda fuera**: el caso que abrió el #586 (33 KB, ya iba a `long`, el valor de una fila
     que nadie pidió) no queda arreglado, y no hay aviso de valor cruzado (su detector dio un aviso
     en falso en la prueba y vuelve a diseño). Un cruce que quede sale en silencio.

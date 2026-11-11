@@ -19,12 +19,16 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   `local_extract` lleva ahora `format` (`html`, `aria`, `markdown`, `csv` o `tsv`). Sobre todas las
   fuentes Python y Markdown del repo y los ficheros de sus SDD, la regla nueva no ve CSV ni TSV en
   ningún `.py`, `.md`, `.json`, `.log` ni `.yaml`, y no pierde ninguna tabla que viera la de antes.
-  Sigue sin ver un CSV de dos columnas, filas con celdas entre comillas que ocupan varias líneas,
-  tablas alineadas con espacios y rejillas de `<div>` que solo lo dicen con clases (`row`, `cell`,
-  `grid`, que también maquetan páginas sin tabla); del lado de subir de más, una enumeración corta
-  en prosa en tres líneas seguidas puede pasar por CSV. La regla sigue siendo lineal y sin
-  expresiones regulares. Como `local_summarize` juzga las cifras de un resumen solo en una entrada
-  con tabla (#630), ese aviso ahora también mira las entradas CSV, TSV, GFM y ARIA.
+  Una coma entre dos dígitos (coma decimal, miles, milisegundos de un log) no cuenta como estilo
+  de CSV, así la prosa con cifras no pasa por tabla. Sigue sin ver un CSV de dos columnas, filas
+  con celdas entre comillas que ocupan varias líneas, una fila TSV que empieza con la celda vacía,
+  una tabla GFM detrás de `> ` o del `+` de un diff, tablas alineadas con espacios y rejillas de
+  `<div>` que solo lo dicen con clases (`row`, `cell`, `grid`, que también maquetan páginas sin
+  tabla); del lado de subir de más, una enumeración corta en prosa en tres líneas seguidas puede
+  pasar por CSV, y una página que solo nombra `role="row"` por ARIA. La regla sigue siendo lineal
+  y sin expresiones regulares. El aviso de cifras de `local_summarize` (#630) se queda en las
+  tablas HTML, ARIA y Markdown (también GFM): un CSV o un TSV, como un log de CI con tabuladores,
+  no lo abre.
 - **`local_summarize` manda al modelo de contexto largo una entrada pequeña con tabla (#650).**
   La misma regla y el mismo detector que `local_extract`. El resumen termina con un
   `[local-delegate warning: …]` que nombra el formato visto, la fila del log de uso lleva
