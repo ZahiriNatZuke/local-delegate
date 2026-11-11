@@ -62,6 +62,14 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   supuesto, sin inventar un número; `doctor` y `local_status` ya lo avisan cuando el rol tiene
   razonamiento con presupuesto configurado.
 
+- **Los tests del proyecto de la sesión ya no fallan al azar en el CI de Windows.** La búsqueda del
+  transcript de una sesión (`hook_common.project_of_session`) tiene un tope de 50 ms, y un runner
+  de Windows cargado lo gasta recorriendo un solo directorio: la línea del mod salía sin
+  `project`/`project_kind` y fallaba `test_the_salt_and_the_list_come_from_the_process_log_dir` en
+  un PR que no tocaba nada de esto. El tope por defecto se lee ahora al llamar (antes quedaba fijado
+  al definir la función), los tests lo ensanchan y solo el test del tope usa el valor de producción,
+  que no cambia. El test del tope cuenta las entradas recorridas en vez de cronometrar.
+
 ## [0.51.0] - 2026-11-10
 
 Mediciones más honestas y menos respuestas equivocadas en silencio. Cada fila del log de uso guarda
