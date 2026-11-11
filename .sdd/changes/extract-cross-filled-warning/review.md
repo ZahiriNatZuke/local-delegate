@@ -50,6 +50,19 @@ nueva es la de `verification.md`).
 | F10 | _DIGIT_GAP une «12 345» en el texto donde se cuenta | raised | not raised | suspected | riesgo residual aceptado: dos números separados solo por un espacio cuentan como uno, y una repetición así puede pasar sin verse; muy raro y el aviso no cambia el valor |
 | F11 | «in» como palabra vacía deja Check-in sin la palabra in | not raised | raised | suspected | aceptado: fallo de detección conocido, sin falso positivo |
 
+## Segunda pasada
+
+Juez independiente sobre el PR #659: «conforma con notas». Los cinco hallazgos se corrigieron en la
+misma rama y sus casos entraron al conjunto (n33 a n35) o tienen test propio.
+
+| ID | Finding | Judge A | Judge B | Status | Resolution |
+| --- | --- | --- | --- | --- | --- |
+| S1 | Las cabeceras de todas las celdas que casan se sumaban a la etiqueta e inflaban a otra clave (`pro_overview` con «$25, 200 GB») | raised | not run | suspected | la cabecera solo cuenta si el valor sale de una sola columna; caso n33; mutante M12 |
+| S2 | Sinónimo con una etiqueta que es parte de la de otra clave (`ram` de «Memory» frente a `memory_speed`; Display, Processor) | raised | not run | suspected | la fila tiene que ser la mejor de la otra clave en toda la entrada; casos n34, n35 y n36 (este último mata el mutante M6, que la regla nueva dejaba vivo); mutante M13 |
+| S3 | La captura en la frontera no cubría cualquier excepción | raised | not run | suspected | `except Exception` en `cross_filled`; test propio; mutante M16 |
+| S4 | El presupuesto contaba celdas y no caracteres | raised | not run | suspected | se descuentan los caracteres de las celdas por hoja; test con un JSON de una celda enorme; mutante M14 |
+| S5 | `html.parser` cuadrático en Python sin el parche de CVE-2025-6069 | raised | not run | suspected | tope de 100 000 caracteres para el camino HTML; test propio; mutante M15 |
+
 ## Required follow-up
 
 - Ninguno bloqueante. La prueba en vivo es opcional (no cambia el prompt ni el enrutado).

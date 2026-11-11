@@ -40,8 +40,13 @@ from typing import Any
 #: A source longer than this is not scanned: the warning is a cheap check, never a cost.
 MAX_SOURCE_CHARS = 400_000
 
-#: Cells times leaves the check may walk before it gives up on the remaining keys.
-_BUDGET = 2_000_000
+#: An HTML page longer than this is not scanned: `html.parser` before Python 3.11.13, 3.12.11 and
+#: 3.13.4 can take quadratic time on malformed markup (CVE-2025-6069).
+MAX_HTML_CHARS = 100_000
+
+#: Characters (of the source's cells, once per leaf of the answer) the check may walk before it
+#: gives up on the remaining keys.
+_BUDGET = 40_000_000
 
 #: A row label longer than this is cut in the warning: it is the source's text, not the program's.
 _LABEL_CHARS = 80
@@ -388,16 +393,31 @@ def _scan(source: str, fields: list[str], data: dict, skip: frozenset[str]) -> d
         row["headers"] = frozenset(
             w for cell, column in row["cells"] for w in words(column) | words(cell)
         )
+        label = _label_words(row["label"])
+        row["fit_labels"] = [label] + [label | _label_words(c) for _x, c in row["cells"] if c]
     budget = _BUDGET
     names = list(dict.fromkeys(name for name in fields if isinstance(name, str)))
     key_words = {name: _label_words(name) for name in names}
+    best_fits: dict[str, int] = {}
+
+    def best_fit(key: str) -> int:
+        """How well `key` fits its best row of the source (with or without a column)."""
+        if key not in best_fits:
+            best_fits[key] = max(
+                (_fits(key_words[key], words_) for row in rows for words_ in row["fit_labels"]),
+                default=0,
+            )
+        return best_fits[key]
+
+    # Characters walked per leaf: the budget keeps the check linear in the source's size.
+    chars = sum(len(c) + 1 for row in rows for _cell, c, _column in row["norm"])
     flagged: dict[str, dict] = {}
     for name in names:
         value = data.get(name)
         leaves = _leaves(value)
         if name in skip or not leaves or not key_words[name]:
             continue
-        budget -= len(leaves) * sum(len(row["norm"]) for row in rows)
+        budget -= sum(len(leaf) + chars for leaf in leaves)
         if budget < 0:
             break
         item = isinstance(value, (list, dict))
@@ -417,15 +437,19 @@ def _scan(source: str, fields: list[str], data: dict, skip: frozenset[str]) -> d
         if any(_bounded_count(_norm(cell), plain_norm) != 1 for cell, _column in hits):
             continue
         # The hit cell's column names it too (`Pro`, `Q2`); a generic one («Value») shares at most
-        # one word with a key, which `_fits` does not count.
+        # one word with a key, which `_fits` does not count. Only when the value comes from ONE
+        # column: cells of several columns (`$25, 200 GB`) say nothing of any one of them.
         label_words = _label_words(row["label"])
-        for _cell, column in hits:
-            label_words |= _label_words(column)
+        columns = {column for _cell, column in hits}
+        if len(columns) == 1:
+            label_words |= _label_words(columns.pop())
         mine = len(key_words[name] & label_words)
         best, best_key = mine, None
         for other in names:
             score = _fits(key_words[other], label_words) if other != name else 0
-            if score > best:
+            # The row must be B's own: if another row fits B better («Memory speed» for
+            # `memory_speed`), this one («Memory», a synonym of `ram`) is not B's.
+            if score > best and score >= best_fit(other):
                 best, best_key = score, other
         if best_key is not None:
             label = row["label"]
@@ -444,7 +468,11 @@ def cross_filled(
     source cannot be read: a warning never breaks the answer."""
     if not source or len(source) > MAX_SOURCE_CHARS or len(fields) < 2:
         return {}
+    lowered = source.lower()
+    if len(source) > MAX_HTML_CHARS and ("<tr" in lowered or "<td" in lowered):
+        return {}
     try:
         return _scan(source, fields, data, frozenset(skip))
-    except (ValueError, RecursionError, OverflowError, AssertionError, csv.Error):
+    except Exception:
+        # The boundary: whatever the source or the answer, a warning never breaks the answer.
         return {}

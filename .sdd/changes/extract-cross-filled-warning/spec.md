@@ -69,6 +69,13 @@ o línea de la entrada que pertenece a otra clave pedida. El aviso va en
   - Request: "derived: revisión de seguridad"
   - Verify: test tests/test_extract_cross_fill.py::test_an_odd_source_never_breaks_the_answer
 
+- **REQ-017** — Segunda pasada: la cabecera de columna solo cuenta si el valor sale de una sola
+  columna; la fila tiene que ser la mejor de la otra clave en toda la entrada; cualquier excepción
+  del detector se traga en la frontera; el presupuesto cuenta caracteres; una página HTML de más de
+  100 000 caracteres no se revisa.
+  - Request: "derived: segunda pasada de revisión del PR #659"
+  - Verify: test tests/test_extract_cross_fill.py::test_a_big_html_page_is_not_scanned
+
 ## Acceptance scenarios
 
 ### Scenario: cruce del #586

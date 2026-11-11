@@ -31,6 +31,10 @@ de ayer y detecta más cruces del `holdout` que el estricto.
   - Files or modules: src/local_delegate/cross_fill.py, src/local_delegate/server.py, tests/
   - Verification: casos n26-n32 y tests de robustez; mutantes M1-M11 de nuevo
   - Depends on: T1, T2, T3
+- [x] T6 — Segunda pasada de revisión: cabeceras, fila propia de la otra clave, frontera, presupuesto en caracteres, tope HTML (REQ-017)
+  - Files or modules: src/local_delegate/cross_fill.py, tests/
+  - Verification: casos n33-n35, tests propios y mutantes M12-M16
+  - Depends on: T5
 
 ## Test strategy
 

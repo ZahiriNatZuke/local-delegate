@@ -319,6 +319,46 @@
         {"answer": {"starter_integrations": ["Jira"], "pro_integrations": ["Jira", "GitHub"]}, "crossed": [], "must_flag": []},
         {"answer": {"starter_integrations": ["GitHub"], "pro_integrations": ["Jira", "GitHub"]}, "crossed": ["starter_integrations"], "must_flag": ["starter_integrations"]}
       ]
+    },
+    {
+      "id": "n33-overview-of-several-columns-en",
+      "format": "markdown", "lang": "en",
+      "source": "| Plan | Price | Storage | Support |\n|---|---|---|---|\n| Pro | $25 | 200 GB | Priority |\n| Basic | $10 | 20 GB | Email |\n",
+      "fields": ["pro_price", "pro_storage", "pro_overview"],
+      "answers": [
+        {"answer": {"pro_price": "$25", "pro_storage": "200 GB", "pro_overview": "$25, 200 GB, Priority support"}, "crossed": [], "must_flag": []},
+        {"answer": {"pro_price": "$25", "pro_storage": "200 GB", "pro_overview": ["$25", "200 GB"]}, "crossed": [], "must_flag": []},
+        {"answer": {"pro_price": "$25", "pro_storage": "$25", "pro_overview": null}, "crossed": ["pro_storage"], "must_flag": ["pro_storage"]}
+      ]
+    },
+    {
+      "id": "n34-synonym-key-and-a-longer-label-en",
+      "format": "text", "lang": "en",
+      "source": "Memory: 16 GB\nMemory speed: 3200 MHz\nStorage: 512 GB SSD\n",
+      "fields": ["ram", "memory_speed", "storage"],
+      "answers": [
+        {"answer": {"ram": "16 GB", "memory_speed": "3200 MHz", "storage": "512 GB SSD"}, "crossed": [], "must_flag": []},
+        {"answer": {"ram": "3200 MHz", "memory_speed": "3200 MHz", "storage": "512 GB SSD"}, "crossed": ["ram"], "must_flag": ["ram"]}
+      ]
+    },
+    {
+      "id": "n35-display-and-processor-synonyms-en",
+      "format": "markdown", "lang": "en",
+      "source": "| Spec | Value |\n|---|---|\n| Display | 6.1 in |\n| Display resolution | 2532 x 1170 |\n| Processor | A15 Bionic |\n| Processor cores | 6 |\n",
+      "fields": ["screen_size", "display_resolution", "cpu", "processor_cores"],
+      "answers": [
+        {"answer": {"screen_size": "6.1 in", "display_resolution": "2532 x 1170", "cpu": "A15 Bionic", "processor_cores": 6}, "crossed": [], "must_flag": []},
+        {"answer": {"screen_size": "2532 x 1170", "display_resolution": "2532 x 1170", "cpu": "A15 Bionic", "processor_cores": 6}, "crossed": ["screen_size"], "must_flag": ["screen_size"]}
+      ]
+    },
+    {
+      "id": "n36-generic-word-and-no-row-of-its-own-en",
+      "format": "markdown", "lang": "en",
+      "source": "| Item | Value |\n| --- | --- |\n| Retail cost (USD) | 59 |\n| Weight (kg) | 1.4 |\n\nShipping is quoted at checkout.\n",
+      "fields": ["price", "shipping_cost", "weight"],
+      "answers": [
+        {"answer": {"price": 59, "shipping_cost": null, "weight": 1.4}, "crossed": [], "must_flag": []}
+      ]
     }
   ]
 }

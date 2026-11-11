@@ -8,7 +8,7 @@ touching the value.
 The measuring gate of the SDD `extract-cross-filled-warning` is this file: the detector runs over
 answers, not over a model. Three sets, all in `tests/data/cross_fill/`:
 
-- `new_cases.json`: 32 invented tables (HTML, Markdown, CSV, TSV, JSON, text lines; synonyms,
+- `new_cases.json`: 36 invented tables (HTML, Markdown, CSV, TSV, JSON, text lines; synonyms,
   another language, repeated numbers, labels with the words of two keys, derived and free-text
   keys such as `currency`, `first_name` or `product_summary`), each with a correct and most with a
   crossed answer written by hand;
@@ -143,8 +143,8 @@ def test_gate_totals():
         false_positives += [(row["case"], k) for k in flagged if k not in row["crossed"]]
         caught += sum(1 for k in flagged if k in row["crossed"])
     assert false_positives == []
-    # Measured when the gate passed (2026-11-11): 37 new + 30 holdout + 5 recorded.
-    assert caught >= 72
+    # Measured when the gate passed (2026-11-11): 40 new + 30 holdout + 5 recorded.
+    assert caught >= 75
 
 
 # --- The rules, one by one ----------------------------------------------------------------------
@@ -320,6 +320,40 @@ def test_location_fields_are_not_checked(backend, tmp_path):
 )
 def test_an_odd_source_never_breaks_the_answer(source, answer):
     assert isinstance(cross_fill.cross_filled(source, ["k", "a_key"], answer), dict)
+
+
+def test_a_big_html_page_is_not_scanned():
+    """`html.parser` can be quadratic on malformed markup in older Pythons (CVE-2025-6069)."""
+    rows = "<tr><td>Custom domains</td><td>25</td></tr><tr><td>Licensed users</td><td>40</td></tr>"
+    small = f"<table>{rows}</table>"
+    assert cross_fill.cross_filled(small, FIELDS, {"licensed_user_limits": 25}) != {}
+    big = small + "<p>" + "x" * cross_fill.MAX_HTML_CHARS + "</p>"
+    assert cross_fill.cross_filled(big, FIELDS, {"licensed_user_limits": 25}) == {}
+
+
+def test_the_budget_counts_characters_not_cells(monkeypatch):
+    """A JSON source with one huge cell and an answer of many short leaves stops early."""
+    source = json.dumps({"body": "word " * 70_000, "custom_domains": "25"})
+    leaves = [f"w{i}" for i in range(300)]
+    walked = []
+    real = cross_fill._row_hits
+
+    def counting(*args, **kwargs):
+        walked.append(1)
+        return real(*args, **kwargs)
+
+    monkeypatch.setattr(cross_fill, "_row_hits", counting)
+    fields = ["summary", "custom_domain_limits"]
+    assert cross_fill.cross_filled(source, fields, {"summary": leaves}) == {}
+    assert walked == []
+
+
+def test_an_unexpected_error_never_breaks_the_answer(monkeypatch):
+    def boom(*_args, **_kwargs):
+        raise TypeError("unexpected")
+
+    monkeypatch.setattr(cross_fill, "_scan", boom)
+    assert cross_fill.cross_filled(TABLE, FIELDS, {"licensed_user_limits": 25}) == {}
 
 
 def test_a_long_row_label_is_cut_in_the_warning():
