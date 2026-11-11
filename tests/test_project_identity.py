@@ -19,10 +19,14 @@ from pathlib import Path
 import pytest
 
 import local_delegate
+from local_delegate.resources.hooks.hook_common import PROJECT_SEARCH_BUDGET_S
 
 HOOK_COMMON = Path(local_delegate.__file__).parent / "resources" / "hooks" / "hook_common.py"
 REPO_DIR = "D--Projects-local-delegate"
 SESSION = "0b9c3f9e-1d2a-4c5b-8e7f-123456789abc"
+#: The budget of the transcript search in every test: a loaded Windows CI runner spends the 50 ms of
+#: production on a one-directory walk (PR #654). The test of the budget passes its own.
+WIDE_SEARCH_BUDGET_S = 30.0
 
 
 @pytest.fixture
@@ -33,6 +37,7 @@ def hc(monkeypatch, tmp_path):
     module = importlib.util.module_from_spec(spec)
     sys.modules[name] = module
     spec.loader.exec_module(module)
+    monkeypatch.setattr(module, "PROJECT_SEARCH_BUDGET_S", WIDE_SEARCH_BUDGET_S)
     monkeypatch.setenv("LOCAL_DELEGATE_LOG_DIR", str(tmp_path / "logs"))
     yield module
     sys.modules.pop(name, None)
@@ -433,8 +438,25 @@ def test_the_search_stops_at_its_budget_and_is_not_cached(hc, tmp_path):
     for name in ("D--work-a", "D--work-b", "D--work-c"):
         (root / name).mkdir()
     ticks = iter(i * 0.030 for i in range(100))
-    assert hc.project_of_session(SESSION, root=root, clock=lambda: next(ticks)) is None
+    spent = hc.project_of_session(
+        SESSION, root=root, clock=lambda: next(ticks), budget_s=PROJECT_SEARCH_BUDGET_S
+    )
+    assert spent is None
     assert hc.project_of_session(SESSION, root=root) == _transcript(root, "D--work-zz")
+
+
+def test_the_default_budget_is_the_constant_at_call_time(hc, tmp_path, monkeypatch):
+    """The widened budget of the tests (and of anyone who sets the constant) reaches the search:
+    a default bound when the function is defined would keep 50 ms whatever the constant says."""
+    root = _session_world(tmp_path, "D--work-zz")
+    (root / "D--work-a").mkdir()
+    monkeypatch.setattr(hc, "PROJECT_SEARCH_BUDGET_S", 0.010)
+    ticks = iter(i * 0.030 for i in range(100))
+    assert hc.project_of_session(SESSION, root=root, clock=lambda: next(ticks)) is None
+    monkeypatch.setattr(hc, "PROJECT_SEARCH_BUDGET_S", WIDE_SEARCH_BUDGET_S)
+    ticks = iter(i * 0.030 for i in range(100))
+    found = hc.project_of_session(SESSION, root=root, clock=lambda: next(ticks))
+    assert found == _transcript(root, "D--work-zz")
 
 
 def test_a_found_or_ambiguous_result_is_cached_and_not_found_is_not(hc, tmp_path, monkeypatch):

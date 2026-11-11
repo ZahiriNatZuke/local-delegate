@@ -1069,18 +1069,21 @@ def project_of_session(
     *,
     root: Path | None = None,
     clock=time.monotonic,
-    budget_s: float = PROJECT_SEARCH_BUDGET_S,
+    budget_s: float | None = None,
 ) -> Path | None:
     """The only `<root>/*/<session_id>.jsonl`, or `None` (REQ-016, D13, D14).
 
     `session_id` must have the shape of a UUID: any other shape, separators or `..` included,
     never forms a path. `None` too if it is in no directory, in more than one, or if the search
-    takes more than `budget_s`. The root is the process's (`projects_root()`). A found or
-    ambiguous result is cached per root and session; "not found" and a spent budget are not, so a
-    session that shows up later is found the next time.
+    takes more than `budget_s` (by default `PROJECT_SEARCH_BUDGET_S`, read at call time so a test
+    can widen it: a 50 ms budget is spent by a loaded CI runner). The root is the process's
+    (`projects_root()`). A found or ambiguous result is cached per root and session; "not found"
+    and a spent budget are not, so a session that shows up later is found the next time.
     """
     if not isinstance(session_id, str) or not _SESSION_UUID.fullmatch(session_id):
         return None
+    if budget_s is None:
+        budget_s = PROJECT_SEARCH_BUDGET_S
     base = Path(root) if root is not None else projects_root()
     key = (str(base), session_id)
     if key in _SESSION_TRANSCRIPTS:
