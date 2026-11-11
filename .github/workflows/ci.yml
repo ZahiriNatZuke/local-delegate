@@ -31,7 +31,7 @@ jobs:
   # para el resto; `tests/test_ci_gate.py` lo ata.
   lint:
     runs-on: ubuntu-26.04
-    timeout-minutes: 12
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
 
@@ -74,11 +74,36 @@ jobs:
       # El módulo se salta solo donde no hay navegador, y por eso lleva dentro una guarda que
       # falla si se salta con CI=true: un test que se salta en todas partes es verde sobre cero
       # comprobaciones, que es un fallo que este repo ya cometió.
-      - name: Install browser for the dashboard UI tests
-        timeout-minutes: 5
+      #
+      # La instalación va en tres piezas desde el 2026-11-11, cuando el mirror de apt de Azure dejó
+      # main en rojo sin ningún cambio de código (aquí, 5 min de tope agotados; en `test-lang-es`,
+      # `exited with code: 100`). Las dependencias del sistema (apt) se reintentan con un tope por
+      # intento; el navegador se guarda en caché por SO, imagen y versión exacta de playwright
+      # (la del lock), y solo se descarga si la caché falla. `tests/test_ci_gate.py` ata la forma.
+      - name: Sync deps (with the ui group)
+        run: uv sync --group dev --group ui
+
+      - name: Resolve the Playwright version
+        id: playwright
         run: |
-          uv sync --group dev --group ui
-          uv run playwright install --with-deps chromium
+          echo "version=$(uv run python -c 'import importlib.metadata as m; print(m.version("playwright"))')" >> "$GITHUB_OUTPUT"
+          echo "image=${ImageOS:-unknown}" >> "$GITHUB_OUTPUT"
+
+      - name: Cache the Playwright browser
+        id: browser-cache
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-chromium-${{ runner.os }}-${{ runner.arch }}-${{ steps.playwright.outputs.image }}-${{ steps.playwright.outputs.version }}
+
+      - name: Install the browser system dependencies
+        timeout-minutes: 8
+        run: bash scripts/ci_playwright_install_deps.sh
+
+      - name: Install browser for the dashboard UI tests
+        if: steps.browser-cache.outputs.cache-hit != 'true'
+        timeout-minutes: 4
+        run: uv run playwright install chromium
 
       - name: Dashboard UI (Playwright)
         timeout-minutes: 5
@@ -209,7 +234,7 @@ jobs:
   # En Windows `LANG` no decide el idioma (REQ-018 mira la interfaz), así que solo Linux discrimina.
   test-lang-es:
     runs-on: ubuntu-26.04
-    timeout-minutes: 15
+    timeout-minutes: 24
     env:
       LANG: es_ES.UTF-8
     steps:
@@ -227,8 +252,29 @@ jobs:
       - name: Sync deps (with the ui group)
         run: uv sync --group dev --group ui
 
+      # Las mismas tres piezas que en `lint` (caché del navegador y apt con reintento), por la misma
+      # razón: el 2026-11-11 este paso salió con `exited with code: 100` de apt sin cambio de código.
+      - name: Resolve the Playwright version
+        id: playwright
+        run: |
+          echo "version=$(uv run python -c 'import importlib.metadata as m; print(m.version("playwright"))')" >> "$GITHUB_OUTPUT"
+          echo "image=${ImageOS:-unknown}" >> "$GITHUB_OUTPUT"
+
+      - name: Cache the Playwright browser
+        id: browser-cache
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-chromium-${{ runner.os }}-${{ runner.arch }}-${{ steps.playwright.outputs.image }}-${{ steps.playwright.outputs.version }}
+
+      - name: Install the browser system dependencies
+        timeout-minutes: 8
+        run: bash scripts/ci_playwright_install_deps.sh
+
       - name: Install browser for the dashboard UI tests
-        run: uv run playwright install --with-deps chromium
+        if: steps.browser-cache.outputs.cache-hit != 'true'
+        timeout-minutes: 4
+        run: uv run playwright install chromium
 
       # Guarda de «esto llegó a comprobar algo»: si el runner pisara `LANG` o pusiera `LC_ALL` o
       # `LC_MESSAGES` (que ganan a `LANG`), el trabajo saldría en verde sin estar en español.

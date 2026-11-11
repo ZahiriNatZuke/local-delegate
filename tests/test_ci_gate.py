@@ -389,7 +389,11 @@ def test_the_lint_job_limit_leaves_room_for_the_browser_steps():
     resto de pasos (checkout, uv, ruff, Node), que en verde tardan ~20 s.
     """
     job = yaml.safe_load(CI_YML.read_text(encoding="utf-8"))["jobs"]["lint"]
-    names = ("Install browser for the dashboard UI tests", "Dashboard UI (Playwright)")
+    names = (
+        "Install the browser system dependencies",
+        "Install browser for the dashboard UI tests",
+        "Dashboard UI (Playwright)",
+    )
     limits = {p["name"]: p.get("timeout-minutes") for p in job["steps"] if p.get("name") in names}
     assert set(limits) == set(names), f"faltan pasos del navegador en `lint`: {limits}"
     assert all(v is not None for v in limits.values()), f"paso sin `timeout-minutes`: {limits}"
@@ -399,6 +403,80 @@ def test_the_lint_job_limit_leaves_room_for_the_browser_steps():
         f"el límite de `lint` ({job['timeout-minutes']}) debe ser al menos la suma de sus pasos "
         f"del navegador ({sum(limits.values())}) más {margin} de margen"
     )
+
+
+BROWSER_JOBS = ("lint", "test-lang-es")
+
+
+def _steps(job: str) -> list[dict]:
+    return yaml.safe_load(CI_YML.read_text(encoding="utf-8"))["jobs"][job]["steps"]
+
+
+@pytest.mark.parametrize("job", BROWSER_JOBS)
+def test_the_browser_is_cached_and_apt_is_retried(job):
+    """Un mirror de apt lento no deja main en rojo sin cambio de código (2026-11-11).
+
+    Ese día `lint` agotó los 5 min del `playwright install --with-deps` y `test-lang-es` salió con
+    `exited with code: 100` de apt. Desde entonces: las dependencias del sistema van por el script
+    con reintentos, el navegador sale de `actions/cache` con una clave atada a la versión exacta de
+    playwright, y solo se descarga cuando la caché falla.
+    """
+    steps = _steps(job)
+    runs = [s.get("run", "") for s in steps]
+    assert not any("--with-deps" in r for r in runs), "vuelve a instalar apt y navegador de una vez"
+
+    by_id = {s["id"]: s for s in steps if "id" in s}
+    cache = by_id.get("browser-cache")
+    assert cache is not None, f"`{job}` sin paso de caché del navegador"
+    assert cache["uses"].startswith("actions/cache@")
+    assert cache["with"]["path"] == "~/.cache/ms-playwright"
+    key = cache["with"]["key"]
+    for part in ("runner.os", "steps.playwright.outputs.version", "steps.playwright.outputs.image"):
+        assert part in key, f"la clave de la caché no incluye {part}: {key}"
+    assert "importlib.metadata" in by_id["playwright"]["run"]
+
+    names = [s.get("name") for s in steps]
+    deps = steps[names.index("Install the browser system dependencies")]
+    browser = steps[names.index("Install browser for the dashboard UI tests")]
+    assert deps["run"].strip() == "bash scripts/ci_playwright_install_deps.sh"
+    assert "if" not in deps, "las dependencias del sistema no van en la caché: se instalan siempre"
+    assert browser["if"] == "steps.browser-cache.outputs.cache-hit != 'true'"
+    assert browser["run"].strip() == "uv run playwright install chromium"
+    assert deps.get("timeout-minutes") and browser.get("timeout-minutes")
+    # Orden: versión, caché, apt, navegador, y todo antes de usar el navegador.
+    order = [
+        names.index(n)
+        for n in (
+            "Resolve the Playwright version",
+            "Cache the Playwright browser",
+            "Install the browser system dependencies",
+            "Install browser for the dashboard UI tests",
+        )
+    ]
+    assert order == sorted(order)
+
+
+def test_the_apt_retry_is_bounded_and_fits_its_step():
+    """El script reintenta un número acotado de veces y su peor caso cabe en el tope del paso."""
+    text = (SCRIPTS / "ci_playwright_install_deps.sh").read_text(encoding="utf-8")
+    assert "playwright install-deps chromium" in text
+    assert "PLAYWRIGHT_DEPS_ATTEMPTS:-3" in text and "PLAYWRIGHT_DEPS_TIMEOUT:-120" in text
+    assert "timeout --kill-after=15" in text and "sleep $((15 * i))" in text
+    attempts, per_attempt, kill_after = 3, 120, 15
+    worst_s = attempts * (per_attempt + kill_after) + sum(15 * i for i in range(1, attempts))
+    for job in BROWSER_JOBS:
+        step = next(
+            s for s in _steps(job) if s.get("name") == "Install the browser system dependencies"
+        )
+        assert step["timeout-minutes"] * 60 > worst_s, (job, step["timeout-minutes"], worst_s)
+
+
+def test_the_spanish_job_fits_the_gate_wait():
+    """`test-lang-es` cabe con margen en la espera de `ci_gate.py` aun con sus pasos al tope."""
+    job = yaml.safe_load(CI_YML.read_text(encoding="utf-8"))["jobs"]["test-lang-es"]
+    limited = sum(s.get("timeout-minutes", 0) for s in job["steps"])
+    assert job["timeout-minutes"] >= limited + 2
+    assert job["timeout-minutes"] * 60 < ci_gate.MAX_WAIT_S
 
 
 def test_the_classifiers_are_the_blocking_cells_of_the_matrix():

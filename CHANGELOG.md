@@ -6,6 +6,16 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Corregido
+
+- **Un mirror de apt lento ya no deja el CI de main en rojo.** Tras la 0.52.0, `lint` agotó los 5
+  minutos de `playwright install --with-deps` y `test-lang-es` salió con el código 100 de apt, sin
+  ningún cambio de código. Ahora, en los dos trabajos, el navegador sale de una caché atada al
+  sistema y a la versión exacta de playwright del lock y solo se descarga si la caché falla; las
+  dependencias del sistema van aparte, con tres intentos de 2 minutos como mucho cada uno
+  (`scripts/ci_playwright_install_deps.sh`), y cada paso lleva su tope de tiempo.
+  `tests/test_ci_gate.py` ata esa forma. Sin efecto para quien usa el paquete.
+
 ## [0.52.0] - 2026-11-11
 
 El panel se filtra por proyecto, menos valores cambiados de fila sin aviso y un diagnóstico que ve
