@@ -373,8 +373,10 @@ def _fits(key: frozenset[str], label: frozenset[str]) -> int:
     """How well a key fits a label: shared words, or 0 when one shared word is a mere accident
     (it counts only if one of the two holds all the words of the other)."""
     shared = len(key & label)
-    if shared >= 2 or (shared == 1 and (key <= label or label <= key)):
+    if shared > 1:
         return shared
+    if shared and (key <= label or label <= key):
+        return 1
     return 0
 
 
