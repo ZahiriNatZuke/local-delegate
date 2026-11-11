@@ -6,6 +6,34 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Cambiado
+
+- **La regla de la tabla ve más formatos y `role_reason` dice cuál vio (#650).** Además de HTML
+  (`<table`/`<tr`) y de Markdown con su línea `--`, ahora cuentan como tabla una tabla GFM sin
+  tuberías externas (`Seats | Domains` sobre `--- | ---`), el separador compacto `|-|-|`, un
+  `role="table"`, `"grid"`, `"treegrid"` o `"row"` de ARIA, y tres o más filas seguidas de CSV
+  (dos o más comas o puntos y coma por fila) o de TSV, con el mismo número de separadores fuera de
+  comillas y sin pinta de prosa ni de código (ni sangría, ni marca de lista o comentario, ni
+  `{ } [ ] ; =`, ni `: `, ni llamadas, ni celdas de más de 8 palabras). En un CSV, el modelo
+  mecánico rellenaba una celda vacía con la vecina. `_local_delegate.role_reason` de
+  `local_extract` lleva ahora `format` (`html`, `aria`, `markdown`, `csv` o `tsv`). Sobre todas las
+  fuentes Python y Markdown del repo y los ficheros de sus SDD, la regla nueva no ve CSV ni TSV en
+  ningún `.py`, `.md`, `.json`, `.log` ni `.yaml`, y no pierde ninguna tabla que viera la de antes.
+  Sigue sin ver un CSV de dos columnas, filas con celdas entre comillas que ocupan varias líneas,
+  tablas alineadas con espacios y rejillas de `<div>` que solo lo dicen con clases (`row`, `cell`,
+  `grid`, que también maquetan páginas sin tabla); del lado de subir de más, una enumeración corta
+  en prosa en tres líneas seguidas puede pasar por CSV. La regla sigue siendo lineal y sin
+  expresiones regulares. Como `local_summarize` juzga las cifras de un resumen solo en una entrada
+  con tabla (#630), ese aviso ahora también mira las entradas CSV, TSV, GFM y ARIA.
+- **`local_summarize` manda al modelo de contexto largo una entrada pequeña con tabla (#650).**
+  La misma regla y el mismo detector que `local_extract`. El resumen termina con un
+  `[local-delegate warning: …]` que nombra el formato visto, la fila del log de uso lleva
+  `role_reason: "table"` (también las de una llamada cortada) y ese resumen no toma el camino por
+  secciones aunque `LOCAL_DELEGATE_STRUCTURED_SUMMARY=1`, que lo abre solo el tamaño. Cuesta lo
+  mismo que en `local_extract`: más latencia y quizá cargar el modelo largo en el backend
+  compartido. `LOCAL_DELEGATE_SUMMARIZE_TABLE_LONG=0` lo apaga (se lee al arrancar); cada tool
+  tiene su interruptor. El prompt no cambia.
+
 ## [0.51.0] - 2026-11-10
 
 Mediciones más honestas y menos respuestas equivocadas en silencio. Cada fila del log de uso guarda

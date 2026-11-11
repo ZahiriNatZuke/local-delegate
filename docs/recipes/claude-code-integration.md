@@ -56,7 +56,7 @@ Esquema de la regla:
 
 | Tool | Qué hace | Rol de modelo (default) |
 |---|---|---|
-| `local_summarize` | Resume texto/archivo | mecánico / largo (auto) |
+| `local_summarize` | Resume texto/archivo | mecánico / largo (auto; una entrada pequeña con tabla va a largo) |
 | `local_classify` | Una etiqueta de una lista | mecánico |
 | `local_extract` | Campos → JSON | mecánico / largo (auto; una entrada pequeña con tabla va a largo) |
 | `local_boilerplate` | Genera código y lo escribe en `target` (devuelve un recibo, no el código) | código |

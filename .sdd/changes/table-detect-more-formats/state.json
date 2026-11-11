@@ -1,0 +1,95 @@
+{
+  "schemaVersion": 1,
+  "slug": "table-detect-more-formats",
+  "title": "Detector de tablas: GFM sin tuberías externas, |-|-|, CSV, TSV y ARIA; local_summarize sube a long con tabla (#650)",
+  "mode": "lite",
+  "traceability": "strict",
+  "status": "verifying",
+  "createdAt": "2026-11-11T10:19:44.741Z",
+  "updatedAt": "2026-11-11T11:00:58.258Z",
+  "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-11-11T10:53:13.358Z",
+      "evidence": "spec.md: 15 requisitos con criterio y método; código inspeccionado y barrido del árbol del repo con el detector; revisión adversarial con 2 bloqueantes resueltos (REQ-013 cifras de #630, REQ-014 celda final vacía) y no bloqueantes escritos",
+      "actor": "user"
+    },
+    "plan": {
+      "status": "approved",
+      "updatedAt": "2026-11-11T10:53:14.157Z",
+      "evidence": "plan.md: T1-T5 cubren REQ-001..015; revisión adversarial (plan-reviewer) con bloqueantes resueltos en T5",
+      "actor": "user"
+    },
+    "quality": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "conformance": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "memory": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-11-11T10:19:44.741Z",
+      "reason": "SDD change created"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-11-11T10:53:13.358Z",
+      "evidence": "spec.md: 15 requisitos con criterio y método; código inspeccionado y barrido del árbol del repo con el detector; revisión adversarial con 2 bloqueantes resueltos (REQ-013 cifras de #630, REQ-014 celda final vacía) y no bloqueantes escritos",
+      "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-11-11T10:53:14.157Z",
+      "evidence": "plan.md: T1-T5 cubren REQ-001..015; revisión adversarial (plan-reviewer) con bloqueantes resueltos en T5",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "specifying",
+      "at": "2026-11-11T11:00:57.466Z",
+      "reason": "spec y plan aprobados tras la revisión adversarial; implementación y tests de zona hechos"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-11-11T11:00:57.713Z",
+      "reason": "spec y plan aprobados tras la revisión adversarial; implementación y tests de zona hechos"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "implementing",
+      "at": "2026-11-11T11:00:57.972Z",
+      "reason": "spec y plan aprobados tras la revisión adversarial; implementación y tests de zona hechos"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-11-11T11:00:58.258Z",
+      "reason": "spec y plan aprobados tras la revisión adversarial; implementación y tests de zona hechos"
+    }
+  ]
+}

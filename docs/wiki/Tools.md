@@ -59,6 +59,15 @@ Resume un texto o archivo. Prefiérela a leer el archivo con `Read` cuando pasa 
 | `max_words` | `150` | Tope de palabras del resumen. |
 | `focus` | opcional | Qué te interesa (p. ej. `"cifras de configuración"`): el resumen lo prioriza y conserva literales sus datos concretos. Va saneado a una línea de 200 caracteres. |
 
+**Una entrada pequeña con tabla va al modelo largo** (#650), con la misma regla y el mismo
+detector que `local_extract` (HTML, ARIA, Markdown/GFM, CSV o TSV; ver más abajo): el modelo
+mecánico rellenó una celda vacía de un CSV con la celda vecina. El resumen termina con un
+`[local-delegate warning: …]` que nombra el formato visto, la fila del log de uso lleva
+`role_reason: "table"` y ese resumen no toma el camino por secciones aunque
+`LOCAL_DELEGATE_STRUCTURED_SUMMARY=1` (ese camino lo abre solo el tamaño). Cuesta lo mismo que en
+`local_extract`: más latencia y quizá cargar el modelo largo. `LOCAL_DELEGATE_SUMMARIZE_TABLE_LONG=0`
+en el entorno del servidor lo apaga (se lee al arrancar).
+
 Enruta sola al modelo de contexto largo cuando la entrada es grande. Si aun así no cabe, hace
 map-reduce: el log del panel guarda **una** entrada con `chunks: N`, no N entradas. Si algún
 trozo se corta por `max_tokens`, se parte y se reintenta (desde la 0.43.0; antes el parcial cortado
@@ -193,8 +202,13 @@ Dos cosas que conviene saber y solo estaban en el código:
   llamada va al rol `long`, también con un solo campo. Motivo: el modelo mecánico contestaba con el
   valor de otra fila en 8 de las 16 tablas pequeñas medidas (y en 7 de 8 claves pedidas solas);
   medido por la propia tool, el largo no cruzó en ninguna de esas 8 (0 de 8 casos) ni falló
-  ninguna de las 44 claves de las limpias. La respuesta lo dice en `_local_delegate.role_reason`
-  (`{"role": "long", "reason": "table", "notice": …}`), también en una respuesta con
+  ninguna de las 44 claves de las limpias. Desde el #650 también cuentan como tabla una tabla GFM
+  sin tuberías externas (`Seats | Domains` sobre `--- | ---`), el separador compacto `|-|-|`, un
+  `role="table"`/`"grid"`/`"row"` de ARIA y tres o más filas seguidas de CSV (con comas o punto y
+  coma, dos o más por fila) o de TSV, con el mismo número de separadores fuera de comillas y sin
+  pinta de prosa ni de código. La respuesta lo dice en `_local_delegate.role_reason`
+  (`{"role": "long", "reason": "table", "format": "html"|"aria"|"markdown"|"csv"|"tsv",
+  "notice": …}`), también en una respuesta con
   `error`/`raw`; no lo lleva si la entrada ya iba a `long` por tamaño y no toca `warning`. La fila
   del log de uso lleva `role_reason: "table"`. El prompt es el mismo; la llamada usa los
   parámetros del rol `long` y su respaldo.
@@ -205,10 +219,12 @@ Dos cosas que conviene saber y solo estaban en el código:
     modelo, los demás clientes que lo comparten lo ven arrancando.
   - **Cómo se apaga**: `LOCAL_DELEGATE_EXTRACT_TABLE_LONG=0` en el entorno del servidor, que la
     lee al arrancar.
-  - **Lo que no ve**: CSV, TSV, una tabla GFM sin tuberías externas (`Seats | Domains`, un solo
-    `|` por línea), el separador `|-|-|` y las rejillas de `<div>` siguen en el modelo mecánico y
-    pueden cruzar. Del lado de subir de más: un `<tr` en una cadena de un JSON, un bloque de código
-    o un diff también sube.
+  - **Lo que no ve**: un CSV de dos columnas (una coma por línea es media prosa), filas con celdas
+    entre comillas que ocupan varias líneas, tablas alineadas con espacios y las rejillas de
+    `<div>` que solo lo dicen con clases (`row`, `cell`, `grid`, que también maquetan páginas sin
+    tabla) siguen en el modelo mecánico y pueden cruzar. Del lado de subir de más: un `<tr` en una
+    cadena de un JSON, un bloque de código o un diff también sube, y una enumeración corta en
+    prosa (`Rojo, verde, azul y rosa.` en tres líneas seguidas) puede pasar por CSV.
   - **Lo que queda fuera**: el caso que abrió el #586 (33 KB, ya iba a `long`, el valor de una fila
     que nadie pidió) no queda arreglado, y no hay aviso de valor cruzado (su detector dio un aviso
     en falso en la prueba y vuelve a diseño). Un cruce que quede sale en silencio.

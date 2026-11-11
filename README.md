@@ -260,7 +260,8 @@ cámbialos por los de tu backend.
 | `LOCAL_DELEGATE_MAX_IMAGE_MB` | `8` | Tope de tamaño de imagen para `local_describe_image` |
 | `LOCAL_DELEGATE_DUMP_CHUNK_NOTES` | *(vacío: apagado)* | Carpeta local donde cada operación troceada deja la salida de cada paso; solo para medir, nunca sale de la máquina |
 | `LOCAL_DELEGATE_LONG_INPUT_CHARS` | `6000` | Umbral mecánico↔largo |
-| `LOCAL_DELEGATE_EXTRACT_TABLE_LONG` | `1` | `local_extract` manda al modelo largo una entrada por debajo del umbral que trae una tabla HTML o Markdown, y lo dice en `role_reason` (respuesta y log). Tarda más y puede cargar el modelo; `0` lo apaga |
+| `LOCAL_DELEGATE_EXTRACT_TABLE_LONG` | `1` | `local_extract` manda al modelo largo una entrada por debajo del umbral que trae una tabla (HTML, ARIA, Markdown/GFM, CSV o TSV), y lo dice en `role_reason` (respuesta, con el formato, y log). Tarda más y puede cargar el modelo; `0` lo apaga |
+| `LOCAL_DELEGATE_SUMMARIZE_TABLE_LONG` | `1` | La misma regla para `local_summarize`: el resumen acaba con un aviso que nombra el formato y la fila del log lleva `role_reason`; `0` lo apaga |
 | `LOCAL_DELEGATE_CHUNK_CHARS` | `3500` | Tamaño de trozo al partir documentos largos (`local_translate`, `local_delegate`) |
 | `LOCAL_DELEGATE_CHUNK_MAX_TOKENS` | `2048` | Techo de `max_tokens` por trozo |
 | `LOCAL_DELEGATE_CHUNK_MIN_CHARS` | `400` | Trozo mínimo: por debajo ya no se vuelve a partir |

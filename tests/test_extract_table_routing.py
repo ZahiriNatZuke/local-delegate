@@ -105,10 +105,15 @@ def _rows(tmp_path: Path, tool: str = "local_extract") -> list[dict]:
     return [row for row in rows if row.get("tool") == tool]
 
 
-def _expected_reason() -> dict:
+#: #650: the table format `role_reason` names, by the extension of the research's inputs.
+_FORMAT_BY_SUFFIX = {".html": "html", ".md": "markdown"}
+
+
+def _expected_reason(fmt: str = "html") -> dict:
     return {
         "role": "long",
         "reason": "table",
+        "format": fmt,
         "notice": i18n.t("mcp.warning.extract_role_reason_table"),
     }
 
@@ -150,7 +155,8 @@ def test_every_small_case_with_a_table_goes_to_long(case_id, backend, tmp_path):
     data = server.local_extract(fields=case["fields"], path=_path(case))
 
     assert backend.models == [LONG]
-    assert data["_local_delegate"]["role_reason"] == _expected_reason()
+    fmt = _FORMAT_BY_SUFFIX[Path(case["file"]).suffix]
+    assert data["_local_delegate"]["role_reason"] == _expected_reason(fmt)
     assert [row.get("role_reason") for row in _rows(tmp_path)] == ["table"]
 
 
@@ -222,18 +228,39 @@ def test_the_switch_is_on_by_default_and_registered(backend):
 # --- REQ-015: only `local_extract` ------------------------------------------------------------
 
 
-def test_the_other_three_tools_stay_on_the_mechanical_model(backend, tmp_path):
+def test_lint_summary_and_translate_stay_on_the_mechanical_model(backend, tmp_path):
+    # #650: `local_summarize` left this list: it has its own rule (`test_summarize_table_routing`).
     case = _case("06-")
     backend.answer_with("- a summary line")
 
-    server.local_summarize(text=_text(case))
     server.local_lint_summary(text=_text(case))
     server.local_translate(target_lang="en", text=_text(case))
 
-    assert backend.models, "the three tools reached the backend"
-    assert set(backend.models) == {MECHANICAL}, "the other three tools stay on mechanical"
-    for tool in ("local_summarize", "local_lint_summary", "local_translate"):
+    assert backend.models, "the two tools reached the backend"
+    assert set(backend.models) == {MECHANICAL}, "lint_summary and translate stay on mechanical"
+    for tool in ("local_lint_summary", "local_translate"):
         assert all("role_reason" not in row for row in _rows(tmp_path, tool)), tool
+
+
+@pytest.mark.parametrize(
+    ("text", "fmt"),
+    [
+        ("plan,seats,price\nbasic,,9\npro,20,29\n", "csv"),
+        ("plan\tseats\tprice\nbasic\t5\t9\npro\t20\t29\n", "tsv"),
+        ("Plan | Seats\n--- | ---\nBasic | 5\n", "markdown"),
+        ("| Plan | Seats |\n|-|-|\n| Basic | 5 |\n", "markdown"),
+        ('<div role="table"><div role="row">Basic 5</div></div>', "aria"),
+    ],
+    ids=["csv", "tsv", "gfm-without-outer-pipes", "compact-separator", "aria"],
+)
+def test_the_shapes_of_650_go_to_long_and_name_their_format(backend, tmp_path, text, fmt):
+    backend.answer_with(_answer(["seats"]))
+
+    data = server.local_extract(fields=["seats"], text=text)
+
+    assert backend.models == [LONG]
+    assert data["_local_delegate"]["role_reason"] == _expected_reason(fmt)
+    assert [row.get("role_reason") for row in _rows(tmp_path)] == ["table"]
 
 
 # --- REQ-016: `role_reason` in the answer, also an error one; never in `warning` --------------
@@ -472,5 +499,6 @@ def test_the_docstring_names_role_reason_and_its_switch():
 
 def test_the_server_calls_the_rule_and_does_not_repeat_it():
     source = Path(server.__file__).read_text(encoding="utf-8")
-    assert "table_detect.has_table(" in source
+    # #650: the server asks the format (`table_format`), of which `has_table` is the yes or no.
+    assert "table_detect.table_format(" in source
     assert '"<table"' not in source and "'<table'" not in source
