@@ -4,9 +4,9 @@
   "title": "local_extract: aviso de valor cruzado entre claves (cross_filled_keys, #650)",
   "mode": "standard",
   "traceability": "strict",
-  "status": "verifying",
+  "status": "closed",
   "createdAt": "2026-11-11T10:19:06.079Z",
-  "updatedAt": "2026-11-11T11:09:37.923Z",
+  "updatedAt": "2026-11-11T11:24:34.277Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -21,22 +21,22 @@
       "actor": "user"
     },
     "quality": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-11-11T11:24:33.063Z",
+      "evidence": "PR #659 CI 22/22 green; suite local -n 2 7477 passed (fallo de nombres arreglado); sdd check ok",
+      "actor": "user"
     },
     "conformance": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-11-11T11:24:33.660Z",
+      "evidence": "review.md deep: dos jueces y seguridad; hallazgos corregidos y añadidos al conjunto; conforms-with-notes",
+      "actor": "user"
     },
     "memory": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-11-11T11:24:33.871Z",
+      "evidence": "handoff.md y brief.md L2; sin secretos ni datos personales",
+      "actor": "user"
     }
   },
   "history": [
@@ -104,6 +104,51 @@
       "to": "verifying",
       "at": "2026-11-11T11:09:37.923Z",
       "reason": "T1-T5 hechas; puerta de medición en verde"
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-11-11T11:24:33.063Z",
+      "evidence": "PR #659 CI 22/22 green; suite local -n 2 7477 passed (fallo de nombres arreglado); sdd check ok",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "verifying",
+      "to": "result-review",
+      "at": "2026-11-11T11:24:33.253Z",
+      "reason": "verificación completa"
+    },
+    {
+      "type": "gate",
+      "gate": "conformance",
+      "status": "approved",
+      "at": "2026-11-11T11:24:33.660Z",
+      "evidence": "review.md deep: dos jueces y seguridad; hallazgos corregidos y añadidos al conjunto; conforms-with-notes",
+      "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "memory",
+      "status": "approved",
+      "at": "2026-11-11T11:24:33.871Z",
+      "evidence": "handoff.md y brief.md L2; sin secretos ni datos personales",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "result-review",
+      "to": "closing",
+      "at": "2026-11-11T11:24:34.072Z",
+      "reason": "puertas aprobadas"
+    },
+    {
+      "type": "transition",
+      "from": "closing",
+      "to": "closed",
+      "at": "2026-11-11T11:24:34.277Z",
+      "reason": "PR #659 abierto en verde; lo mezcla la sesión principal"
     }
   ]
 }
