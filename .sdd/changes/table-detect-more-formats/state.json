@@ -4,9 +4,9 @@
   "title": "Detector de tablas: GFM sin tuberías externas, |-|-|, CSV, TSV y ARIA; local_summarize sube a long con tabla (#650)",
   "mode": "lite",
   "traceability": "strict",
-  "status": "verifying",
+  "status": "closed",
   "createdAt": "2026-11-11T10:19:44.741Z",
-  "updatedAt": "2026-11-11T11:00:58.258Z",
+  "updatedAt": "2026-11-11T11:38:38.118Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -21,22 +21,22 @@
       "actor": "user"
     },
     "quality": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-11-11T11:38:29.833Z",
+      "evidence": "PR #658 CI 22/22 en verde en 30ed7e8e; suite local 7414 passed con -n 2 (2 fallos arreglados); 12 mutantes matados; sdd check ok",
+      "actor": "user"
     },
     "conformance": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-11-11T11:38:37.320Z",
+      "evidence": "review.md standard: dos jueces, conforms-with-notes; el bloqueante del juez A (CHANGELOG) y los no bloqueantes resueltos; sdd check ok",
+      "actor": "user"
     },
     "memory": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-11-11T11:38:37.874Z",
+      "evidence": "handoff.md y Log L2 de brief.md; sin secretos ni datos personales",
+      "actor": "user"
     }
   },
   "history": [
@@ -90,6 +90,51 @@
       "to": "verifying",
       "at": "2026-11-11T11:00:58.258Z",
       "reason": "spec y plan aprobados tras la revisión adversarial; implementación y tests de zona hechos"
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-11-11T11:38:29.833Z",
+      "evidence": "PR #658 CI 22/22 en verde en 30ed7e8e; suite local 7414 passed con -n 2 (2 fallos arreglados); 12 mutantes matados; sdd check ok",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "verifying",
+      "to": "result-review",
+      "at": "2026-11-11T11:38:30.130Z",
+      "reason": "quality aprobada"
+    },
+    {
+      "type": "gate",
+      "gate": "conformance",
+      "status": "approved",
+      "at": "2026-11-11T11:38:37.320Z",
+      "evidence": "review.md standard: dos jueces, conforms-with-notes; el bloqueante del juez A (CHANGELOG) y los no bloqueantes resueltos; sdd check ok",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "result-review",
+      "to": "closing",
+      "at": "2026-11-11T11:38:37.631Z",
+      "reason": "conformance aprobada"
+    },
+    {
+      "type": "gate",
+      "gate": "memory",
+      "status": "approved",
+      "at": "2026-11-11T11:38:37.874Z",
+      "evidence": "handoff.md y Log L2 de brief.md; sin secretos ni datos personales",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "closing",
+      "to": "closed",
+      "at": "2026-11-11T11:38:38.118Z",
+      "reason": "puertas aprobadas; PR #658 en verde, sin mezclar (lo mezcla la sesión principal)"
     }
   ]
 }

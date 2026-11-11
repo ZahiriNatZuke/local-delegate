@@ -33,7 +33,8 @@
 | ruff format --check (ficheros tocados) | sí | pass | 6 files already formatted |
 | pytest de la zona (5 ficheros) | sí | pass | 222 passed tras los arreglos de la revisión |
 | mutantes de control positivo (12) | sí | pass | los 12 matados (9 y luego 3 de la revisión: coma entre dígitos, `;` final, `delimited`), ficheros restaurados |
-| pytest suite entera con -n 2 | no | skip | pausa por recursos ordenada por el coordinador; se corta y queda para cuando avise (o el CI del PR) |
+| pytest suite entera con -n 2 | sí | pass | 7414 passed, 2 failed y arreglados: léxico de nombres (palabras nuevas clasificadas) y `register.js` que dejó en el árbol una corrida cortada (borrado, el test pasa) |
+| CI del PR, primer push | sí | fail y arreglado | Windows tardó 1,2 s en dos entradas hostiles; detector reescrito con métodos de `str` en dos pasos: peor caso local 0,19 s en 17 entradas de 1 MB |
 
 ## Quality checks
 
