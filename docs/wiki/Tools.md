@@ -187,6 +187,14 @@ Dos cosas que conviene saber y solo estaban en el código:
   `## Tareas`). Si un campo pide elementos (`tareas_con_lineas`, `requisitos_con_lineas`) y el
   modelo solo da el rango del apartado que los contiene, el campo va en
   `_local_delegate.section_only_keys` con aviso: lee ese rango (#633).
+- **Valor de otra fila** (#650). Si el valor de una clave solo aparece en una fila o línea
+  etiquetada de la entrada (tabla HTML, Markdown, CSV o TSV, clave de un JSON, `etiqueta: valor`)
+  cuya etiqueta casa mejor con otra clave pedida, la clave va en
+  `_local_delegate.cross_filled_keys` (`{clave: {"row", "other_key"}}`) con aviso. El valor no se
+  toca. El valor tiene que ser la celda (con o sin unidad) o estar hecho de celdas de la fila, no
+  un trozo ni prosa alrededor. Calla si el valor se repite en la entrada, si ninguna otra clave casa
+  de verdad con la fila (dos palabras, o una si una contiene a la otra), con empates, con valores
+  triviales (booleanos, sí/no, una cifra) y con los campos de ubicación.
 - **Una entrada pequeña con tabla va al modelo largo** (#586). Por debajo de
   `LOCAL_DELEGATE_LONG_INPUT_CHARS`, si la entrada trae una etiqueta `<table` o `<tr` (seguida de
   blanco, `>` o `/`) o una línea con dos o más `|` seguida de su línea separadora (con `--`), la

@@ -6,6 +6,27 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Añadido
+
+- **`local_extract` avisa de un valor que solo está en la fila de otra clave pedida (#650).** Si el
+  valor de una clave (texto, número, o los textos y números de una lista o un objeto) sale de una
+  sola fila o línea etiquetada de la entrada (fila de tabla HTML, Markdown, CSV o TSV, clave de un
+  JSON o línea `etiqueta: valor`), ni el valor ni esa celda se repiten en otra parte, y otra clave
+  pedida casa con la etiqueta de la fila mejor que la propia, la clave va en
+  `_local_delegate.cross_filled_keys` (`{clave: {"row", "other_key"}}`) con aviso. Es el modelo
+  repartiendo las filas por posición: `licensed_user_limits` con la fila «Custom domains». Solo
+  avisa: el valor no se toca ni pasa a null. Para no avisar en falso: el valor tiene que ser la
+  celda (con o sin unidad, `49` o `49 USD`) o estar hecho de celdas de esa fila, nunca un trozo
+  de celda (`currency` = `USD` de «Price: 49 USD») ni prosa alrededor de una celda (un
+  `product_summary` que cita el peso); la otra clave tiene que casar de verdad (dos palabras en
+  común, o una si una contiene a la otra: `shipping_cost` no casa con «Retail cost (USD)»); y
+  calla con valores repetidos (el `39` de «Retail cost (USD)» y de «Noise level (dB)»), con
+  empates, con filas que no son de ninguna clave pedida, con valores triviales (booleanos, sí/no,
+  una cifra) y con los campos de ubicación (`…_con_lineas`). Medido sobre 32 tablas nuevas y los 24
+  casos a ciegas del #586 con respuestas escritas a mano, y sobre 58 respuestas reales grabadas de
+  los modelos locales: 0 avisos en falso y 72 cruces detectados, los dos del #586 entre ellos. Los
+  cruces con valores repetidos, empates o etiquetas en otro idioma siguen sin aviso.
+
 ## [0.51.0] - 2026-11-10
 
 Mediciones más honestas y menos respuestas equivocadas en silencio. Cada fila del log de uso guarda
