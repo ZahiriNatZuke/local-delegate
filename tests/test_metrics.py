@@ -191,6 +191,13 @@ def test_api_backend_unavailable(monkeypatch):
         "running_ok": False,  # /running ni se pide con /models caído (REQ-013)
         "models": [],
         "models_stale": True,
+        # Each role's model with the daemon's config, for `doctor` (`service.role_models`).
+        "role_models": {
+            "mechanical": config.MODEL_MECHANICAL,
+            "long": config.MODEL_LONG,
+            "code": config.MODEL_CODE,
+            "vision": config.MODEL_VISION,
+        },
         "cause": "transport",
         "label": "fallo de red",
         "detail": "fallo de red con test-backend (ConnectError)",

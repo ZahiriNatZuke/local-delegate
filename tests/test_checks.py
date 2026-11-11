@@ -53,7 +53,10 @@ def make_ctx(home, **kwargs):
             "pid": 42,
             "mcp_url": f"http://{host}:{port}/mcp",
         },
-        "backend_models": lambda: BackendView(True, "", None, "direct"),
+        # `/models` lists the model of every role, so `service.role_models` is `ok` like the rest.
+        "backend_models": lambda: BackendView(
+            True, "", None, "direct", tuple(checks.role_models().values())
+        ),
         "version_of": lambda component, cfg: (probes.RECOMMENDED_VERSIONS[component], None),
         # Igual que el daemon: **la instalada**, no una fija. Con una fija, el check de versión
         # publicada saldría `warn` u `ok` según la versión que lleve el repo ese día.
@@ -111,8 +114,8 @@ def test_registry_ids_are_unique_and_groups_are_known():
 
 
 def test_check_ids_exact():
-    """A6 (REQ-011) and REQ-009: the 34 exact ids, in English. An id is a contract with its readers."""
-    assert len(checks.CHECKS) == 34
+    """A6 (REQ-011) and REQ-009: the 35 exact ids, in English. An id is a contract with its readers."""
+    assert len(checks.CHECKS) == 35
     assert {check.id for check in checks.CHECKS} == {
         "cli.path",
         "cli.published",
@@ -139,6 +142,7 @@ def test_check_ids_exact():
         "mod.read_overlap",
         "service.daemon",
         "service.backend",
+        "service.role_models",
         "service.credential",
         "service.daemon_auth",
         "service.desktop_auth",
@@ -1372,6 +1376,7 @@ _NUMBER_WORDS = {
     32: "treinta y dos",
     33: "treinta y tres",
     34: "treinta y cuatro",
+    35: "treinta y cinco",
 }
 _NUMBER_WORDS_WITHOUT_NOUN = {**_NUMBER_WORDS, 21: "veintiuno", 31: "treinta y uno"}
 
