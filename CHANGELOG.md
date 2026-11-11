@@ -6,6 +6,18 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Corregido
+
+- **Un mirror de apt lento o sin DNS ya no deja el CI de main en rojo.** Tras la 0.52.0, `lint`
+  agotó los 5 minutos de `playwright install --with-deps` y `test-lang-es` salió con el código 100
+  de apt, sin ningún cambio de código: el runner no resolvía los mirrors de Ubuntu. Ahora, en los
+  dos trabajos, el navegador sale de una caché atada al sistema y a la versión exacta de playwright
+  del lock y solo se descarga si la caché falla; y apt solo se toca si Chromium no arranca con las
+  librerías que ya trae la imagen. En ese caso hay tres intentos de 2 minutos como mucho cada uno,
+  con el tope corriendo como root para que un `apt-get` colgado no deje el lock tomado
+  (`scripts/ci_playwright_system_packages.sh`). `tests/test_ci_gate.py` ata esa forma. Sin efecto
+  para quien usa el paquete.
+
 ## [0.52.0] - 2026-11-11
 
 El panel se filtra por proyecto, menos valores cambiados de fila sin aviso y un diagnóstico que ve
