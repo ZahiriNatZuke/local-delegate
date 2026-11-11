@@ -31,8 +31,8 @@
 | --- | --- | --- | --- |
 | ruff check (src/local_delegate y tests tocados) | sí | pass | All checks passed |
 | ruff format --check (ficheros tocados) | sí | pass | 6 files already formatted |
-| pytest de la zona (5 ficheros) | sí | pass | 215 passed |
-| mutantes de control positivo (9) | sí | pass | los 9 matados, ficheros restaurados |
+| pytest de la zona (5 ficheros) | sí | pass | 222 passed tras los arreglos de la revisión |
+| mutantes de control positivo (12) | sí | pass | los 12 matados (9 y luego 3 de la revisión: coma entre dígitos, `;` final, `delimited`), ficheros restaurados |
 | pytest suite entera con -n 2 | no | skip | pausa por recursos ordenada por el coordinador; se corta y queda para cuando avise (o el CI del PR) |
 
 ## Quality checks
