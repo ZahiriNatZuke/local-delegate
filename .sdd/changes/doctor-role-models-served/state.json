@@ -4,9 +4,9 @@
   "title": "doctor: cada rol tiene su modelo servido",
   "mode": "lite",
   "traceability": "strict",
-  "status": "result-review",
+  "status": "closed",
   "createdAt": "2026-11-11T10:19:15.753Z",
-  "updatedAt": "2026-11-11T10:58:52.745Z",
+  "updatedAt": "2026-11-11T10:59:44.698Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -33,10 +33,10 @@
       "actor": "doctor-role-models-agent"
     },
     "memory": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-11-11T10:59:44.563Z",
+      "evidence": "Sin nota aparte: lo durable va en el CHANGELOG, el PR #656 y review.md; la jornada del vault la escribe la sesion principal",
+      "actor": "doctor-role-models-agent"
     }
   },
   "history": [
@@ -120,6 +120,28 @@
       "at": "2026-11-11T10:58:52.745Z",
       "evidence": "review.md: 2 judges, conforms after F1-F9; F10-F11 accepted and recorded",
       "actor": "doctor-role-models-agent"
+    },
+    {
+      "type": "transition",
+      "from": "result-review",
+      "to": "closing",
+      "at": "2026-11-11T10:59:44.375Z",
+      "reason": "conformance approved; PR #656 open"
+    },
+    {
+      "type": "gate",
+      "gate": "memory",
+      "status": "approved",
+      "at": "2026-11-11T10:59:44.563Z",
+      "evidence": "Sin nota aparte: lo durable va en el CHANGELOG, el PR #656 y review.md; la jornada del vault la escribe la sesion principal",
+      "actor": "doctor-role-models-agent"
+    },
+    {
+      "type": "transition",
+      "from": "closing",
+      "to": "closed",
+      "at": "2026-11-11T10:59:44.698Z",
+      "reason": "PR #656 open with suite green; merge and live check by the main session"
     }
   ]
 }
