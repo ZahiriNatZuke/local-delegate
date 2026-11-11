@@ -375,7 +375,7 @@ def _fits(key: frozenset[str], label: frozenset[str]) -> int:
     shared = len(key & label)
     if shared > 1:
         return shared
-    if shared and (key <= label or label <= key):
+    if shared and (key.issubset(label) or label.issubset(key)):
         return 1
     return 0
 
