@@ -1,0 +1,117 @@
+{
+  "schemaVersion": 1,
+  "slug": "extract-diff-files-names",
+  "title": "local_extract: nombres de campo de ficheros y hunks de un diff por programa, sin null silencioso (#665)",
+  "mode": "lite",
+  "traceability": "strict",
+  "status": "result-review",
+  "createdAt": "2026-11-16T15:54:39.440Z",
+  "updatedAt": "2026-11-16T16:08:51.159Z",
+  "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-11-16T15:57:34.284Z",
+      "evidence": "spec.md: 5 requisitos con test; control positivo en brief.md L2",
+      "actor": "user"
+    },
+    "plan": {
+      "status": "approved",
+      "updatedAt": "2026-11-16T15:57:34.719Z",
+      "evidence": "plan.md: 3 tareas trazadas a REQ-001..005",
+      "actor": "user"
+    },
+    "quality": {
+      "status": "approved",
+      "updatedAt": "2026-11-16T16:08:50.927Z",
+      "evidence": "pytest -n 1 vecindad 1060 passed + 175 tras ajuste; control 15/22 rojos en main; ruff check/format ok; sdd check ok",
+      "actor": "user"
+    },
+    "conformance": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "memory": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-11-16T15:54:39.440Z",
+      "reason": "SDD change created"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "specifying",
+      "at": "2026-11-16T15:57:27.389Z",
+      "reason": "issue y log leidos; reproducido con backend doblado (15 fallos en main)"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-11-16T15:57:34.284Z",
+      "evidence": "spec.md: 5 requisitos con test; control positivo en brief.md L2",
+      "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-11-16T15:57:34.719Z",
+      "evidence": "plan.md: 3 tareas trazadas a REQ-001..005",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-11-16T15:57:34.945Z",
+      "reason": "spec aprobada"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "plan-review",
+      "at": "2026-11-16T15:57:35.226Z",
+      "reason": "plan escrito"
+    },
+    {
+      "type": "transition",
+      "from": "plan-review",
+      "to": "implementing",
+      "at": "2026-11-16T15:57:35.488Z",
+      "reason": "plan aprobado"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-11-16T16:07:21.113Z",
+      "reason": "T1-T3 hechas"
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-11-16T16:08:50.927Z",
+      "evidence": "pytest -n 1 vecindad 1060 passed + 175 tras ajuste; control 15/22 rojos en main; ruff check/format ok; sdd check ok",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "verifying",
+      "to": "result-review",
+      "at": "2026-11-16T16:08:51.159Z",
+      "reason": "verificacion local completa; falta la revision de dos jueces"
+    }
+  ]
+}

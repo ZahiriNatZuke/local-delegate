@@ -221,6 +221,8 @@
   "mcp.warning.extract_dropped_keys": "el modelo devolvió claves que no se pidieron, fuera de los datos (sus valores van en `dropped`): {fields}",
   "mcp.warning.extract_missing_keys": "el modelo omitió estas claves pedidas, se devuelven a null: {fields}",
   "mcp.warning.extract_renamed_keys": "el modelo escribió claves pedidas de otra forma, se emparejaron: {pairs}",
+  "mcp.warning.extract_diff_unparsed": "{fields}: en este `.patch`/`.diff` el programa no encontró cabeceras de fichero (`diff --git`, `--- `/`+++ `); el valor es del modelo y puede faltar",
+  "mcp.warning.extract_diff_null_hint": "{fields}: ningún trozo del diff dio valor; `files_with_lines` y `files_and_hunks_with_lines` se responden por programa con el parche entero (cada fichero y sus hunks, en líneas del parche)",
   "mcp.warning.extract_null_in_chunks": "documento procesado en {pieces} trozos y ninguno dio valor para: {fields}; ese null puede significar «no visto», no «no existe»",
   "mcp.warning.extract_lines_unverified": "líneas citadas que no contienen lo que el valor nombra, o fuera del fichero; no te fíes de esos números: {lines}",
   "mcp.warning.extract_placeholder_keys": "el modelo puso un marcador de «sin dato» (como N/A) en estas claves, se devuelven a null (los valores van en `placeholder_keys`): {fields}",

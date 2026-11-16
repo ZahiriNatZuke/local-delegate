@@ -219,8 +219,13 @@ Dos cosas que conviene saber y solo estaban en el código:
   respuesta del modelo no sirve (no es JSON, no es un objeto o el backend falló), esos valores se
   mantienen, el resto queda a `null` y el motivo va en `_local_delegate.model_error` (`error`,
   `raw`) y en `warning`. Un nombre en singular (`fichero_con_lineas`) no cuenta. El modelo
-  recibe además la advertencia de que los números de `@@` no son líneas del parche. Otro campo de
-  líneas sobre un diff (`hunks_con_lineas`, `lineas_con_exec_con_lineas`) sigue siendo del modelo.
+  recibe además la advertencia de que los números de `@@` no son líneas del parche. Un campo que
+  pide los ficheros y sus hunks (`ficheros_y_hunks_con_lineas`, `files_and_hunks_with_lines`)
+  recibe igual, por programa, `ruta: primera-última (hunks: a-b, c-d)`; `changed_files_with_lines`
+  cuenta como campo de ficheros. Un `.patch` o `.diff` se lee como diff aunque traiga un preámbulo
+  antes del primer `diff --git`; si no tiene cabeceras de fichero, `warning` lo dice. Otro campo de
+  líneas sobre un diff (`hunks_con_lineas`, `lineas_con_exec_con_lineas`) sigue siendo del modelo;
+  si queda en `null` en todos los trozos, `warning` nombra los campos que da el programa.
 - **Una respuesta de líneas cortada por `max_tokens` se rehace en mitades** (#666). Si la llamada
   única con un campo de líneas se corta, se repite troceada (y el troceo vuelve a partir lo que
   siga cortado), y los campos de líneas se unen por programa. Si aun así no queda JSON, el error
