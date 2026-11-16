@@ -113,14 +113,17 @@ con saltos pudo contaminarla un swap.
   una excepción no controlada antes de escribir su evento. Solo se guarda el **tipo** de la
   excepción, nunca su mensaje. Antes esas llamadas, como las canceladas por plazo, no dejaban
   línea y el panel enseñaba 0 % de errores.
-- `tool_use_id` (solo si el cliente lo manda; Claude Code sí, Codex y los scripts no): el id de la
-  llamada en el transcript, leído de `_meta["claudecode/toolUseId"]`. Es la clave exacta para
-  cruzar la línea con el transcript.
+- `tool_use_id` (solo si el cliente lo manda; Claude Code y Codex sí, los scripts no): el id de la
+  llamada, leído de `_meta["claudecode/toolUseId"]` en Claude Code (la clave exacta para cruzar la
+  línea con el transcript) y de `_meta.callId` en Codex (ver
+  [Delegaciones de Codex](#delegaciones-de-codex)).
 - `caller_kind` (`main` o `subagent`), `caller_agent_type`, `caller_effort`, `caller_model` y
-  `caller_src` (`hook+transcript` o `hook`): **quién pidió** la delegación. Los escribe el servidor
-  a partir de la nota que deja el hook `record_call.py` (antes `anotar_llamada.py`; ver
-  [Coste equivalente](#coste-equivalente-a-precio-de-api)); sin nota, la línea no lleva ningún
-  `caller_*`. Nunca lleva el id de sesión.
+  `caller_src` (`hook+transcript` o `hook`; `codex-hook` en Codex): **quién pidió** la delegación.
+  Los escribe el servidor a partir de la nota que deja el hook `record_call.py` (antes
+  `anotar_llamada.py`; ver [Coste equivalente](#coste-equivalente-a-precio-de-api)); sin nota, la
+  línea no lleva ningún `caller_*`, salvo en Codex, que trae `caller_session_key` igual (ver
+  [Delegaciones de Codex](#delegaciones-de-codex)). Nunca lleva el id de sesión, solo esa clave de
+  un solo sentido.
 - `caller_project` y `caller_project_kind` (`self` u `other`): **desde qué proyecto** se pidió la
   delegación. Salen de la misma nota que los `caller_*`: el directorio de proyecto del transcript
   de la sesión principal, también cuando delega un subagente o el mod. Sin nota vigente, la fila no
@@ -776,12 +779,13 @@ cada hook, `recompute-cost` y los scripts, cada uno de su `LOG_DIR`. Si `LOCAL_D
 define en el lanzador de Claude Code y no en el daemon, o al revés, la sal difiere entre filas y
 eventos (y el mismo proyecto sale en dos grupos), igual que ya se partía el log.
 
-**Quién delegó, en tres columnas.** El total de `/api/stats` y cada fila de `by_client` traen
-`main_calls`, `subagent_calls`, `mod_calls` y `unknown_caller_calls`, que suman `calls`. La regla
-es una (`attribution.caller_column`): `mod` si la pidió el mod, aunque la fila diga `main`; el hilo
+**Quién delegó, por columnas.** El total de `/api/stats` y cada fila de `by_client` traen
+`main_calls`, `subagent_calls`, `mod_calls`, `codex_calls` y `unknown_caller_calls`, que suman
+`calls`. La regla es una (`attribution.caller_column`): `codex` si la pidió Codex, sea cual sea su
+hilo; `mod` si la pidió el mod, aunque la fila diga `main`; el hilo
 de la fila si es un dato real (trae `caller_src`, o su cruce es `exact`, `window` o `window+path`);
 `unknown` en lo demás, también cuando el hilo lo puso el respaldo. La tarjeta «Quién delegó» las
-enseña como Hilo principal, Subagentes y Mod, y «Sin dato» solo cuando no es cero.
+enseña como Hilo principal, Subagentes y Mod, y «Codex» y «Sin dato» solo cuando no son cero.
 
 **El histórico, con `recompute-cost`.** Las filas escritas antes de la 0.51.0 no llevan proyecto y
 caen en «Sin proyecto» hasta que el relleno se lo da: `local-delegate recompute-cost` lleva el
@@ -810,11 +814,39 @@ proceso.
 **Los scripts.** `scripts/measure_adoption.py` aparta el propio repo en las filas del log y en los
 eventos de hooks; un evento viejo sin `project_kind` se resuelve por su sesión con la raíz de
 proyectos (`--projects` para cambiarla). Su salida trae `excluded_self` y `unknown_project` (cada
-uno con `hooks` y `usage`), `delegations_by_caller` (`main`, `subagent`, `mod`, `unknown`) y
+uno con `hooks` y `usage`), `delegations_by_caller` (`main`, `subagent`, `mod`, `codex`, `unknown`) y
 `delegations_by_project_kind`. `scripts/measure_plugin_adoption.py` deja fuera las sesiones del
 propio repo (`excluded_self_sessions`) y da, por periodo, `with_delegation` (hilo principal),
 `with_subagent_delegation`, `with_mod_delegation` y `delegations_by_caller`; `pct` sigue saliendo
 solo del hilo principal. Los dos aceptan `--exclude-self` (por defecto) e `--include-self`.
+
+## Delegaciones de Codex
+
+Desde #669 cada delegación que pide Codex (cliente `codex-mcp-client`) dice de qué sesión vino.
+
+**De dónde sale cada campo.**
+
+| Campo de la fila | Origen | Sin el hook aprobado |
+|---|---|---|
+| `tool_use_id` | `_meta.callId` de la llamada (`call_…`; en *code mode*, `exec-<uuid>`) | igual |
+| `caller_session_key` | `_meta.sessionId`, guardado solo en hash (la misma clave que `?session=`) | igual |
+| `caller_kind`, `caller_agent_type` | la nota del hook `codex-mcp-call` (`agent_id`, `agent_type`) | no está |
+| `caller_model` | la nota: el modelo de Codex tal cual (`gpt-…`), sin precio de Claude | no está |
+| `caller_src` | `codex-hook` cuando hubo nota | no está |
+
+`callId` y `sessionId` solo se leen si el cliente es `codex-mcp-client`; de Claude Code se sigue
+leyendo solo `claudecode/toolUseId`. Nunca hay esfuerzo (Codex no lo manda), proyecto ni nada de un
+transcript. `_meta.sessionId` y el `session_id` del hook son el mismo valor en Codex 0.169.0 (los
+dos salen de `sess.session_id()`), así que la fila tiene la misma sesión con o sin hook. La nota es
+`codex-<id>.json` en el mismo directorio temporal que las de Claude Code, caduca a los diez
+minutos y no guarda `cwd`, `transcript_path`, la entrada de la tool ni el id de sesión en claro.
+
+**Dónde cuentan.** Son uso: entran en todas las cifras del panel. No se valoran: el coste las deja en
+el tramo «excluido» con motivo «no es Claude». No pasan por el relleno a posteriori: el relleno
+cruza con los transcripts de Claude Code, y una llamada de Codex del mismo segundo y la misma tool
+que una de Claude heredaba su modelo; ahora no se cruzan, y una entrada vieja de
+`attribution-AAAAMM.json` para una fila de Codex se ignora. En «Quién delegó» van en la columna
+«Codex» (`codex_calls`), y `/api/stats?session=<id de sesión de Codex>` da solo las de esa sesión.
 
 ## Delegaciones del mod y adopción del plugin
 

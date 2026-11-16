@@ -41,10 +41,13 @@ BUDGET_S = 0.050
 #: Los motivos son valores de máquina (REQ-033): el panel los recibe como claves de
 #: `excluded_by_reason` y no los pinta tal cual.
 NON_CLAUDE_CLIENTS = {
-    "codex-mcp-client": "not_claude",
+    clients.CODEX_CLIENT: "not_claude",
     # The read summary of Codex's `codex-tool-guard` hook (#670, `codex_reads.CLIENT_NAME`).
     "local-delegate-codex-read": "not_claude",
 }
+
+#: `caller_src` of a Codex row whose hook note was found (#669).
+CODEX_HOOK_SRC = "codex-hook"
 
 #: El cliente `mcp` es el de los scripts del repo: lo que hace es una prueba (test-windows-out-of-metrics).
 TEST_CLIENTS = {"mcp": "tests"}
@@ -278,13 +281,86 @@ def _note_session_key(note: dict) -> str | None:
     return None
 
 
+def is_codex_row(row: dict) -> bool:
+    """Whether Codex asked for the delegation of this row (or event): the ONE rule (#669)."""
+    return str(row.get("client") or "") == clients.CODEX_CLIENT
+
+
+def _is_codex_request() -> bool:
+    return clients.current_client() == clients.CODEX_CLIENT
+
+
+def read_codex_note(call_id: str, *, directory: Path | None = None) -> dict | None:
+    """The note `codex-mcp-call` left for that Codex call id, or `None`. Never raises."""
+    name = hook_common.codex_note_name(call_id)
+    if name is None:
+        return None
+    base = directory if directory is not None else hook_common.call_notes_dir()
+    try:
+        note = json.loads((base / name).read_text(encoding="utf-8"))
+    except (OSError, ValueError, TypeError):
+        return None
+    if (
+        isinstance(note, dict)
+        and note.get("tool_use_id") == call_id
+        and note.get("client") == "codex"
+    ):
+        return note
+    return None
+
+
+def resolve_codex_call(
+    call_id: str | None,
+    session_key: str | None,
+    *,
+    notes: Path | None = None,
+    now: float | None = None,
+) -> dict:
+    """The `caller_*` fields of a Codex call (#669); `{}` when nothing is known.
+
+    The session comes from `_meta.sessionId` (already a one-way key) and, without it, from the
+    note. The note of the `codex-mcp-call` hook adds the thread, the agent type and the Codex model
+    (as Codex names it: no Claude price applies). Never the effort (Codex does not send it), the
+    project nor anything of a transcript.
+    """
+    r: dict = {}
+    key = session_key if _valid_session_key(session_key) else None
+    note = read_codex_note(call_id, directory=notes) if call_id else None
+    if note is not None and not _note_fresh(note, time.time() if now is None else now):
+        note = None
+    if note is not None:
+        agent = note.get("agent_id")
+        r["caller_kind"] = "subagent" if agent else "main"
+        r["caller_src"] = CODEX_HOOK_SRC
+        entry_type = note.get("agent_type")
+        if agent and isinstance(entry_type, str) and entry_type:
+            r["caller_agent_type"] = entry_type
+        model = note.get("model")
+        if isinstance(model, str) and hook_common.CODEX_MODEL_PATTERN.fullmatch(model):
+            r["caller_model"] = model
+        if key is None:
+            key = _note_session_key(note)
+    if key is not None:
+        r["caller_session_key"] = key
+    return r
+
+
+def _valid_session_key(key: object) -> bool:
+    return _note_session_key({"session_key": key}) is not None
+
+
 def current_session_key() -> str | None:
     """The one-way key of the session behind the request in course, or `None` (issue #442).
 
     Only the hook's note, never the transcript: `server._inflight_start` asks for it when a
     delegation starts, when the transcript may not carry the call yet, and it must not memoize a
-    resolution without the model for the log line written later (`current_call`).
+    resolution without the model for the log line written later (`current_call`). For Codex, the
+    key of `_meta.sessionId` and, without it, the note of `codex-mcp-call` (#669).
     """
+    if _is_codex_request():
+        return resolve_codex_call(
+            clients.current_tool_use_id(), clients.current_codex_session_key()
+        ).get("caller_session_key")
     tool_use_id = clients.current_tool_use_id()
     if not tool_use_id:
         return None
@@ -299,8 +375,19 @@ def current_call() -> dict:
 
     Se memoriza en el dict que el middleware pone por petición (`clients.request_memory`),
     nunca en el módulo: en el daemon un dict del módulo crecería sin límite.
+
+    A Codex request goes by `resolve_codex_call` (#669): it may know its session without an id.
     """
     tool_use_id = clients.current_tool_use_id()
+    if _is_codex_request():
+        memo = clients.request_memory()
+        slot = f"codex:{tool_use_id}"
+        if memo is not None and slot in memo:
+            return memo[slot]
+        result = resolve_codex_call(tool_use_id, clients.current_codex_session_key())
+        if memo is not None:
+            memo[slot] = result
+        return result
     if not tool_use_id:
         return {}
     memo = clients.request_memory()
@@ -543,12 +630,17 @@ def project_kind(row: dict) -> str:
 
 
 def caller_column(row: dict) -> str:
-    """`mod`, `main`, `subagent` or `unknown`: the ONE rule of who asked (REQ-008), in this order.
+    """`codex`, `mod`, `main`, `subagent` or `unknown`: the ONE rule of who asked (REQ-008), in
+    this order.
 
-    `mod` first, because a mod row arrives with `caller_kind: main`. Then the row's
-    `caller_kind` only if it is real data: the row carries `caller_src` (the hook's note), or its
-    `match` is a real cross. The thread `cost.merge_row` fills in as a fallback is not data.
+    `codex` first (#669): every row of Codex has its own column, whatever its thread, and a Codex
+    `callId` that happens to start with `toolu_plugin_` is still not the mod. Then `mod`, because a
+    mod row arrives with `caller_kind: main`. Then the row's `caller_kind` only if it is real data:
+    the row carries `caller_src` (the hook's note), or its `match` is a real cross. The thread
+    `cost.merge_row` fills in as a fallback is not data.
     """
+    if is_codex_row(row):
+        return "codex"
     if is_mod_call(row):
         return "mod"
     kind = row.get("caller_kind")

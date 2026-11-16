@@ -1362,8 +1362,10 @@ def _probe_codex_plugin(ctx: Context) -> Result:
     return Result(worst, "; ".join(result.detail for result in chosen), " && ".join(fixes))
 
 
-def _codex_hooks_stale(ctx: Context, found: list) -> tuple[list[str], str | None]:
-    """(names of ours that are not what `install` would write now, a missing interpreter)."""
+def _codex_hooks_stale(ctx: Context, found: list) -> tuple[list[str], list[str], str | None]:
+    """(names of ours that are not what `install` would write now, names of ours that are not
+    there at all, a missing interpreter). A missing one is told apart (#669): adding it leaves the
+    others where they are, so only the new one waits for approval in `/hooks`."""
     expected = getattr(ctx.expected_ld_bin(), "path", None)
     specs = {spec.name: spec for spec in codex_hooks.SPECS}
     stale: list[str] = []
@@ -1384,8 +1386,8 @@ def _codex_hooks_stale(ctx: Context, found: list) -> tuple[list[str], str | None
         if fresh is None or item.name in counted or item.group != fresh:
             stale.append(item.name)
         counted.add(item.name)
-    stale.extend(name for name in specs if name not in counted)
-    return list(dict.fromkeys(stale)), missing_python
+    missing = [name for name in specs if name not in counted]
+    return list(dict.fromkeys(stale)), missing, missing_python
 
 
 def _probe_codex_hooks(ctx: Context) -> Result:
@@ -1412,9 +1414,19 @@ def _probe_codex_hooks(ctx: Context) -> Result:
         )
     if not seen.found:
         return Result(OK, i18n.t("doctor.probe.codex_hooks.none", path=seen.path))
-    stale, missing_python = _codex_hooks_stale(ctx, seen.found)
-    if stale or missing_python:
-        detail = i18n.t("doctor.probe.codex_hooks.stale", names=", ".join(stale), path=seen.path)
+    stale, missing, missing_python = _codex_hooks_stale(ctx, seen.found)
+    if stale or missing or missing_python:
+        parts = []
+        if stale or not missing:
+            # Without stale nor missing ones (only the interpreter) the text is the one it was.
+            parts.append(
+                i18n.t("doctor.probe.codex_hooks.stale", names=", ".join(stale), path=seen.path)
+            )
+        if missing:
+            parts.append(
+                i18n.t("doctor.probe.codex_hooks.missing", names=", ".join(missing), path=seen.path)
+            )
+        detail = "; ".join(parts)
         if missing_python:
             detail += "; " + i18n.t("doctor.probe.codex_hooks.no_python", python=missing_python)
         return Result(WARN, detail, CODEX_HOOKS_UPDATE_HINT)

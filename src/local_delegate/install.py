@@ -2906,7 +2906,8 @@ def _codex_hooks_bytes(path: Path, *, refuse_bom: bool = True) -> bytes | None:
 
 
 def _codex_hooks_action(opts: Options, codex: Path) -> Action:
-    """Issue #669: our two consultative hooks in `~/.codex/hooks.json`, next to the user's."""
+    """Issue #669: our Codex hooks (two consultative, one that notes each call) in
+    `~/.codex/hooks.json`, next to the user's."""
     codex_hooks = _sibling("codex_hooks")
     claude_plugin = _sibling("claude_plugin")
 

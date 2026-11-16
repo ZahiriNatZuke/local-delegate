@@ -103,21 +103,24 @@ def test_the_schema_check_can_fail():
 
 
 # --- REQ-001: the entries ------------------------------------------------------------------------
-def test_entries_are_two_command_handlers_without_args():
+def test_entries_are_command_handlers_without_args():
+    """One group per entry of `SPECS` (#669 adds `codex-mcp-call`; #670 and #671 add more)."""
     entries = codex_hooks.entries(PYTHON, "win32")
-    # #670 adds `PreToolUse` (`tests/test_codex_reads.py`); these are the two of #669.
-    entries = {k: v for k, v in entries.items() if k in {"UserPromptSubmit", "SubagentStart"}}
-    assert set(entries) == {"UserPromptSubmit", "SubagentStart"}
+    assert set(entries) == {spec.event for spec in codex_hooks.SPECS}
     flat = [(event, g) for event, groups in entries.items() for g in groups]
-    assert len(flat) == 2
+    assert len(flat) == len(codex_hooks.SPECS)
+    specs = {spec.name: spec for spec in codex_hooks.SPECS}
     for event, g in flat:
-        assert "matcher" not in g
+        spec = specs[codex_hooks.our_name(g)]
+        assert g.get("matcher") == spec.matcher and spec.event == event
         [only] = g["hooks"]
         assert set(only) == {"type", "command", "timeout"}
-        assert only["type"] == "command" and only["timeout"] == 30
-        assert codex_hooks.our_name(g) is not None
+        # Each spec carries its own time: `codex-tool-guard` (#670) waits for the read summary.
+        assert only["type"] == "command" and only["timeout"] == spec.timeout
     names = {codex_hooks.our_name(g): event for event, g in flat}
-    assert names == {"codex-prompt": "UserPromptSubmit", "codex-subagent-start": "SubagentStart"}
+    assert names["codex-prompt"] == "UserPromptSubmit"
+    assert names["codex-subagent-start"] == "SubagentStart"
+    assert specs["codex-prompt"].matcher is None and specs["codex-subagent-start"].matcher is None
 
 
 def test_the_hooks_file_passes_the_codex_parser_rules():

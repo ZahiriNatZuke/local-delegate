@@ -23,7 +23,7 @@ local-delegate uninstall             # revierte solo lo que instaló
 |---|---|---|
 | Entrada MCP | Claude Code (`claude mcp add-json --scope user`, o `~/.claude.json` si no está la CLI), `~/.codex/config.toml` y opencode (`opencode mcp add`, o `~/.config/opencode/opencode.json[c]` si no está la CLI) | `stdio` con `uvx` por defecto; `--mcp-mode http` apunta al daemon compartido |
 | Hooks | `~/.claude/hooks/local-delegate/` + registro en `~/.claude/settings.json` | `UserPromptSubmit`, `SubagentStart` (recordatorio de cargar las tools `local_*` en cada subagente, salvo en uno cuya lista cerrada de `tools:` no las trae, #664) y `record_call.py` (`PreToolUse` sobre `mcp__local-delegate__.*`) siempre; los de lectura (`PreToolUse`/`Read` y `PreToolUse`/`Bash\|PowerShell`) solo con `--enable-read-hook`, que los deja activos. `record_call.py` (antes `anotar_llamada.py`) no avisa ni bloquea: anota qué agente pidió cada delegación, con qué esfuerzo y en qué transcript, para que el log de uso guarde su modelo (ver [Savings & metrics](Savings-and-metrics.md#coste-equivalente-a-precio-de-api)) |
-| Hooks de Codex | `~/.codex/hooks.json`, junto a los hooks que ya tengas | dos hooks consultivos: `UserPromptSubmit` (el mismo aviso de tarea mecánica que en Claude Code) y `SubagentStart` (cómo usar las `local_*` con `path` en cada subagente). Con Codex instalado (o `--clients codex`) y una instalación por `uv tool`; Codex no los ejecuta hasta que los apruebas en `/hooks` (ver [Hooks de Codex](#hooks-de-codex)) |
+| Hooks de Codex | `~/.codex/hooks.json`, junto a los hooks que ya tengas | dos hooks consultivos: `UserPromptSubmit` (el mismo aviso de tarea mecánica que en Claude Code) y `SubagentStart` (cómo usar las `local_*` con `path` en cada subagente), y `codex-mcp-call` (`PreToolUse` sobre las tools de `local-delegate`), que solo anota quién pidió cada delegación. Con Codex instalado (o `--clients codex`) y una instalación por `uv tool`; Codex no los ejecuta hasta que los apruebas en `/hooks` (ver [Hooks de Codex](#hooks-de-codex)) |
 | Skill | `~/.claude/skills/local-delegation/SKILL.md` y `~/.config/opencode/skill/local-delegation/SKILL.md` | regla de oro + catálogo de tools |
 | Memoria | bloque entre marcadores en `~/.claude/CLAUDE.md`, `~/.codex/AGENTS.md` y `~/.config/opencode/AGENTS.md` | resumen corto de la regla, siempre cargado |
 | Idioma | `language.json` en el directorio de datos | el idioma de la sesión en que corre `install` (o `update`), para el daemon y los hooks, que no ven tu shell. La skill, el bloque y el catálogo de los subagentes se escriben en ese idioma. Ver [Idioma](Language.md) |
@@ -483,24 +483,29 @@ claude plugin test src/local_delegate/resources/claude-plugin/local-delegate
 
 ## Hooks de Codex
 
-Con Codex instalado (o `--clients codex`), `install` añade a `~/.codex/hooks.json` dos hooks consultivos (issue #669) y el del resumen de lecturas y el guard de escritura (issue #670):
+Con Codex instalado (o `--clients codex`), `install` añade a `~/.codex/hooks.json` cuatro hooks: dos consultivos y uno que solo anota (issue #669), y el del resumen de lecturas y el guard de escritura (issue #670):
 
 | Evento de Codex | Hook | Qué hace |
 |---|---|---|
 | `UserPromptSubmit` | `codex-prompt` | si el prompt es claramente mecánico (resumir, extraer, traducir…), le dice al modelo de qué tipo es y que evalúe la tool `local_*` específica con `path`; si no, calla |
 | `SubagentStart` | `codex-subagent-start` | le dice a cada subagente cómo usar las `local_*` con `path` ante un archivo grande |
 | `PreToolUse` (Bash, `apply_patch` y lecturas MCP) | `codex-tool-guard` | da el resumen local en lugar de una lectura grande de prosa por shell, lleva la cuenta de las lecturas por rangos y rechaza editar un fichero leído solo resumido hasta que leas literal el tramo; ver [Resumen de lecturas y guard de escritura](#resumen-de-lecturas-y-guard-de-escritura-en-codex) |
+| `PreToolUse`, matcher `^mcp__local[-_]delegate__` | `codex-mcp-call` | antes de cada llamada a una tool de `local-delegate`, también las anidadas de *code mode*, deja una nota con el modelo de Codex, si la pide un subagente (y su tipo) y la clave de un solo sentido de la sesión; no imprime nada ni bloquea |
 
-**Qué no cubre todavía.** Ningún hook mira las llamadas MCP a `local-delegate` (tampoco las de
-*code mode*): la atribución de cada delegación a su sesión de Codex es el siguiente paso de #669;
-la interfaz y los comandos sin modelo, #671.
+**Qué no cubre todavía.** La interfaz y los comandos sin modelo, #671. El matcher de
+`codex-mcp-call` va anclado (`^`) y acepta el nombre del servidor con `-` o con `_`, porque Codex
+puede sanear el guion; el propio hook vuelve a mirar el nombre de la tool, así que un matcher
+ensanchado a mano no anota llamadas de otros servidores.
 
 **Telemetría global y atribución por sesión.** El daemon cuenta todas las delegaciones, vengan de
 donde vengan: en el log de uso las de Codex salen con su cliente (`codex-mcp-client`) y fuera del
-coste equivalente. Lo que todavía no se sabe es **de qué sesión de Codex** vino cada una: eso es la
-atribución por sesión, el siguiente paso. Estos dos hooks no escriben en la telemetría de hooks
-(la serie de la ventana de medición es de Claude Code); cada despacho solo deja la hora en
-`codex-hooks-seen.json`, sin nada del prompt.
+coste equivalente. La **atribución por sesión** dice además de qué sesión de Codex vino cada una:
+el servidor lee del `_meta` de cada llamada `callId` y `sessionId` (solo si el cliente es
+`codex-mcp-client`; la sesión, solo en hash) y, con la nota de `codex-mcp-call`, el hilo, el tipo
+de agente y el modelo. Sin el hook aprobado la fila tiene igual su sesión. Qué campos lleva la fila
+y dónde se ven: [Savings & metrics](Savings-and-metrics.md#delegaciones-de-codex). Ningún hook de
+Codex escribe en la telemetría de hooks (la serie de la ventana de medición es de Claude Code);
+cada despacho solo deja la hora en `codex-hooks-seen.json`, sin nada del prompt ni de la llamada.
 
 **Cómo conviven con los tuyos.** Un grupo es nuestro solo si tiene un único manejador `command`,
 sin `commandWindows` ni `command_windows`, cuyo comando es solo el intérprete seguido de `-I -m local_delegate.hook codex-<nombre>`. Los tuyos no
@@ -522,13 +527,17 @@ dice por qué.
 `local-delegate` no la escribe por ti:
 
 1. `local-delegate install --clients codex`, con `local-delegate` instalado por `uv tool`.
-2. Abre Codex y escribe `/hooks`. Aparecen `codex-prompt`, `codex-subagent-start` y
-   `codex-tool-guard` como pendientes de revisar; apruébalos.
+2. Abre Codex y escribe `/hooks`. Aparecen `codex-prompt`, `codex-subagent-start`,
+   `codex-tool-guard` y `codex-mcp-call` como pendientes de revisar; apruébalos.
 3. Escribe un prompt mecánico, por ejemplo «resume este fichero en cinco viñetas»: el modelo
-   recibe el aviso. Pídele luego algo que lance un subagente, para `codex-subagent-start`.
+   recibe el aviso. Pídele luego algo que lance un subagente, para `codex-subagent-start`, y
+   que delegue algo en una tool `local_*`, para `codex-mcp-call`.
 4. `local-delegate doctor`: la línea «hooks de local-delegate en Codex» dice «aprobados en
-   /hooks: 3 de 3» y la hora en que vio despachar cada uno. Si tras aprobarlos dice «0 de 3»,
+   /hooks: 4 de 4» y la hora en que vio despachar cada uno. Si tras aprobarlos dice «0 de 4»,
    es un fallo: avísalo.
+
+Si ya tenías los primeros aprobados, `update` añade los que faltan (`codex-tool-guard`,
+`codex-mcp-call`) sin moverlos (siguen aprobados) y en `/hooks` solo quedan pendientes los nuevos.
 
 Si `doctor` dice que no son los de esta versión, `local-delegate update` los repone en su sitio y
 hay que aprobarlos otra vez en `/hooks`.
@@ -633,7 +642,7 @@ local-delegate doctor --home /tmp/x  # diagnostica contra un HOME simulado (solo
 | Andamiaje | MCP en Claude Code | la entrada `local-delegate` en `~/.claude.json` |
 | Andamiaje | MCP en Codex | la sección `[mcp_servers.local-delegate]` de `~/.codex/config.toml`, **también con sangría**: otros programas reescriben ese fichero a su manera (el plugin de JetBrains lo indenta entero y se come los comentarios). Con el marcador de apertura es nuestra y `[ OK ]`, aunque falte el de cierre; sin marcadores, `warn` y no se pisa |
 | Andamiaje | plugin de local-delegate en Codex | si el plugin de **Claude Code** se importó a mano en Codex (`codex plugin marketplace add` + `codex plugin add`): lee la caché `~/.codex/plugins/cache/<marketplace>/local-delegate/<versión>/hooks/hooks.json` y `[plugins."local-delegate@<marketplace>"]` de `~/.codex/config.toml`, sin lanzar `codex`. Codex 0.169.0 solo admite `description` y `hooks` arriba del todo: el `modules` del mod de Claude Code hace que **rechace el fichero entero** con un simple aviso al arrancar, aunque el proceso termine bien. Habilitado así, `warn` con `codex plugin remove local-delegate@<marketplace>` (quita el plugin y su caché y deja intacta la entrada MCP). Sin `modules` también es `warn`: Codex lo carga pero tira los `args` y no expande `${user_config.ld_bin}`. Deshabilitado (o solo en la caché, sin tabla en `config.toml`) o sin plugin, `[ OK ]`; sin `~/.codex`, `[ -- ]`. Una tabla sin `enabled` cuenta como habilitada, como en Codex. Con el formato de Codex, `[ OK ]`, pero eso no prueba que cargue ni que sus hooks estén aprobados: se mira en Codex con `/hooks`. `install` nunca pone este plugin en Codex: a Codex le da la entrada MCP y `AGENTS.md` (issue #668) |
-| Andamiaje | hooks de local-delegate en Codex | nuestros dos grupos en `~/.codex/hooks.json` (issue #669), sin lanzar `codex`. Dice por separado tres cosas: **configurados** (están en el fichero), **aprobados** (cuántos tienen `trusted_hash` bajo su clave en `[hooks.state]` de `~/.codex/config.toml`; eso no prueba que la aprobación siga valiendo, lo decide Codex al cargarlos) y **vistos despachar** (la hora del último despacho de cada uno, de `codex-hooks-seen.json` en el directorio de datos). Sin hooks nuestros, `[ OK ]` (son opcionales); si alguno falta, no es el de esta versión o su intérprete ya no existe, `warn` con `local-delegate update`, y tras reparar hay que aprobarlo otra vez en `/hooks`. Si Codex rechazaría el fichero entero (una clave que no conoce, o una marca BOM al principio), `warn`. Avisa también si `config.toml` tiene grupos de hooks en `[hooks]` (Codex dice al arrancar que carga los dos); `[hooks.state]` solo no cuenta. Sin `~/.codex`, `[ -- ]` |
+| Andamiaje | hooks de local-delegate en Codex | nuestros cuatro grupos en `~/.codex/hooks.json` (issues #669 y #670), sin lanzar `codex`. Dice por separado tres cosas: **configurados** (están en el fichero), **aprobados** (cuántos tienen `trusted_hash` bajo su clave en `[hooks.state]` de `~/.codex/config.toml`; eso no prueba que la aprobación siga valiendo, lo decide Codex al cargarlos) y **vistos despachar** (la hora del último despacho de cada uno, de `codex-hooks-seen.json` en el directorio de datos). Sin hooks nuestros, `[ OK ]` (son opcionales); si alguno falta, no es el de esta versión o su intérprete ya no existe, `warn` con `local-delegate update`, y tras reparar hay que aprobarlo otra vez en `/hooks`. Si Codex rechazaría el fichero entero (una clave que no conoce, o una marca BOM al principio), `warn`. Avisa también si `config.toml` tiene grupos de hooks en `[hooks]` (Codex dice al arrancar que carga los dos); `[hooks.state]` solo no cuenta. Sin `~/.codex`, `[ -- ]` |
 | Andamiaje | MCP en opencode | la clave `mcp.local-delegate` de `~/.config/opencode/opencode.json` **o** `opencode.jsonc` — opencode lee los dos y los fusiona |
 | Andamiaje | autocompletado del shell | el de `install --shell-completion`, si está: lee el manifiesto `installed.json` y compara cada fichero con el que genera la versión instalada **en el idioma del manifiesto** (así el veredicto no cambia con el idioma de la sesión), y mira que cada perfil listado siga teniendo el bloque que lo carga. No lanza ningún shell. Sin nada instalado, `[ OK ]` «no instalado (opcional)»; fichero de otra versión o distinto, `warn` con `local-delegate update`; fichero ausente, bloque borrado o ficheros sin manifiesto, `warn` con `local-delegate install --shell-completion`; manifiesto, fichero o perfil ilegible, `unknown` |
 | Servicios | daemon | `http://127.0.0.1:9393/api/daemon` (versión y pid), y si sirve una versión **distinta de la instalada** |

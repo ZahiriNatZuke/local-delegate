@@ -32,6 +32,20 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   diálogo a un hook: la wiki explica la vía, los límites y la prueba en vivo con un centinela.
   Hay que aprobarlo en `/hooks`.
 
+- **Cada delegación de Codex, con su sesión (#669, segunda parte).** `install` añade a
+  `~/.codex/hooks.json` un cuarto hook, `codex-mcp-call` (`PreToolUse` sobre
+  `^mcp__local[-_]delegate__`), que no avisa ni bloquea: deja una nota con el modelo de Codex, si la
+  llamada es de un subagente (y su tipo) y la clave de un solo sentido de la sesión. El servidor la
+  une a la línea del log por el `_meta.callId` que manda Codex, y lee `_meta.sessionId` (solo de
+  `codex-mcp-client`, y solo en hash) para que la fila tenga sesión aunque no hayas aprobado el hook.
+  Las filas de Codex ya no se cruzan con los transcripts de Claude en el relleno a posteriori (antes
+  una llamada de Codex del mismo segundo y la misma tool podía heredar el modelo de una de Claude),
+  siguen fuera del coste («no es Claude») y tienen columna propia «Codex» en «Quién delegó» y
+  `codex_calls` en `/api/stats` (también con `?session=<id de Codex>`); las filas viejas de Codex
+  pasan de «Sin dato» a «Codex». `measure_adoption.py` las cuenta como `codex`. Codex pide aprobar
+  el hook nuevo en `/hooks`; los de antes conservan su aprobación, y `doctor` cuenta cuatro hooks
+  (avisa hasta que `update` añade el que falta).
+
 - **Hooks de Codex (#669, núcleo).** Con Codex instalado (o `--clients codex`), `install` añade a
   `~/.codex/hooks.json` dos hooks consultivos: `UserPromptSubmit` (el aviso de tarea mecánica) y
   `SubagentStart` (cómo usar las `local_*` con `path` en cada subagente). No tocan ni mueven tus
@@ -40,9 +54,8 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   o un error, Codex sigue igual. `update` los repone si no son los de esta versión (hay que
   aprobarlos otra vez), `uninstall` quita solo los nuestros sin tocar tus aprobaciones de `config.toml`, y el check
   nuevo `codex.hooks` de `doctor` (37 en total) dice por separado si están configurados, aprobados
-  y vistos despachar. Aún sin hooks sobre las herramientas de Codex (llamadas MCP, *code mode*,
-  shell, `apply_patch`): la atribución de cada delegación a su sesión de Codex va en el siguiente
-  paso.
+  y vistos despachar. Las llamadas MCP (y las de *code mode*) tienen su hook en la entrada de
+  arriba; shell y `apply_patch`, todavía no.
 
 - **`doctor` avisa si el plugin de Claude Code está importado en Codex, que no lo puede leer
   (#668).** Codex lee los marketplaces de Claude Code, así que el plugin se puede importar a mano
