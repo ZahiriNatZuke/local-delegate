@@ -205,6 +205,22 @@ Dos cosas que conviene saber y solo estaban en el código:
   un trozo ni prosa alrededor. Calla si el valor se repite en la entrada, si ninguna otra clave casa
   de verdad con la fila (dos palabras, o una si una contiene a la otra), con empates, con valores
   triviales (booleanos, sí/no, una cifra) y con los campos de ubicación.
+- **Negación cambiada** (#667). Si una frase de un valor lleva una negación (`no`, `not`,
+  `don't`, `never`, `nunca`, `ni`, `evitar`...) que su frase de la entrada no tiene, o perdió la
+  que la entrada tiene, la clave va en `_local_delegate.polarity_flipped_keys`
+  (`{clave: {"value", "source", "flip"}}`, con `flip` = `added` o `removed`) con aviso. El valor no
+  se toca. La frase del valor se busca en la entrada por las cuatro primeras letras de sus palabras
+  (al menos dos y el 60 %), así que también la encuentra traducida entre español e inglés
+  (`revisar`/`review`); y la palabra que niega la negación tiene que estar en la otra frase y no
+  contar entre las dos palabras compartidas. Un salto de línea dentro de un párrafo no corta la
+  frase; una línea en blanco, un elemento de lista, un encabezado o una celda de tabla, sí. Calla si
+  la frase no aparece, si la entrada dice las dos cosas, si la negación de la entrada viene de antes
+  en la misma oración («no revises X, los adaptadores») o de un encabezado o una línea `...:` sobre
+  su lista («## No hacer»), con una doble negación («no mezclar sin CI verde»), con claves cuyo
+  nombre lleva una negación o una prohibición (`no_reintentar`, `do_not_retry`), con frases de menos
+  de tres palabras con contenido, con entradas de más de 400 000 caracteres y con los campos de
+  ubicación. No ve una frase que el modelo une con otra hasta no parecerse a ninguna de la entrada,
+  ni idiomas que no comparten raíces con el de la entrada.
 - **Una entrada pequeña con tabla va al modelo largo** (#586). Por debajo de
   `LOCAL_DELEGATE_LONG_INPUT_CHARS`, si la entrada trae una etiqueta `<table` o `<tr` (seguida de
   blanco, `>` o `/`) o una línea con dos o más `|` seguida de su línea separadora (con `--`), la

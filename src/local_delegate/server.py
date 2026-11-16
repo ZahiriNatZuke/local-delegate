@@ -65,6 +65,7 @@ from . import (
     matrix,
     pace,
     path_guard,
+    polarity,
     questions,
     remote_turn,
     sections,
@@ -8577,6 +8578,8 @@ def local_extract(
     A value found only in the row of another requested key (a table row, a JSON key or a `label:
     value` line) is kept but reported in `cross_filled_keys` (`{key: {"row", "other_key"}}`), with
     a warning: the model may have handed out the rows by position.
+    A clause of a value that carries a negation its source clause lacks, or lost one the source
+    has, is kept but reported in `polarity_flipped_keys` (`{key: {"value", "source", "flip"}}`).
     A small input that carries a table (HTML `<table`/`<tr`, ARIA `role="table"`, `"grid"`,
     `"treegrid"` or `"row"`, a Markdown or GFM table with its delimiter row, three or more CSV
     or TSV rows) goes to the long-context model too, even with one field: the mechanical one
@@ -8824,6 +8827,8 @@ def local_extract(
                 data[name] = _strip_extract_prefixes(data[name], total_lines)
     # #650: a value that sits only in the row of another requested key; a warning, never a null.
     cross_filled = cross_fill.cross_filled(content, fields, data, skip=location_fields)
+    # #667: a clause whose negation the source does not carry (or lost); a warning, never a change.
+    flipped = polarity.flipped(content, fields, data, skip=location_fields)
     meta: dict = dict(truncation)
     # #586: its own key, never `warning`: going to `long` is not a failure (as `chunked.notice`).
     meta.update(role_meta)
@@ -8887,6 +8892,11 @@ def local_extract(
             f"{name} <- {info['row']} ({info['other_key']})" for name, info in cross_filled.items()
         )
         late_notices.append(i18n.t("mcp.warning.extract_cross_filled_keys", pairs=pairs))
+    if flipped:
+        meta["polarity_flipped_keys"] = flipped
+        late_notices.append(
+            i18n.t("mcp.warning.extract_polarity_flipped_keys", fields=", ".join(flipped))
+        )
     if late_notices:
         previous = meta.get("warning")
         joined = "; ".join(late_notices)

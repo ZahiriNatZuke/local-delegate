@@ -1,0 +1,95 @@
+{
+  "schemaVersion": 1,
+  "slug": "extract-polarity-flip",
+  "title": "local_extract: aviso cuando un valor invierte la negacion de la fuente",
+  "mode": "lite",
+  "traceability": "strict",
+  "status": "verifying",
+  "createdAt": "2026-11-16T12:34:14.110Z",
+  "updatedAt": "2026-11-16T13:19:56.737Z",
+  "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-11-16T13:19:55.803Z",
+      "evidence": "spec contrastada con el issue 667 y el codigo de local_extract",
+      "actor": "user"
+    },
+    "plan": {
+      "status": "approved",
+      "updatedAt": "2026-11-16T13:19:56.266Z",
+      "evidence": "plan: cuatro tareas cubren REQ-001 a REQ-005; prompt sin cambios",
+      "actor": "user"
+    },
+    "quality": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "conformance": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "memory": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-11-16T12:34:14.110Z",
+      "reason": "SDD change created"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "specifying",
+      "at": "2026-11-16T13:19:55.574Z",
+      "reason": "issue 667 leido"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-11-16T13:19:55.803Z",
+      "evidence": "spec contrastada con el issue 667 y el codigo de local_extract",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-11-16T13:19:56.009Z",
+      "reason": "spec aprobada"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-11-16T13:19:56.266Z",
+      "evidence": "plan: cuatro tareas cubren REQ-001 a REQ-005; prompt sin cambios",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "implementing",
+      "at": "2026-11-16T13:19:56.479Z",
+      "reason": "plan aprobado"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-11-16T13:19:56.737Z",
+      "reason": "implementado; suite, mutantes y revision hechas"
+    }
+  ]
+}
