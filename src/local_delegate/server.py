@@ -68,6 +68,7 @@ from . import (
     polarity,
     questions,
     remote_turn,
+    runner_totals,
     sections,
     table_detect,
     test_windows,
@@ -1390,6 +1391,10 @@ def _describe_pace() -> str:
     return i18n.t("mcp.status.pace.line", parts="; ".join(parts))
 
 
+#: The `model` of a usage row the program answered alone (`program_only`, #687): no model ran.
+PROGRAM_MODEL = "program"
+
+
 def _log_event(
     *,
     tool: str,
@@ -1442,8 +1447,13 @@ def _log_event(
     exception_type: str | None = None,
     concurrency_trace: dict | None = None,
     role_reason: str | None = None,
+    program_only: bool = False,
 ) -> None:
     """Escribe una línea JSONL en el log activo (rotado por mes o fijo). Nunca rompe una tool.
+
+    `program_only` (#687): the program answered the call by itself, with no backend call. The row
+    then carries `program_only: true` and `model: PROGRAM_MODEL`, and `_accounting` gives it 0
+    backend calls; its reading server-side counts as any other with `path`.
 
     Los campos del respaldo (F3, REQ-013) son aditivos: `model` sigue siendo el modelo que
     RESPONDIÓ, así que un evento sin salto se escribe igual que antes y el histórico se lee igual.
@@ -1500,6 +1510,8 @@ def _log_event(
             tool_use_id = clients.current_tool_use_id()
             if tool_use_id:
                 rec["tool_use_id"] = tool_use_id
+            # Codex (#669) may bring its session without a call id: it resolves either way.
+            if tool_use_id or caller == clients.CODEX_CLIENT:
                 from . import attribution
 
                 rec.update(attribution.current_call())
@@ -1511,6 +1523,8 @@ def _log_event(
         # `chunks` es el número REAL de llamadas al backend, no el de trozos: una operación
         # troceada gasta la GPU N veces y esta es la única huella que queda de ello. Se omite
         # cuando vale 1, así que quien agregue debe leerlo como `chunks or 1`.
+        if program_only:
+            rec["program_only"] = True
         if chunks is not None and chunks > 1:
             rec["chunks"] = int(chunks)
             # Issue #454: the pieces announced to the panel, next to the calls (`chunks`), so
@@ -1841,6 +1855,9 @@ def _accounting(row: dict) -> dict:
     connection_failed = failed and bool(row.get("connection_failure"))
     chunks = int(row.get("chunks") or 0)
     backend_calls = chunks if connection_failed else (chunks or 1)
+    if row.get("program_only"):
+        # #687: the program answered alone (`local_extract` over a diff): no backend call.
+        backend_calls = 0
 
     raw_in = row.get("tokens_in")
     raw_out = row.get("tokens_out")
@@ -7939,6 +7956,34 @@ def _grounding_notice(
     return _notice
 
 
+def _test_totals_notice(
+    content: str, before: Callable[[str, bool], str]
+) -> Callable[[str, bool], str]:
+    """#684: `before`, then a warning when the summary denies what a test runner counted.
+
+    `runner_totals.denied` reads the totals line of pytest, jest, cargo or go in the input and
+    looks, in the summary, for a negation of a category (failures, skips) the runner counted above
+    zero («No se reportaron fallos ni saltos» over `750 passed, 2 skipped`). The figure is in the
+    input, so `_grounding_notice` has nothing to say. The summary is not changed. Judged on what
+    the model wrote, before the other notices add their own text (some of them say «sin»).
+    """
+
+    def _notice(text: str, truncated: bool) -> str:
+        found = runner_totals.denied(text, content)
+        text = before(text, truncated)
+        if not found:
+            return text
+        details = "; ".join(
+            i18n.t(f"mcp.warning.denied_{category}", clause=clause, count=count)
+            for category, clause, count in found
+        )
+        line = runner_totals.totals(content).lines[-1][:200]
+        notice = i18n.t("mcp.warning.summary_denies_test_totals", details=details, line=line)
+        return f"{text.rstrip()}\n\n{WARNING_MARKER}{notice}]"
+
+    return _notice
+
+
 def _listed(items: list[str]) -> str:
     """`items` as «a», «b»…, the first `grounding.MAX_ITEMS`, and how many more."""
     shown = ", ".join(f"«{item}»" for item in items[: grounding.MAX_ITEMS])
@@ -8126,6 +8171,8 @@ def local_summarize(
     kind = _source_kind(path)
     # #630: the check of the summary against the input runs on every path, with the #539 notice.
     literal_notice = _grounding_notice(content, _string_literal_notice(content, kind=kind))
+    # #684: and against the totals of a test runner, when the input carries them.
+    literal_notice = _test_totals_notice(content, literal_notice)
     # #650: by size only; a small input the table rule raised keeps the single call.
     structured = (
         config.STRUCTURED_SUMMARY and role == "long" and table_format is None and kind != "code"
@@ -8524,6 +8571,9 @@ def _as_figure(value: Any) -> float | None:
 _EXTRACT_OUTLINE_SHARE = 0.15
 #: The files whose `#` lines are headings, so the outline is computed for them only.
 _MARKDOWN_SUFFIXES = frozenset({".md", ".markdown", ".mdx"})
+#: #665: a file with one of these is read as a diff even when it does not open with a patch header
+#: (a preamble before its first `diff --git`); any other file is a diff only by its start (#499).
+_DIFF_SUFFIXES = frozenset({".patch", ".diff"})
 
 _EXTRACT_LINES_CLAUSE = (
     " Cada línea del contenido empieza por su número de línea en el fichero seguido de «| »; ese "
@@ -8676,7 +8726,8 @@ def local_extract(
     cited lines that do not hold in the file are listed in `lines_unverified`, and a field that
     asks for items (`tasks_with_lines`) but got only section ranges in `section_only_keys`.
     Over a unified diff, a field that asks only for the files and their lines (`files_with_lines`)
-    gets one `path: first-last` per file, by program (`diff_files` says so).
+    gets one `path: first-last` per file, by program (`diff_files` says so); one that asks for
+    the files and their hunks (`files_and_hunks_with_lines`) gets each hunk's range too.
     A value that is a "no data" marker ("N/A", "unknown", "-", "", also the strings "null" and
     "undefined") comes back as null, listed in `missing_keys`, with the model's text in
     `placeholder_keys`. With a JSON object as input, a field that counts one of its top-level
@@ -8711,6 +8762,7 @@ def local_extract(
     probe = path and Path(path).is_file()
     probe_len = Path(path).stat().st_size if probe else len(text or "")
     # Entera (B2c): lo que no cabe en una llamada se trocea en vez de truncarse.
+    started = time.monotonic()
     content, _truncated_in, raw_len = _read_input(text, path, _NO_TRUNCATE)
     # #586: the role is decided after reading, because the table rule needs the content.
     role, model, table_format = _extract_role(probe_len, content, fields)
@@ -8738,14 +8790,19 @@ def local_extract(
     # #665: with `path` and a unified diff, each file's lines in the patch, by program (#582). A
     # field that asks only for the files and their lines is answered from them, whatever the
     # model listed: asked per chunk, it named the first file of each and the rest went missing.
+    # #665 (reopened): also the files and their hunks, and a `.patch`/`.diff` with a preamble.
+    diff_suffix = bool(path) and Path(path).suffix.lower() in _DIFF_SUFFIXES
     diff_ranges = (
-        line_check.diff_file_ranges(content)
-        if numbered and sections.is_unified_diff(content)
+        line_check.diff_file_hunks(content)
+        if numbered and (diff_suffix or sections.is_unified_diff(content))
         else []
     )
-    diff_file_fields = (
-        [f for f in location_fields if line_check.asks_for_diff_files(f)] if diff_ranges else []
-    )
+    asked_diff_fields = [
+        f
+        for f in location_fields
+        if line_check.asks_for_diff_files(f) or line_check.asks_for_diff_hunks(f)
+    ]
+    diff_file_fields = asked_diff_fields if diff_ranges else []
     if diff_ranges:
         system += _DIFF_LINES_CLAUSE
     use_schema = config.JSON_SCHEMA_MODE != "off"
@@ -8807,8 +8864,18 @@ def local_extract(
         )
         return joined
 
+    # #687: every field asked is answered by program from the diff, so the model's reply would be
+    # thrown away: no backend call (a 151 KB patch went through 7 chunks and 129 s for nothing).
+    # The answer is built below exactly as when the model gave no value; no backend call. The row
+    # of the usage log is still written (`program_only`), at the end, so the panel sees it.
+    program_only = bool(diff_file_fields) and all(name in diff_file_fields for name in fields)
+    if program_only:
+        raw = "{}"
+        truncated_calls = retried_calls = calls = 0
+        pieces = 1
+        unreduced = False
     # Chunking is decided on the bare text, as in #460: the prefix travels, the threshold stays.
-    if len(content) > max_chars:
+    elif len(content) > max_chars:
         raw = _map_reduce(_map_budget(max_chars), report)
         truncated_calls = report.get("truncated_calls", 0)
         retried_calls = report.get("retried_calls", 0)
@@ -8976,7 +9043,17 @@ def local_extract(
     for name in diff_file_fields:
         # #665: one entry per file of the diff, `path: first-last` in lines of the patch; what the
         # model listed is replaced, never merged (it may name a file twice or at a hunk's lines).
-        data[name] = [f"{diff_path}: {first}-{last}" for first, last, diff_path in diff_ranges]
+        # A field that asks for the hunks too gets each hunk's range after it.
+        with_hunks = line_check.asks_for_diff_hunks(name)
+        data[name] = [
+            f"{diff_path}: {first}-{last}"
+            + (
+                f" (hunks: {', '.join(f'{a}-{b}' for a, b in hunks)})"
+                if with_hunks and hunks
+                else ""
+            )
+            for first, last, diff_path, hunks in diff_ranges
+        ]
     missing_keys = [name for name in missing_keys if name not in diff_file_fields]
     # #586: a "no data" marker is null (and counts as missing); a count of a JSON input's list is
     # the program's, not the model's.
@@ -9099,6 +9176,18 @@ def local_extract(
                 count=len(diff_ranges),
             ),
         }
+    if asked_diff_fields and not diff_ranges and numbered and diff_suffix:
+        # #665: a `.patch`/`.diff` where the program found no file: the value is the model's.
+        late_notices.append(
+            i18n.t("mcp.warning.extract_diff_unparsed", fields=", ".join(asked_diff_fields))
+        )
+    diff_nulls = [f for f in location_fields if f not in diff_file_fields and data.get(f) is None]
+    if diff_ranges and pieces > 1 and diff_nulls:
+        # #665: a location field over a chunked diff that no chunk answered; say which names the
+        # program answers whole, instead of a null whose only notice is "not seen".
+        late_notices.append(
+            i18n.t("mcp.warning.extract_diff_null_hint", fields=", ".join(diff_nulls))
+        )
     if model_error:
         # #665: the model's reply (or the backend's error) was not usable; the program's values
         # stand, the rest is null, and the caller hears why instead of a silent null.
@@ -9138,6 +9227,23 @@ def local_extract(
         meta["fallback"] = fallback_info
     if meta:
         data["_local_delegate"] = meta
+    if program_only:
+        # #687: every delegation is in the usage log. No model ran: `PROGRAM_MODEL`, 0 tokens and
+        # 0 backend calls (`_accounting`); the reading server-side counts as with any `path`.
+        _log_event(
+            tool="local_extract",
+            model=PROGRAM_MODEL,
+            source=source,
+            chars_in=len(content),
+            chars_out=len(json.dumps(data, ensure_ascii=False)),
+            latency_ms=int((time.monotonic() - started) * 1000),
+            ok=True,
+            tokens_in=0,
+            tokens_out=0,
+            raw_len=raw_len,
+            path=path,
+            program_only=True,
+        )
     return data
 
 

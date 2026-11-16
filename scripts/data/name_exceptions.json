@@ -1130,6 +1130,41 @@
           "reason": "dato congelado de corpus o caso: nombre de campo en español a propósito (#665), para comprobar que el singular pide un fichero y no la lista de todos"
         },
         {
+          "name": "ficheros_y_hunks_con_lineas",
+          "file": "tests/test_extract_diff_files_names.py",
+          "reason": "dato congelado de corpus o caso: nombre de campo literal del issue #665 reabierto, en español a propósito, para comprobar que pedir los ficheros y sus hunks de un diff se responde por programa"
+        },
+        {
+          "name": "ficheros_con_lineas",
+          "file": "tests/test_extract_diff_files_names.py",
+          "reason": "dato congelado de corpus o caso: nombre de campo literal del issue #665 reabierto, en español a propósito, sobre un diff troceado de unas 6000 líneas"
+        },
+        {
+          "name": "archivos_y_hunks_con_lineas",
+          "file": "tests/test_extract_diff_files_names.py",
+          "reason": "dato congelado de corpus o caso: nombre de campo en español a propósito (#665), para comprobar que «archivos» y «hunks» piden los ficheros y sus hunks"
+        },
+        {
+          "name": "hunks_con_lineas",
+          "file": "tests/test_extract_diff_files_names.py",
+          "reason": "dato congelado de corpus o caso: nombre de campo en español a propósito (#665), para comprobar que pedir hunks sin ficheros sigue siendo del modelo"
+        },
+        {
+          "name": "fichero_y_hunks_con_lineas",
+          "file": "tests/test_extract_diff_files_names.py",
+          "reason": "dato congelado de corpus o caso: nombre de campo en español a propósito (#665), para comprobar que el singular no recibe la lista de todos los ficheros"
+        },
+        {
+          "name": "ficheros_modificados_con_lineas",
+          "file": "tests/test_extract_diff_files_names.py",
+          "reason": "dato congelado de corpus o caso: nombre de campo en español a propósito (#665), para comprobar que «modificados» nombra los ficheros y no cuenta líneas"
+        },
+        {
+          "name": "lineas_modificadas",
+          "file": "tests/test_extract_diff_files_names.py",
+          "reason": "dato congelado de corpus o caso: nombre de campo en español a propósito (#665), para comprobar que un recuento de líneas sigue siendo recuento"
+        },
+        {
           "name": "secciones_con_lineas",
           "file": "tests/test_extract_section_lines.py",
           "reason": "dato congelado de corpus o caso: nombre de campo del issue #633, en español a propósito, para comprobar que pedir secciones no es pedir elementos"

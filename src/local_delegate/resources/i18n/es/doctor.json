@@ -112,6 +112,7 @@
   "doctor.probe.clients_observed.no_elicitation": "sin elicitation",
   "doctor.probe.clients_observed.none": "todavía no ha hablado ningún cliente MCP con este local-delegate",
   "doctor.probe.clients_observed.unnamed": "(sin identificar)",
+  "doctor.probe.codex_hooks.missing": "faltan hooks nuestros de Codex ({names}) en {path}; al añadirlos, los demás se quedan donde están y solo esos esperan tu aprobación en /hooks",
   "doctor.probe.codex_hooks.never_seen": "aún ninguno",
   "doctor.probe.codex_hooks.no_python": "el intérprete de los hooks de Codex no existe ({python})",
   "doctor.probe.codex_hooks.none": "no instalados en {path} (opcionales: `local-delegate install --clients codex` los añade)",
@@ -353,5 +354,6 @@
   "doctor.status.warn": "[WARN]",
   "doctor.summary.ok": "Resultado: todo a punto (andamiaje, servicios y versiones probadas).",
   "doctor.summary.warnings": "Resultado: {n} aviso(s) — revisa {missing} y {warn} arriba.",
-  "doctor.title": "local-delegate doctor — diagnóstico del andamiaje, los servicios y el backend local"
+  "doctor.title": "local-delegate doctor — diagnóstico del andamiaje, los servicios y el backend local",
+  "doctor.probe.mcp_codex.direct_tools": ", tools directas sin tool_search (omit_tools_from)"
 }

@@ -544,7 +544,7 @@
   "cli.script.measure_cooldown.window": "Window: {since} to {until}  ({now})",
   "cli.script.measure_cooldown.with_outcome": "  with a known outcome:    {n}",
   "cli.script.measure_adoption.by_project": "  by project:           {kinds}",
-  "cli.script.measure_adoption.by_thread": "  by thread:            main {main}, subagents {subagent}, mod {mod}, no data {unknown}",
+  "cli.script.measure_adoption.by_thread": "  by thread:            main {main}, subagents {subagent}, mod {mod}, Codex {codex}, no data {unknown}",
   "cli.script.measure_adoption.help.exclude_self": "leave out the repo's own project (the default)",
   "cli.script.measure_adoption.help.include_self": "count the repo's own project too: the figure comparable with the earlier cuts",
   "cli.script.measure_adoption.help.projects": "root of the Claude Code projects, for the old events (~/.claude/projects)",
@@ -722,5 +722,8 @@
   "cli.watch.could_not_open": "the watch could not be opened: {reason}",
   "cli.watch.daemon_did_not_open": "the daemon did not open the watch: {reason}",
   "cli.watch.late": "the daemon did not report the watch outcome in time",
-  "cli.written": "written: {path}"
+  "cli.written": "written: {path}",
+  "cli.help.install.codex_direct_tools": "Codex: puts the local-delegate tools in the model's initial list, without tool_search (omit_tools_from = [\"deferred\"]; about 15.8 KB more per turn)",
+  "cli.help.install.no_codex_direct_tools": "Codex: puts the local-delegate tools back behind tool_search (removes only \"deferred\" from omit_tools_from)",
+  "cli.install.codex_direct_tools_ignored": "Warning: --codex-direct-tools/--no-codex-direct-tools only changes the Codex MCP entry, which is not written this time; it has no effect."
 }

@@ -1,0 +1,15 @@
+{
+  "session_id": "019a6e3b-5c1d-7a2e-9f40-3b8d2c6e1a55",
+  "turn_id": "019a6e3b-7d20-7c11-8e3a-5f1c9b0d4e22",
+  "transcript_path": null,
+  "cwd": "/work/project",
+  "hook_event_name": "PreToolUse",
+  "model": "gpt-5.5-codex",
+  "permission_mode": "default",
+  "tool_name": "mcp__local_delegate__local_summarize",
+  "tool_use_id": "call_mcp_0001",
+  "tool_input": {
+    "path": "/work/project/README.md",
+    "max_words": 80
+  }
+}

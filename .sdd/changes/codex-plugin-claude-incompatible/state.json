@@ -4,9 +4,9 @@
   "title": "Doctor detecta el plugin de Claude importado en Codex: hooks.json con modules rechazado (#668)",
   "mode": "lite",
   "traceability": "strict",
-  "status": "verifying",
+  "status": "closed",
   "createdAt": "2026-11-16T11:31:08.047Z",
-  "updatedAt": "2026-11-16T12:01:15.580Z",
+  "updatedAt": "2026-11-16T15:21:45.656Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -21,22 +21,22 @@
       "actor": "agent"
     },
     "quality": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-11-16T15:21:20.814Z",
+      "evidence": "verification.md: zona 347 passed, 1 skipped; suite entera -n 2 en verde tras clasificar cuatro palabras del lexico; 5 mutantes de control positivo matados; ruff limpio; carga probada en Codex 0.169.0 real con CODEX_HOME temporal. PR #677 mezclado (402f99e3) con sus 22 checks en verde, CodeQL, Socket y GitGuardian incluidos.",
+      "actor": "user"
     },
     "conformance": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-11-16T15:21:34.190Z",
+      "evidence": "review.md: dos jueces, veredicto conforms-with-notes, REQ-001..007 implementados y verificados, hallazgos F1-F10 resueltos o aceptados por escrito. PR #677 mezclado con todos los checks en verde.",
+      "actor": "user"
     },
     "memory": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-11-16T15:21:35.739Z",
+      "evidence": "Lo durable ya esta en la nota del vault projects/local-delegate/jornada-2026-11-16-diez-issues-y-codex-nativo.md; decisiones y siguiente paso (#669) en handoff.md de este SDD.",
+      "actor": "user"
     }
   },
   "history": [
@@ -90,6 +90,51 @@
       "to": "verifying",
       "at": "2026-11-16T12:01:15.580Z",
       "reason": "zona, mutantes y suite en verde"
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-11-16T15:21:20.814Z",
+      "evidence": "verification.md: zona 347 passed, 1 skipped; suite entera -n 2 en verde tras clasificar cuatro palabras del lexico; 5 mutantes de control positivo matados; ruff limpio; carga probada en Codex 0.169.0 real con CODEX_HOME temporal. PR #677 mezclado (402f99e3) con sus 22 checks en verde, CodeQL, Socket y GitGuardian incluidos.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "verifying",
+      "to": "result-review",
+      "at": "2026-11-16T15:21:26.561Z",
+      "reason": "PR 677 mezclado con CI en verde; puerta quality aprobada"
+    },
+    {
+      "type": "gate",
+      "gate": "conformance",
+      "status": "approved",
+      "at": "2026-11-16T15:21:34.190Z",
+      "evidence": "review.md: dos jueces, veredicto conforms-with-notes, REQ-001..007 implementados y verificados, hallazgos F1-F10 resueltos o aceptados por escrito. PR #677 mezclado con todos los checks en verde.",
+      "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "memory",
+      "status": "approved",
+      "at": "2026-11-16T15:21:35.739Z",
+      "evidence": "Lo durable ya esta en la nota del vault projects/local-delegate/jornada-2026-11-16-diez-issues-y-codex-nativo.md; decisiones y siguiente paso (#669) en handoff.md de este SDD.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "result-review",
+      "to": "closing",
+      "at": "2026-11-16T15:21:40.156Z",
+      "reason": "Revision de resultado aplicada; puertas conformance y memory aprobadas"
+    },
+    {
+      "type": "transition",
+      "from": "closing",
+      "to": "closed",
+      "at": "2026-11-16T15:21:45.656Z",
+      "reason": "PR 677 mezclado en verde; todas las puertas aprobadas"
     }
   ]
 }

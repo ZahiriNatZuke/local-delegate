@@ -33,7 +33,7 @@ El mod lanza los dos por `python -I -m local_delegate.hook`, nunca por `-m local
 esa vía entra por `entrypoint`, que importa el servidor y el SDK de MCP (654 ms de importación
 medidos en `evidence/F4-live.md`, frente a ~75 ms de esta).
 El mod pregunta antes al daemon (`POST /api/hook/classify` y `/api/hook/classify-config`, en
-`web/metrics.py`), que responde con las mismas `classify_text` y `config_text` de aquí y con el
+`web/metrics.py`), que responde con las mismas `classify_text` (en `hook_classify`) y `config_text` de aquí y con el
 entorno que manda el mod (`CLASSIFY_ENV`); el proceso queda de respaldo (F4-classify-daemon).
 
 - `hook record-read`: stdin, la salida de `classify` más `decision` y `session_id`; escribe en la
@@ -154,31 +154,14 @@ def _load_hook_module(name: str):
 
 
 def classify_text(payload: object, environ) -> str:
-    """La respuesta de `hook classify`, el JSON tal cual sale por stdout (sin el salto final).
+    """`hook_classify.classify_text`, imported only when asked (the inactive hooks import nothing).
 
-    La única implementación: la usan el CLI (con `os.environ`) y el endpoint del daemon
-    `POST /api/hook/classify` (con el entorno que manda el mod, `CLASSIFY_ENV`). No lee
-    `os.environ` cuando le pasan otro entorno ni lo toca: el daemon atiende peticiones a la vez.
-    Importa el clasificador como módulo del paquete, sin tocar `sys.path` (en el daemon, el
-    `sys.path` es de todos).
+    The implementation lives in `hook_classify`, which `codex_reads` imports too: so `codex_reads`
+    does not import this module, which imports `codex_hooks`, which imports `codex_reads`.
     """
-    import json
+    from .hook_classify import classify_text as classify
 
-    from . import read_switch
-    from .resources.hooks import hook_common, read_classifier
-
-    if not isinstance(payload, dict):
-        payload = {}
-    if read_switch.enabled(environ=environ):
-        state = hook_common.block_state(environ)
-    else:
-        state = "inactive"
-    if state == "on" and hook_common.backend_down(environ):
-        # Corte por backend inalcanzable (issue #436): el mod de lectura solo actúa con `on`, así
-        # que con este valor deja pasar la lectura sin resumir ni avisar, igual que con el bloqueo
-        # apagado. Sin tocar el mod: la condición vive aquí, en una sola implementación.
-        state = "backend_down"
-    return json.dumps(read_classifier.classify(payload, state, environ), ensure_ascii=False)
+    return classify(payload, environ)
 
 
 def config_text(environ) -> str:

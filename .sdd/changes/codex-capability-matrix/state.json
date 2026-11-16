@@ -1,0 +1,139 @@
+{
+  "schemaVersion": 1,
+  "slug": "codex-capability-matrix",
+  "title": "Codex: matriz de capacidades y alternativas para barra, comandos sin modelo y tools fijadas (#671)",
+  "mode": "standard",
+  "traceability": "strict",
+  "status": "closing",
+  "createdAt": "2026-11-16T15:43:30.734Z",
+  "updatedAt": "2026-11-16T16:04:52.379Z",
+  "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-11-16T15:56:16.232Z",
+      "evidence": "Revisor independiente personal-sdd-plan-reviewer, dos pasadas: approve-with-changes; los 3 bloqueantes de la primera pasada aplicados (lista entera, semantica de los flags, update) y sin bloqueantes en la segunda",
+      "actor": "user"
+    },
+    "plan": {
+      "status": "approved",
+      "updatedAt": "2026-11-16T15:56:16.379Z",
+      "evidence": "Segunda pasada del revisor: trazabilidad REQ-001..REQ-007 a T1..T6 completa, sin bloqueantes; hallazgos menores aplicados en tests y spec",
+      "actor": "user"
+    },
+    "quality": {
+      "status": "approved",
+      "updatedAt": "2026-11-16T16:04:35.914Z",
+      "evidence": "Tests locales con pesado.sh -n 1 sobre ficheros afectados y vecinos en verde (26 nuevos; 468+396+103 vecinos); control contra main 20 failed; ruff check y format en verde. El CI completo lo corre el PR integrado de la sesion principal",
+      "actor": "user"
+    },
+    "conformance": {
+      "status": "approved",
+      "updatedAt": "2026-11-16T16:04:36.101Z",
+      "evidence": "Revision deep: juez A conforms-with-notes, juez B does-not-conform por un fallo (lista multilinea con ] en comentario) arreglado y con test; revisor de seguridad sin hallazgos explotables; hallazgos en review.md",
+      "actor": "user"
+    },
+    "memory": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-11-16T15:43:30.734Z",
+      "reason": "SDD change created"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "researching",
+      "at": "2026-11-16T15:45:54.548Z",
+      "reason": "Investigación de Codex 0.169.0 en research.md"
+    },
+    {
+      "type": "transition",
+      "from": "researching",
+      "to": "specifying",
+      "at": "2026-11-16T15:45:54.627Z",
+      "reason": "research.md completo con evidencia de código y ejecución"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-11-16T15:56:16.232Z",
+      "evidence": "Revisor independiente personal-sdd-plan-reviewer, dos pasadas: approve-with-changes; los 3 bloqueantes de la primera pasada aplicados (lista entera, semantica de los flags, update) y sin bloqueantes en la segunda",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-11-16T15:56:16.304Z",
+      "reason": "spec aprobada"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-11-16T15:56:16.379Z",
+      "evidence": "Segunda pasada del revisor: trazabilidad REQ-001..REQ-007 a T1..T6 completa, sin bloqueantes; hallazgos menores aplicados en tests y spec",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "plan-review",
+      "at": "2026-11-16T16:04:14.452Z",
+      "reason": "plan aprobado; T1-T6 hechos y verificados (verification.md)"
+    },
+    {
+      "type": "transition",
+      "from": "plan-review",
+      "to": "implementing",
+      "at": "2026-11-16T16:04:14.654Z",
+      "reason": "plan aprobado; T1-T6 hechos y verificados (verification.md)"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-11-16T16:04:14.851Z",
+      "reason": "plan aprobado; T1-T6 hechos y verificados (verification.md)"
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-11-16T16:04:35.914Z",
+      "evidence": "Tests locales con pesado.sh -n 1 sobre ficheros afectados y vecinos en verde (26 nuevos; 468+396+103 vecinos); control contra main 20 failed; ruff check y format en verde. El CI completo lo corre el PR integrado de la sesion principal",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "verifying",
+      "to": "result-review",
+      "at": "2026-11-16T16:04:36.004Z",
+      "reason": "quality aprobada"
+    },
+    {
+      "type": "gate",
+      "gate": "conformance",
+      "status": "approved",
+      "at": "2026-11-16T16:04:36.101Z",
+      "evidence": "Revision deep: juez A conforms-with-notes, juez B does-not-conform por un fallo (lista multilinea con ] en comentario) arreglado y con test; revisor de seguridad sin hallazgos explotables; hallazgos en review.md",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "result-review",
+      "to": "closing",
+      "at": "2026-11-16T16:04:52.379Z",
+      "reason": "conformance aprobada; memory y closed los hace la sesion principal al integrar"
+    }
+  ]
+}

@@ -8,13 +8,17 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [0.53.0] - 2026-11-16
 
-Codex recibe los avisos de delegación y `local_extract` desconfía mejor de sus propias respuestas.
-`install` pone en `~/.codex/hooks.json` dos hooks consultivos (el aviso de tarea mecánica y la
-pista de cada subagente) y `doctor` gana dos checks de Codex, `codex.hooks` y `codex.plugin` (37 en
-total), este último para avisar del plugin de Claude Code importado en Codex, que no lo puede leer.
-`local_extract` calcula por programa los ficheros de un diff (`diff_files`), rehace en mitades una
-respuesta de líneas cortada y avisa cuando un valor invierte la negación de la fuente
-(`polarity_flipped_keys`). Un `path` que no es UTF-8 se lee sin perder caracteres y avisa;
+Codex recibe la delegación casi como Claude Code y `local_extract` desconfía mejor de sus propias
+respuestas. `install` pone en `~/.codex/hooks.json` cuatro hooks: el aviso de tarea mecánica, la
+pista de cada subagente, el resumen de lecturas grandes con guard de escritura, y la nota que une
+cada delegación a su sesión de Codex (columna «Codex» en el panel). `install --codex-direct-tools`
+saca las tools de detrás de `tool_search`, y la wiki trae la matriz de lo que Codex tiene y no del
+mod. `doctor` gana dos checks de Codex, `codex.hooks` y `codex.plugin` (37 en total), este último
+para avisar del plugin de Claude Code importado en Codex, que no lo puede leer. `local_extract`
+calcula por programa los ficheros y los hunks de un diff (`diff_files`, sin llamar al modelo si no
+hace falta), rehace en mitades una respuesta de líneas cortada y avisa cuando un valor invierte la
+negación de la fuente (`polarity_flipped_keys`); `local_summarize` avisa si el resumen niega los
+fallos o saltos que contó un runner de tests. Un `path` que no es UTF-8 se lee sin perder caracteres y avisa;
 `local_describe_image` dice que no sirve para medir; y un subagente con lista cerrada de tools ya no
 recibe órdenes de delegar que no puede cumplir.
 
@@ -25,14 +29,52 @@ recibe órdenes de delegar que no puede cumplir.
   tus extras). **Reinicia el daemon** para que sirva las tools de esta versión, y haz `/mcp` en
   Claude Code (o abre una sesión nueva): las sesiones abiertas siguen con el servidor MCP de la
   0.52.0 hasta entonces.
-- **Con Codex:** tras `install` o `update`, abre `/hooks` en Codex y aprueba los dos hooks nuevos de
-  `local-delegate`; Codex no los ejecuta hasta entonces, y `local-delegate` no escribe esa
+- **Con Codex:** tras `install` o `update`, abre `/hooks` en Codex y aprueba los cuatro hooks nuevos de
+  `local-delegate` (`codex-prompt`, `codex-subagent-start`, `codex-tool-guard` y `codex-mcp-call`); Codex no los ejecuta hasta entonces, y `local-delegate` no escribe esa
   aprobación. `doctor` (check `codex.hooks`) dice si están configurados, aprobados y vistos
   despachar. Si importaste a mano el plugin de Claude Code en Codex, `doctor` (check
   `codex.plugin`) te da el `codex plugin remove` que lo quita.
 - No hace falta cambiar la configuración.
 
 ### Añadido
+
+- **Codex: matriz de capacidades y tools directas (#671, #686).** Página nueva de la wiki
+  ([Codex: qué tiene y qué no del mod](docs/wiki/Codex-capabilities.md)) con lo que hace el mod de
+  Claude Code y lo que hay en Codex 0.169.0, fila por fila y con su evidencia: los comandos sin
+  modelo y la banda de estado no tienen equivalente (Codex solo ofrece `!comando` y una
+  `/statusline` de campos fijos). Lo que sí lo tiene son las tools fijadas: Codex deja toda tool MCP
+  tras `tool_search`, y `install --codex-direct-tools` pone `omit_tools_from = ["deferred"]` en la
+  entrada de Codex para que las once vayan en la lista inicial del modelo (unos 15,8 KB más por
+  turno, medido con `codex debug prompt-input`). Va apagado por defecto; `--no-codex-direct-tools`
+  quita solo `"deferred"`, y sin flag `install` y `update` conservan la lista tal cual, también una
+  lista escrita a mano. `doctor` lo enseña en la línea de la entrada MCP de Codex.
+
+- **Codex: resumen de lecturas y guard de escritura (#670, #686).** Un tercer hook de Codex,
+  `codex-tool-guard` (`PreToolUse` sobre Bash, `apply_patch` y lecturas MCP), hace lo del mod de
+  lectura de Claude Code: una lectura entera por shell de prosa grande se deniega con el resumen de
+  `local_summarize` como motivo, así que la lectura no se ejecuta y el texto no entra al contexto;
+  los tramos suman y el que llevaría lo leído al 80 % también se resume; código, configuración y
+  ficheros pequeños o cortos pasan literales; y `apply_patch` o una escritura por shell sobre un
+  fichero leído solo resumido se rechaza hasta leer literal un tramo. El estado es por sesión y por
+  agente (principal y cada subagente aparte) y solo guarda rutas y tramos. Falla en abierto: sin
+  daemon, con el backend caído o con un resumen vacío, cortado o movido a segundo plano, la lectura
+  pasa. Codex no deja sustituir la salida de Bash después de ejecutarla (`PostToolUse`) ni da
+  diálogo a un hook: la wiki explica la vía, los límites y la prueba en vivo con un centinela.
+  Hay que aprobarlo en `/hooks`.
+
+- **Cada delegación de Codex, con su sesión (#669, #686).** `install` añade a
+  `~/.codex/hooks.json` un cuarto hook, `codex-mcp-call` (`PreToolUse` sobre
+  `^mcp__local[-_]delegate__`), que no avisa ni bloquea: deja una nota con el modelo de Codex, si la
+  llamada es de un subagente (y su tipo) y la clave de un solo sentido de la sesión. El servidor la
+  une a la línea del log por el `_meta.callId` que manda Codex, y lee `_meta.sessionId` (solo de
+  `codex-mcp-client`, y solo en hash) para que la fila tenga sesión aunque no hayas aprobado el hook.
+  Las filas de Codex ya no se cruzan con los transcripts de Claude en el relleno a posteriori (antes
+  una llamada de Codex del mismo segundo y la misma tool podía heredar el modelo de una de Claude),
+  siguen fuera del coste («no es Claude») y tienen columna propia «Codex» en «Quién delegó» y
+  `codex_calls` en `/api/stats` (también con `?session=<id de Codex>`); las filas viejas de Codex
+  pasan de «Sin dato» a «Codex». `measure_adoption.py` las cuenta como `codex`. Codex pide aprobar
+  el hook nuevo en `/hooks`; los de antes conservan su aprobación, y `doctor` cuenta cuatro hooks
+  (avisa hasta que `update` añade el que falta).
 
 - **Hooks de Codex (#669, #682).** Con Codex instalado (o `--clients codex`), `install` añade a
   `~/.codex/hooks.json` dos hooks consultivos: `UserPromptSubmit` (el aviso de tarea mecánica) y
@@ -42,9 +84,8 @@ recibe órdenes de delegar que no puede cumplir.
   o un error, Codex sigue igual. `update` los repone si no son los de esta versión (hay que
   aprobarlos otra vez), `uninstall` quita solo los nuestros sin tocar tus aprobaciones de `config.toml`, y el check
   nuevo `codex.hooks` de `doctor` (37 en total) dice por separado si están configurados, aprobados
-  y vistos despachar. Aún sin hooks sobre las herramientas de Codex (llamadas MCP, *code mode*,
-  shell, `apply_patch`): la atribución de cada delegación a su sesión de Codex va en el siguiente
-  paso.
+  y vistos despachar. Las llamadas MCP (y las de *code mode*) tienen su hook en la entrada de
+  arriba; shell y `apply_patch`, todavía no.
 
 - **`doctor` avisa si el plugin de Claude Code está importado en Codex, que no lo puede leer
   (#668, #677).** Codex lee los marketplaces de Claude Code, así que el plugin se puede importar a mano
@@ -63,12 +104,43 @@ recibe órdenes de delegar que no puede cumplir.
 
 ### Corregido
 
+- **`local_extract` ya no llama al modelo cuando el programa resuelve todos los campos de un diff**
+  (#687, #686). Con campos como `files_with_lines` o `ficheros_y_hunks_con_lineas` sobre un `.patch`, el
+  programa ya daba los ficheros y sus líneas (#665), pero el modelo se llamaba igual y su respuesta
+  se descartaba: un parche de ~151 KB pasó por 7 trozos y tardó 129 s para nada. Ahora, si todos
+  los campos pedidos son de ese tipo, la respuesta se arma solo por programa, en milisegundos y sin
+  ocupar el turno del backend, con el mismo resultado y el mismo `_local_delegate` (`diff_files`,
+  `read_server_side`). La llamada sigue escribiendo su fila en el log de uso, para que salga en el
+  panel y cuente el contexto ahorrado: lleva `program_only: true` y `model: "program"`, 0 tokens
+  locales y la latencia real, y el panel la cuenta como delegación con 0 llamadas al backend. Con
+  cualquier otro campo en la lista, el modelo se llama como antes.
+- **`local_summarize` avisa cuando el resumen niega lo que contó un runner de tests** (#684, #686).
+  Sobre una salida corta de `pytest -q` que termina en `750 passed, 2 skipped`, el resumen decía
+  «omitiendo 2» y en la frase siguiente «No se reportaron fallos ni saltos», sin aviso: la cifra
+  sí estaba en la entrada, así que la revisión de datos inventados (#630) no tenía nada que marcar.
+  Ahora el programa lee la línea de totales de pytest, jest, `cargo test` o `go test -v` y, si una
+  frase del resumen niega una categoría (fallos o errores, saltos) que el runner cuenta por encima
+  de cero, en español o en inglés («sin saltos», «no failures or skips»), añade un aviso con la
+  frase y la línea del runner, y recuerda que para salida de tests está `local_lint_summary`. El
+  resumen no cambia. Un resumen que dice bien «2 saltados» o que niega solo lo que el runner no
+  contó no avisa.
 - **`local_extract` sobre un diff grande ya no devuelve solo el primer fichero** (#665, #676). Con `path`
   a un `.patch` de varios ficheros y un campo como `ficheros_con_lineas`, la respuesta traía
   `package.json: líneas 1-21` y nada más, sin aviso. La unión de los trozos estaba bien; el fallo
   era que el modelo nombraba solo el primer `diff --git` de lo que leía. Ahora un campo que solo
   pide los ficheros y sus líneas lo calcula el programa desde el parche (`ruta: primera-última`,
   uno por fichero) y `_local_delegate.diff_files` lo dice.
+- **`local_extract` sobre un diff da también los ficheros con sus hunks y no deja un `null` mudo**
+  (#665, #686). Dos informes con `.patch` grandes y troceados (14 ficheros con hunks
+  `@@ -0,0 +1,N @@` largos; unas 6000 líneas) volvieron con `null` en todos los trozos: corrían la
+  0.52.0, anterior al arreglo de arriba, y además `main` seguía mandando al modelo, trozo a trozo,
+  tres casos. Ahora un campo que pide los ficheros y sus hunks (`ficheros_y_hunks_con_lineas`,
+  `files_and_hunks_with_lines`) recibe por programa `ruta: primera-última (hunks: a-b, c-d)`, en
+  líneas del parche; `changed_files_with_lines` y `modified_files_with_lines` cuentan como campos
+  de ficheros (no como recuentos de líneas), y un `.patch`/`.diff` con un preámbulo antes del
+  primer `diff --git` se lee como diff. Si un `.patch` no tiene cabeceras de fichero, o un campo de
+  líneas que el programa no responde queda en `null` en todos los trozos de un diff, `warning` lo
+  dice y nombra los campos que sí se responden por programa.
 - **`local_extract` con un campo de líneas ya no devuelve un JSON cortado en silencio** (#666, #676). Si
   la llamada única se cortaba por `max_tokens`, el resultado era el error «respuesta no parseable
   como JSON» y las líneas inventadas no se comprobaban. Ahora esa llamada se rehace en mitades y

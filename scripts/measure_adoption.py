@@ -57,7 +57,7 @@ HOOK_SCRIPTS = {
 NOT_A_READ = frozenset({"no_file"})
 
 #: The columns of `delegations_by_caller`, in the order of `attribution.caller_column`.
-CALLER_COLUMNS = ("main", "subagent", "mod", "unknown")
+CALLER_COLUMNS = ("main", "subagent", "mod", "codex", "unknown")
 
 #: A script is not a hook: the search of a session's transcript gets room for a cold disk, and
 #: each session is searched once per run (`SessionProjects`).

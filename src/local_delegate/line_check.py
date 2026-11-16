@@ -836,8 +836,16 @@ def is_location_field(name: str) -> bool:
     `price_range`, `line_items` or `pipeline` are ordinary data fields, and a false positive
     changes their prompt.
     """
-    words = set(_FIELD_WORD.findall(_fold(_CAMEL_BOUNDARY.sub(" ", name))))
-    if words & _COUNT_WORDS:
+    sequence = _FIELD_WORD.findall(_fold(_CAMEL_BOUNDARY.sub(" ", name)))
+    words = set(sequence)
+    # #665: right before a plural of files a count word names those files (`changed_files`),
+    # it does not count lines (`lines_changed`, `changed_lines`, `changed_files_count`).
+    counted = {
+        word
+        for k, word in enumerate(sequence)
+        if word in _COUNT_WORDS and not (k + 1 < len(sequence) and sequence[k + 1] in _FILE_WORDS)
+    }
+    if counted:
         return False
     if words & _LINES_WORDS and not words & _PLURAL_COUNT_WORDS:
         return True
@@ -999,6 +1007,27 @@ def asks_for_diff_files(field_name: str) -> bool:
     return bool(subject & _FILE_WORDS) and subject <= _DIFF_FILE_SUBJECT_WORDS
 
 
+#: #665: the words that name the hunks of a diff, beside the files.
+_HUNK_WORDS = frozenset({"hunk", "hunks"})
+
+
+def asks_for_diff_hunks(field_name: str) -> bool:
+    """#665: whether the location field `field_name` asks for the files of a diff and their hunks.
+
+    `ficheros_y_hunks_con_lineas`, `files_and_hunks_with_lines`: a plural of files, a hunk word and
+    nothing else beside the location words. `hunks_with_lines` (no files) or a singular
+    (`fichero_y_hunks_con_lineas`) do not.
+    """
+    if not is_location_field(field_name):
+        return False
+    subject = _name_words(field_name) - _LOCATION_NAME_WORDS
+    return (
+        bool(subject & _FILE_WORDS)
+        and bool(subject & _HUNK_WORDS)
+        and subject <= _DIFF_FILE_SUBJECT_WORDS | _HUNK_WORDS
+    )
+
+
 #: #582: a hunk header and its line counts (`-a,b +c,d`; a missing count is 1).
 _HUNK_COUNTS = re.compile(r"@@ -\d+(?:,(\d+))? \+\d+(?:,(\d+))? @@")
 #: The `a/`, `b/` prefixes of git, and the `i/ w/ c/ o/` of `diff.mnemonicPrefix`.
@@ -1059,10 +1088,16 @@ class _DiffEntry:
     old: str | None = None
     new: str | None = None
     end: int | None = None
+    hunks: list[int] = field(default_factory=list)  # 0-based line of each `@@` header
 
 
 def diff_file_ranges(content: str) -> list[tuple[int, int, str]]:
-    """#582: `(first, last, path)` of each file of a unified diff, in lines of the patch itself.
+    """#582: `(first, last, path)` of each file of a unified diff (see `diff_file_hunks`)."""
+    return [(first, last, path) for first, last, path, _hunks in diff_file_hunks(content)]
+
+
+def diff_file_hunks(content: str) -> list[tuple[int, int, str, list[tuple[int, int]]]]:
+    """#582, #665: `(first, last, path, hunks)` of each file of a unified diff, in patch lines.
 
     A file starts at its header: `diff --git`, or the `--- ` line followed by `+++ `, moved back
     to a `diff -…`, `Index: ` or `===` line just before it (`diff -ru`, SVN). It ends on the line
@@ -1072,7 +1107,9 @@ def diff_file_ranges(content: str) -> list[tuple[int, int, str]]:
     header (`--- comment`) does not open a file. Lines counted from 1 and split only on `\\n`,
     like `_number_lines` and `Read`. The path is the one of `+++ b/x`, the one of `--- a/x` for a
     deletion, the `rename to`, or the one of the `diff --git` line; quoted paths are unquoted and
-    the `a/ b/ i/ w/ c/ o/` prefixes dropped. Anything that is not a diff gives `[]`.
+    the `a/ b/ i/ w/ c/ o/` prefixes dropped. `hunks` holds `(first, last)` of each hunk of the
+    file: from its `@@` line to the line before the next one, or to the end of the file. Anything
+    that is not a diff gives `[]`.
     """
     lines = content.split("\n")
     files: list[_DiffEntry] = []
@@ -1102,6 +1139,8 @@ def diff_file_ranges(content: str) -> list[tuple[int, int, str]]:
             old_left = new_left = 0  # a malformed hunk: read the line as a header
         if line.startswith("@@"):
             counts = _HUNK_COUNTS.match(line)
+            if current is not None and current.end is None:
+                current.hunks.append(i)
             if counts and current is not None:
                 old_left = int(counts.group(1)) if counts.group(1) is not None else 1
                 new_left = int(counts.group(2)) if counts.group(2) is not None else 1
@@ -1138,11 +1177,14 @@ def diff_file_ranges(content: str) -> list[tuple[int, int, str]]:
         while end - 1 > current.start and lines[end - 1] == "":
             end -= 1
         current.end = end
-    out: list[tuple[int, int, str]] = []
+    out: list[tuple[int, int, str, list[tuple[int, int]]]] = []
     for entry in files:
         path = entry.new or entry.old or entry.header
         if path and entry.end is not None:
-            out.append((entry.start + 1, entry.end, path))
+            starts = [h for h in entry.hunks if h < entry.end]
+            ends = [*starts[1:], entry.end] if starts else []
+            hunks = [(start + 1, end) for start, end in zip(starts, ends, strict=True)]
+            out.append((entry.start + 1, entry.end, path, hunks))
     return out
 
 
