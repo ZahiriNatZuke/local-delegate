@@ -2,9 +2,19 @@
 
 ## Current state
 
-- SDD status: implementing → verifying (ver `state.json`)
-- Last completed gate: plan
-- Current revision: rama `feat/codex-native-hooks` sobre `402f99e3`
+- SDD status: `result-review`; puertas spec, plan, quality y conformance aprobadas; `memory` pendiente (se aprueba al cerrar, tras mezclar).
+- Last completed gate: conformance
+- Current revision: rama `feat/codex-native-hooks` sobre `6e973c39`, PR #682 («Refs #669»), abierto (no borrador) el 2026-11-16 a las 11:35 (hora de Uruguay).
+- Al cerrar la jornada (11:38): los checks del PR seguían corriendo; en verde los rápidos (matriz CLI 3.11 a 3.14, install-smoke, audit, secrets, GitGuardian, Socket) y pendientes CodeQL, lint, test en Windows, Ubuntu y macOS, plugin, test-lang-es y ci-gate.
+
+## Para retomar
+
+1. `gh pr checks 682`: arreglar cualquier rojo. Mirar en el log de `test (windows-latest)` que
+   `test_the_generated_command_runs_through_the_codex_shell` **corrió** (con `CI` falla en vez de
+   saltarse) y anotarlo en `verification.md`.
+2. Si `main` se movió y hay conflicto (CHANGELOG o wiki), actualizar la rama y resolver.
+3. Prueba de confianza de la persona (abajo, «Next action», punto 1). Mezclar lo decide el usuario.
+4. Tras mezclar: puerta `memory`, `closed`, tarjeta del Project, y el siguiente PR de #669.
 
 ## What changed
 
