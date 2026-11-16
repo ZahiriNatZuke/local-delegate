@@ -34,6 +34,17 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   español o en inglés), la respuesta termina con un aviso por programa: el prompt del rol `vision`
   no cambia y la respuesta del modelo se devuelve tal cual.
 
+- **`local_extract` avisa cuando un valor dice lo contrario que la entrada (#667).** El modelo
+  mecánico (gemma3-4b) devolvió «Do not review code real of the mod and adapters…» donde el
+  documento pedía revisar ese código: la negación de la frase siguiente («no inferir la respuesta
+  desde las skills») pasó a la primera al traducirla. El programa no cambia ninguna palabra de un
+  valor (lo comprueban los tests), así que el giro es del modelo. Ahora `local_extract` compara
+  cada frase de cada valor con la frase de la entrada que le corresponde, también traducida entre
+  español e inglés, y si una lleva una negación que la otra no tiene, la clave va en
+  `_local_delegate.polarity_flipped_keys` (`{clave: {"value", "source", "flip"}}`) con aviso. El
+  valor no se toca. No salta en ninguna de las 177 respuestas guardadas en `tests/data/cross_fill/`
+  ni con ninguna frase de la wiki y del CHANGELOG copiada contra su propio fichero. El prompt no
+  cambia.
 - **Un fichero que no es UTF-8 ya no pierde caracteres en silencio ni da falsos «datos inventados»
   (#672).** Con `path`, el servidor leía todo como UTF-8 sustituyendo lo que no entendía: un texto
   en Latin-1 (la salida de `pdftotext` en Windows) perdía sus `²`, `³` y tildes sin aviso, y la
