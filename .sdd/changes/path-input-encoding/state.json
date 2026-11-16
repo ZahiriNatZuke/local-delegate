@@ -4,9 +4,9 @@
   "title": "Lectura con path: ficheros que no son UTF-8 y falsos «datos inventados» con m²/m³ (#672)",
   "mode": "lite",
   "traceability": "strict",
-  "status": "verifying",
+  "status": "closed",
   "createdAt": "2026-11-16T12:22:05.098Z",
-  "updatedAt": "2026-11-16T12:39:16.199Z",
+  "updatedAt": "2026-11-16T13:18:07.943Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -21,22 +21,22 @@
       "actor": "user"
     },
     "quality": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-11-16T13:18:06.828Z",
+      "evidence": "PR #678 CI en verde en 5d06f4e9 (todos los checks, CLEAN); suite local 7775 passed con -n 2; ruff ok; sdd check ok",
+      "actor": "user"
     },
     "conformance": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-11-16T13:18:07.297Z",
+      "evidence": "review.md standard: dos jueces, conforms-with-notes; hallazgos resueltos o aceptados por escrito; sdd check ok",
+      "actor": "user"
     },
     "memory": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-11-16T13:18:07.716Z",
+      "evidence": "handoff.md y Log L2 de brief.md; sin secretos ni datos personales",
+      "actor": "user"
     }
   },
   "history": [
@@ -90,6 +90,51 @@
       "to": "verifying",
       "at": "2026-11-16T12:39:16.199Z",
       "reason": "spec y plan aprobados; implementación y tests de zona hechos"
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-11-16T13:18:06.828Z",
+      "evidence": "PR #678 CI en verde en 5d06f4e9 (todos los checks, CLEAN); suite local 7775 passed con -n 2; ruff ok; sdd check ok",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "verifying",
+      "to": "result-review",
+      "at": "2026-11-16T13:18:07.053Z",
+      "reason": "quality aprobada"
+    },
+    {
+      "type": "gate",
+      "gate": "conformance",
+      "status": "approved",
+      "at": "2026-11-16T13:18:07.297Z",
+      "evidence": "review.md standard: dos jueces, conforms-with-notes; hallazgos resueltos o aceptados por escrito; sdd check ok",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "result-review",
+      "to": "closing",
+      "at": "2026-11-16T13:18:07.496Z",
+      "reason": "conformance aprobada"
+    },
+    {
+      "type": "gate",
+      "gate": "memory",
+      "status": "approved",
+      "at": "2026-11-16T13:18:07.716Z",
+      "evidence": "handoff.md y Log L2 de brief.md; sin secretos ni datos personales",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "closing",
+      "to": "closed",
+      "at": "2026-11-16T13:18:07.943Z",
+      "reason": "puertas aprobadas; PR #678 en verde, sin mezclar"
     }
   ]
 }

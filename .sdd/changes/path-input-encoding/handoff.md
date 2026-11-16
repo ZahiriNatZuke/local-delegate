@@ -2,8 +2,8 @@
 
 ## Current state
 
-- SDD status: verificando; las puertas quality, conformance y memory se pasan con el CI en verde
-- Last completed gate: plan
+- SDD status: cerrado tras las puertas quality, conformance y memory
+- Last completed gate: memory
 - Current revision: rama `fix/path-input-encoding`
 
 ## What changed
@@ -20,7 +20,7 @@
 
 ## Next action
 
-- Esperar el CI del PR y cerrar las puertas.
+- Mezclar el PR #678 (lo decide la sesión principal).
 
 ## Memory
 
