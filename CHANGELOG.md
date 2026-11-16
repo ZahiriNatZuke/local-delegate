@@ -6,9 +6,39 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+## [0.53.0] - 2026-11-16
+
+Codex recibe la delegación casi como Claude Code y `local_extract` desconfía mejor de sus propias
+respuestas. `install` pone en `~/.codex/hooks.json` cuatro hooks: el aviso de tarea mecánica, la
+pista de cada subagente, el resumen de lecturas grandes con guard de escritura, y la nota que une
+cada delegación a su sesión de Codex (columna «Codex» en el panel). `install --codex-direct-tools`
+saca las tools de detrás de `tool_search`, y la wiki trae la matriz de lo que Codex tiene y no del
+mod. `doctor` gana dos checks de Codex, `codex.hooks` y `codex.plugin` (37 en total), este último
+para avisar del plugin de Claude Code importado en Codex, que no lo puede leer. `local_extract`
+calcula por programa los ficheros y los hunks de un diff (`diff_files`, sin llamar al modelo si no
+hace falta), rehace en mitades una respuesta de líneas cortada y avisa cuando un valor invierte la
+negación de la fuente (`polarity_flipped_keys`); `local_summarize` avisa si el resumen niega los
+fallos o saltos que contó un runner de tests. Un `path` que no es UTF-8 se lee sin perder caracteres y avisa;
+`local_describe_image` dice que no sirve para medir; y un subagente con lista cerrada de tools ya no
+recibe órdenes de delegar que no puede cumplir.
+
+### Cómo actualizar
+
+- **En la PC y en la Mac:** ejecuta `local-delegate update` o, si instalaste con versión fija,
+  reinstala con `uv tool install --force --no-cache "local-delegate-mcp[llamaswap]==0.53.0"` (con
+  tus extras). **Reinicia el daemon** para que sirva las tools de esta versión, y haz `/mcp` en
+  Claude Code (o abre una sesión nueva): las sesiones abiertas siguen con el servidor MCP de la
+  0.52.0 hasta entonces.
+- **Con Codex:** tras `install` o `update`, abre `/hooks` en Codex y aprueba los cuatro hooks nuevos de
+  `local-delegate` (`codex-prompt`, `codex-subagent-start`, `codex-tool-guard` y `codex-mcp-call`); Codex no los ejecuta hasta entonces, y `local-delegate` no escribe esa
+  aprobación. `doctor` (check `codex.hooks`) dice si están configurados, aprobados y vistos
+  despachar. Si importaste a mano el plugin de Claude Code en Codex, `doctor` (check
+  `codex.plugin`) te da el `codex plugin remove` que lo quita.
+- No hace falta cambiar la configuración.
+
 ### Añadido
 
-- **Codex: matriz de capacidades y tools directas (#671).** Página nueva de la wiki
+- **Codex: matriz de capacidades y tools directas (#671, #686).** Página nueva de la wiki
   ([Codex: qué tiene y qué no del mod](docs/wiki/Codex-capabilities.md)) con lo que hace el mod de
   Claude Code y lo que hay en Codex 0.169.0, fila por fila y con su evidencia: los comandos sin
   modelo y la banda de estado no tienen equivalente (Codex solo ofrece `!comando` y una
@@ -19,7 +49,7 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   quita solo `"deferred"`, y sin flag `install` y `update` conservan la lista tal cual, también una
   lista escrita a mano. `doctor` lo enseña en la línea de la entrada MCP de Codex.
 
-- **Codex: resumen de lecturas y guard de escritura (#670).** Un tercer hook de Codex,
+- **Codex: resumen de lecturas y guard de escritura (#670, #686).** Un tercer hook de Codex,
   `codex-tool-guard` (`PreToolUse` sobre Bash, `apply_patch` y lecturas MCP), hace lo del mod de
   lectura de Claude Code: una lectura entera por shell de prosa grande se deniega con el resumen de
   `local_summarize` como motivo, así que la lectura no se ejecuta y el texto no entra al contexto;
@@ -32,7 +62,7 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   diálogo a un hook: la wiki explica la vía, los límites y la prueba en vivo con un centinela.
   Hay que aprobarlo en `/hooks`.
 
-- **Cada delegación de Codex, con su sesión (#669, segunda parte).** `install` añade a
+- **Cada delegación de Codex, con su sesión (#669, #686).** `install` añade a
   `~/.codex/hooks.json` un cuarto hook, `codex-mcp-call` (`PreToolUse` sobre
   `^mcp__local[-_]delegate__`), que no avisa ni bloquea: deja una nota con el modelo de Codex, si la
   llamada es de un subagente (y su tipo) y la clave de un solo sentido de la sesión. El servidor la
@@ -46,7 +76,7 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   el hook nuevo en `/hooks`; los de antes conservan su aprobación, y `doctor` cuenta cuatro hooks
   (avisa hasta que `update` añade el que falta).
 
-- **Hooks de Codex (#669, núcleo).** Con Codex instalado (o `--clients codex`), `install` añade a
+- **Hooks de Codex (#669, #682).** Con Codex instalado (o `--clients codex`), `install` añade a
   `~/.codex/hooks.json` dos hooks consultivos: `UserPromptSubmit` (el aviso de tarea mecánica) y
   `SubagentStart` (cómo usar las `local_*` con `path` en cada subagente). No tocan ni mueven tus
   grupos, así que no pierden su aprobación; Codex no los ejecuta hasta que los apruebas en
@@ -58,7 +88,7 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   arriba; shell y `apply_patch`, todavía no.
 
 - **`doctor` avisa si el plugin de Claude Code está importado en Codex, que no lo puede leer
-  (#668).** Codex lee los marketplaces de Claude Code, así que el plugin se puede importar a mano
+  (#668, #677).** Codex lee los marketplaces de Claude Code, así que el plugin se puede importar a mano
   (`codex plugin marketplace add` + `codex plugin add`). Pero Codex 0.169.0 solo admite
   `description` y `hooks` arriba del todo en `hooks/hooks.json`, y el `modules` del mod hace que
   rechace el fichero entero con un simple aviso al arrancar: el plugin sale habilitado y en caché y
@@ -70,12 +100,12 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   formato de Codex, `ok`, sin afirmar que cargue. Las reglas copian el parser de Codex 0.169.0 (`openai/codex`, etiqueta
   `rust-v0.169.0`) y las fixtures de `tests/fixtures/codex_plugin` se cargaron en un Codex real
   con un `CODEX_HOME` temporal. `install` sigue sin poner el plugin en Codex: allí da la entrada
-  MCP y `AGENTS.md`. `doctor` pasa de 35 a 36 checks.
+  MCP y `AGENTS.md`. Con este check y `codex.hooks`, `doctor` pasa de 35 a 37 checks.
 
 ### Corregido
 
 - **`local_extract` ya no llama al modelo cuando el programa resuelve todos los campos de un diff**
-  (#687). Con campos como `files_with_lines` o `ficheros_y_hunks_con_lineas` sobre un `.patch`, el
+  (#687, #686). Con campos como `files_with_lines` o `ficheros_y_hunks_con_lineas` sobre un `.patch`, el
   programa ya daba los ficheros y sus líneas (#665), pero el modelo se llamaba igual y su respuesta
   se descartaba: un parche de ~151 KB pasó por 7 trozos y tardó 129 s para nada. Ahora, si todos
   los campos pedidos son de ese tipo, la respuesta se arma solo por programa, en milisegundos y sin
@@ -84,7 +114,7 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   panel y cuente el contexto ahorrado: lleva `program_only: true` y `model: "program"`, 0 tokens
   locales y la latencia real, y el panel la cuenta como delegación con 0 llamadas al backend. Con
   cualquier otro campo en la lista, el modelo se llama como antes.
-- **`local_summarize` avisa cuando el resumen niega lo que contó un runner de tests** (#684).
+- **`local_summarize` avisa cuando el resumen niega lo que contó un runner de tests** (#684, #686).
   Sobre una salida corta de `pytest -q` que termina en `750 passed, 2 skipped`, el resumen decía
   «omitiendo 2» y en la frase siguiente «No se reportaron fallos ni saltos», sin aviso: la cifra
   sí estaba en la entrada, así que la revisión de datos inventados (#630) no tenía nada que marcar.
@@ -94,14 +124,14 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   frase y la línea del runner, y recuerda que para salida de tests está `local_lint_summary`. El
   resumen no cambia. Un resumen que dice bien «2 saltados» o que niega solo lo que el runner no
   contó no avisa.
-- **`local_extract` sobre un diff grande ya no devuelve solo el primer fichero** (#665). Con `path`
+- **`local_extract` sobre un diff grande ya no devuelve solo el primer fichero** (#665, #676). Con `path`
   a un `.patch` de varios ficheros y un campo como `ficheros_con_lineas`, la respuesta traía
   `package.json: líneas 1-21` y nada más, sin aviso. La unión de los trozos estaba bien; el fallo
   era que el modelo nombraba solo el primer `diff --git` de lo que leía. Ahora un campo que solo
   pide los ficheros y sus líneas lo calcula el programa desde el parche (`ruta: primera-última`,
   uno por fichero) y `_local_delegate.diff_files` lo dice.
 - **`local_extract` sobre un diff da también los ficheros con sus hunks y no deja un `null` mudo**
-  (#665, reabierto). Dos informes con `.patch` grandes y troceados (14 ficheros con hunks
+  (#665, #686). Dos informes con `.patch` grandes y troceados (14 ficheros con hunks
   `@@ -0,0 +1,N @@` largos; unas 6000 líneas) volvieron con `null` en todos los trozos: corrían la
   0.52.0, anterior al arreglo de arriba, y además `main` seguía mandando al modelo, trozo a trozo,
   tres casos. Ahora un campo que pide los ficheros y sus hunks (`ficheros_y_hunks_con_lineas`,
@@ -111,7 +141,7 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   primer `diff --git` se lee como diff. Si un `.patch` no tiene cabeceras de fichero, o un campo de
   líneas que el programa no responde queda en `null` en todos los trozos de un diff, `warning` lo
   dice y nombra los campos que sí se responden por programa.
-- **`local_extract` con un campo de líneas ya no devuelve un JSON cortado en silencio** (#666). Si
+- **`local_extract` con un campo de líneas ya no devuelve un JSON cortado en silencio** (#666, #676). Si
   la llamada única se cortaba por `max_tokens`, el resultado era el error «respuesta no parseable
   como JSON» y las líneas inventadas no se comprobaban. Ahora esa llamada se rehace en mitades y
   los campos de líneas se unen por programa; si aun así no hay JSON, el error dice que el corte fue
@@ -119,7 +149,7 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   cuando salen de un trozo cortado.
 
 - **Un subagente con lista cerrada de tools ya no recibe órdenes de delegar que no puede cumplir
-  (#664).** Un agente con `tools: Read, Grep, Glob` en su definición no tiene `ToolSearch` ni las
+  (#664, #681).** Un agente con `tools: Read, Grep, Glob` en su definición no tiene `ToolSearch` ni las
   `local_*`, pero el recordatorio de `SubagentStart`, la pista de `Read` en código grande y el
   bloqueo de la prosa grande (en `Read` y en el shell) lo mandaban a ellas. La entrada del hook no
   trae la lista de tools y el transcript no la distingue (uno de lista cerrada no tiene ningún
@@ -130,7 +160,7 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   sigue como antes. El bloque de `CLAUDE.md` y la skill dicen qué hacer en ese caso: quien lanza el
   agente delega antes y le pasa el resultado, o elige un tipo que herede las tools o nombre las
   `local_*`; el subagente lee por rangos y lo dice en su informe.
-- **`local_describe_image` avisa de que no mide (#663).** El modelo de visión afirmó que un botón
+- **`local_describe_image` avisa de que no mide (#663, #679).** El modelo de visión afirmó que un botón
   estaba desalineado entre dos barras de una captura y que un valor se partía en dos líneas, y las
   medidas del DOM lo desmintieron; un agente con solo la imagen habría informado de dos defectos
   que no existen. Ahora la descripción de la tool, la skill `local-delegation` y la wiki dicen que
@@ -139,7 +169,7 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   español o en inglés), la respuesta termina con un aviso por programa: el prompt del rol `vision`
   no cambia y la respuesta del modelo se devuelve tal cual.
 
-- **`local_extract` avisa cuando un valor dice lo contrario que la entrada (#667).** El modelo
+- **`local_extract` avisa cuando un valor dice lo contrario que la entrada (#667, #680).** El modelo
   mecánico (gemma3-4b) devolvió «Do not review code real of the mod and adapters…» donde el
   documento pedía revisar ese código: la negación de la frase siguiente («no inferir la respuesta
   desde las skills») pasó a la primera al traducirla. El programa no cambia ninguna palabra de un
@@ -151,7 +181,7 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   ni con ninguna frase de la wiki y del CHANGELOG copiada contra su propio fichero. El prompt no
   cambia.
 - **Un fichero que no es UTF-8 ya no pierde caracteres en silencio ni da falsos «datos inventados»
-  (#672).** Con `path`, el servidor leía todo como UTF-8 sustituyendo lo que no entendía: un texto
+  (#672, #678).** Con `path`, el servidor leía todo como UTF-8 sustituyendo lo que no entendía: un texto
   en Latin-1 (la salida de `pdftotext` en Windows) perdía sus `²`, `³` y tildes sin aviso, y la
   revisión de #630 tomaba por inventados los `m²`/`m³` que el resumen copiaba del fichero. Ahora se
   prueba UTF-8 estricto; un fichero con BOM de UTF-16 se lee como UTF-16, y el resto como
@@ -161,7 +191,7 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   `_local_delegate.warning` e `input_encoding`. La revisión de #630 compara las dos partes en la
   misma forma Unicode (NFC) y solo mira las letras de cada palabra, así que `m²` ya no es «una
   palabra de otro idioma». Un fichero UTF-8 se lee igual que antes.
-- **Un mirror de apt lento o sin DNS ya no deja el CI de main en rojo.** Tras la 0.52.0, `lint`
+- **Un mirror de apt lento o sin DNS ya no deja el CI de main en rojo (#662).** Tras la 0.52.0, `lint`
   agotó los 5 minutos de `playwright install --with-deps` y `test-lang-es` salió con el código 100
   de apt, sin ningún cambio de código: el runner no resolvía los mirrors de Ubuntu. Ahora, en los
   dos trabajos, el navegador sale de una caché atada al sistema y a la versión exacta de playwright
@@ -170,6 +200,12 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   con el tope corriendo como root para que un `apt-get` colgado no deje el lock tomado
   (`scripts/ci_playwright_system_packages.sh`). `tests/test_ci_gate.py` ata esa forma. Sin efecto
   para quien usa el paquete.
+
+### Dependencias
+
+- **Al día (#673–#675, de Dependabot):** `fastapi` 0.162.5 y `filelock` 4.2.10; de desarrollo,
+  `ruff` 0.17.5 y `playwright` 1.65.1. Socket da 0,98 o más a las tres primeras; a `playwright`,
+  0,70 de licencia y 0,75 de cadena de suministro (solo se usa en el CI y en las capturas).
 
 ## [0.52.0] - 2026-11-11
 
@@ -5246,7 +5282,8 @@ los ficheros de datos. Lo que lee el usuario sigue en español.
 - Empaquetado para PyPI (`local-delegate-mcp`) ejecutable con `uvx`; `server.json` para el
   registro oficial de MCP.
 
-[Unreleased]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.52.0...HEAD
+[Unreleased]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.53.0...HEAD
+[0.53.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.52.0...v0.53.0
 [0.52.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.51.0...v0.52.0
 [0.51.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.50.0...v0.51.0
 [0.50.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.49.0...v0.50.0
