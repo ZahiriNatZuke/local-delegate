@@ -43,5 +43,5 @@ depende de que el modelo obedezca prosa; y el bloque y la skill dicen qué hacer
 
   > Resolver #664 de `ZahiriNatZuke/local-delegate`: «El paso 1 obligatorio de delegación es imposible en subagentes con lista cerrada de tools (sin ToolSearch)».
 
-- L2 2026-11-16 Hecho el arreglo por definición del agente, tests, prueba instalada y documentación;
-  queda el PR, el CI y el cierre de puertas.
+- L2 2026-11-16 Hecho el arreglo por definición del agente, tests, prueba instalada y documentación.
+  PR #681 con el CI en verde; puertas aprobadas y cambio cerrado. Queda el mod como seguimiento.
