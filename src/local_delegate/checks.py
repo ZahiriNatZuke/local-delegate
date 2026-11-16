@@ -1261,6 +1261,9 @@ def _probe_mcp_codex(ctx: Context) -> Result:
         )
     kind = _codex_mode(section.group(0))
     kind += _timeouts_text(dict(install._CODEX_TIMEOUT_RE.findall(section.group(0))))
+    if install.codex_tools_direct(section.group(0)):
+        # #671: lo que dice la tabla; con `code_mode_only_strict_3p_tools` Codex lo ignora.
+        kind += i18n.t("doctor.probe.mcp_codex.direct_tools")
     if install.TOML_BEGIN not in text:
         return Result(WARN, i18n.t("doctor.probe.mcp_codex.by_hand", details=kind, path=path))
     # El de apertura basta para saber que es nuestra. Si falta el de cierre es que otro programa
