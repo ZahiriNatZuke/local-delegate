@@ -4,9 +4,9 @@
   "title": "local_extract: ficheros de un diff por programa y respuesta de líneas cortada (#665, #666)",
   "mode": "lite",
   "traceability": "strict",
-  "status": "verifying",
+  "status": "closed",
   "createdAt": "2026-11-16T11:37:30.936Z",
-  "updatedAt": "2026-11-16T12:01:20.504Z",
+  "updatedAt": "2026-11-16T12:11:10.935Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -21,22 +21,22 @@
       "actor": "user"
     },
     "quality": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-11-16T12:11:09.885Z",
+      "evidence": "PR #676 CI 22/22 en verde (CodeQL, Socket y GitGuardian incluidos); suite local -n 2 7739 passed; sdd check ok",
+      "actor": "user"
     },
     "conformance": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-11-16T12:11:10.318Z",
+      "evidence": "review.md standard: dos jueces, conforms-with-notes; hallazgos medios corregidos con tests",
+      "actor": "user"
     },
     "memory": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-11-16T12:11:10.525Z",
+      "evidence": "handoff.md y brief.md L2; sin secretos ni datos personales",
+      "actor": "user"
     }
   },
   "history": [
@@ -97,6 +97,51 @@
       "to": "verifying",
       "at": "2026-11-16T12:01:20.504Z",
       "reason": "avance del expediente: spec y plan aprobados, T1-T5 hechas y verificadas"
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-11-16T12:11:09.885Z",
+      "evidence": "PR #676 CI 22/22 en verde (CodeQL, Socket y GitGuardian incluidos); suite local -n 2 7739 passed; sdd check ok",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "verifying",
+      "to": "result-review",
+      "at": "2026-11-16T12:11:10.105Z",
+      "reason": "verificación completa"
+    },
+    {
+      "type": "gate",
+      "gate": "conformance",
+      "status": "approved",
+      "at": "2026-11-16T12:11:10.318Z",
+      "evidence": "review.md standard: dos jueces, conforms-with-notes; hallazgos medios corregidos con tests",
+      "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "memory",
+      "status": "approved",
+      "at": "2026-11-16T12:11:10.525Z",
+      "evidence": "handoff.md y brief.md L2; sin secretos ni datos personales",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "result-review",
+      "to": "closing",
+      "at": "2026-11-16T12:11:10.730Z",
+      "reason": "puertas aprobadas"
+    },
+    {
+      "type": "transition",
+      "from": "closing",
+      "to": "closed",
+      "at": "2026-11-16T12:11:10.935Z",
+      "reason": "PR #676 abierto en verde; lo mezcla la sesión principal"
     }
   ]
 }

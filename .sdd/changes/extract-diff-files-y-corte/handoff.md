@@ -2,8 +2,8 @@
 
 ## Current state
 
-- SDD status: verifying, a la espera del PR en verde
-- Last completed gate: plan
+- SDD status: closed; PR #676 en verde, sin mezclar
+- Last completed gate: memory
 - Current revision: rama del worktree sobre b4669c85
 
 ## What changed
