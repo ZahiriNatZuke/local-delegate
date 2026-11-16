@@ -7,8 +7,11 @@ the format ``codex_plugin.check_hooks_file`` checks. This module owns two handle
 - ``UserPromptSubmit`` → ``codex-prompt``: a delegation hint for a clearly mechanical prompt.
 - ``SubagentStart`` → ``codex-subagent-start``: the reminder for every subagent.
 
+- ``PreToolUse`` → ``codex-tool-guard``: read summary and write guard for the shell, ``apply_patch``
+  and MCP reads (#670, `codex_reads`).
+
 Not covered here: the calls to our MCP tools and their attribution to a Codex session (next step
-of #669), reads, shell commands and ``apply_patch`` (#670).
+of #669).
 
 Codex only runs a handler the user approved in ``/hooks``. The approval is stored under the key
 ``"<path>:<event>:<group>:<handler>"`` (``codex-rs/hooks/src/lib.rs``, ``hook_key``) with a hash
@@ -44,6 +47,8 @@ from datetime import UTC, datetime
 from pathlib import Path
 from types import ModuleType
 
+from . import codex_reads
+
 HOOKS_FILE_NAME = "hooks.json"
 #: In `LOG_DIR`: `{hook name: UTC time}` of the last dispatch of each Codex hook.
 SEEN_FILE_NAME = "codex-hooks-seen.json"
@@ -56,16 +61,23 @@ class HookSpec:
     name: str
     event: str
     matcher: str | None = None
+    timeout: int = TIMEOUT_S
 
 
 SPECS: tuple[HookSpec, ...] = (
     HookSpec("codex-prompt", "UserPromptSubmit"),
     HookSpec("codex-subagent-start", "SubagentStart"),
+    # #670: read summary and write guard (`codex_reads`), with the summary's own time.
+    HookSpec(codex_reads.NAME, codex_reads.EVENT, codex_reads.MATCHER, codex_reads.HOOK_TIMEOUT_S),
 )
 NAMES = frozenset(spec.name for spec in SPECS)
 
 #: `hook_event_key_label` of `codex-rs/hooks/src/lib.rs`, for the events we use.
-EVENT_LABELS = {"UserPromptSubmit": "user_prompt_submit", "SubagentStart": "subagent_start"}
+EVENT_LABELS = {
+    "UserPromptSubmit": "user_prompt_submit",
+    "SubagentStart": "subagent_start",
+    "PreToolUse": "pre_tool_use",
+}
 
 #: The tail of every command of ours, whatever the interpreter in front of it.
 #: Anchored at the start: one interpreter (quoted or bare) and nothing else in front, so a wrapper
@@ -92,15 +104,15 @@ def command(python: str, name: str, platform: str | None = None) -> str:
     return f"{exe} -I -m {HOOK_MODULE} {name}"
 
 
-def handler(python: str, name: str, platform: str | None = None) -> dict:
-    return {"type": "command", "command": command(python, name, platform), "timeout": TIMEOUT_S}
+def handler(python: str, name: str, platform: str | None = None, timeout: int = TIMEOUT_S) -> dict:
+    return {"type": "command", "command": command(python, name, platform), "timeout": timeout}
 
 
 def group(spec: HookSpec, python: str, platform: str | None = None) -> dict:
     data: dict = {}
     if spec.matcher is not None:
         data["matcher"] = spec.matcher
-    data["hooks"] = [handler(python, spec.name, platform)]
+    data["hooks"] = [handler(python, spec.name, platform, spec.timeout)]
     return data
 
 
@@ -412,6 +424,12 @@ def run(name: str, load_hook_module: Callable[[str], ModuleType]) -> None:
     if payload is None:
         return
     common = load_hook_module("hook_common")
+    if name == codex_reads.NAME:
+        # Not behind `backend_down`: the write guard does not need the backend (the classifier
+        # lets the read through when it is down).
+        if common.enabled():
+            codex_reads.run(payload, common)
+        return
     if not common.enabled() or common.backend_down():
         return
     if name == "codex-prompt":

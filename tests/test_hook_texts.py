@@ -83,7 +83,8 @@ def test_every_key_the_hooks_use_exists():
     used = set()
     # The Codex hooks run inside the package and reach the catalogue as `common.hook_text` (#669).
     codex = Path(inst.__file__).resolve().parent / "codex_hooks.py"
-    for path in [*HOOK_FILES, codex]:
+    reads = codex.with_name("codex_reads.py")  # #670
+    for path in [*HOOK_FILES, codex, reads]:
         for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
             if not isinstance(node, ast.Call):
                 continue

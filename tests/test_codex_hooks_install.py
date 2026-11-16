@@ -37,7 +37,8 @@ def _merge(data: dict, python: str = PYTHON) -> tuple[dict, list[str]]:
 # --- merge and strip, pure -----------------------------------------------------------------------
 def test_merge_into_nothing_gives_both_and_a_file_codex_reads():
     data, changed = _merge({})
-    assert changed == ["codex-prompt", "codex-subagent-start"]
+    assert changed == [spec.name for spec in codex_hooks.SPECS]
+    assert changed[:2] == ["codex-prompt", "codex-subagent-start"]
     assert data == {"hooks": codex_hooks.entries(PYTHON, "win32")}
     assert codex_plugin.check_hooks_file(data) == []
 
@@ -50,7 +51,8 @@ def test_merge_goes_after_the_users_groups_and_moves_none():
     before = copy.deepcopy(data)
     merged, _ = _merge(data)
     assert merged["description"] == "mine"
-    assert merged["hooks"]["PreToolUse"] == before["hooks"]["PreToolUse"]
+    # The user's groups keep their index; ours (#670) go after them.
+    assert merged["hooks"]["PreToolUse"][:1] == before["hooks"]["PreToolUse"]
     assert merged["hooks"]["UserPromptSubmit"][0] == FOREIGN_PROMPT
     assert codex_hooks.our_name(merged["hooks"]["UserPromptSubmit"][1]) == "codex-prompt"
 
@@ -69,7 +71,8 @@ def test_an_old_group_of_ours_is_rewritten_in_its_index():
         }
     }
     merged, changed = _merge(data)
-    assert changed == ["codex-prompt"]
+    # Of the two hooks of #669 in `data`, only the old one is rewritten (the rest are added).
+    assert [n for n in changed if n in {"codex-prompt", "codex-subagent-start"}] == ["codex-prompt"]
     assert merged["hooks"]["UserPromptSubmit"] == [_ours("codex-prompt"), FOREIGN_PROMPT]
 
 

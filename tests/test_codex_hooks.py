@@ -105,6 +105,8 @@ def test_the_schema_check_can_fail():
 # --- REQ-001: the entries ------------------------------------------------------------------------
 def test_entries_are_two_command_handlers_without_args():
     entries = codex_hooks.entries(PYTHON, "win32")
+    # #670 adds `PreToolUse` (`tests/test_codex_reads.py`); these are the two of #669.
+    entries = {k: v for k, v in entries.items() if k in {"UserPromptSubmit", "SubagentStart"}}
     assert set(entries) == {"UserPromptSubmit", "SubagentStart"}
     flat = [(event, g) for event, groups in entries.items() for g in groups]
     assert len(flat) == 2
