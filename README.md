@@ -155,27 +155,28 @@ auto-arranque de llama-swap es opt-in (ver tabla de configuración).
 ¿Qué versiones de `llama-server`/`llama-swap` usar y cómo disponer el workspace? Ver
 [Versiones del backend y workspace de referencia](./docs/wiki/Backend-versions.md) (sugerencia
 probada, no requisito). `local-delegate doctor` compara tu instalación contra esas versiones y, de
-paso, comprueba el resto del andamiaje —hooks, skill, memoria, entradas MCP, el daemon y que el
-modelo de cada rol esté en la lista del backend— sin
+paso, comprueba el resto del andamiaje —hooks, skill, memoria, entradas MCP, el daemon, que el
+modelo de cada rol esté en la lista del backend y, en Codex, los hooks y el plugin— sin
 escribir nada ([qué mira cada check](./docs/wiki/Integration-install.md#comprobar-la-instalación-local-delegate-doctor)).
 
 ## Tools
 
 Pasar `path` (en vez de `text`) hace que el MCP lea el archivo server-side: el contenido no entra
-al contexto de Claude, y de ahí sale el ahorro.
+al contexto de Claude, y de ahí sale el ahorro. Un fichero que no es UTF-8 (UTF-16 con BOM,
+Windows-1252) se lee sin perder caracteres y la respuesta lo avisa.
 
 | Tool | Qué hace | Rol de modelo (default) |
 |---|---|---|
 | `local_summarize` | Resume texto o archivo; `focus` opcional para decir qué conservar (p. ej. «cifras de configuración»); avisa si el resumen trae siglas, palabras o cifras que la entrada no tiene | mecánico / largo (auto; una entrada pequeña con tabla va a largo) |
 | `local_classify` | Devuelve UNA etiqueta de una lista | mecánico |
-| `local_extract` | Extrae campos → **objeto validado** con exactamente las claves pedidas (las que falten o vengan como «N/A», `null`), no una cadena que haya que parsear; con `path`, números de línea reales para un campo que los pida; una entrada pequeña con tabla (HTML, ARIA, Markdown/GFM, CSV o TSV) va al modelo largo y `_local_delegate.role_reason` lo dice con su `format`; si el valor de una clave sale de la fila de otra clave pedida, avisa en `cross_filled_keys` | mecánico / largo (auto; también con tabla) |
+| `local_extract` | Extrae campos → **objeto validado** con exactamente las claves pedidas (las que falten o vengan como «N/A», `null`), no una cadena que haya que parsear; con `path`, números de línea reales para un campo que los pida; una entrada pequeña con tabla (HTML, ARIA, Markdown/GFM, CSV o TSV) va al modelo largo y `_local_delegate.role_reason` lo dice con su `format`; si el valor de una clave sale de la fila de otra clave pedida, avisa en `cross_filled_keys`, y si invierte una negación de la entrada, en `polarity_flipped_keys`; sobre un diff, los ficheros y sus líneas los calcula el programa (`diff_files`) | mecánico / largo (auto; también con tabla) |
 | `local_boilerplate` | Genera código desde una spec y lo **escribe en `target`**; devuelve solo un recibo | código |
 | `local_delegate` | Escape genérico texto→texto | mecánico (o el que pases) |
 | `local_lint_summary` | Resume logs de lint/tests/CI; con pytest parte de los fallos reales del log y avisa si el resumen no cuadra con ellos | mecánico / largo (auto) |
 | `local_commit_msg` | Mensaje de commit desde un diff; con `path` toma el idioma del repo y avisa si no pudo; con un diff enorme acaba a tiempo con lo leído y lo avisa; troceado, avisa y lista las condiciones cambiadas para revisarlo | código |
 | `local_translate` | Traduce texto o archivo | mecánico / largo (auto) |
 | `local_explain_code` | Explica código en prosa; con `path` y pregunta avisa de líneas citadas dudosas y de una premisa que el código no sostiene, aunque la respuesta la sitúe junto a código real | código |
-| `local_describe_image` | Describe una imagen o responde una pregunta sobre ella (imagen→texto) | visión |
+| `local_describe_image` | Describe una imagen o responde una pregunta sobre ella (imagen→texto); no mide alineación, tamaños ni saltos de línea, y avisa cuando la pregunta o la respuesta hablan de eso | visión |
 | `local_status` | Diagnóstico de solo lectura: backend, catálogo, log, VRAM, RAM de sistema | — (no llama al backend de chat) |
 
 Los modelos locales **no** usan tool-calling: el server arma el prompt + guardrails, hace POST al
@@ -394,7 +395,7 @@ a propósito:
 | Memoria | bloque gestionado en `~/.claude/CLAUDE.md`, `~/.codex/AGENTS.md` y `~/.config/opencode/AGENTS.md` | la regla en una nota corta siempre cargada |
 
 Por defecto se configuran **solo los clientes que tengas instalados**; se elige a mano con
-`--clients claude|codex|opencode`. Los **hooks** son de Claude Code y, desde esta versión, también
+`--clients claude|codex|opencode`. Los **hooks** son de Claude Code y, desde la 0.53.0, también
 de Codex: dos consultivos en `~/.codex/hooks.json` que no tocan ni mueven los tuyos y que no
 corren hasta que los apruebas en `/hooks`; todavía no hay hooks sobre las herramientas de Codex
 (llamadas MCP, shell, `apply_patch`). Ver
