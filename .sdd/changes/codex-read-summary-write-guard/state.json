@@ -1,0 +1,109 @@
+{
+  "schemaVersion": 1,
+  "slug": "codex-read-summary-write-guard",
+  "title": "Codex: resumen automático de lecturas y guard de escritura (#670)",
+  "mode": "standard",
+  "traceability": "strict",
+  "status": "verifying",
+  "createdAt": "2026-11-16T15:38:42.960Z",
+  "updatedAt": "2026-11-16T16:08:19.681Z",
+  "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-11-16T15:48:57.761Z",
+      "evidence": "Revisor independiente personal-sdd-plan-reviewer (plan-review-1.md): approve-with-changes; 3 bloqueantes y 5 menores aplicados a spec.md",
+      "actor": "user"
+    },
+    "plan": {
+      "status": "approved",
+      "updatedAt": "2026-11-16T15:49:04.414Z",
+      "evidence": "Revisor personal-sdd-plan-reviewer: trazabilidad REQ-001..REQ-011 a T1..T5 completa; hallazgos aplicados (plan-review-1.md)",
+      "actor": "user"
+    },
+    "quality": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "conformance": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "memory": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-11-16T15:38:42.960Z",
+      "reason": "SDD change created"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "researching",
+      "at": "2026-11-16T15:46:13.301Z",
+      "reason": "código de Codex rust-v0.169.0 leído (hooks PreToolUse/PostToolUse, registry, hook_runtime)"
+    },
+    {
+      "type": "transition",
+      "from": "researching",
+      "to": "specifying",
+      "at": "2026-11-16T15:46:13.556Z",
+      "reason": "vía técnica: deny con motivo en PreToolUse"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-11-16T15:48:57.761Z",
+      "evidence": "Revisor independiente personal-sdd-plan-reviewer (plan-review-1.md): approve-with-changes; 3 bloqueantes y 5 menores aplicados a spec.md",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-11-16T15:49:04.147Z",
+      "reason": "spec aprobada"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-11-16T15:49:04.414Z",
+      "evidence": "Revisor personal-sdd-plan-reviewer: trazabilidad REQ-001..REQ-011 a T1..T5 completa; hallazgos aplicados (plan-review-1.md)",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "plan-review",
+      "at": "2026-11-16T15:49:22.200Z",
+      "reason": "plan revisado por revisor independiente"
+    },
+    {
+      "type": "transition",
+      "from": "plan-review",
+      "to": "implementing",
+      "at": "2026-11-16T15:49:22.470Z",
+      "reason": "puertas spec y plan aprobadas"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-11-16T16:08:19.681Z",
+      "reason": "tests de los ficheros afectados en verde (396), mutantes caen, hooks/list en Codex 0.169.0"
+    }
+  ]
+}

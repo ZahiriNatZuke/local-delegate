@@ -23,7 +23,7 @@ local-delegate uninstall             # revierte solo lo que instaló
 |---|---|---|
 | Entrada MCP | Claude Code (`claude mcp add-json --scope user`, o `~/.claude.json` si no está la CLI), `~/.codex/config.toml` y opencode (`opencode mcp add`, o `~/.config/opencode/opencode.json[c]` si no está la CLI) | `stdio` con `uvx` por defecto; `--mcp-mode http` apunta al daemon compartido |
 | Hooks | `~/.claude/hooks/local-delegate/` + registro en `~/.claude/settings.json` | `UserPromptSubmit`, `SubagentStart` (recordatorio de cargar las tools `local_*` en cada subagente, salvo en uno cuya lista cerrada de `tools:` no las trae, #664) y `record_call.py` (`PreToolUse` sobre `mcp__local-delegate__.*`) siempre; los de lectura (`PreToolUse`/`Read` y `PreToolUse`/`Bash\|PowerShell`) solo con `--enable-read-hook`, que los deja activos. `record_call.py` (antes `anotar_llamada.py`) no avisa ni bloquea: anota qué agente pidió cada delegación, con qué esfuerzo y en qué transcript, para que el log de uso guarde su modelo (ver [Savings & metrics](Savings-and-metrics.md#coste-equivalente-a-precio-de-api)) |
-| Hooks de Codex | `~/.codex/hooks.json`, junto a los hooks que ya tengas | dos hooks consultivos: `UserPromptSubmit` (el mismo aviso de tarea mecánica que en Claude Code) y `SubagentStart` (cómo usar las `local_*` con `path` en cada subagente). Con Codex instalado (o `--clients codex`) y una instalación por `uv tool`; Codex no los ejecuta hasta que los apruebas en `/hooks` (ver [Hooks de Codex](#hooks-de-codex)) |
+| Hooks de Codex | `~/.codex/hooks.json`, junto a los hooks que ya tengas | dos hooks consultivos: `UserPromptSubmit` (el mismo aviso de tarea mecánica que en Claude Code) y `SubagentStart` (cómo usar las `local_*` con `path` en cada subagente), y `codex-mcp-call` (`PreToolUse` sobre las tools de `local-delegate`), que solo anota quién pidió cada delegación. Con Codex instalado (o `--clients codex`) y una instalación por `uv tool`; Codex no los ejecuta hasta que los apruebas en `/hooks` (ver [Hooks de Codex](#hooks-de-codex)) |
 | Skill | `~/.claude/skills/local-delegation/SKILL.md` y `~/.config/opencode/skill/local-delegation/SKILL.md` | regla de oro + catálogo de tools |
 | Memoria | bloque entre marcadores en `~/.claude/CLAUDE.md`, `~/.codex/AGENTS.md` y `~/.config/opencode/AGENTS.md` | resumen corto de la regla, siempre cargado |
 | Idioma | `language.json` en el directorio de datos | el idioma de la sesión en que corre `install` (o `update`), para el daemon y los hooks, que no ven tu shell. La skill, el bloque y el catálogo de los subagentes se escriben en ese idioma. Ver [Idioma](Language.md) |
@@ -130,6 +130,7 @@ opencode mcp list      # debe decir: ✓ local-delegate connected
 | `--dry-run` | describe los cambios sin escribir nada |
 | `--clients auto \| claude \| codex \| opencode` | cliente(s) a configurar (repetible; default `auto`) |
 | `--force-mcp-codex` | reemplaza sin preguntar una entrada de Codex escrita a mano |
+| `--codex-direct-tools` / `--no-codex-direct-tools` | pone o quita `"deferred"` en `omit_tools_from` de la entrada de Codex: las tools de local-delegate van en la lista inicial del modelo en vez de tras `tool_search` (unos 15,8 KB más por turno). **Sin ninguno de los dos se conserva lo que tuviera la tabla.** Ver [Codex: qué tiene y qué no del mod](Codex-capabilities.md#tools-directas-en-vez-de-tool_search) |
 | `--target claude \| codex \| opencode \| all` | histórico, equivale a `--clients`; `all` fuerza los tres aunque no estén instalados. No se combina con `--clients` |
 | `--no-hooks` / `--no-skill` / `--no-memory` / `--no-mcp` | excluye ese componente |
 | `--agents` | actualiza tus subagentes de `~/.claude/agents/` (opt-in, ver abajo) |
@@ -482,25 +483,29 @@ claude plugin test src/local_delegate/resources/claude-plugin/local-delegate
 
 ## Hooks de Codex
 
-Con Codex instalado (o `--clients codex`), `install` añade a `~/.codex/hooks.json` dos hooks consultivos (issue #669):
+Con Codex instalado (o `--clients codex`), `install` añade a `~/.codex/hooks.json` cuatro hooks: dos consultivos y uno que solo anota (issue #669), y el del resumen de lecturas y el guard de escritura (issue #670):
 
 | Evento de Codex | Hook | Qué hace |
 |---|---|---|
 | `UserPromptSubmit` | `codex-prompt` | si el prompt es claramente mecánico (resumir, extraer, traducir…), le dice al modelo de qué tipo es y que evalúe la tool `local_*` específica con `path`; si no, calla |
 | `SubagentStart` | `codex-subagent-start` | le dice a cada subagente cómo usar las `local_*` con `path` ante un archivo grande |
+| `PreToolUse` (Bash, `apply_patch` y lecturas MCP) | `codex-tool-guard` | da el resumen local en lugar de una lectura grande de prosa por shell, lleva la cuenta de las lecturas por rangos y rechaza editar un fichero leído solo resumido hasta que leas literal el tramo; ver [Resumen de lecturas y guard de escritura](#resumen-de-lecturas-y-guard-de-escritura-en-codex) |
+| `PreToolUse`, matcher `^mcp__local[-_]delegate__` | `codex-mcp-call` | antes de cada llamada a una tool de `local-delegate`, también las anidadas de *code mode*, deja una nota con el modelo de Codex, si la pide un subagente (y su tipo) y la clave de un solo sentido de la sesión; no imprime nada ni bloquea |
 
-**Qué no cubre todavía.** En esta versión no hay ningún hook sobre herramientas: ni sobre las
-llamadas MCP a `local-delegate` (tampoco las de *code mode*), ni sobre Bash, `apply_patch` o las
-lecturas. La atribución de cada delegación a su sesión de Codex es el siguiente paso de #669; el
-resumen de lecturas, el guard de escritura y los hooks de shell, #670; la interfaz y los comandos
-sin modelo, #671.
+**Qué no cubre todavía.** La interfaz y los comandos sin modelo, #671. El matcher de
+`codex-mcp-call` va anclado (`^`) y acepta el nombre del servidor con `-` o con `_`, porque Codex
+puede sanear el guion; el propio hook vuelve a mirar el nombre de la tool, así que un matcher
+ensanchado a mano no anota llamadas de otros servidores.
 
 **Telemetría global y atribución por sesión.** El daemon cuenta todas las delegaciones, vengan de
 donde vengan: en el log de uso las de Codex salen con su cliente (`codex-mcp-client`) y fuera del
-coste equivalente. Lo que todavía no se sabe es **de qué sesión de Codex** vino cada una: eso es la
-atribución por sesión, el siguiente paso. Estos dos hooks no escriben en la telemetría de hooks
-(la serie de la ventana de medición es de Claude Code); cada despacho solo deja la hora en
-`codex-hooks-seen.json`, sin nada del prompt.
+coste equivalente. La **atribución por sesión** dice además de qué sesión de Codex vino cada una:
+el servidor lee del `_meta` de cada llamada `callId` y `sessionId` (solo si el cliente es
+`codex-mcp-client`; la sesión, solo en hash) y, con la nota de `codex-mcp-call`, el hilo, el tipo
+de agente y el modelo. Sin el hook aprobado la fila tiene igual su sesión. Qué campos lleva la fila
+y dónde se ven: [Savings & metrics](Savings-and-metrics.md#delegaciones-de-codex). Ningún hook de
+Codex escribe en la telemetría de hooks (la serie de la ventana de medición es de Claude Code);
+cada despacho solo deja la hora en `codex-hooks-seen.json`, sin nada del prompt ni de la llamada.
 
 **Cómo conviven con los tuyos.** Un grupo es nuestro solo si tiene un único manejador `command`,
 sin `commandWindows` ni `command_windows`, cuyo comando es solo el intérprete seguido de `-I -m local_delegate.hook codex-<nombre>`. Los tuyos no
@@ -522,16 +527,83 @@ dice por qué.
 `local-delegate` no la escribe por ti:
 
 1. `local-delegate install --clients codex`, con `local-delegate` instalado por `uv tool`.
-2. Abre Codex y escribe `/hooks`. Aparecen `codex-prompt` y `codex-subagent-start` como pendientes
-   de revisar; apruébalos.
+2. Abre Codex y escribe `/hooks`. Aparecen `codex-prompt`, `codex-subagent-start`,
+   `codex-tool-guard` y `codex-mcp-call` como pendientes de revisar; apruébalos.
 3. Escribe un prompt mecánico, por ejemplo «resume este fichero en cinco viñetas»: el modelo
-   recibe el aviso. Pídele luego algo que lance un subagente, para `codex-subagent-start`.
+   recibe el aviso. Pídele luego algo que lance un subagente, para `codex-subagent-start`, y
+   que delegue algo en una tool `local_*`, para `codex-mcp-call`.
 4. `local-delegate doctor`: la línea «hooks de local-delegate en Codex» dice «aprobados en
-   /hooks: 2 de 2» y la hora en que vio despachar cada uno. Si tras aprobarlos dice «0 de 2»,
+   /hooks: 4 de 4» y la hora en que vio despachar cada uno. Si tras aprobarlos dice «0 de 4»,
    es un fallo: avísalo.
+
+Si ya tenías los primeros aprobados, `update` añade los que faltan (`codex-tool-guard`,
+`codex-mcp-call`) sin moverlos (siguen aprobados) y en `/hooks` solo quedan pendientes los nuevos.
 
 Si `doctor` dice que no son los de esta versión, `local-delegate update` los repone en su sitio y
 hay que aprobarlos otra vez en `/hooks`.
+
+### Resumen de lecturas y guard de escritura en Codex
+
+`codex-tool-guard` hace en Codex lo que el mod de lectura hace en Claude Code (issue #670), por la
+única vía que abre Codex CLI 0.169.0. Leído en su código (`openai/codex`, etiqueta `rust-v0.169.0`):
+
+- **Lo que sí se puede.** Un hook `PreToolUse` que responde `permissionDecision: "deny"` impide que
+  la herramienta se ejecute (`core/src/tools/registry.rs`, `apply_pre_tool_use`), y el modelo recibe
+  `Command blocked by PreToolUse hook: <motivo>. Command: <comando>` (`core/src/hook_runtime.rs`).
+  Ese motivo es el resumen: la lectura **no se ejecuta** y el texto del fichero **no entra** al
+  contexto. Un `additionalContext` sin decisión llega como nota.
+- **Lo que no.** `PostToolUse` no puede sustituir la salida de Bash (`updatedMCPToolOutput` está
+  «unsupported» y falla en abierto, `hooks/src/events/post_tool_use.rs`) y, además, a esas alturas la
+  lectura ya se ejecutó. Reescribir el comando (`updatedInput` con `allow`) a un `echo` del resumen se
+  descartó: pasa por el sandbox y la aprobación del shell, y por el quoting de PowerShell. Codex no
+  da a un hook ningún diálogo, así que no hay «resumir o leer entero»: se resume solo, como en una
+  sesión de Claude Code sin diálogo. Sin caché de resúmenes: cada lectura resumida pide uno nuevo.
+
+Qué hace, en el orden del mod:
+
+| Llamada | Qué pasa |
+|---|---|
+| Lectura entera por shell (`cat`, `Get-Content`, `type`) de prosa por encima del umbral (`.md`, `.txt`, `.rst`, más de 8 KB) | se deniega con el resumen de `local_summarize` (pedido al daemon con `path`) como motivo, con una cabecera que dice que la lectura no se ejecutó, cuántas líneas puedes leer literales y con qué comando (`sed -n '1,120p'`, `Get-Content -TotalCount 120`); el fichero queda guardado |
+| Un tramo (`sed -n 'A,Bp'`, `head -n`, `Get-Content -TotalCount`) | pasa y suma; el tramo que llevaría lo leído en la sesión al 80 % de sus líneas se resume (como leerlo entero) |
+| Código, configuración, datos, prosa pequeña, un fichero corto (≤200 líneas y <32 KB) | pasa literal; un subagente que lee entero un fichero grande recibe la nota de localizar antes |
+| `apply_patch` (`Update/Add/Delete File`, `Move to`) o escritura por shell (`sed -i`, `>`, `cp`, `Set-Content`) sobre un fichero guardado | se rechaza hasta que leas literal un tramo de ese fichero |
+| Comando compuesto (`;`, `&&`, `$(…)`) que lee prosa grande | pasa (denegarlo quitaría también el resto) con la nota de usar `local_summarize` |
+| Lectura por una tool MCP ajena (`read_text_file`, `read_note`…) de un fichero grande | pasa con esa misma nota; nunca se deniega |
+
+**Fallo en abierto.** Si el daemon no contesta en 150 s, el backend está marcado caído, el resumen
+viene vacío, con `[local-delegate error]`, con el aviso de llamada movida a segundo plano o con un
+aviso de salida cortada o de presupuesto de tiempo, la lectura pasa tal cual y el fichero no queda
+guardado. El `timeout` del hook es 180 s: si Codex lo corta, también deja pasar la lectura. El guard
+no depende del backend. `LD_HOOK_ENABLED=0` apaga el hook entero, y el interruptor de lectura de
+siempre (`LD_HOOK_READ_ENABLED`, `LD_HOOK_READ_BLOCK`, `~/.claude/local-delegate-block-off`) decide
+si resume, igual que en Claude Code.
+
+**Alcance y estado.** El guard y la cuenta de líneas son de cada agente: el hilo principal por un
+lado y cada subagente (`agent_id`) por otro, así que el resumen de un subagente no impide editar al
+principal ni al revés. Se guardan en `<datos>/codex-read/<session_id>.jsonl` (solo rutas, tramos y
+marcas, nunca contenido), así que sobreviven a reanudar la sesión. Una lectura literal levanta el
+guard en el momento de permitirla. El resumen sale en el log de uso con el cliente
+`local-delegate-codex-read`, fuera del coste equivalente.
+
+**Coste.** El hook arranca un proceso de Python en cada llamada a Bash (unos 0,12 s medidos en
+Windows); en el hilo principal, un comando que no nombra un fichero de prosa y una sesión sin estado
+salen antes de cargar el clasificador.
+
+**Prueba en vivo (la haces tú: los tests no pueden abrir un Codex con tu cuenta).**
+
+1. Instala la rama con `uv tool`, `local-delegate install --clients codex` y aprueba
+   `codex-tool-guard` en `/hooks`. Con el daemon y el backend en marcha.
+2. Crea un `centinela.md` de prosa de más de 8 KB con una palabra rara solo a mitad del texto (por
+   ejemplo `ZEBRA-4417`) y pide a Codex «lee centinela.md con cat y dime de qué trata». Debe responder
+   con el resumen y el aviso de `/hooks` de que la orden se bloqueó. Pregúntale luego qué palabra rara
+   hay a mitad del fichero: no debe saberla. En el transcript de la sesión (`~/.codex/sessions/…`) la
+   palabra no debe aparecer.
+3. Pídele que cambie una línea de `centinela.md`: el `apply_patch` se rechaza con el aviso de leer un
+   tramo. Que lea `sed -n '1,40p' centinela.md` (o `Get-Content -TotalCount 40`) y repita: ahora pasa.
+4. Con el daemon parado, repite el punto 2: Codex lee el fichero entero (la lectura pasa).
+5. Si en el punto 2 no se resume nada, añade a mano un grupo tuyo de `PreToolUse` con matcher `Bash`
+   que vuelque su entrada a un fichero (`python -c "import sys; open(r'C:/tmp/pre.json','wb').write(sys.stdin.buffer.read())"`),
+   repite y adjunta ese JSON al issue: es el payload real de Windows que los tests no tienen.
 
 ## Comprobar la instalación: `local-delegate doctor`
 
@@ -570,7 +642,7 @@ local-delegate doctor --home /tmp/x  # diagnostica contra un HOME simulado (solo
 | Andamiaje | MCP en Claude Code | la entrada `local-delegate` en `~/.claude.json` |
 | Andamiaje | MCP en Codex | la sección `[mcp_servers.local-delegate]` de `~/.codex/config.toml`, **también con sangría**: otros programas reescriben ese fichero a su manera (el plugin de JetBrains lo indenta entero y se come los comentarios). Con el marcador de apertura es nuestra y `[ OK ]`, aunque falte el de cierre; sin marcadores, `warn` y no se pisa |
 | Andamiaje | plugin de local-delegate en Codex | si el plugin de **Claude Code** se importó a mano en Codex (`codex plugin marketplace add` + `codex plugin add`): lee la caché `~/.codex/plugins/cache/<marketplace>/local-delegate/<versión>/hooks/hooks.json` y `[plugins."local-delegate@<marketplace>"]` de `~/.codex/config.toml`, sin lanzar `codex`. Codex 0.169.0 solo admite `description` y `hooks` arriba del todo: el `modules` del mod de Claude Code hace que **rechace el fichero entero** con un simple aviso al arrancar, aunque el proceso termine bien. Habilitado así, `warn` con `codex plugin remove local-delegate@<marketplace>` (quita el plugin y su caché y deja intacta la entrada MCP). Sin `modules` también es `warn`: Codex lo carga pero tira los `args` y no expande `${user_config.ld_bin}`. Deshabilitado (o solo en la caché, sin tabla en `config.toml`) o sin plugin, `[ OK ]`; sin `~/.codex`, `[ -- ]`. Una tabla sin `enabled` cuenta como habilitada, como en Codex. Con el formato de Codex, `[ OK ]`, pero eso no prueba que cargue ni que sus hooks estén aprobados: se mira en Codex con `/hooks`. `install` nunca pone este plugin en Codex: a Codex le da la entrada MCP y `AGENTS.md` (issue #668) |
-| Andamiaje | hooks de local-delegate en Codex | nuestros dos grupos en `~/.codex/hooks.json` (issue #669), sin lanzar `codex`. Dice por separado tres cosas: **configurados** (están en el fichero), **aprobados** (cuántos tienen `trusted_hash` bajo su clave en `[hooks.state]` de `~/.codex/config.toml`; eso no prueba que la aprobación siga valiendo, lo decide Codex al cargarlos) y **vistos despachar** (la hora del último despacho de cada uno, de `codex-hooks-seen.json` en el directorio de datos). Sin hooks nuestros, `[ OK ]` (son opcionales); si alguno falta, no es el de esta versión o su intérprete ya no existe, `warn` con `local-delegate update`, y tras reparar hay que aprobarlo otra vez en `/hooks`. Si Codex rechazaría el fichero entero (una clave que no conoce, o una marca BOM al principio), `warn`. Avisa también si `config.toml` tiene grupos de hooks en `[hooks]` (Codex dice al arrancar que carga los dos); `[hooks.state]` solo no cuenta. Sin `~/.codex`, `[ -- ]` |
+| Andamiaje | hooks de local-delegate en Codex | nuestros cuatro grupos en `~/.codex/hooks.json` (issues #669 y #670), sin lanzar `codex`. Dice por separado tres cosas: **configurados** (están en el fichero), **aprobados** (cuántos tienen `trusted_hash` bajo su clave en `[hooks.state]` de `~/.codex/config.toml`; eso no prueba que la aprobación siga valiendo, lo decide Codex al cargarlos) y **vistos despachar** (la hora del último despacho de cada uno, de `codex-hooks-seen.json` en el directorio de datos). Sin hooks nuestros, `[ OK ]` (son opcionales); si alguno falta, no es el de esta versión o su intérprete ya no existe, `warn` con `local-delegate update`, y tras reparar hay que aprobarlo otra vez en `/hooks`. Si Codex rechazaría el fichero entero (una clave que no conoce, o una marca BOM al principio), `warn`. Avisa también si `config.toml` tiene grupos de hooks en `[hooks]` (Codex dice al arrancar que carga los dos); `[hooks.state]` solo no cuenta. Sin `~/.codex`, `[ -- ]` |
 | Andamiaje | MCP en opencode | la clave `mcp.local-delegate` de `~/.config/opencode/opencode.json` **o** `opencode.jsonc` — opencode lee los dos y los fusiona |
 | Andamiaje | autocompletado del shell | el de `install --shell-completion`, si está: lee el manifiesto `installed.json` y compara cada fichero con el que genera la versión instalada **en el idioma del manifiesto** (así el veredicto no cambia con el idioma de la sesión), y mira que cada perfil listado siga teniendo el bloque que lo carga. No lanza ningún shell. Sin nada instalado, `[ OK ]` «no instalado (opcional)»; fichero de otra versión o distinto, `warn` con `local-delegate update`; fichero ausente, bloque borrado o ficheros sin manifiesto, `warn` con `local-delegate install --shell-completion`; manifiesto, fichero o perfil ilegible, `unknown` |
 | Servicios | daemon | `http://127.0.0.1:9393/api/daemon` (versión y pid), y si sirve una versión **distinta de la instalada** |

@@ -121,7 +121,7 @@ def test_every_file_of_a_chunked_diff_comes_back(backend, tmp_path):
     text, expected = _diff(30, 60)
     assert len(text) > config.max_chars_for_role("long"), "guard: it must chunk"
     data = server.local_extract(fields=[FILES_FIELD], path=_write(tmp_path, text, "big.patch"))
-    assert len(calls) > 1, "guard: it chunked"
+    assert calls == [], "#687: the program answers every field, no backend call"
     assert data[FILES_FIELD] == expected
     meta = data["_local_delegate"]
     assert meta["diff_files"]["fields"] == [FILES_FIELD]
@@ -134,7 +134,9 @@ def test_a_single_call_diff_is_answered_by_program_too(backend, tmp_path):
     calls, state = backend
     state["answer"] = _first_file_only
     text, expected = _diff(3, 4)
-    data = server.local_extract(fields=[FILES_FIELD], path=_write(tmp_path, text, "small.patch"))
+    data = server.local_extract(
+        fields=["summary", FILES_FIELD], path=_write(tmp_path, text, "small.patch")
+    )
     assert len(calls) == 1
     assert data[FILES_FIELD] == expected
     # #582: the model is told the `@@` numbers are not lines of the patch.
@@ -173,7 +175,9 @@ def test_json_that_is_not_an_object_keeps_the_diff_files(backend, tmp_path):
     _calls, state = backend
     state["answer"] = lambda call: _ok('["package.json"]')
     text, expected = _diff(3, 4)
-    data = server.local_extract(fields=[FILES_FIELD], path=_write(tmp_path, text, "small.patch"))
+    data = server.local_extract(
+        fields=["summary", FILES_FIELD], path=_write(tmp_path, text, "small.patch")
+    )
     assert data[FILES_FIELD] == expected
     assert data["_local_delegate"]["model_error"]["error"] == i18n.t("mcp.extract.not_object")
 
@@ -183,7 +187,9 @@ def test_a_cut_call_with_only_diff_files_is_not_retried(backend, tmp_path):
     state["answer"] = lambda call: _ok(f'{{"{FILES_FIELD}": ["package.json: 1-', "length")
     text, expected = _diff(6, 30)
     assert len(text) > 2 * config.CHUNK_MIN_CHARS and len(text) < config.max_chars_for_role("long")
-    data = server.local_extract(fields=[FILES_FIELD], path=_write(tmp_path, text, "mid.patch"))
+    data = server.local_extract(
+        fields=["summary", FILES_FIELD], path=_write(tmp_path, text, "mid.patch")
+    )
     assert len(calls) == 1, "the program answers the field: no more calls"
     assert data[FILES_FIELD] == expected
 

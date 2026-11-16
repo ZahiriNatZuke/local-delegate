@@ -9,6 +9,7 @@ Documentación extendida del MCP `local-delegate`. Para empezar rápido, ve al
 - **[Architecture](Architecture.md)** — daemon HTTP/compatibilidad stdio → endpoint OpenAI-compatible, guardrail, logging y dashboard.
 - **[Daemon compartido](Daemon.md)** — un solo MCP persistente para Codex, Claude Code y otros clientes.
 - **[Instalación de la integración](Integration-install.md)** — `install`/`uninstall`: entrada MCP, hooks, skill y bloque de memoria en CLAUDE.md/AGENTS.md.
+- **[Codex: qué tiene y qué no del mod](Codex-capabilities.md)** — matriz Claude Code ↔ Codex (tools fijadas, comandos sin modelo, barra de estado) con su evidencia, y las tools directas con `--codex-direct-tools`.
 - **[Entrega por plugin de Claude Code](Claude-plugin.md)** — hooks como plugin, vuelta a settings, `install --desktop` (puente del chat de Claude Desktop) y cómo deshacerlo.
 - **[Configuration](Configuration.md)** — referencia completa de variables de entorno.
 - **[Idioma](Language.md)** — español o inglés: precedencia, `language.json`, cómo elegir y cómo volver a seguir al sistema.

@@ -23,7 +23,7 @@ from collections.abc import Iterable
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
-from . import attribution, config, pricing, test_windows
+from . import attribution, clients, config, pricing, test_windows
 
 # El respaldo declarado (REQ-008): el grupo más frecuente medido (135 de 149 atribuidas).
 DECLARED_FALLBACK = {"model": "claude-opus-5-5", "thread": "subagent"}
@@ -187,7 +187,9 @@ def merge_row(row: dict, entry: dict | None = None, *, fallback_: dict | None = 
     necesita el tramo de la barra.
     """
     out = dict(row)
-    entry = entry if isinstance(entry, dict) else {}
+    # A Codex row takes nothing from the backfill (#669): an entry for it can only be an old
+    # window cross with a Claude transcript, which is not its caller.
+    entry = entry if isinstance(entry, dict) and not attribution.is_codex_row(row) else {}
     for field in BACKFILL_FIELDS:
         if _empty(out.get(field)) and not _empty(entry.get(field)):
             out[field] = entry[field]
@@ -253,7 +255,9 @@ def in_flight_row(
     if input_unit != "chars":
         row["input_unit"] = input_unit
     try:
-        row.update(attribution.current_call())
+        # A Codex call keeps the receipt it had (#669): its model is not a Claude one to value.
+        if clients.current_client() != clients.CODEX_CLIENT:
+            row.update(attribution.current_call())
     except Exception:
         pass  # observar nunca rompe una tool: sin atribución, respaldo
     return merge_row(row)

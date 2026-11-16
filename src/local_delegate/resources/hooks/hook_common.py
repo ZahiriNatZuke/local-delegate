@@ -1611,6 +1611,47 @@ HOOK_TEXTS: dict[str, dict[str, str]] = {
             "`local_extract` o `local_explain_code` (con `path`) las lineas que necesitas y lee "
             "solo ese rango; para un resumen, `local_summarize` con `path`."
         ),
+        "codex.read.summary.header_budget": (
+            "Resumen de `{path}` hecho por el modelo local de `local-delegate`: la lectura no se "
+            "ejecuto y este es su resultado (no es el contenido literal). Para modificar el "
+            "fichero, lee solo el tramo que vas a cambiar, por ejemplo `sed -n '1,120p'` o "
+            "`Get-Content -TotalCount 120`: con una lectura literal ya puedes editarlo. En esta "
+            "sesion puedes leer literal hasta {lines} de sus {total} lineas en total; desde el "
+            "80 %, cuenta como lectura entera y tambien se resume."
+        ),
+        "codex.read.summary.header_ranges": (
+            "Resumen de `{path}` hecho por el modelo local de `local-delegate`: la lectura no se "
+            "ejecuto y este es su resultado (no es el contenido literal). No es por el tamano del "
+            "tramo: con el, lo leido del fichero en esta sesion llegaria al {pct} % de sus {total} "
+            "lineas, y desde el 80 % cuenta como lectura entera. Llevas {read} lineas leidas "
+            "literales; te quedan {left} (el maximo es {lines}). Para modificarlo, lee con "
+            "`sed -n '1,120p'` solo el tramo que vas a cambiar."
+        ),
+        "codex.read.summary.range_omitted": (
+            "Las lineas {first}-{last} que pediste no llegaron literales, solo este resumen. Para "
+            "tenerlas literales, pidelas en tramos mas cortos que sumen como mucho {left} lineas "
+            "que aun no hayas leido."
+        ),
+        "codex.read.summary.range_omitted_none": (
+            "Las lineas {first}-{last} que pediste no llegaron literales, solo este resumen, y en "
+            "esta sesion ya no quedan lineas de este fichero para leer literales: otro tramo "
+            "tambien se resumiria. En una sesion nueva la cuenta empieza de cero."
+        ),
+        "codex.guard.refused": (
+            "`{path}` solo se ha leido resumido: antes de modificarlo, lee literal el tramo que "
+            "vas a cambiar, por ejemplo con `sed -n '1,120p'` (con una lectura literal basta; si "
+            "lo leido del fichero llega al 80 % de sus lineas, tambien se resume)."
+        ),
+        "codex.read.warn.large": (
+            "Esta lectura de `{path}` ({kb} KB) puede meter mucho texto en el contexto. Si basta "
+            "un resumen, usa `local_summarize` con `path`."
+        ),
+        "codex.read.warn.subagent": (
+            "Subagente: `{path}` pesa {kb} KB. En un archivo grande, localiza antes de leer: pide "
+            "a `local_extract` o `local_explain_code` (con `path`) las lineas que necesitas y lee "
+            "solo ese rango. Citar o editar lineas exactas justifica leer el rango, no el archivo "
+            "entero."
+        ),
         "prompt.mechanical": (
             "Oportunidad mecanica detectada ({category}). Antes de leer contenido grande, evalua "
             "usar la tool local_* especifica con path. Conserva en Claude cualquier parte que "
@@ -1672,6 +1713,48 @@ HOOK_TEXTS: dict[str, dict[str, str]] = {
             "If you have the `local_*` tools of the MCP `local-delegate`, for a large file ask "
             "`local_extract` or `local_explain_code` (with `path`) for the lines you need and read "
             "only that range; for a summary, `local_summarize` with `path`."
+        ),
+        "codex.read.summary.header_budget": (
+            "Summary of `{path}` made by the local model of `local-delegate`: the read did not "
+            "run and this is its result (not the literal content). To modify the file, read only "
+            "the part you are going to change, for example `sed -n '1,120p'` or "
+            "`Get-Content -TotalCount 120`: one literal read is enough to edit it. In this "
+            "session you can read up to {lines} of its {total} lines literally in all; from 80 %, "
+            "it counts as reading it whole and is summarized too."
+        ),
+        "codex.read.summary.header_ranges": (
+            "Summary of `{path}` made by the local model of `local-delegate`: the read did not "
+            "run and this is its result (not the literal content). Not because of the range's "
+            "size: with it, what this session has read of the file would reach {pct} % of its "
+            "{total} lines, and from 80 % that counts as reading it whole. You have read {read} "
+            "lines literally; {left} are left (the most is {lines}). To modify it, read with "
+            "`sed -n '1,120p'` only the part you are going to change."
+        ),
+        "codex.read.summary.range_omitted": (
+            "Lines {first}-{last} you asked for did not come literally, only this summary. To get "
+            "them literally, ask for them in shorter ranges that add up to at most {left} lines "
+            "you have not read yet."
+        ),
+        "codex.read.summary.range_omitted_none": (
+            "Lines {first}-{last} you asked for did not come literally, only this summary, and "
+            "this session has no lines of this file left to read literally: another range would "
+            "be summarized too. A new session starts the count over."
+        ),
+        "codex.guard.refused": (
+            "`{path}` has only been read as a summary: before modifying it, read literally the "
+            "part you are going to change, for example with `sed -n '1,120p'` (one literal read "
+            "is enough; if what was read of the file reaches 80 % of its lines, it is summarized "
+            "too)."
+        ),
+        "codex.read.warn.large": (
+            "This read of `{path}` ({kb} KB) may put a lot of text in the context. If a summary "
+            "is enough, use `local_summarize` with `path`."
+        ),
+        "codex.read.warn.subagent": (
+            "Subagent: `{path}` is {kb} KB. For a large file, locate before reading: ask "
+            "`local_extract` or `local_explain_code` (with `path`) for the lines you need and "
+            "read only that range. Quoting or editing exact lines justifies reading the range, "
+            "not the whole file."
         ),
         "prompt.mechanical": (
             "Mechanical task detected ({category}). Before reading large content, consider the "
@@ -2362,4 +2445,77 @@ def record_call(hook_input: dict, directory: Path | None = None) -> bool:
     except Exception:
         # Best-effort a proposito: perder la nota deja la delegacion para el relleno; romperle la
         # llamada al usuario por un fichero temporal costaria mucho mas.
+        return False
+
+
+# --- The note of a Codex call (#669) -------------------------------------------------------------
+# The Codex hook `codex-mcp-call` (PreToolUse on our MCP tools) leaves one note per call in the same
+# directory, under a name of its own (`codex-<call id>.json`), so it never meets a note of Claude
+# Code. The server picks it up by the `_meta.callId` Codex sends (`attribution.read_codex_note`).
+# It carries what only the hook input has: the model, the subagent and the session, the last as its
+# one-way key. Never `cwd`, `transcript_path`, `tool_input` nor the session id itself.
+
+#: File name prefix of a Codex note.
+CODEX_NOTE_PREFIX = "codex-"
+
+#: Shape of a Codex `call_id` (`call_...` of the model, `exec-<uuid>` in code mode). Checked before
+#: it becomes a file name, like `TOOL_USE_ID_PATTERN`.
+CODEX_CALL_ID_PATTERN = re.compile(r"^[A-Za-z0-9_-]{1,128}$")
+
+#: Shape of the model slug kept from the hook input; anything else is dropped.
+CODEX_MODEL_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:/-]{0,79}$")
+
+#: Shape of the agent type (the role name of a Codex subagent) kept from the hook input.
+CODEX_AGENT_TYPE_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,63}$")
+
+
+def _shaped(value: object, pattern: re.Pattern) -> str | None:
+    """``value`` when it is a string that fully matches ``pattern``, else `None`."""
+    text = _text(value)
+    return text if text and pattern.fullmatch(text) else None
+
+
+def codex_note_name(call_id: object) -> str | None:
+    """`codex-<id>.json` for a valid Codex call id, else `None`."""
+    if not isinstance(call_id, str) or not CODEX_CALL_ID_PATTERN.fullmatch(call_id):
+        return None
+    return f"{CODEX_NOTE_PREFIX}{call_id}.json"
+
+
+def record_codex_call(hook_input: dict, directory: Path | None = None) -> bool:
+    """Writes the note of this Codex call. Returns whether it did. Never raises."""
+    try:
+        call_id = hook_input.get("tool_use_id")
+        name = codex_note_name(call_id)
+        if name is None:
+            return False
+        target = directory or call_notes_dir()
+        now = time.time()
+        # Every text field with a bounded shape: what does not fit is dropped, never cut.
+        note = {
+            "tool_use_id": call_id,
+            "ts": now,
+            "client": "codex",
+            "model": _shaped(hook_input.get("model"), CODEX_MODEL_PATTERN),
+            "agent_id": _shaped(hook_input.get("agent_id"), CODEX_CALL_ID_PATTERN),
+            "agent_type": _shaped(hook_input.get("agent_type"), CODEX_AGENT_TYPE_PATTERN),
+            "session_key": session_key(hook_input.get("session_id")),
+        }
+        target.mkdir(parents=True, exist_ok=True)
+        descriptor, tmp_name = tempfile.mkstemp(dir=target, prefix=".", suffix=".tmp")
+        try:
+            with os.fdopen(descriptor, "w", encoding="utf-8") as stream:
+                json.dump(note, stream, ensure_ascii=False)
+            os.replace(tmp_name, target / name)
+        except OSError:
+            try:
+                os.unlink(tmp_name)
+            except OSError:
+                # Best-effort cleanup: a hook never raises, and False below says it failed.
+                pass
+            return False
+        _prune_notes(target, now)
+        return True
+    except Exception:
+        # Best-effort on purpose: a lost note leaves the row with its session only.
         return False

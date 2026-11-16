@@ -343,16 +343,16 @@ SEED_AND_MOCK = """({DENSITY, PRICES_CHECKED}) => {
       // enseñar es de quién son las delegaciones de quien regenera la captura. La columna de
       // ahorro lee `tokens_net` (sin ella saldría «–»).
       by_client: [
-        // Who asked (usage-log-project-and-own-repo-exclusion, REQ-014): the four columns add up
-        // to `calls`; Codex brings no thread data, so its calls fall in `unknown_caller_calls`.
+        // Who asked (usage-log-project-and-own-repo-exclusion, REQ-014): the five columns add up
+        // to `calls`; every Codex row is in its own column, `codex_calls` (#669).
         {client: 'claude-code', calls: 74, backend_calls: 96,
-         main_calls: 41, subagent_calls: 21, mod_calls: 12, unknown_caller_calls: 0,
+         main_calls: 41, subagent_calls: 21, mod_calls: 12, codex_calls: 0, unknown_caller_calls: 0,
          tokens_saved: 88240, tokens_net: 81520, tokens_in: 101300, tokens_generated: 6120},
         {client: 'codex-mcp-client', calls: 31, backend_calls: 38,
-         main_calls: 0, subagent_calls: 0, mod_calls: 0, unknown_caller_calls: 31,
+         main_calls: 0, subagent_calls: 0, mod_calls: 0, codex_calls: 31, unknown_caller_calls: 0,
          tokens_saved: 24880, tokens_net: 22950, tokens_in: 29010, tokens_generated: 2410},
         {client: 'unknown', calls: 15, backend_calls: 18,
-         main_calls: 0, subagent_calls: 0, mod_calls: 0, unknown_caller_calls: 15,
+         main_calls: 0, subagent_calls: 0, mod_calls: 0, codex_calls: 0, unknown_caller_calls: 15,
          tokens_saved: 7180, tokens_net: 6640, tokens_in: 8640, tokens_generated: 690},
       ],
       // «By project» and the project filter (dashboard-project-filter): invented folder names and

@@ -84,6 +84,7 @@
   "panel.chart.unavailable": "Gráficos no disponibles: no se pudo cargar Chart.js (¿sin conexión?). El resto del panel funciona igual.",
   "panel.clients.col.backend_calls": "Llamadas al backend",
   "panel.clients.col.client": "Cliente",
+  "panel.clients.col.codex": "Codex",
   "panel.clients.col.delegations": "Delegaciones",
   "panel.clients.col.main": "Hilo principal",
   "panel.clients.col.mod": "Mod",
