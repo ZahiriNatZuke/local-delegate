@@ -6,7 +6,7 @@
   "traceability": "strict",
   "status": "verifying",
   "createdAt": "2026-11-16T12:34:14.110Z",
-  "updatedAt": "2026-11-16T13:19:56.737Z",
+  "updatedAt": "2026-11-16T13:44:18.793Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -21,22 +21,22 @@
       "actor": "user"
     },
     "quality": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-11-16T13:44:18.271Z",
+      "evidence": "PR #680 CI 22/22 en verde en ed4d49d8 antes del conflicto; tras fusionar main (solo CHANGELOG), 174 tests de la zona en verde; suite local 7830 passed",
+      "actor": "user"
     },
     "conformance": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-11-16T13:44:18.544Z",
+      "evidence": "review.md: revisor independiente, 12 hallazgos resueltos con test; mutantes 12/12 muertos; 0 avisos en 177 respuestas guardadas",
+      "actor": "user"
     },
     "memory": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-11-16T13:44:18.793Z",
+      "evidence": "handoff.md; sin secretos ni datos personales",
+      "actor": "user"
     }
   },
   "history": [
@@ -90,6 +90,30 @@
       "to": "verifying",
       "at": "2026-11-16T13:19:56.737Z",
       "reason": "implementado; suite, mutantes y revision hechas"
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-11-16T13:44:18.271Z",
+      "evidence": "PR #680 CI 22/22 en verde en ed4d49d8 antes del conflicto; tras fusionar main (solo CHANGELOG), 174 tests de la zona en verde; suite local 7830 passed",
+      "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "conformance",
+      "status": "approved",
+      "at": "2026-11-16T13:44:18.544Z",
+      "evidence": "review.md: revisor independiente, 12 hallazgos resueltos con test; mutantes 12/12 muertos; 0 avisos en 177 respuestas guardadas",
+      "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "memory",
+      "status": "approved",
+      "at": "2026-11-16T13:44:18.793Z",
+      "evidence": "handoff.md; sin secretos ni datos personales",
+      "actor": "user"
     }
   ]
 }

@@ -28,6 +28,7 @@ from __future__ import annotations
 
 import bisect
 import re
+import unicodedata
 from dataclasses import dataclass, field
 
 __all__ = ["MAX_ITEMS", "Findings", "check"]
@@ -100,7 +101,10 @@ def check(summary: str, source: str, *, language: str, figures: bool = True) -> 
     check is skipped, since its alphabet is not known here. `figures=False` skips the figures: the
     tool judges them only on an input with a table (see `local_summarize`).
     """
-    text = _CODE_SPAN.sub(" ", summary)
+    # #672: both sides in the same Unicode form, so an `é` written as `e` + combining accent in
+    # one and as one character in the other is the same letter.
+    text = _CODE_SPAN.sub(" ", unicodedata.normalize("NFC", summary))
+    source = unicodedata.normalize("NFC", source)
     source_words = [w.lower() for w in _WORD.findall(source)]
     return Findings(
         acronyms=_ungrounded_acronyms(text, " " + " ".join(source_words) + " "),
@@ -184,7 +188,9 @@ def _foreign_words(text: str, source_words: set[str], language: str) -> list[str
     found: list[str] = []
     for word in _WORD.findall(text):
         low = word.lower()
-        if all(ch in alphabet for ch in low) or low in source_words:
+        # #672: `_WORD` also takes the digits that are not decimal (`²`, `³`, `½`): `m²` is a
+        # unit, not a word with a letter of another alphabet, so only the letters are judged.
+        if all(ch in alphabet for ch in low if ch.isalpha()) or low in source_words:
             continue
         if word not in found:
             found.append(word)
