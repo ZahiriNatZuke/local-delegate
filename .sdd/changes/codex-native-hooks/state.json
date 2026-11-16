@@ -1,0 +1,132 @@
+{
+  "schemaVersion": 1,
+  "slug": "codex-native-hooks",
+  "title": "Entrega Codex nativa: hooks de usuario, instalador, diagnóstico y atribución por sesión (#669)",
+  "mode": "standard",
+  "traceability": "strict",
+  "status": "result-review",
+  "createdAt": "2026-11-16T13:32:14.187Z",
+  "updatedAt": "2026-11-16T14:34:54.423Z",
+  "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-11-16T13:50:31.342Z",
+      "evidence": "Revisor independiente personal-sdd-plan-reviewer, dos pasadas (plan-review-1.md): approve-with-changes; los 4 bloqueantes y los 4 hallazgos de la segunda pasada aplicados a spec.md",
+      "actor": "user"
+    },
+    "plan": {
+      "status": "approved",
+      "updatedAt": "2026-11-16T13:50:56.779Z",
+      "evidence": "Revisor independiente personal-sdd-plan-reviewer, segunda pasada: trazabilidad REQ-001..REQ-011 a T1..T7 completa, sin bloqueantes; hallazgos aplicados (plan-review-1.md)",
+      "actor": "user"
+    },
+    "quality": {
+      "status": "approved",
+      "updatedAt": "2026-11-16T14:34:54.010Z",
+      "evidence": "pytest -q -n 2 completo: 7842 passed, 32 skipped; ruff check y format en verde; script en vivo contra Codex 0.169.0: 15 comprobaciones, 0 fallos; hashes del ~/.codex real iguales",
+      "actor": "user"
+    },
+    "conformance": {
+      "status": "approved",
+      "updatedAt": "2026-11-16T14:34:54.423Z",
+      "evidence": "Revisión deep: dos jueces (conforms-with-notes) y revisor de seguridad sin hallazgos explotables; hallazgos aplicados o aceptados como riesgo residual en review.md",
+      "actor": "user"
+    },
+    "memory": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-11-16T13:32:14.187Z",
+      "reason": "SDD change created"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "researching",
+      "at": "2026-11-16T13:35:34.235Z",
+      "reason": "código de Codex rust-v0.169.0 leído y hooks/list medido"
+    },
+    {
+      "type": "transition",
+      "from": "researching",
+      "to": "specifying",
+      "at": "2026-11-16T13:35:34.452Z",
+      "reason": "research.md escrito"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-11-16T13:50:31.342Z",
+      "evidence": "Revisor independiente personal-sdd-plan-reviewer, dos pasadas (plan-review-1.md): approve-with-changes; los 4 bloqueantes y los 4 hallazgos de la segunda pasada aplicados a spec.md",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-11-16T13:50:42.181Z",
+      "reason": "spec aprobada tras dos pasadas de revisión"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-11-16T13:50:56.779Z",
+      "evidence": "Revisor independiente personal-sdd-plan-reviewer, segunda pasada: trazabilidad REQ-001..REQ-011 a T1..T7 completa, sin bloqueantes; hallazgos aplicados (plan-review-1.md)",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "plan-review",
+      "at": "2026-11-16T13:51:25.184Z",
+      "reason": "plan revisado por el revisor independiente, dos pasadas"
+    },
+    {
+      "type": "transition",
+      "from": "plan-review",
+      "to": "implementing",
+      "at": "2026-11-16T13:51:32.189Z",
+      "reason": "sin hallazgos bloqueantes en la segunda pasada"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-11-16T14:34:42.133Z",
+      "reason": "suite completa en verde, revisión deep con cambios aplicados"
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-11-16T14:34:54.010Z",
+      "evidence": "pytest -q -n 2 completo: 7842 passed, 32 skipped; ruff check y format en verde; script en vivo contra Codex 0.169.0: 15 comprobaciones, 0 fallos; hashes del ~/.codex real iguales",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "verifying",
+      "to": "result-review",
+      "at": "2026-11-16T14:34:54.200Z",
+      "reason": "quality aprobada"
+    },
+    {
+      "type": "gate",
+      "gate": "conformance",
+      "status": "approved",
+      "at": "2026-11-16T14:34:54.423Z",
+      "evidence": "Revisión deep: dos jueces (conforms-with-notes) y revisor de seguridad sin hallazgos explotables; hallazgos aplicados o aceptados como riesgo residual en review.md",
+      "actor": "user"
+    }
+  ]
+}

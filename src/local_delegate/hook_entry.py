@@ -62,6 +62,10 @@ HOOKS: dict[str, tuple[str, bool]] = {
     "subagent-start": ("subagent_start.py", False),
 }
 
+#: Prefix of the Codex hooks (`codex_hooks.NAMES`), written to `~/.codex/hooks.json` by `install`.
+#: They run in this process, not as scripts of `resources/hooks/` (#669).
+CODEX_PREFIX = "codex-"
+
 #: Subcomandos del mod de lectura (no son hooks de `hooks.json`). Salen con 0, o con 1 si fallan.
 COMMANDS = ("classify", "record-read")
 
@@ -301,6 +305,16 @@ def main(argv: list[str]) -> int:
         except (Exception, SystemExit) as exc:
             _log_failure(name, exc, state.get("entry"))
             return 1
+        return 0
+    if name.startswith(CODEX_PREFIX):
+        try:
+            from . import codex_hooks
+
+            if name in codex_hooks.NAMES:
+                _utf8_streams()
+                codex_hooks.run(name)
+        except (Exception, SystemExit) as exc:  # incluye SystemExit(2): nunca bloquear
+            _log_failure(name, exc)
         return 0
     entry = HOOKS.get(name)
     if entry is None:

@@ -114,8 +114,8 @@ def test_registry_ids_are_unique_and_groups_are_known():
 
 
 def test_check_ids_exact():
-    """A6 (REQ-011), REQ-009 and #668: the 36 exact ids, in English. An id is a contract with its readers."""
-    assert len(checks.CHECKS) == 36
+    """A6 (REQ-011), REQ-009 and #668: the 37 exact ids, in English. An id is a contract with its readers."""
+    assert len(checks.CHECKS) == 37
     assert {check.id for check in checks.CHECKS} == {
         "cli.path",
         "cli.published",
@@ -135,6 +135,7 @@ def test_check_ids_exact():
         "scaffold.mcp_claude",
         "scaffold.mcp_codex",
         "codex.plugin",
+        "codex.hooks",
         "scaffold.mcp_opencode",
         "scaffold.shell_completion",
         "plugin.ld_bin",
@@ -547,9 +548,11 @@ def test_empty_home_reports_missing_with_fix_hint(tmp_path):
     # not apply and the second has nothing duplicated, so both are `ok` (F1-doctor). `mod.loaded`
     # neither: without the plugin there is no mod to load (F2-mod-core), nor a read mod to
     # overlap with the read hooks (`mod.read_overlap`, F4-hooks-swap). `codex.plugin` neither: it
-    # looks for a plugin `install` never writes, so its absence is `ok` (issue #668).
+    # looks for a plugin `install` never writes, so its absence is `ok` (issue #668). Nor
+    # `codex.hooks`: our Codex hooks are optional, so none is `ok` (issue #669).
     separate = {
         "codex.plugin",
+        "codex.hooks",
         "scaffold.memory",
         "scaffold.hook_orphans",
         "scaffold.shell_completion",
@@ -1381,6 +1384,7 @@ _NUMBER_WORDS = {
     34: "treinta y cuatro",
     35: "treinta y cinco",
     36: "treinta y seis",
+    37: "treinta y siete",
 }
 _NUMBER_WORDS_WITHOUT_NOUN = {**_NUMBER_WORDS, 21: "veintiuno", 31: "treinta y uno"}
 
