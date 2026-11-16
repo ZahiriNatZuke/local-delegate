@@ -2,9 +2,9 @@
 
 ## Current state
 
-- SDD status: implementado y verificado en local; pendiente del CI del PR
-- Last completed gate: plan
-- Current revision: rama `fix/codex-plugin-claude-incompatible`
+- SDD status: closed; PR #677 mezclado en `main` (402f99e3) con los 22 checks en verde
+- Last completed gate: memory
+- Current revision: `main`
 
 ## What changed
 
@@ -24,5 +24,5 @@
 
 ## Memory
 
-- Canonical note: este handoff; sin nota de vault propia
+- Canonical note: vault `projects/local-delegate/jornada-2026-11-16-diez-issues-y-codex-nativo.md`; este handoff
 - Indexes updated: ninguno
