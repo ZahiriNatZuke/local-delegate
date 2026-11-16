@@ -25,6 +25,19 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ### Corregido
 
+- **`local_extract` sobre un diff grande ya no devuelve solo el primer fichero** (#665). Con `path`
+  a un `.patch` de varios ficheros y un campo como `ficheros_con_lineas`, la respuesta traía
+  `package.json: líneas 1-21` y nada más, sin aviso. La unión de los trozos estaba bien; el fallo
+  era que el modelo nombraba solo el primer `diff --git` de lo que leía. Ahora un campo que solo
+  pide los ficheros y sus líneas lo calcula el programa desde el parche (`ruta: primera-última`,
+  uno por fichero) y `_local_delegate.diff_files` lo dice.
+- **`local_extract` con un campo de líneas ya no devuelve un JSON cortado en silencio** (#666). Si
+  la llamada única se cortaba por `max_tokens`, el resultado era el error «respuesta no parseable
+  como JSON» y las líneas inventadas no se comprobaban. Ahora esa llamada se rehace en mitades y
+  los campos de líneas se unen por programa; si aun así no hay JSON, el error dice que el corte fue
+  por `max_tokens`, y las líneas que no casan con el fichero van en `lines_unverified` también
+  cuando salen de un trozo cortado.
+
 - **Un subagente con lista cerrada de tools ya no recibe órdenes de delegar que no puede cumplir
   (#664).** Un agente con `tools: Read, Grep, Glob` en su definición no tiene `ToolSearch` ni las
   `local_*`, pero el recordatorio de `SubagentStart`, la pista de `Read` en código grande y el

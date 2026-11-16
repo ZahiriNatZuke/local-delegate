@@ -1,0 +1,147 @@
+{
+  "schemaVersion": 1,
+  "slug": "extract-diff-files-y-corte",
+  "title": "local_extract: ficheros de un diff por programa y respuesta de líneas cortada (#665, #666)",
+  "mode": "lite",
+  "traceability": "strict",
+  "status": "closed",
+  "createdAt": "2026-11-16T11:37:30.936Z",
+  "updatedAt": "2026-11-16T12:11:10.935Z",
+  "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-11-16T11:38:27.480Z",
+      "evidence": "spec.md: 8 requisitos verificados por test; plan.md: 4 tareas trazadas a REQ-001..008; reproducción previa en brief.md L2",
+      "actor": "user"
+    },
+    "plan": {
+      "status": "approved",
+      "updatedAt": "2026-11-16T11:38:27.480Z",
+      "evidence": "spec.md: 8 requisitos verificados por test; plan.md: 4 tareas trazadas a REQ-001..008; reproducción previa en brief.md L2",
+      "actor": "user"
+    },
+    "quality": {
+      "status": "approved",
+      "updatedAt": "2026-11-16T12:11:09.885Z",
+      "evidence": "PR #676 CI 22/22 en verde (CodeQL, Socket y GitGuardian incluidos); suite local -n 2 7739 passed; sdd check ok",
+      "actor": "user"
+    },
+    "conformance": {
+      "status": "approved",
+      "updatedAt": "2026-11-16T12:11:10.318Z",
+      "evidence": "review.md standard: dos jueces, conforms-with-notes; hallazgos medios corregidos con tests",
+      "actor": "user"
+    },
+    "memory": {
+      "status": "approved",
+      "updatedAt": "2026-11-16T12:11:10.525Z",
+      "evidence": "handoff.md y brief.md L2; sin secretos ni datos personales",
+      "actor": "user"
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-11-16T11:37:30.936Z",
+      "reason": "SDD change created"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "specifying",
+      "at": "2026-11-16T11:38:27.231Z",
+      "reason": "issues leídos y reproducidos con backend doblado (control positivo)"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-11-16T11:38:27.480Z",
+      "evidence": "spec.md: 8 requisitos verificados por test; plan.md: 4 tareas trazadas a REQ-001..008; reproducción previa en brief.md L2",
+      "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-11-16T11:38:27.480Z",
+      "evidence": "spec.md: 8 requisitos verificados por test; plan.md: 4 tareas trazadas a REQ-001..008; reproducción previa en brief.md L2",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-11-16T12:01:19.833Z",
+      "reason": "avance del expediente: spec y plan aprobados, T1-T5 hechas y verificadas"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "plan-review",
+      "at": "2026-11-16T12:01:20.048Z",
+      "reason": "avance del expediente: spec y plan aprobados, T1-T5 hechas y verificadas"
+    },
+    {
+      "type": "transition",
+      "from": "plan-review",
+      "to": "implementing",
+      "at": "2026-11-16T12:01:20.272Z",
+      "reason": "avance del expediente: spec y plan aprobados, T1-T5 hechas y verificadas"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-11-16T12:01:20.504Z",
+      "reason": "avance del expediente: spec y plan aprobados, T1-T5 hechas y verificadas"
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-11-16T12:11:09.885Z",
+      "evidence": "PR #676 CI 22/22 en verde (CodeQL, Socket y GitGuardian incluidos); suite local -n 2 7739 passed; sdd check ok",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "verifying",
+      "to": "result-review",
+      "at": "2026-11-16T12:11:10.105Z",
+      "reason": "verificación completa"
+    },
+    {
+      "type": "gate",
+      "gate": "conformance",
+      "status": "approved",
+      "at": "2026-11-16T12:11:10.318Z",
+      "evidence": "review.md standard: dos jueces, conforms-with-notes; hallazgos medios corregidos con tests",
+      "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "memory",
+      "status": "approved",
+      "at": "2026-11-16T12:11:10.525Z",
+      "evidence": "handoff.md y brief.md L2; sin secretos ni datos personales",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "result-review",
+      "to": "closing",
+      "at": "2026-11-16T12:11:10.730Z",
+      "reason": "puertas aprobadas"
+    },
+    {
+      "type": "transition",
+      "from": "closing",
+      "to": "closed",
+      "at": "2026-11-16T12:11:10.935Z",
+      "reason": "PR #676 abierto en verde; lo mezcla la sesión principal"
+    }
+  ]
+}

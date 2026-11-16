@@ -1105,6 +1105,31 @@
           "reason": "dato congelado de corpus o caso: nombre de campo del issue #633, en español a propósito, para comprobar que una tabla se ubica por su rango"
         },
         {
+          "name": "ficheros_con_lineas",
+          "file": "tests/test_extract_diff_files_and_cut.py",
+          "reason": "dato congelado de corpus o caso: nombre de campo literal del issue #665, en español a propósito, para comprobar que pedir los ficheros de un diff se responde por programa"
+        },
+        {
+          "name": "lineas_con_red_o_exec_con_lineas",
+          "file": "tests/test_extract_diff_files_and_cut.py",
+          "reason": "dato congelado de corpus o caso: nombre de campo literal del issue #666, en español a propósito, para reproducir la respuesta de líneas cortada por max_tokens"
+        },
+        {
+          "name": "archivos_y_lineas",
+          "file": "tests/test_extract_diff_files_and_cut.py",
+          "reason": "dato congelado de corpus o caso: nombre de campo en español a propósito (#665), para comprobar que «archivos» y «y» piden los ficheros de un diff"
+        },
+        {
+          "name": "rutas_con_lineas",
+          "file": "tests/test_extract_diff_files_and_cut.py",
+          "reason": "dato congelado de corpus o caso: nombre de campo en español a propósito (#665), para comprobar que «rutas» pide los ficheros de un diff"
+        },
+        {
+          "name": "fichero_con_lineas",
+          "file": "tests/test_extract_diff_files_and_cut.py",
+          "reason": "dato congelado de corpus o caso: nombre de campo en español a propósito (#665), para comprobar que el singular pide un fichero y no la lista de todos"
+        },
+        {
           "name": "secciones_con_lineas",
           "file": "tests/test_extract_section_lines.py",
           "reason": "dato congelado de corpus o caso: nombre de campo del issue #633, en español a propósito, para comprobar que pedir secciones no es pedir elementos"
