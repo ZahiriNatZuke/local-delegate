@@ -182,6 +182,16 @@ la capa activa apagada (entonces no actúa ninguno).
 están en la sesión, los hooks de `Read` y de shell dejan pasar la lectura sin sugerir ni exigir
 ninguna y lo anotan como `mcp_absent`; ante la duda, avisan como antes.
 
+**Subagente con lista cerrada (#664).** Un subagente cuya definición (un `.claude/agents/*.md` cuyo `name:` es
+su `agent_type`, del proyecto o del usuario; sin `name:`, el nombre del fichero) trae un `tools:`
+sin comodín y sin ninguna tool `mcp__local-delegate__*` no puede cargar las `local_*`: no tiene
+`ToolSearch`. Con él, los hooks de `Read` y de shell tampoco sugieren ni bloquean (`mcp_absent`), y
+`SubagentStart` no le recuerda cargarlas. Un `tools:` que las nombre, `*`, un agente sin `tools:`
+(hereda las de la sesión), uno de plugin o uno integrado siguen como antes, y un `tool_use` de una
+`local_*` (o un `deferred_tools_delta` que las añada) en el transcript del propio subagente gana a la definición; lo que el parser de YAML no lee entero cuenta como duda. El transcript solo no basta:
+un agente de lista cerrada no tiene ningún `deferred_tools_delta`, nombre las `local_*` o no. El mod
+no cambia: en un subagente, la lectura por rango ya pasa literal.
+
 **Verificación.** Antes de encenderlo por defecto se probó en vivo con `claude -p` en Windows: el
 control positivo (sin el mod, `Write` pasa), el negativo (con el mod, tras un resumen, `Write` se
 rechaza y el fichero no cambia), la guarda tras `--resume`, que el hook se aparta y el latido.

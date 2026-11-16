@@ -83,6 +83,15 @@ tasks over the whole (count, pick the maximum, a single global summary) use
 A subagent does not load this skill nor the `local_*` tools by itself (they are deferred): if
 its prompt does not tell it to, it reads files whole with `Read`.
 
+**An agent with a closed list** (`tools:` in its definition) only sees what that list names:
+without `ToolSearch` or `mcp__local-delegate__local_*` it cannot load anything. For that case,
+whoever orchestrates delegates first and passes it the result in the prompt, or launches a type
+that inherits the session's tools (`disallowedTools` instead of `tools:` to take away writing) or
+that names the `local_*` tools. A subagent that finds itself like this reads by ranges with
+`offset`/`limit` and says so in its report, without insisting. The hooks recognize it by its
+definition (`agent_type` → `.claude/agents/`) and neither remind it to load the tools nor block its
+read.
+
 **If you orchestrate**, step 1 of each subagent's prompt is a concrete delegation, not an
 «if it helps»:
 

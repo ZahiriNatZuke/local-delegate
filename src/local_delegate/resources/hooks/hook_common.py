@@ -1921,13 +1921,194 @@ def _session_transcript(payload: Mapping) -> Path | None:
     return main
 
 
-def local_tools_absent(payload: object) -> bool:
-    """¿Dice el transcript que esta sesion NO tiene las tools `local_*`? True solo con al menos un
-    `deferred_tools_delta` legible, ninguna tool del servidor en el conjunto neto de diferidas,
-    ningun servidor `local-delegate` pendiente en el ultimo y ningun `tool_use` de una de sus tools."""
+# --- Subagente con lista cerrada de tools (issue #664) -------------------------------------------
+#
+# Un agente con `tools:` en su definicion solo ve lo que esa lista nombra: sin `ToolSearch` ni las
+# `local_*`, mandarlo a ellas (aviso, bloqueo, recordatorio de SubagentStart) lo deja sin salida. La
+# entrada del hook no trae la lista de tools (doc oficial de hooks: solo `agent_id` y `agent_type`), y
+# su transcript tampoco sirve: medido en los transcripts de una PC real, uno de lista cerrada SIN las
+# `local_*` no tiene ningun `deferred_tools_delta`, pero uno de lista cerrada QUE LAS NOMBRA tampoco
+# (se cargan de entrada). La prueba es la definicion: `agent_type` -> `.claude/agents/<...>.md` del
+# proyecto (de `cwd` hacia arriba, y `CLAUDE_PROJECT_DIR`) o del usuario. Solo cuenta como ausencia
+# un `tools:` explicito sin comodin y sin ninguna tool del servidor; todo lo demas (sin definicion,
+# agente de plugin o integrado, `tools:` ausente o ilegible) es duda, y ante la duda, como hoy.
+
+#: Un nombre de agente que se busca: sin `:` (los de plugin viven en su plugin) ni separadores.
+_AGENT_NAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$")
+#: Topes de la busqueda: el hook no puede tardar con una carpeta enorme o un fichero gigante.
+AGENT_FILE_MAX_BYTES = 256 * 1024
+AGENT_DIR_MAX_FILES = 300
+#: Of each definition only its head is read: the frontmatter goes first.
+AGENT_HEAD_BYTES = 16 * 1024
+_AGENT_PARENTS_MAX = 32
+
+
+def _agent_dirs(payload: Mapping) -> list[Path]:
+    """Las carpetas de definiciones, de la mas cercana a la mas general."""
+    dirs: list[Path] = []
+    project = str(os.environ.get("CLAUDE_PROJECT_DIR") or "").strip()
+    if project:
+        dirs.append(Path(project) / ".claude" / "agents")
+    cwd = payload.get("cwd")
+    if isinstance(cwd, str) and cwd.strip():
+        here = Path(cwd.strip())
+        dirs += [p / ".claude" / "agents" for p in [here, *here.parents][:_AGENT_PARENTS_MAX]]
+    config = str(os.environ.get("CLAUDE_CONFIG_DIR") or "").strip()
+    dirs.append(Path(config) / "agents" if config else _home(os.environ) / ".claude" / "agents")
+    unique: list[Path] = []
+    for folder in dirs:
+        if folder not in unique:
+            unique.append(folder)
+    return unique
+
+
+def _frontmatter(text: str) -> list[str] | None:
+    lines = text.splitlines()
+    if not lines or lines[0].strip() != "---":
+        return None
+    for index, line in enumerate(lines[1:], start=1):
+        if line.strip() == "---":
+            return lines[1:index]
+    return None
+
+
+def _unquote(value: str) -> str:
+    value = value.strip()
+    if len(value) >= 2 and value[0] == value[-1] and value[0] in "'\"":
+        return value[1:-1].strip()
+    return value
+
+
+def _frontmatter_value(lines: list[str], key: str) -> list[str] | None:
+    """Los valores de `key` (en linea, separados por comas o `[...]`, o como lista YAML `- x`);
+    None si la clave no esta, y [] (duda) con una forma que este parser no lee entera: una lista
+    `[` partida en varias lineas, un bloque de texto (`>`, `|`) o una lista con lineas raras."""
+    for index, line in enumerate(lines):
+        if not line.startswith(f"{key}:"):
+            continue
+        inline = _unquote(line[len(key) + 1 :])
+        if inline:
+            if inline.startswith(("[", "{")) and inline.endswith(("]", "}")):
+                inline = inline[1:-1]
+            if inline[:1] in ">|&*!" or any(mark in inline for mark in "[]{}#"):
+                return []
+            return [item for item in (_unquote(part) for part in inline.split(",")) if item]
+        items = []
+        for follow in lines[index + 1 :]:
+            stripped = follow.strip()
+            if not stripped or stripped.startswith("#"):
+                continue
+            if stripped.startswith("- ") or stripped == "-":
+                item = _unquote(stripped[1:])
+                if "#" in item:
+                    return []
+                if item:
+                    items.append(item)
+                continue
+            if follow[:1].isspace():
+                return []
+            break
+        return items
+    return None
+
+
+def _agent_definition_tools(payload: Mapping) -> list[str] | None:
+    """El `tools:` de la definicion del agente que llama; None si no hay definicion o no lo trae."""
+    name = payload.get("agent_type")
+    if not isinstance(name, str) or not _AGENT_NAME.match(name.strip()):
+        return None
+    name = name.strip()
+    for folder in _agent_dirs(payload):
+        try:
+            if not folder.is_dir():
+                continue
+            # The usual file first (`<name>.md`), then the rest: the `name:` field rules.
+            files = sorted(folder.glob("*.md"), key=lambda f: (f.stem != name, f.name))
+            files = files[:AGENT_DIR_MAX_FILES]
+        except OSError:
+            continue
+        for file in files:
+            try:
+                if not file.is_file() or file.stat().st_size > AGENT_FILE_MAX_BYTES:
+                    continue
+                with file.open("rb") as handle:
+                    head = handle.read(AGENT_HEAD_BYTES)
+                text = head.decode("utf-8", errors="replace").lstrip("﻿")
+                lines = _frontmatter(text)
+            except OSError:
+                continue
+            if lines is None:
+                continue
+            declared = _frontmatter_value(lines, "name")
+            own = declared[0] if declared else file.stem
+            if own == name:
+                return _frontmatter_value(lines, "tools")
+    return None
+
+
+def closed_agent_without_local_tools(payload: object) -> bool:
+    """¿Es quien llama un subagente cuya definicion cierra la lista de tools sin las `local_*`?"""
     try:
         if not isinstance(payload, Mapping):
             return False
+        tools = _agent_definition_tools(payload)
+        if not tools:
+            return False
+        for tool in tools:
+            if tool == "*" or (tool.startswith("mcp__") and "*" in tool):
+                return False
+            if "local-delegate" in tool:
+                return False
+        return True
+    except (OSError, ValueError, TypeError, AttributeError, RecursionError):
+        return False
+
+
+def _own_transcript_shows_local_tools(payload: Mapping) -> bool:
+    """¿El transcript PROPIO de quien llama prueba que tiene las `local_*`? Un `tool_use` de una, o un
+    `deferred_tools_delta` que las anade: la definicion hallada puede no ser la que cargo Claude Code.
+    El de un subagente es el suyo, nunca el del principal (que puede tenerlas); sin `agent_id`
+    (`--agent`) el de la sesion es el propio."""
+    path = _session_transcript(payload)
+    if path is None:
+        return False
+    agent = payload.get("agent_id")
+    if isinstance(agent, str) and agent.strip() and path.name != f"agent-{agent.strip()}.jsonl":
+        return False
+    if not path.is_file() or path.stat().st_size > TRANSCRIPT_MAX_BYTES:
+        return False
+    data = path.read_bytes()
+    if _LOCAL_TOOL_USE.search(data):
+        return True
+    start = data.find(_DELTA_MARK)
+    while start != -1:
+        line_start = data.rfind(b"\n", 0, start) + 1
+        line_end = data.find(b"\n", start)
+        line_end = len(data) if line_end == -1 else line_end
+        start = data.find(_DELTA_MARK, line_end)
+        try:
+            event = json.loads(data[line_start:line_end])
+        except ValueError:
+            continue
+        delta = event.get("attachment") if isinstance(event, dict) else None
+        if not isinstance(delta, dict) or delta.get("type") != "deferred_tools_delta":
+            continue
+        if any(LOCAL_TOOL_MARK in str(n) for n in delta.get("addedNames") or []):
+            return True
+    return False
+
+
+def local_tools_absent(payload: object) -> bool:
+    """¿Esta sesion NO tiene las tools `local_*`? True con una de dos pruebas: un subagente cuya
+    definicion cierra la lista sin ellas (issue #664) y que no las ha usado, o un transcript con al
+    menos un `deferred_tools_delta` legible, ninguna tool del servidor en el conjunto neto de
+    diferidas, ningun servidor `local-delegate` pendiente en el ultimo y ningun `tool_use` de una de
+    sus tools (issue #595)."""
+    try:
+        if not isinstance(payload, Mapping):
+            return False
+        if closed_agent_without_local_tools(payload):
+            return not _own_transcript_shows_local_tools(payload)
         path = _session_transcript(payload)
         # Solo un fichero normal: una FIFO o un dispositivo colgarian `read_bytes`.
         if path is None or not path.is_file() or path.stat().st_size > TRANSCRIPT_MAX_BYTES:

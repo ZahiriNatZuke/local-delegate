@@ -83,6 +83,14 @@ el conjunto (contar, elegir el máximo, un único resumen global) usa `local_sum
 Un subagente no carga esta skill ni las tools `local_*` por su cuenta (son diferidas): si su
 prompt no se lo manda, lee los archivos enteros con `Read`.
 
+**Un agente con lista cerrada** (`tools:` en su definición) solo ve lo que esa lista nombra: sin
+`ToolSearch` ni `mcp__local-delegate__local_*` no puede cargar nada. Para ese caso, quien orquesta
+hace la delegación antes y le pasa el resultado en el prompt, o lanza un tipo que herede las tools
+de la sesión (`disallowedTools` en vez de `tools:` para quitarle la escritura) o que nombre las
+`local_*`. El subagente, si se encuentra así, lee por rangos con `offset`/`limit` y lo dice en su
+informe, sin insistir. Los hooks lo reconocen por su definición (`agent_type` → `.claude/agents/`)
+y ni le recuerdan cargar las tools ni le bloquean la lectura.
+
 **Si orquestas**, el paso 1 del prompt de cada subagente es una delegación concreta, no un
 «si te conviene»:
 

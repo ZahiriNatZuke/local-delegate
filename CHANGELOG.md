@@ -38,6 +38,18 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   por `max_tokens`, y las líneas que no casan con el fichero van en `lines_unverified` también
   cuando salen de un trozo cortado.
 
+- **Un subagente con lista cerrada de tools ya no recibe órdenes de delegar que no puede cumplir
+  (#664).** Un agente con `tools: Read, Grep, Glob` en su definición no tiene `ToolSearch` ni las
+  `local_*`, pero el recordatorio de `SubagentStart`, la pista de `Read` en código grande y el
+  bloqueo de la prosa grande (en `Read` y en el shell) lo mandaban a ellas. La entrada del hook no
+  trae la lista de tools y el transcript no la distingue (uno de lista cerrada no tiene ningún
+  `deferred_tools_delta`, nombre las `local_*` o no), así que los hooks leen ahora la definición
+  del agente por su `agent_type` en `.claude/agents/` (del proyecto, de `cwd` hacia arriba, y del
+  usuario): un `tools:` sin comodín y sin ninguna `mcp__local-delegate__*` cuenta como
+  `mcp_absent`. Ante la duda (sin definición, agente de plugin o integrado, `tools:` ausente) todo
+  sigue como antes. El bloque de `CLAUDE.md` y la skill dicen qué hacer en ese caso: quien lanza el
+  agente delega antes y le pasa el resultado, o elige un tipo que herede las tools o nombre las
+  `local_*`; el subagente lee por rangos y lo dice en su informe.
 - **`local_describe_image` avisa de que no mide (#663).** El modelo de visión afirmó que un botón
   estaba desalineado entre dos barras de una captura y que un valor se partía en dos líneas, y las
   medidas del DOM lo desmintieron; un agente con solo la imagen habría informado de dos defectos
