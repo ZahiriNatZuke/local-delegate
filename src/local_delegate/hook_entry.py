@@ -159,9 +159,9 @@ def classify_text(payload: object, environ) -> str:
     The implementation lives in `hook_classify`, which `codex_reads` imports too: so `codex_reads`
     does not import this module, which imports `codex_hooks`, which imports `codex_reads`.
     """
-    from .hook_classify import classify_text as implementation
+    from .hook_classify import classify_text as classify
 
-    return implementation(payload, environ)
+    return classify(payload, environ)
 
 
 def config_text(environ) -> str:
