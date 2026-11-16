@@ -1,0 +1,30 @@
+{
+  "description": "Positive fixture: the hooks.json shape Codex CLI 0.169.0 reads (HooksFile: description and hooks only; command handlers without args or ${user_config.*}). A real Codex 0.169.0 lists both hooks with no warning (app-server hooks/list, temporary CODEX_HOME).",
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python -I -m local_delegate.hook prompt",
+            "timeout": 30
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "mcp__local-delegate__.*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python -I -m local_delegate.hook record-call",
+            "commandWindows": "python.exe -I -m local_delegate.hook record-call",
+            "timeout": 30,
+            "statusMessage": "local-delegate"
+          }
+        ]
+      }
+    ]
+  }
+}

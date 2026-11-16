@@ -6,6 +6,23 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Añadido
+
+- **`doctor` avisa si el plugin de Claude Code está importado en Codex, que no lo puede leer
+  (#668).** Codex lee los marketplaces de Claude Code, así que el plugin se puede importar a mano
+  (`codex plugin marketplace add` + `codex plugin add`). Pero Codex 0.169.0 solo admite
+  `description` y `hooks` arriba del todo en `hooks/hooks.json`, y el `modules` del mod hace que
+  rechace el fichero entero con un simple aviso al arrancar: el plugin sale habilitado y en caché y
+  el proceso termina bien, pero no carga ningún hook. El check nuevo `codex.plugin` (en el grupo
+  `scaffold`, solo lee `~/.codex`) lo dice con `warn` y da `codex plugin remove
+  local-delegate@<marketplace>`, que quita el plugin y su caché y deja la entrada MCP. Avisa
+  también si falta `modules` pero quedan `args` y `${user_config.ld_bin}`, que Codex tira o no
+  expande sin decir nada. Deshabilitado o sin plugin es `ok`, y sin Codex, `unknown`; con el
+  formato de Codex, `ok`, sin afirmar que cargue. Las reglas copian el parser de Codex 0.169.0 (`openai/codex`, etiqueta
+  `rust-v0.169.0`) y las fixtures de `tests/fixtures/codex_plugin` se cargaron en un Codex real
+  con un `CODEX_HOME` temporal. `install` sigue sin poner el plugin en Codex: allí da la entrada
+  MCP y `AGENTS.md`. `doctor` pasa de 35 a 36 checks.
+
 ### Corregido
 
 - **Un mirror de apt lento o sin DNS ya no deja el CI de main en rojo.** Tras la 0.52.0, `lint`
