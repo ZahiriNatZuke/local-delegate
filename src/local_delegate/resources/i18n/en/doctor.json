@@ -353,5 +353,6 @@
   "doctor.status.warn": "[WARN]",
   "doctor.summary.ok": "Result: all set (scaffolding, services and tested versions).",
   "doctor.summary.warnings": "Result: {n} warning(s) — check {missing} and {warn} above.",
-  "doctor.title": "local-delegate doctor — diagnosis of the scaffolding, the services and the local backend"
+  "doctor.title": "local-delegate doctor — diagnosis of the scaffolding, the services and the local backend",
+  "doctor.probe.mcp_codex.direct_tools": ", direct tools without tool_search (omit_tools_from)"
 }

@@ -722,5 +722,8 @@
   "cli.watch.could_not_open": "no se pudo abrir la vigía: {reason}",
   "cli.watch.daemon_did_not_open": "el daemon no abrió la vigía: {reason}",
   "cli.watch.late": "el daemon no dio la salida de la vigía a tiempo",
-  "cli.written": "escrito: {path}"
+  "cli.written": "escrito: {path}",
+  "cli.help.install.codex_direct_tools": "Codex: pone las tools de local-delegate en la lista inicial del modelo, sin tool_search (omit_tools_from = [\"deferred\"]; unos 15,8 KB más por turno)",
+  "cli.help.install.no_codex_direct_tools": "Codex: vuelve a dejar las tools de local-delegate detrás de tool_search (quita solo \"deferred\" de omit_tools_from)",
+  "cli.install.codex_direct_tools_ignored": "Aviso: --codex-direct-tools/--no-codex-direct-tools solo cambia la entrada MCP de Codex, que esta vez no se escribe; no tiene efecto."
 }

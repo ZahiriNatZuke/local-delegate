@@ -130,6 +130,7 @@ opencode mcp list      # debe decir: ✓ local-delegate connected
 | `--dry-run` | describe los cambios sin escribir nada |
 | `--clients auto \| claude \| codex \| opencode` | cliente(s) a configurar (repetible; default `auto`) |
 | `--force-mcp-codex` | reemplaza sin preguntar una entrada de Codex escrita a mano |
+| `--codex-direct-tools` / `--no-codex-direct-tools` | pone o quita `"deferred"` en `omit_tools_from` de la entrada de Codex: las tools de local-delegate van en la lista inicial del modelo en vez de tras `tool_search` (unos 15,8 KB más por turno). **Sin ninguno de los dos se conserva lo que tuviera la tabla.** Ver [Codex: qué tiene y qué no del mod](Codex-capabilities.md#tools-directas-en-vez-de-tool_search) |
 | `--target claude \| codex \| opencode \| all` | histórico, equivale a `--clients`; `all` fuerza los tres aunque no estén instalados. No se combina con `--clients` |
 | `--no-hooks` / `--no-skill` / `--no-memory` / `--no-mcp` | excluye ese componente |
 | `--agents` | actualiza tus subagentes de `~/.claude/agents/` (opt-in, ver abajo) |

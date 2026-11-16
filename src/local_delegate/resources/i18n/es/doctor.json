@@ -353,5 +353,6 @@
   "doctor.status.warn": "[WARN]",
   "doctor.summary.ok": "Resultado: todo a punto (andamiaje, servicios y versiones probadas).",
   "doctor.summary.warnings": "Resultado: {n} aviso(s) — revisa {missing} y {warn} arriba.",
-  "doctor.title": "local-delegate doctor — diagnóstico del andamiaje, los servicios y el backend local"
+  "doctor.title": "local-delegate doctor — diagnóstico del andamiaje, los servicios y el backend local",
+  "doctor.probe.mcp_codex.direct_tools": ", tools directas sin tool_search (omit_tools_from)"
 }

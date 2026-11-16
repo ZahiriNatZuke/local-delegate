@@ -181,5 +181,6 @@
   "install.update.uv_tool.pinned": "  It is pinned to {version} (installed with `==`): `uv tool upgrade` will not move it.",
   "install.update.version_latest": "Latest published version: {version} ({source})",
   "install.update.version_requested": "Version requested with --version: {version}",
-  "install.update.version_unknown": "Warning: {reason}. Continuing without touching the pins."
+  "install.update.version_unknown": "Warning: {reason}. Continuing without touching the pins.",
+  "install.mcp.codex_direct_tools": " — direct tools, without tool_search (omit_tools_from)"
 }

@@ -181,5 +181,6 @@
   "install.update.uv_tool.pinned": "  Está fijado a la {version} (se instaló con `==`): `uv tool upgrade` no lo moverá.",
   "install.update.version_latest": "Última versión publicada: {version} ({source})",
   "install.update.version_requested": "Versión pedida con --version: {version}",
-  "install.update.version_unknown": "Aviso: {reason}. Se sigue sin tocar los pines."
+  "install.update.version_unknown": "Aviso: {reason}. Se sigue sin tocar los pines.",
+  "install.mcp.codex_direct_tools": " — tools directas, sin tool_search (omit_tools_from)"
 }
