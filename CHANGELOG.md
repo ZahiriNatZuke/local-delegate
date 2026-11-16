@@ -25,6 +25,17 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ### Corregido
 
+- **Un fichero que no es UTF-8 ya no pierde caracteres en silencio ni da falsos «datos inventados»
+  (#672).** Con `path`, el servidor leía todo como UTF-8 sustituyendo lo que no entendía: un texto
+  en Latin-1 (la salida de `pdftotext` en Windows) perdía sus `²`, `³` y tildes sin aviso, y la
+  revisión de #630 tomaba por inventados los `m²`/`m³` que el resumen copiaba del fichero. Ahora se
+  prueba UTF-8 estricto; un fichero con BOM de UTF-16 se lee como UTF-16, y el resto como
+  Windows-1252 (o Latin-1 con los cinco bytes que Windows-1252 no define). Las seis tools que leen
+  `path` (`local_summarize`, `local_extract`, `local_explain_code`, `local_lint_summary`,
+  `local_commit_msg` y `local_translate`) lo avisan delante de la respuesta, y `local_extract` en
+  `_local_delegate.warning` e `input_encoding`. La revisión de #630 compara las dos partes en la
+  misma forma Unicode (NFC) y solo mira las letras de cada palabra, así que `m²` ya no es «una
+  palabra de otro idioma». Un fichero UTF-8 se lee igual que antes.
 - **Un mirror de apt lento o sin DNS ya no deja el CI de main en rojo.** Tras la 0.52.0, `lint`
   agotó los 5 minutos de `playwright install --with-deps` y `test-lang-es` salió con el código 100
   de apt, sin ningún cambio de código: el runner no resolvía los mirrors de Ubuntu. Ahora, en los

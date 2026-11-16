@@ -15,6 +15,18 @@ Casi todas aceptan `text` (o `code`, o `diff`) **y** `path`. No son equivalentes
 Con backend remoto (la Mac delegando en la PC), la ruta se resuelve **en la máquina donde corre el
 MCP**, no donde está el modelo. Ver [Backend remoto](Remote-backend.md).
 
+**Codificación del fichero (desde #672).** El servidor lee el `path` como UTF-8. Si no lo es, no
+sustituye los caracteres que no entiende como antes: un fichero con BOM de UTF-16 (lo que escribe
+la redirección de PowerShell 5) se lee como UTF-16, y cualquier otro se lee como Windows-1252
+(Latin-1 más `€`, `…` y las comillas tipográficas), o como Latin-1 si trae uno de los cinco bytes
+que Windows-1252 no define. Las seis tools que leen `path` con texto (`local_summarize`,
+`local_extract`, `local_explain_code`, `local_lint_summary`, `local_commit_msg` y
+`local_translate`) lo avisan con un `[local-delegate warning: el fichero no es UTF-8 válido y se
+leyó como cp1252; …]` delante de la respuesta, y `local_extract` en `_local_delegate.warning` y en
+`_local_delegate.input_encoding`. Un error del backend conserva su prefijo `[local-delegate error]`
+al principio. Si el texto sale raro (era otra codificación, como cp1251), convierte el fichero a
+UTF-8 y vuelve a llamar.
+
 ## De un vistazo
 
 | Tool | Qué hace | Modelo | Si la entrada no cabe |
@@ -90,7 +102,9 @@ y en todos los caminos (llamada única, map-reduce y por secciones), y avisa con
 - una sigla expandida entre paréntesis («SDD (Sistema de Diagnóstico Dinámico)», o al revés) cuyas
   palabras forman la sigla y que la entrada no expande así;
 - una palabra con letras que no son del idioma del resumen (`ç`, `ã`, `ê`… en un resumen en
-  español; cualquier tilde en uno en inglés) y que no sale en la entrada («deviações»);
+  español; cualquier tilde en uno en inglés) y que no sale en la entrada («deviações»). Solo
+  cuentan las letras: `m²` o `m³` no son palabras de otro idioma (#672), y una tilde escrita como
+  letra más acento combinante cuenta igual que la letra compuesta;
 - solo si la entrada trae una tabla HTML, ARIA o Markdown (también GFM; un CSV o un TSV, como un
   log de CI con tabuladores, no abre esta revisión, #650), una cifra que la
   entrada no trae en ninguna grafía (`2 862` = `2862`, `2,5` = `2.5`, «tres» = `3`). Fuera de las
