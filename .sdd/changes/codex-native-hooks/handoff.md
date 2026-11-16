@@ -2,19 +2,16 @@
 
 ## Current state
 
-- SDD status: `result-review`; puertas spec, plan, quality y conformance aprobadas; `memory` pendiente (se aprueba al cerrar, tras mezclar).
-- Last completed gate: conformance
-- Current revision: rama `feat/codex-native-hooks` sobre `6e973c39`, PR #682 («Refs #669»), abierto (no borrador) el 2026-11-16 a las 11:35 (hora de Uruguay).
-- Al cerrar la jornada (11:38): los checks del PR seguían corriendo; en verde los rápidos (matriz CLI 3.11 a 3.14, install-smoke, audit, secrets, GitGuardian, Socket) y pendientes CodeQL, lint, test en Windows, Ubuntu y macOS, plugin, test-lang-es y ci-gate.
+- SDD status: `closed`. Puertas spec, plan, quality, conformance y memory aprobadas.
+- PR #682 («Refs #669») con auto-merge: CI completo en verde sobre `03b5b678` (CodeQL, Socket,
+  GitGuardian, test en Windows, Ubuntu y macOS incluidos). CodeQL abrió tres alertas (ciclo de
+  import `codex_hooks` <-> `hook_entry` e `import` + `from` del paquete en el test); arregladas en
+  `7600b156` (`hook_entry` pasa su cargador a `codex_hooks.run`). Se mezcla solo al quedar CLEAN.
 
 ## Para retomar
 
-1. `gh pr checks 682`: arreglar cualquier rojo. Mirar en el log de `test (windows-latest)` que
-   `test_the_generated_command_runs_through_the_codex_shell` **corrió** (con `CI` falla en vez de
-   saltarse) y anotarlo en `verification.md`.
-2. Si `main` se movió y hay conflicto (CHANGELOG o wiki), actualizar la rama y resolver.
-3. Prueba de confianza de la persona (abajo, «Next action», punto 1). Mezclar lo decide el usuario.
-4. Tras mezclar: puerta `memory`, `closed`, tarjeta del Project, y el siguiente PR de #669.
+1. Prueba de confianza de la persona usuaria («Next action», punto 1), con `main` instalado.
+2. Siguiente PR de #669 (punto 2) y luego #670 y #671 (punto 3).
 
 ## What changed
 
@@ -67,5 +64,5 @@
 
 ## Memory
 
-- Canonical note: pendiente (se decide al cerrar)
+- Canonical note: sin nota aparte; lo durable va en `handoff.md` (Decisions), `review.md`, el CHANGELOG y el PR #682; la jornada del vault la escribe la sesión principal.
 - Indexes updated: no

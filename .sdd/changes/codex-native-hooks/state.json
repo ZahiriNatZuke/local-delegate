@@ -4,9 +4,9 @@
   "title": "Entrega Codex nativa: hooks de usuario, instalador, diagnóstico y atribución por sesión (#669)",
   "mode": "standard",
   "traceability": "strict",
-  "status": "result-review",
+  "status": "closed",
   "createdAt": "2026-11-16T13:32:14.187Z",
-  "updatedAt": "2026-11-16T14:34:54.423Z",
+  "updatedAt": "2026-11-16T14:47:39.599Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -22,8 +22,8 @@
     },
     "quality": {
       "status": "approved",
-      "updatedAt": "2026-11-16T14:34:54.010Z",
-      "evidence": "pytest -q -n 2 completo: 7842 passed, 32 skipped; ruff check y format en verde; script en vivo contra Codex 0.169.0: 15 comprobaciones, 0 fallos; hashes del ~/.codex real iguales",
+      "updatedAt": "2026-11-16T14:47:23.330Z",
+      "evidence": "CI del PR 682 en verde en 03b5b678 (CodeQL, Socket, GitGuardian, test windows/ubuntu/macos, plugin, lint, ci-gate); alertas de CodeQL arregladas en 7600b156 con los tests del area en verde (148 passed)",
       "actor": "user"
     },
     "conformance": {
@@ -33,10 +33,10 @@
       "actor": "user"
     },
     "memory": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-11-16T14:47:30.003Z",
+      "evidence": "Sin nota aparte: lo durable va en handoff.md (Decisions), review.md, el CHANGELOG y el PR 682; la jornada del vault la escribe la sesion principal. Sin secretos ni datos personales",
+      "actor": "user"
     }
   },
   "history": [
@@ -127,6 +127,36 @@
       "at": "2026-11-16T14:34:54.423Z",
       "evidence": "Revisión deep: dos jueces (conforms-with-notes) y revisor de seguridad sin hallazgos explotables; hallazgos aplicados o aceptados como riesgo residual en review.md",
       "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-11-16T14:47:23.330Z",
+      "evidence": "CI del PR 682 en verde en 03b5b678 (CodeQL, Socket, GitGuardian, test windows/ubuntu/macos, plugin, lint, ci-gate); alertas de CodeQL arregladas en 7600b156 con los tests del area en verde (148 passed)",
+      "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "memory",
+      "status": "approved",
+      "at": "2026-11-16T14:47:30.003Z",
+      "evidence": "Sin nota aparte: lo durable va en handoff.md (Decisions), review.md, el CHANGELOG y el PR 682; la jornada del vault la escribe la sesion principal. Sin secretos ni datos personales",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "result-review",
+      "to": "closing",
+      "at": "2026-11-16T14:47:38.431Z",
+      "reason": "conformance y quality aprobadas; PR 682 con CI verde y alertas de CodeQL arregladas en 7600b156; auto-merge activo"
+    },
+    {
+      "type": "transition",
+      "from": "closing",
+      "to": "closed",
+      "at": "2026-11-16T14:47:39.599Z",
+      "reason": "handoff.md lleno con la prueba de confianza y lo que queda (siguiente PR de 669, 670, 671); PR 682 se mezcla solo por auto-merge al quedar CLEAN"
     }
   ]
 }
