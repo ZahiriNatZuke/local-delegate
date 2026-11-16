@@ -152,6 +152,38 @@ def test_one_missing_is_a_warn(home, python, tmp_path):
     assert result.status == checks.WARN and "codex-subagent-start" in result.detail
 
 
+def test_from_the_two_hooks_of_the_core_to_three(home, python, tmp_path):
+    """#669, second part: the file the core wrote (two hooks, one approved) gets only the new one.
+
+    `doctor` names it as missing, not as stale: the two old ones keep index and approval.
+    """
+    old = {
+        "hooks": {
+            "UserPromptSubmit": [codex_hooks.group(codex_hooks.SPECS[0], python)],
+            "SubagentStart": [codex_hooks.group(codex_hooks.SPECS[1], python)],
+        }
+    }
+    path = _write(home, old)
+    key = codex_hooks.hook_key(path, "UserPromptSubmit", 0)
+    (home / ".codex" / "config.toml").write_text(
+        f'[hooks.state."{key}"]\ntrusted_hash = "sha256:aa"\n'.replace("\\", "\\\\"), "utf-8"
+    )
+    result = _result(home, python, tmp_path)
+    assert result.status == checks.WARN
+    assert result.detail == i18n.t(
+        "doctor.probe.codex_hooks.missing", names="codex-mcp-call", path=path
+    )
+
+    merged, changed = codex_hooks.merge(json.loads(path.read_text("utf-8")), python)
+    assert changed == ["codex-mcp-call"]
+    assert merged["hooks"]["UserPromptSubmit"] == old["hooks"]["UserPromptSubmit"]
+    assert merged["hooks"]["SubagentStart"] == old["hooks"]["SubagentStart"]
+    _write(home, merged)
+    assert codex_hooks.inspect(home / ".codex", tmp_path / "data").trusted == {"codex-prompt"}
+    result = _result(home, python, tmp_path)
+    assert result.status == checks.OK and result.detail == _ok_detail(home, 1)
+
+
 def test_a_different_timeout_is_a_warn(home, python, tmp_path):
     """Not only the interpreter: any difference from `entries()` changes Codex's hash."""
     data, _ = codex_hooks.merge({}, python)

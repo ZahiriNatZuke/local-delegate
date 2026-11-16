@@ -2382,6 +2382,15 @@ CODEX_CALL_ID_PATTERN = re.compile(r"^[A-Za-z0-9_-]{1,128}$")
 #: Shape of the model slug kept from the hook input; anything else is dropped.
 CODEX_MODEL_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:/-]{0,79}$")
 
+#: Shape of the agent type (the role name of a Codex subagent) kept from the hook input.
+CODEX_AGENT_TYPE_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,63}$")
+
+
+def _shaped(value: object, pattern: re.Pattern) -> str | None:
+    """``value`` when it is a string that fully matches ``pattern``, else `None`."""
+    text = _text(value)
+    return text if text and pattern.fullmatch(text) else None
+
 
 def codex_note_name(call_id: object) -> str | None:
     """`codex-<id>.json` for a valid Codex call id, else `None`."""
@@ -2397,16 +2406,16 @@ def record_codex_call(hook_input: dict, directory: Path | None = None) -> bool:
         name = codex_note_name(call_id)
         if name is None:
             return False
-        model = _text(hook_input.get("model"))
         target = directory or call_notes_dir()
         now = time.time()
+        # Every text field with a bounded shape: what does not fit is dropped, never cut.
         note = {
             "tool_use_id": call_id,
             "ts": now,
             "client": "codex",
-            "model": model if model and CODEX_MODEL_PATTERN.fullmatch(model) else None,
-            "agent_id": _text(hook_input.get("agent_id")),
-            "agent_type": _text(hook_input.get("agent_type")),
+            "model": _shaped(hook_input.get("model"), CODEX_MODEL_PATTERN),
+            "agent_id": _shaped(hook_input.get("agent_id"), CODEX_CALL_ID_PATTERN),
+            "agent_type": _shaped(hook_input.get("agent_type"), CODEX_AGENT_TYPE_PATTERN),
             "session_key": session_key(hook_input.get("session_id")),
         }
         target.mkdir(parents=True, exist_ok=True)

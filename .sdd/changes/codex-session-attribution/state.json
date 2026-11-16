@@ -4,9 +4,9 @@
   "title": "Atribución de cada delegación de Codex a su sesión (#669, segunda parte)",
   "mode": "standard",
   "traceability": "strict",
-  "status": "implementing",
+  "status": "result-review",
   "createdAt": "2026-11-16T15:41:02.583Z",
-  "updatedAt": "2026-11-16T15:45:33.925Z",
+  "updatedAt": "2026-11-16T16:12:42.656Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -21,10 +21,10 @@
       "actor": "user"
     },
     "quality": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-11-16T16:04:31.988Z",
+      "evidence": "sdd check en verde; pytest -n 1 de los ficheros del area: 1234+268+648 passed (un fallo del detector de nombres arreglado); 12 de 12 mutantes muertos; ruff check y format limpios; hooks de pre-commit (secretos, ruff) pasados. Excepcion explicita: sin suite completa ni CI propio por orden del coordinador (PR conjunto)",
+      "actor": "user"
     },
     "conformance": {
       "status": "pending",
@@ -97,6 +97,28 @@
       "to": "implementing",
       "at": "2026-11-16T15:45:33.925Z",
       "reason": "plan aprobado"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-11-16T16:04:26.025Z",
+      "reason": "T1..T7 hechas; verification.md con tests, mutantes y ruff"
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-11-16T16:04:31.988Z",
+      "evidence": "sdd check en verde; pytest -n 1 de los ficheros del area: 1234+268+648 passed (un fallo del detector de nombres arreglado); 12 de 12 mutantes muertos; ruff check y format limpios; hooks de pre-commit (secretos, ruff) pasados. Excepcion explicita: sin suite completa ni CI propio por orden del coordinador (PR conjunto)",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "verifying",
+      "to": "result-review",
+      "at": "2026-11-16T16:12:42.656Z",
+      "reason": "tres revisiones hechas y aplicadas (review.md)"
     }
   ]
 }

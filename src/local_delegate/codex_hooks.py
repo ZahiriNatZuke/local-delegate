@@ -2,7 +2,7 @@
 
 Codex CLI 0.169.0 (``openai/codex``, tag ``rust-v0.169.0``) reads, for its user layer,
 ``<CODEX_HOME>/hooks.json`` (``codex-rs/hooks/src/engine/discovery.rs``, ``load_hooks_json``) in
-the format ``codex_plugin.check_hooks_file`` checks. This module owns two handlers in it:
+the format ``codex_plugin.check_hooks_file`` checks. This module owns three handlers in it:
 
 - ``UserPromptSubmit`` → ``codex-prompt``: a delegation hint for a clearly mechanical prompt.
 - ``SubagentStart`` → ``codex-subagent-start``: the reminder for every subagent.

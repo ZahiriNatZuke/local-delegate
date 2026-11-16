@@ -112,6 +112,7 @@
   "doctor.probe.clients_observed.no_elicitation": "no elicitation",
   "doctor.probe.clients_observed.none": "no MCP client has talked to this local-delegate yet",
   "doctor.probe.clients_observed.unnamed": "(unidentified)",
+  "doctor.probe.codex_hooks.missing": "Codex hooks of ours missing ({names}) in {path}; adding them leaves the others where they are, and only those wait for your approval in /hooks",
   "doctor.probe.codex_hooks.never_seen": "none yet",
   "doctor.probe.codex_hooks.no_python": "the interpreter of the Codex hooks does not exist ({python})",
   "doctor.probe.codex_hooks.none": "not installed in {path} (optional: `local-delegate install --clients codex` adds them)",

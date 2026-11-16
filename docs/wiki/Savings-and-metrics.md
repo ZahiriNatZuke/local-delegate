@@ -118,10 +118,12 @@ con saltos pudo contaminarla un swap.
   línea con el transcript) y de `_meta.callId` en Codex (ver
   [Delegaciones de Codex](#delegaciones-de-codex)).
 - `caller_kind` (`main` o `subagent`), `caller_agent_type`, `caller_effort`, `caller_model` y
-  `caller_src` (`hook+transcript` o `hook`): **quién pidió** la delegación. Los escribe el servidor
-  a partir de la nota que deja el hook `record_call.py` (antes `anotar_llamada.py`; ver
-  [Coste equivalente](#coste-equivalente-a-precio-de-api)); sin nota, la línea no lleva ningún
-  `caller_*`. Nunca lleva el id de sesión.
+  `caller_src` (`hook+transcript` o `hook`; `codex-hook` en Codex): **quién pidió** la delegación.
+  Los escribe el servidor a partir de la nota que deja el hook `record_call.py` (antes
+  `anotar_llamada.py`; ver [Coste equivalente](#coste-equivalente-a-precio-de-api)); sin nota, la
+  línea no lleva ningún `caller_*`, salvo en Codex, que trae `caller_session_key` igual (ver
+  [Delegaciones de Codex](#delegaciones-de-codex)). Nunca lleva el id de sesión, solo esa clave de
+  un solo sentido.
 - `caller_project` y `caller_project_kind` (`self` u `other`): **desde qué proyecto** se pidió la
   delegación. Salen de la misma nota que los `caller_*`: el directorio de proyecto del transcript
   de la sesión principal, también cuando delega un subagente o el mod. Sin nota vigente, la fila no

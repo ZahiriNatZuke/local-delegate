@@ -85,18 +85,27 @@ def test_the_mcp_hook_is_the_last_entry_and_the_first_two_do_not_change():
     assert set(only) == {"type", "command", "timeout"} and only["timeout"] == 30
     assert codex_hooks.our_name(group) == "codex-mcp-call"
     assert codex_plugin.check_hooks_file({"hooks": codex_hooks.entries(PYTHON, "win32")}) == []
-    assert codex_hooks.hook_key(Path("C:/h/hooks.json"), "PreToolUse", 1).endswith(
-        ":pre_tool_use:1:0"
-    )
 
 
-def test_merge_puts_the_new_hook_behind_a_users_pre_tool_use_group():
-    """A user's `PreToolUse/Bash` group keeps index 0 (and its approval key)."""
+def test_merge_puts_the_new_hook_behind_a_users_pre_tool_use_group(tmp_path):
+    """A user's `PreToolUse/Bash` group keeps index 0 (and its approval key); ours gets index 1,
+    and `doctor` counts its approval under the key of that index."""
     users = {"matcher": "Bash", "hooks": [{"type": "command", "command": "audit.sh"}]}
     data, changed = codex_hooks.merge({"hooks": {"PreToolUse": [users]}}, PYTHON, "win32")
     assert data["hooks"]["PreToolUse"][0] == users
     assert codex_hooks.our_name(data["hooks"]["PreToolUse"][1]) == "codex-mcp-call"
     assert "codex-mcp-call" in changed
+    codex_dir = tmp_path / ".codex"
+    codex_dir.mkdir()
+    path = codex_dir / codex_hooks.HOOKS_FILE_NAME
+    path.write_text(json.dumps(data), encoding="utf-8")
+    [found] = [f for f in codex_hooks.inspect(codex_dir, tmp_path).found if f.event == "PreToolUse"]
+    key = codex_hooks.hook_key(path, found.event, found.group_index)
+    assert key.endswith(":pre_tool_use:1:0")
+    (codex_dir / "config.toml").write_text(
+        f'[hooks.state."{key}"]\ntrusted_hash = "sha256:aa"\n'.replace("\\", "\\\\"), "utf-8"
+    )
+    assert codex_hooks.inspect(codex_dir, tmp_path).trusted == {"codex-mcp-call"}
 
 
 # --- REQ-002: the matcher -----------------------------------------------------------------------
@@ -221,6 +230,24 @@ def test_a_model_of_a_strange_shape_is_dropped(tmp_path):
     assert note["model"] is None
 
 
+@pytest.mark.parametrize(
+    ("field", "value"), [("agent_type", "x" * 65), ("agent_type", "a\nb"), ("agent_id", "../a")]
+)
+def test_an_agent_field_of_a_strange_shape_is_dropped(tmp_path, field, value):
+    payload = {**_fixture("pre_tool_use_mcp_subagent"), field: value}
+    assert hook_common.record_codex_call(payload, tmp_path)
+    note = json.loads((tmp_path / "codex-call_mcp_0002.json").read_text(encoding="utf-8"))
+    assert note[field] is None
+
+
+def test_the_agent_fields_of_the_fixture_are_kept(tmp_path):
+    """Control of the case above: the real shapes pass."""
+    payload = _fixture("pre_tool_use_mcp_subagent")
+    assert hook_common.record_codex_call(payload, tmp_path)
+    note = json.loads((tmp_path / "codex-call_mcp_0002.json").read_text(encoding="utf-8"))
+    assert (note["agent_id"], note["agent_type"]) == (payload["agent_id"], payload["agent_type"])
+
+
 @pytest.mark.parametrize("stdin", [b"", b"not json", b"[1, 2]", b"\xff\xfe"])
 def test_broken_input_exits_zero_without_a_note(tmp_path, stdin):
     env = _sandbox(tmp_path)
@@ -284,9 +311,10 @@ def test_claude_code_never_gives_the_codex_keys():
 
 
 def test_codex_with_a_bad_call_id_or_no_meta_gives_none():
-    metas = [{"callId": "../x", "sessionId": SESSION}, {}]
+    metas = [{"callId": "../x", "sessionId": SESSION}, {}, {clients.TOOL_USE_ID_KEY: "toolu_z"}]
     seen = anyio.run(_call_as, CODEX, metas, _ids)
-    assert seen == [(None, _key(SESSION)), (None, None)]
+    # The last: Codex never falls back to the Claude key.
+    assert seen == [(None, _key(SESSION)), (None, None), (None, None)]
 
 
 # --- REQ-005: the log line ----------------------------------------------------------------------
@@ -382,6 +410,17 @@ def test_a_stale_note_or_a_claude_note_does_not_count(log_and_notes):
         encoding="utf-8",
     )
     assert attribution.resolve_codex_call("call_mcp_0002", None, notes=notes) == {}
+    # A Codex note under the name of one id that carries another id does not count either.
+    (notes / "codex-call_mcp_0003.json").write_text(
+        json.dumps({**note, "tool_use_id": "call_mcp_0004", "ts": time.time()}), encoding="utf-8"
+    )
+    assert attribution.resolve_codex_call("call_mcp_0003", None, notes=notes) == {}
+    # A `codex-<id>.json` without `client: codex` (not written by our hook) does not count.
+    (notes / "codex-call_mcp_0005.json").write_text(
+        json.dumps({**note, "tool_use_id": "call_mcp_0005", "ts": time.time(), "client": None}),
+        encoding="utf-8",
+    )
+    assert attribution.resolve_codex_call("call_mcp_0005", None, notes=notes) == {}
     # Without the meta session, the note's key is used.
     fresh = {**note, "ts": time.time()}
     note_path.write_text(json.dumps(fresh), encoding="utf-8")
