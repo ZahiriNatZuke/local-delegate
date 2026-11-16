@@ -37,6 +37,15 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   sigue como antes. El bloque de `CLAUDE.md` y la skill dicen qué hacer en ese caso: quien lanza el
   agente delega antes y le pasa el resultado, o elige un tipo que herede las tools o nombre las
   `local_*`; el subagente lee por rangos y lo dice en su informe.
+- **`local_describe_image` avisa de que no mide (#663).** El modelo de visión afirmó que un botón
+  estaba desalineado entre dos barras de una captura y que un valor se partía en dos líneas, y las
+  medidas del DOM lo desmintieron; un agente con solo la imagen habría informado de dos defectos
+  que no existen. Ahora la descripción de la tool, la skill `local-delegation` y la wiki dicen que
+  sirve para el contenido y la composición, no para verificar alineación, tamaños, distancias ni
+  saltos de línea, y que eso se mide. Y cuando la pregunta o la respuesta hablan de eso (en
+  español o en inglés), la respuesta termina con un aviso por programa: el prompt del rol `vision`
+  no cambia y la respuesta del modelo se devuelve tal cual.
+
 - **`local_extract` avisa cuando un valor dice lo contrario que la entrada (#667).** El modelo
   mecánico (gemma3-4b) devolvió «Do not review code real of the mod and adapters…» donde el
   documento pedía revisar ese código: la negación de la frase siguiente («no inferir la respuesta

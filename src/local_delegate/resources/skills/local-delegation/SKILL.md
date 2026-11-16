@@ -49,7 +49,9 @@ Los ids de modelos del catálogo (mecánico/largo/código/visión) son configura
 env y pueden cambiar entre máquinas: consulta `local_status` para ver el catálogo
 activo en vez de asumir nombres fijos. `local_describe_image` es **solo imagen→texto**
 (describir, leer texto visible, responder una pregunta puntual) — nunca genera ni edita
-imágenes.
+imágenes. Y **no mide**: sirve para el contenido y la composición general, no para verificar
+alineación, tamaños, distancias ni si un texto salta de línea; eso se mide (en una página web,
+en el DOM con `getBoundingClientRect`).
 
 ## Documentos largos
 
