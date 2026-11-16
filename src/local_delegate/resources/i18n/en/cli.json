@@ -544,7 +544,7 @@
   "cli.script.measure_cooldown.window": "Window: {since} to {until}  ({now})",
   "cli.script.measure_cooldown.with_outcome": "  with a known outcome:    {n}",
   "cli.script.measure_adoption.by_project": "  by project:           {kinds}",
-  "cli.script.measure_adoption.by_thread": "  by thread:            main {main}, subagents {subagent}, mod {mod}, no data {unknown}",
+  "cli.script.measure_adoption.by_thread": "  by thread:            main {main}, subagents {subagent}, mod {mod}, Codex {codex}, no data {unknown}",
   "cli.script.measure_adoption.help.exclude_self": "leave out the repo's own project (the default)",
   "cli.script.measure_adoption.help.include_self": "count the repo's own project too: the figure comparable with the earlier cuts",
   "cli.script.measure_adoption.help.projects": "root of the Claude Code projects, for the old events (~/.claude/projects)",

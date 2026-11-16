@@ -84,6 +84,7 @@
   "panel.chart.unavailable": "Charts unavailable: Chart.js could not be loaded (offline?). The rest of the dashboard works the same.",
   "panel.clients.col.backend_calls": "Backend calls",
   "panel.clients.col.client": "Client",
+  "panel.clients.col.codex": "Codex",
   "panel.clients.col.delegations": "Delegations",
   "panel.clients.col.main": "Main thread",
   "panel.clients.col.mod": "Mod",

@@ -1,0 +1,102 @@
+{
+  "schemaVersion": 1,
+  "slug": "codex-session-attribution",
+  "title": "Atribución de cada delegación de Codex a su sesión (#669, segunda parte)",
+  "mode": "standard",
+  "traceability": "strict",
+  "status": "implementing",
+  "createdAt": "2026-11-16T15:41:02.583Z",
+  "updatedAt": "2026-11-16T15:45:33.925Z",
+  "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-11-16T15:45:23.564Z",
+      "evidence": "Revision propia adversarial (plan-review-1.md): decision de sessionId apoyada en la fuente de Codex rust-v0.169.0; hallazgo bloqueante 1 aplicado a REQ-008",
+      "actor": "user"
+    },
+    "plan": {
+      "status": "approved",
+      "updatedAt": "2026-11-16T15:45:24.006Z",
+      "evidence": "Revision propia (plan-review-1.md): REQ-001..REQ-012 trazados a T1..T7, sin bloqueantes abiertos",
+      "actor": "user"
+    },
+    "quality": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "conformance": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "memory": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-11-16T15:41:02.583Z",
+      "reason": "SDD change created"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "researching",
+      "at": "2026-11-16T15:44:46.728Z",
+      "reason": "issue #669 y handoff del nucleo leidos"
+    },
+    {
+      "type": "transition",
+      "from": "researching",
+      "to": "specifying",
+      "at": "2026-11-16T15:44:46.946Z",
+      "reason": "research.md con fuente de Codex rust-v0.169.0 citada"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-11-16T15:45:23.564Z",
+      "evidence": "Revision propia adversarial (plan-review-1.md): decision de sessionId apoyada en la fuente de Codex rust-v0.169.0; hallazgo bloqueante 1 aplicado a REQ-008",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-11-16T15:45:23.786Z",
+      "reason": "spec aprobada"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-11-16T15:45:24.006Z",
+      "evidence": "Revision propia (plan-review-1.md): REQ-001..REQ-012 trazados a T1..T7, sin bloqueantes abiertos",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "plan-review",
+      "at": "2026-11-16T15:45:33.457Z",
+      "reason": "plan-review-1.md"
+    },
+    {
+      "type": "transition",
+      "from": "plan-review",
+      "to": "implementing",
+      "at": "2026-11-16T15:45:33.925Z",
+      "reason": "plan aprobado"
+    }
+  ]
+}

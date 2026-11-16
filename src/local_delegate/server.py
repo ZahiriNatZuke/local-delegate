@@ -1500,6 +1500,8 @@ def _log_event(
             tool_use_id = clients.current_tool_use_id()
             if tool_use_id:
                 rec["tool_use_id"] = tool_use_id
+            # Codex (#669) may bring its session without a call id: it resolves either way.
+            if tool_use_id or caller == clients.CODEX_CLIENT:
                 from . import attribution
 
                 rec.update(attribution.current_call())

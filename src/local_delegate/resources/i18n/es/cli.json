@@ -544,7 +544,7 @@
   "cli.script.measure_cooldown.window": "Ventana: {since} a {until}  ({now})",
   "cli.script.measure_cooldown.with_outcome": "  con desenlace conocido:  {n}",
   "cli.script.measure_adoption.by_project": "  por proyecto:         {kinds}",
-  "cli.script.measure_adoption.by_thread": "  por hilo:             principal {main}, subagentes {subagent}, mod {mod}, sin dato {unknown}",
+  "cli.script.measure_adoption.by_thread": "  por hilo:             principal {main}, subagentes {subagent}, mod {mod}, Codex {codex}, sin dato {unknown}",
   "cli.script.measure_adoption.help.exclude_self": "quitar el propio repo (por defecto)",
   "cli.script.measure_adoption.help.include_self": "contar también el propio repo: la cifra comparable con los cortes anteriores",
   "cli.script.measure_adoption.help.projects": "raíz de proyectos de Claude Code para los eventos viejos (~/.claude/projects)",

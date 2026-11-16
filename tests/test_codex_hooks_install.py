@@ -37,7 +37,7 @@ def _merge(data: dict, python: str = PYTHON) -> tuple[dict, list[str]]:
 # --- merge and strip, pure -----------------------------------------------------------------------
 def test_merge_into_nothing_gives_both_and_a_file_codex_reads():
     data, changed = _merge({})
-    assert changed == ["codex-prompt", "codex-subagent-start"]
+    assert changed == [spec.name for spec in codex_hooks.SPECS]
     assert data == {"hooks": codex_hooks.entries(PYTHON, "win32")}
     assert codex_plugin.check_hooks_file(data) == []
 
@@ -50,7 +50,9 @@ def test_merge_goes_after_the_users_groups_and_moves_none():
     before = copy.deepcopy(data)
     merged, _ = _merge(data)
     assert merged["description"] == "mine"
-    assert merged["hooks"]["PreToolUse"] == before["hooks"]["PreToolUse"]
+    # The user's group stays first; ours (`codex-mcp-call`, #669) goes behind it.
+    assert merged["hooks"]["PreToolUse"][0] == before["hooks"]["PreToolUse"][0]
+    assert codex_hooks.our_name(merged["hooks"]["PreToolUse"][1]) == "codex-mcp-call"
     assert merged["hooks"]["UserPromptSubmit"][0] == FOREIGN_PROMPT
     assert codex_hooks.our_name(merged["hooks"]["UserPromptSubmit"][1]) == "codex-prompt"
 
@@ -66,6 +68,7 @@ def test_an_old_group_of_ours_is_rewritten_in_its_index():
         "hooks": {
             "UserPromptSubmit": [_ours("codex-prompt", OLD_PYTHON), FOREIGN_PROMPT],
             "SubagentStart": [_ours("codex-subagent-start")],
+            "PreToolUse": [_ours("codex-mcp-call")],
         }
     }
     merged, changed = _merge(data)

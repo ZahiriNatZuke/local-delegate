@@ -2363,3 +2363,67 @@ def record_call(hook_input: dict, directory: Path | None = None) -> bool:
         # Best-effort a proposito: perder la nota deja la delegacion para el relleno; romperle la
         # llamada al usuario por un fichero temporal costaria mucho mas.
         return False
+
+
+# --- The note of a Codex call (#669) -------------------------------------------------------------
+# The Codex hook `codex-mcp-call` (PreToolUse on our MCP tools) leaves one note per call in the same
+# directory, under a name of its own (`codex-<call id>.json`), so it never meets a note of Claude
+# Code. The server picks it up by the `_meta.callId` Codex sends (`attribution.read_codex_note`).
+# It carries what only the hook input has: the model, the subagent and the session, the last as its
+# one-way key. Never `cwd`, `transcript_path`, `tool_input` nor the session id itself.
+
+#: File name prefix of a Codex note.
+CODEX_NOTE_PREFIX = "codex-"
+
+#: Shape of a Codex `call_id` (`call_...` of the model, `exec-<uuid>` in code mode). Checked before
+#: it becomes a file name, like `TOOL_USE_ID_PATTERN`.
+CODEX_CALL_ID_PATTERN = re.compile(r"^[A-Za-z0-9_-]{1,128}$")
+
+#: Shape of the model slug kept from the hook input; anything else is dropped.
+CODEX_MODEL_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:/-]{0,79}$")
+
+
+def codex_note_name(call_id: object) -> str | None:
+    """`codex-<id>.json` for a valid Codex call id, else `None`."""
+    if not isinstance(call_id, str) or not CODEX_CALL_ID_PATTERN.fullmatch(call_id):
+        return None
+    return f"{CODEX_NOTE_PREFIX}{call_id}.json"
+
+
+def record_codex_call(hook_input: dict, directory: Path | None = None) -> bool:
+    """Writes the note of this Codex call. Returns whether it did. Never raises."""
+    try:
+        call_id = hook_input.get("tool_use_id")
+        name = codex_note_name(call_id)
+        if name is None:
+            return False
+        model = _text(hook_input.get("model"))
+        target = directory or call_notes_dir()
+        now = time.time()
+        note = {
+            "tool_use_id": call_id,
+            "ts": now,
+            "client": "codex",
+            "model": model if model and CODEX_MODEL_PATTERN.fullmatch(model) else None,
+            "agent_id": _text(hook_input.get("agent_id")),
+            "agent_type": _text(hook_input.get("agent_type")),
+            "session_key": session_key(hook_input.get("session_id")),
+        }
+        target.mkdir(parents=True, exist_ok=True)
+        descriptor, tmp_name = tempfile.mkstemp(dir=target, prefix=".", suffix=".tmp")
+        try:
+            with os.fdopen(descriptor, "w", encoding="utf-8") as stream:
+                json.dump(note, stream, ensure_ascii=False)
+            os.replace(tmp_name, target / name)
+        except OSError:
+            try:
+                os.unlink(tmp_name)
+            except OSError:
+                # Best-effort cleanup: a hook never raises, and False below says it failed.
+                pass
+            return False
+        _prune_notes(target, now)
+        return True
+    except Exception:
+        # Best-effort on purpose: a lost note leaves the row with its session only.
+        return False

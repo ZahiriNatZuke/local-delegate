@@ -6,9 +6,11 @@ the format ``codex_plugin.check_hooks_file`` checks. This module owns two handle
 
 - ``UserPromptSubmit`` → ``codex-prompt``: a delegation hint for a clearly mechanical prompt.
 - ``SubagentStart`` → ``codex-subagent-start``: the reminder for every subagent.
+- ``PreToolUse`` on ``^mcp__local[-_]delegate__`` → ``codex-mcp-call``: a silent note per call to
+  our MCP tools (model, subagent, session key), which the server joins to the log line by the
+  ``_meta.callId`` Codex sends (``attribution.resolve_codex_call``).
 
-Not covered here: the calls to our MCP tools and their attribution to a Codex session (next step
-of #669), reads, shell commands and ``apply_patch`` (#670).
+Not covered here: reads, shell commands and ``apply_patch`` (#670).
 
 Codex only runs a handler the user approved in ``/hooks``. The approval is stored under the key
 ``"<path>:<event>:<group>:<handler>"`` (``codex-rs/hooks/src/lib.rs``, ``hook_key``) with a hash
@@ -58,14 +60,43 @@ class HookSpec:
     matcher: str | None = None
 
 
+#: The tools of our server as a Codex hook sees them: `mcp__<namespace>__<tool>`
+#: (`core/src/tools/handlers/mcp.rs`). The namespace may keep the `-` of `local-delegate` or be
+#: sanitized to `_`; both are ours. Anchored: Codex runs a matcher with other characters than
+#: `[A-Za-z0-9_|]` as an unanchored regex (`hooks/src/engine/matcher.rs`).
+MCP_MATCHER = r"^mcp__local[-_]delegate__"
+
+#: New entries go at the END: the index of a group is part of its approval key in Codex.
 SPECS: tuple[HookSpec, ...] = (
     HookSpec("codex-prompt", "UserPromptSubmit"),
     HookSpec("codex-subagent-start", "SubagentStart"),
+    HookSpec("codex-mcp-call", "PreToolUse", MCP_MATCHER),
 )
 NAMES = frozenset(spec.name for spec in SPECS)
 
 #: `hook_event_key_label` of `codex-rs/hooks/src/lib.rs`, for the events we use.
-EVENT_LABELS = {"UserPromptSubmit": "user_prompt_submit", "SubagentStart": "subagent_start"}
+EVENT_LABELS = {
+    "UserPromptSubmit": "user_prompt_submit",
+    "SubagentStart": "subagent_start",
+    "PreToolUse": "pre_tool_use",
+}
+
+
+def matcher_matches(matcher: str | None, names: list[str] | tuple[str, ...]) -> bool:
+    """Whether Codex would dispatch a hook with ``matcher`` for a tool known by ``names``.
+
+    ``HookMatcher`` of ``hooks/src/engine/matcher.rs``: empty or ``*`` matches all; only
+    ``[A-Za-z0-9_|]`` is an exact match against any ``|`` alternative; anything else is an
+    unanchored regex (``is_match``). ``names`` is the tool name and its matcher aliases.
+    """
+    if matcher is None or matcher in ("", "*"):
+        return True
+    if re.fullmatch(r"[A-Za-z0-9_|]+", matcher):
+        alternatives = matcher.split("|")
+        return any(name in alternatives for name in names)
+    pattern = re.compile(matcher)
+    return any(pattern.search(name) for name in names)
+
 
 #: The tail of every command of ours, whatever the interpreter in front of it.
 #: Anchored at the start: one interpreter (quoted or bare) and nothing else in front, so a wrapper
@@ -412,6 +443,14 @@ def run(name: str, load_hook_module: Callable[[str], ModuleType]) -> None:
     if payload is None:
         return
     common = load_hook_module("hook_common")
+    if name == "codex-mcp-call":
+        # Observation, like `record_call.py` of Claude Code: no switch, no backend, no output.
+        # The tool name is checked here too: a matcher the user widened by hand would otherwise
+        # note calls to other servers.
+        tool = payload.get("tool_name")
+        if isinstance(tool, str) and matcher_matches(MCP_MATCHER, (tool,)):
+            common.record_codex_call(payload)
+        return
     if not common.enabled() or common.backend_down():
         return
     if name == "codex-prompt":

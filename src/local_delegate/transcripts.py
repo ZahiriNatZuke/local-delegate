@@ -25,7 +25,7 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
-from . import pricing
+from . import attribution, pricing
 from .resources.hooks import hook_common
 
 TOOL_PREFIX = "mcp__local-delegate__"
@@ -422,6 +422,10 @@ def match_lines(
     for key, row in lines:
         t = parse_instant(row.get("ts"))
         if t is None or t < since or not needs_backfill(row):
+            continue
+        # A Codex row is never crossed with a Claude transcript (#669): a `tool_use` of Claude of
+        # the same tool in the same second would hand it a model and a thread that are not its.
+        if attribution.is_codex_row(row):
             continue
         session_key = row.get("caller_session_key")
         tool_use_id = row.get("tool_use_id")

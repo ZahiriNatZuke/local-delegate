@@ -104,8 +104,21 @@ def current_client() -> str | None:
 # scripts) no lo mandan: entonces vale `None` y la línea no lleva el campo.
 TOOL_USE_ID_KEY = "claudecode/toolUseId"
 
+# Codex CLI (#669): its MCP client introduces itself as `codex-mcp-client` and sends, in the `_meta`
+# of every `tools/call`, `callId` (the `tool_use_id` its `PreToolUse` hook receives) and `sessionId`
+# (the `session_id` of that hook: both are `sess.session_id()`, `core/src/mcp_tool_call.rs` of
+# `rust-v0.169.0`). They are read ONLY from that client; the session only as its one-way key.
+CODEX_CLIENT = "codex-mcp-client"
+CODEX_CALL_ID_KEY = "callId"
+CODEX_SESSION_ID_KEY = "sessionId"
+
 _CURRENT_TOOL_USE_ID: contextvars.ContextVar[str | None] = contextvars.ContextVar(
     "local_delegate_current_tool_use_id", default=None
+)
+
+# The one-way key (`hook_common.session_key`) of the Codex session behind the request, or `None`.
+_CURRENT_CODEX_SESSION_KEY: contextvars.ContextVar[str | None] = contextvars.ContextVar(
+    "local_delegate_current_codex_session_key", default=None
 )
 
 # Memoria de ESTA petición: un dict nuevo por petición, puesto por el middleware. Es un dict y no
@@ -183,15 +196,49 @@ def request_memory() -> dict | None:
     return _REQUEST_MEMORY.get()
 
 
-def _tool_use_id_from(ctx: Any) -> str | None:
-    """Lee `claudecode/toolUseId` del `_meta` de la petición. Medido con el SDK instalado: llega
-    como dict en `ctx.meta` (y también en `ctx.params["_meta"]`)."""
+def current_codex_session_key() -> str | None:
+    """The one-way key of the Codex session of the request in course, or `None`."""
+    return _CURRENT_CODEX_SESSION_KEY.get()
+
+
+def _meta_of(ctx: Any) -> dict | None:
     meta = getattr(ctx, "meta", None)
     if not isinstance(meta, dict):
         params = getattr(ctx, "params", None)
         meta = params.get("_meta") if isinstance(params, dict) else None
-    value = meta.get(TOOL_USE_ID_KEY) if isinstance(meta, dict) else None
+    return meta if isinstance(meta, dict) else None
+
+
+def _tool_use_id_from(ctx: Any, client: str | None = None) -> str | None:
+    """Lee `claudecode/toolUseId` del `_meta` de la petición. Medido con el SDK instalado: llega
+    como dict en `ctx.meta` (y también en `ctx.params["_meta"]`).
+
+    With ``client`` `codex-mcp-client`, the id is `callId` instead, and only if it has the shape of
+    a Codex call id (it ends in a file name): the Claude key is never read from Codex, nor
+    `callId` from anyone else.
+    """
+    meta = _meta_of(ctx)
+    if meta is None:
+        return None
+    if client == CODEX_CLIENT:
+        from .resources.hooks import hook_common
+
+        value = meta.get(CODEX_CALL_ID_KEY)
+        return value if hook_common.codex_note_name(value) is not None else None
+    value = meta.get(TOOL_USE_ID_KEY)
     return value if isinstance(value, str) and value else None
+
+
+def _codex_session_key_from(ctx: Any, client: str | None) -> str | None:
+    """`hook_common.session_key` of `_meta.sessionId`, only for Codex; never the id itself."""
+    if client != CODEX_CLIENT:
+        return None
+    meta = _meta_of(ctx)
+    if meta is None:
+        return None
+    from .resources.hooks import hook_common
+
+    return hook_common.session_key(meta.get(CODEX_SESSION_ID_KEY))
 
 
 def _utcnow() -> datetime:
@@ -371,7 +418,9 @@ async def observe_client(ctx: Any, call_next: Any) -> Any:
         try:
             # Va en su propio `try`: un fallo leyendo la identidad no puede llevarse el
             # `tool_use_id`, ni al revés. Y también ANTES de `call_next`, por lo mismo de arriba.
-            _CURRENT_TOOL_USE_ID.set(_tool_use_id_from(ctx))
+            client = _CURRENT_CLIENT.get()
+            _CURRENT_TOOL_USE_ID.set(_tool_use_id_from(ctx, client))
+            _CURRENT_CODEX_SESSION_KEY.set(_codex_session_key_from(ctx, client))
             _REQUEST_MEMORY.set({})
         except Exception:
             pass  # observar es best-effort; jamás propaga a la respuesta del cliente
