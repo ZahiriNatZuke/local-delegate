@@ -345,11 +345,14 @@ def _reply(raw: str, kind: str, wanted: object) -> dict | None:
             if line.startswith("data:"):
                 data.append(line[5:].lstrip())
             elif not line.strip() and data:
-                try:
-                    messages.append(json.loads("\n".join(data)))
-                except ValueError:
-                    pass
+                event = "\n".join(data)
                 data = []
+                try:
+                    messages.append(json.loads(event))
+                except ValueError:
+                    # An SSE event that is not JSON (a keep-alive, a comment) is not the answer:
+                    # skip it and keep looking for the message with the wanted id.
+                    continue
     else:
         try:
             messages.append(json.loads(raw))
