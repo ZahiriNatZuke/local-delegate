@@ -479,6 +479,17 @@ En Windows, `install --desktop` añade el chat de **Claude Desktop**: escribe un
 Desktop no pasa su entorno a los MCP. Para bajar a la 0.39, `uninstall` antes. Todo el detalle en
 [Entrega por plugin de Claude Code](./docs/wiki/Claude-plugin.md).
 
+### El mod en Codex
+
+Codex no carga el mod ni tiene con qué: no hay comandos de usuario sin modelo (solo `!comando`, que
+corre un comando local) ni una barra en la que pintar algo propio (`/statusline` elige campos fijos
+de Codex). Lo que sí tiene es una forma de que el modelo vea las tools sin buscarlas:
+`install --clients codex --codex-direct-tools` pone `omit_tools_from = ["deferred"]` en la entrada
+MCP. Entran las once tools a la vez (Codex no deja elegir una a una), unos 15,8 KB más por turno,
+así que va apagado por defecto; `update` conserva lo que elijas. La tabla completa, con la
+evidencia de cada fila y las pruebas en vivo pendientes:
+[Codex: qué tiene y qué no del mod](./docs/wiki/Codex-capabilities.md).
+
 ## Groups de llama-swap (opcional)
 
 Con `pip install "local-delegate-mcp[llamaswap]"` quedan disponibles los CLIs para gestionar

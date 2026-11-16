@@ -8,6 +8,17 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ### Añadido
 
+- **Codex: matriz de capacidades y tools directas (#671).** Página nueva de la wiki
+  ([Codex: qué tiene y qué no del mod](docs/wiki/Codex-capabilities.md)) con lo que hace el mod de
+  Claude Code y lo que hay en Codex 0.169.0, fila por fila y con su evidencia: los comandos sin
+  modelo y la banda de estado no tienen equivalente (Codex solo ofrece `!comando` y una
+  `/statusline` de campos fijos). Lo que sí lo tiene son las tools fijadas: Codex deja toda tool MCP
+  tras `tool_search`, y `install --codex-direct-tools` pone `omit_tools_from = ["deferred"]` en la
+  entrada de Codex para que las once vayan en la lista inicial del modelo (unos 15,8 KB más por
+  turno, medido con `codex debug prompt-input`). Va apagado por defecto; `--no-codex-direct-tools`
+  quita solo `"deferred"`, y sin flag `install` y `update` conservan la lista tal cual, también una
+  lista escrita a mano. `doctor` lo enseña en la línea de la entrada MCP de Codex.
+
 - **Hooks de Codex (#669, núcleo).** Con Codex instalado (o `--clients codex`), `install` añade a
   `~/.codex/hooks.json` dos hooks consultivos: `UserPromptSubmit` (el aviso de tarea mecánica) y
   `SubagentStart` (cómo usar las `local_*` con `path` en cada subagente). No tocan ni mueven tus
