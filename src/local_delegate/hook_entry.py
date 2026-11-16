@@ -312,7 +312,7 @@ def main(argv: list[str]) -> int:
 
             if name in codex_hooks.NAMES:
                 _utf8_streams()
-                codex_hooks.run(name)
+                codex_hooks.run(name, _load_hook_module)
         except (Exception, SystemExit) as exc:  # incluye SystemExit(2): nunca bloquear
             _log_failure(name, exc)
         return 0

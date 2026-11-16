@@ -17,11 +17,10 @@ from pathlib import Path
 import jsonschema
 import pytest
 
-import local_delegate
 from local_delegate import codex_hooks, codex_plugin, config, hook_entry
 
 FIXTURES = Path(__file__).parent / "fixtures" / "codex_hooks"
-SRC = Path(local_delegate.__file__).resolve().parents[1]
+SRC = Path(config.__file__).resolve().parents[1]
 TIMEOUT_S = 60
 PYTHON = "C:/Users/someone/AppData/Roaming/uv/tools/local-delegate-mcp/Scripts/python.exe"
 
@@ -300,7 +299,7 @@ def test_a_failing_codex_handler_exits_zero_and_logs_only_the_type(tmp_path, fai
     boot = (
         f"import sys; sys.path.insert(0, {str(SRC)!r}); "
         "from local_delegate import codex_hooks\n"
-        f"def broken(name):\n    {failure}\n"
+        f"def broken(name, load_hook_module):\n    {failure}\n"
         "codex_hooks.run = broken\n"
         "from local_delegate.hook import run_hook; run_hook(['codex-prompt'])"
     )

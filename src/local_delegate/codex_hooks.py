@@ -38,9 +38,11 @@ import re
 import secrets
 import shlex
 import sys
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
+from types import ModuleType
 
 HOOKS_FILE_NAME = "hooks.json"
 #: In `LOG_DIR`: `{hook name: UTC time}` of the last dispatch of each Codex hook.
@@ -399,19 +401,21 @@ def _emit(event: str, text: str) -> None:
     )
 
 
-def run(name: str) -> None:
-    """Runs Codex hook ``name``. Raises on a bug: `hook_entry` logs it and exits 0."""
-    from .hook_entry import _load_hook_module
+def run(name: str, load_hook_module: Callable[[str], ModuleType]) -> None:
+    """Runs Codex hook ``name``. Raises on a bug: `hook_entry` logs it and exits 0.
 
+    ``load_hook_module`` is `hook_entry._load_hook_module`, passed in so this module
+    never imports `hook_entry`, which imports this one.
+    """
     _mark_seen(name)
     payload = _payload()
     if payload is None:
         return
-    common = _load_hook_module("hook_common")
+    common = load_hook_module("hook_common")
     if not common.enabled() or common.backend_down():
         return
     if name == "codex-prompt":
-        prompt_rules = _load_hook_module("suggest_delegate_prompt")
+        prompt_rules = load_hook_module("suggest_delegate_prompt")
         prompt = str(payload.get("prompt") or "")
         if prompt_rules.is_system_event(prompt):
             return
