@@ -33,7 +33,7 @@
 | F3 | Fila de Codex sin nota recibe el respaldo de modelo de Claude en la fusión | H3 | — | suspected | aceptado: solo sirve a la densidad de filas ya excluidas del coste; el recibo en curso queda como antes a propósito (un fix no cambia otra cosa); si molesta en el panel, siguiente PR |
 | F4 | Capturas claro/oscuro de REQ-008 pendientes | H4 | B4 | confirmed | pendientes para la sesión principal; `conformance` no se aprueba hasta tenerlas |
 | F5 | `hook_key` del test no salía de un fichero fusionado | H5 | — | suspected | test reescrito con `merge` + `inspect` + `config.toml` |
-| F6 | `agent_id`/`agent_type` sin forma ni tope | H6 | — | confirmed (también seguridad) | `_shaped` con patrones acotados; test con control |
+| F6 | `agent_id`/`agent_type` sin forma ni tope | H6 | — | confirmed | `_shaped` con patrones acotados; test con control |
 | F7 | `doctor` decía «no son de esta versión… aprobar otra vez» para el hook que falta | — | B1 | suspected | texto propio `doctor.probe.codex_hooks.missing` (es/en) |
 | F8 | Sin test del paso de dos hooks a tres | — | B2 | suspected | `test_from_the_two_hooks_of_the_core_to_three` |
 | F9 | Docstrings con «two hooks» | — | B5 | suspected | corregidos |

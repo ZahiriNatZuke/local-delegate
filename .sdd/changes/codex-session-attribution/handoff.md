@@ -2,8 +2,8 @@
 
 ## Current state
 
-- SDD status: `implementing` → `verifying` (puertas spec y plan aprobadas; quality y conformance, ver `state.json`).
-- Last completed gate: plan.
+- SDD status: `result-review`. Puertas spec, plan y quality aprobadas; `conformance` espera las capturas del panel (claro y oscuro).
+- Last completed gate: quality.
 - Current revision: rama `feat/codex-session-attribution` (push hecho; el PR conjunto de #684/#669/#670/#671 lo abre la sesión principal).
 
 ## What changed
