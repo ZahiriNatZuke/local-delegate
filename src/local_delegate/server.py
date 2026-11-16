@@ -68,6 +68,7 @@ from . import (
     polarity,
     questions,
     remote_turn,
+    runner_totals,
     sections,
     table_detect,
     test_windows,
@@ -7939,6 +7940,34 @@ def _grounding_notice(
     return _notice
 
 
+def _test_totals_notice(
+    content: str, before: Callable[[str, bool], str]
+) -> Callable[[str, bool], str]:
+    """#684: `before`, then a warning when the summary denies what a test runner counted.
+
+    `runner_totals.denied` reads the totals line of pytest, jest, cargo or go in the input and
+    looks, in the summary, for a negation of a category (failures, skips) the runner counted above
+    zero («No se reportaron fallos ni saltos» over `750 passed, 2 skipped`). The figure is in the
+    input, so `_grounding_notice` has nothing to say. The summary is not changed. Judged on what
+    the model wrote, before the other notices add their own text (some of them say «sin»).
+    """
+
+    def _notice(text: str, truncated: bool) -> str:
+        found = runner_totals.denied(text, content)
+        text = before(text, truncated)
+        if not found:
+            return text
+        details = "; ".join(
+            i18n.t(f"mcp.warning.denied_{category}", clause=clause, count=count)
+            for category, clause, count in found
+        )
+        line = runner_totals.totals(content).lines[-1][:200]
+        notice = i18n.t("mcp.warning.summary_denies_test_totals", details=details, line=line)
+        return f"{text.rstrip()}\n\n{WARNING_MARKER}{notice}]"
+
+    return _notice
+
+
 def _listed(items: list[str]) -> str:
     """`items` as «a», «b»…, the first `grounding.MAX_ITEMS`, and how many more."""
     shown = ", ".join(f"«{item}»" for item in items[: grounding.MAX_ITEMS])
@@ -8126,6 +8155,8 @@ def local_summarize(
     kind = _source_kind(path)
     # #630: the check of the summary against the input runs on every path, with the #539 notice.
     literal_notice = _grounding_notice(content, _string_literal_notice(content, kind=kind))
+    # #684: and against the totals of a test runner, when the input carries them.
+    literal_notice = _test_totals_notice(content, literal_notice)
     # #650: by size only; a small input the table rule raised keeps the single call.
     structured = (
         config.STRUCTURED_SUMMARY and role == "long" and table_format is None and kind != "code"

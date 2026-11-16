@@ -116,6 +116,15 @@ aviso dice qué comprobar contra la fuente. Lo que va entre comillas invertidas 
 no ve: una causa cambiada o una cifra de la tabla puesta en otra fila, si la cifra existe en la
 entrada.
 
+**Salida de tests (#684).** Si la entrada trae la línea de totales de un runner (pytest
+`750 passed, 2 skipped in 81.33s`, jest `Tests: 1 failed, 10 passed, 11 total`, `cargo test`
+`test result: …; 2 ignored; …` o las líneas `--- FAIL:`/`--- SKIP:` de `go test -v`) y una frase
+del resumen niega una categoría que el runner cuenta por encima de cero («No se reportaron fallos
+ni saltos», «without failures», «0 skipped»), el aviso nombra la frase y la línea del runner. Una
+negación cuenta si va antes de la palabra en la misma frase, a menos de seis palabras y sin una
+cifra ni un «y»/«pero» en medio. El resumen no cambia. Para salida de tests la tool indicada es
+`local_lint_summary`.
+
 ### Resumen por secciones (experimental, apagado)
 
 Con `LOCAL_DELEGATE_STRUCTURED_SUMMARY=1` y un documento Markdown que va al modelo largo, el

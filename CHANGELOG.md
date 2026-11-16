@@ -37,6 +37,16 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ### Corregido
 
+- **`local_summarize` avisa cuando el resumen niega lo que contó un runner de tests** (#684).
+  Sobre una salida corta de `pytest -q` que termina en `750 passed, 2 skipped`, el resumen decía
+  «omitiendo 2» y en la frase siguiente «No se reportaron fallos ni saltos», sin aviso: la cifra
+  sí estaba en la entrada, así que la revisión de datos inventados (#630) no tenía nada que marcar.
+  Ahora el programa lee la línea de totales de pytest, jest, `cargo test` o `go test -v` y, si una
+  frase del resumen niega una categoría (fallos o errores, saltos) que el runner cuenta por encima
+  de cero, en español o en inglés («sin saltos», «no failures or skips»), añade un aviso con la
+  frase y la línea del runner, y recuerda que para salida de tests está `local_lint_summary`. El
+  resumen no cambia. Un resumen que dice bien «2 saltados» o que niega solo lo que el runner no
+  contó no avisa.
 - **`local_extract` sobre un diff grande ya no devuelve solo el primer fichero** (#665). Con `path`
   a un `.patch` de varios ficheros y un campo como `ficheros_con_lineas`, la respuesta traía
   `package.json: líneas 1-21` y nada más, sin aviso. La unión de los trozos estaba bien; el fallo
