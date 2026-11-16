@@ -4,9 +4,9 @@
   "title": "local_extract: aviso cuando un valor invierte la negacion de la fuente",
   "mode": "lite",
   "traceability": "strict",
-  "status": "result-review",
+  "status": "closed",
   "createdAt": "2026-11-16T12:34:14.110Z",
-  "updatedAt": "2026-11-16T13:44:36.245Z",
+  "updatedAt": "2026-11-16T13:45:04.738Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -121,6 +121,20 @@
       "to": "result-review",
       "at": "2026-11-16T13:44:36.245Z",
       "reason": "CI verde y revisión hecha"
+    },
+    {
+      "type": "transition",
+      "from": "result-review",
+      "to": "closing",
+      "at": "2026-11-16T13:45:04.519Z",
+      "reason": "puertas aprobadas"
+    },
+    {
+      "type": "transition",
+      "from": "closing",
+      "to": "closed",
+      "at": "2026-11-16T13:45:04.738Z",
+      "reason": "PR #680 listo para mezclar"
     }
   ]
 }
