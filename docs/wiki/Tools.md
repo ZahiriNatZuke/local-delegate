@@ -15,6 +15,18 @@ Casi todas aceptan `text` (o `code`, o `diff`) **y** `path`. No son equivalentes
 Con backend remoto (la Mac delegando en la PC), la ruta se resuelve **en la máquina donde corre el
 MCP**, no donde está el modelo. Ver [Backend remoto](Remote-backend.md).
 
+**Codificación del fichero (desde #672).** El servidor lee el `path` como UTF-8. Si no lo es, no
+sustituye los caracteres que no entiende como antes: un fichero con BOM de UTF-16 (lo que escribe
+la redirección de PowerShell 5) se lee como UTF-16, y cualquier otro se lee como Windows-1252
+(Latin-1 más `€`, `…` y las comillas tipográficas), o como Latin-1 si trae uno de los cinco bytes
+que Windows-1252 no define. Las seis tools que leen `path` con texto (`local_summarize`,
+`local_extract`, `local_explain_code`, `local_lint_summary`, `local_commit_msg` y
+`local_translate`) lo avisan con un `[local-delegate warning: el fichero no es UTF-8 válido y se
+leyó como cp1252; …]` delante de la respuesta, y `local_extract` en `_local_delegate.warning` y en
+`_local_delegate.input_encoding`. Un error del backend conserva su prefijo `[local-delegate error]`
+al principio. Si el texto sale raro (era otra codificación, como cp1251), convierte el fichero a
+UTF-8 y vuelve a llamar.
+
 ## De un vistazo
 
 | Tool | Qué hace | Modelo | Si la entrada no cabe |
@@ -90,7 +102,9 @@ y en todos los caminos (llamada única, map-reduce y por secciones), y avisa con
 - una sigla expandida entre paréntesis («SDD (Sistema de Diagnóstico Dinámico)», o al revés) cuyas
   palabras forman la sigla y que la entrada no expande así;
 - una palabra con letras que no son del idioma del resumen (`ç`, `ã`, `ê`… en un resumen en
-  español; cualquier tilde en uno en inglés) y que no sale en la entrada («deviações»);
+  español; cualquier tilde en uno en inglés) y que no sale en la entrada («deviações»). Solo
+  cuentan las letras: `m²` o `m³` no son palabras de otro idioma (#672), y una tilde escrita como
+  letra más acento combinante cuenta igual que la letra compuesta;
 - solo si la entrada trae una tabla HTML, ARIA o Markdown (también GFM; un CSV o un TSV, como un
   log de CI con tabuladores, no abre esta revisión, #650), una cifra que la
   entrada no trae en ninguna grafía (`2 862` = `2862`, `2,5` = `2.5`, «tres» = `3`). Fuera de las
@@ -220,6 +234,22 @@ Dos cosas que conviene saber y solo estaban en el código:
   un trozo ni prosa alrededor. Calla si el valor se repite en la entrada, si ninguna otra clave casa
   de verdad con la fila (dos palabras, o una si una contiene a la otra), con empates, con valores
   triviales (booleanos, sí/no, una cifra) y con los campos de ubicación.
+- **Negación cambiada** (#667). Si una frase de un valor lleva una negación (`no`, `not`,
+  `don't`, `never`, `nunca`, `ni`, `evitar`...) que su frase de la entrada no tiene, o perdió la
+  que la entrada tiene, la clave va en `_local_delegate.polarity_flipped_keys`
+  (`{clave: {"value", "source", "flip"}}`, con `flip` = `added` o `removed`) con aviso. El valor no
+  se toca. La frase del valor se busca en la entrada por las cuatro primeras letras de sus palabras
+  (al menos dos y el 60 %), así que también la encuentra traducida entre español e inglés
+  (`revisar`/`review`); y la palabra que niega la negación tiene que estar en la otra frase y no
+  contar entre las dos palabras compartidas. Un salto de línea dentro de un párrafo no corta la
+  frase; una línea en blanco, un elemento de lista, un encabezado o una celda de tabla, sí. Calla si
+  la frase no aparece, si la entrada dice las dos cosas, si la negación de la entrada viene de antes
+  en la misma oración («no revises X, los adaptadores») o de un encabezado o una línea `...:` sobre
+  su lista («## No hacer»), con una doble negación («no mezclar sin CI verde»), con claves cuyo
+  nombre lleva una negación o una prohibición (`no_reintentar`, `do_not_retry`), con frases de menos
+  de tres palabras con contenido, con entradas de más de 400 000 caracteres y con los campos de
+  ubicación. No ve una frase que el modelo une con otra hasta no parecerse a ninguna de la entrada,
+  ni idiomas que no comparten raíces con el de la entrada.
 - **Una entrada pequeña con tabla va al modelo largo** (#586). Por debajo de
   `LOCAL_DELEGATE_LONG_INPUT_CHARS`, si la entrada trae una etiqueta `<table` o `<tr` (seguida de
   blanco, `>` o `/`) o una línea con dos o más `|` seguida de su línea separadora (con `--`), la
@@ -509,6 +539,18 @@ obligatorio — la imagen la lee el servidor, no la adjuntas tú.
 
 Es **imagen→texto** y nada más: no genera ni edita imágenes. El tope de tamaño lo pone
 `LOCAL_DELEGATE_MAX_IMAGE_MB` (8 MB por defecto).
+
+**No mide (desde #663).** Sirve para el contenido y la composición general, no para verificar
+alineación, tamaños, distancias, espaciados ni si un texto salta de línea al píxel: el modelo de
+visión afirmó que un botón estaba desalineado entre dos barras y que un valor se partía en dos
+líneas, y las medidas del DOM (`getBoundingClientRect`, `Range.getClientRects`) lo desmintieron.
+Eso se mide. Cuando la pregunta o la respuesta usan las palabras habituales de alineación,
+centrado, píxeles, distancias, márgenes, desplazamientos, tamaños comparados, espaciado o saltos
+de línea (en español o en inglés), detrás de la respuesta del modelo va un
+`[local-delegate warning: un modelo de visión no mide: …]`, antes del recibo de ahorro. Es una
+guarda por programa, por palabras: el prompt del rol `vision` no cambia, la respuesta del modelo
+se devuelve como vino y una descripción que use esas palabras sin medir nada («un margen amplio»)
+también lleva el aviso.
 
 ## `local_status`
 

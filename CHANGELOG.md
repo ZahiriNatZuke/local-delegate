@@ -38,6 +38,37 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   por `max_tokens`, y las líneas que no casan con el fichero van en `lines_unverified` también
   cuando salen de un trozo cortado.
 
+- **`local_describe_image` avisa de que no mide (#663).** El modelo de visión afirmó que un botón
+  estaba desalineado entre dos barras de una captura y que un valor se partía en dos líneas, y las
+  medidas del DOM lo desmintieron; un agente con solo la imagen habría informado de dos defectos
+  que no existen. Ahora la descripción de la tool, la skill `local-delegation` y la wiki dicen que
+  sirve para el contenido y la composición, no para verificar alineación, tamaños, distancias ni
+  saltos de línea, y que eso se mide. Y cuando la pregunta o la respuesta hablan de eso (en
+  español o en inglés), la respuesta termina con un aviso por programa: el prompt del rol `vision`
+  no cambia y la respuesta del modelo se devuelve tal cual.
+
+- **`local_extract` avisa cuando un valor dice lo contrario que la entrada (#667).** El modelo
+  mecánico (gemma3-4b) devolvió «Do not review code real of the mod and adapters…» donde el
+  documento pedía revisar ese código: la negación de la frase siguiente («no inferir la respuesta
+  desde las skills») pasó a la primera al traducirla. El programa no cambia ninguna palabra de un
+  valor (lo comprueban los tests), así que el giro es del modelo. Ahora `local_extract` compara
+  cada frase de cada valor con la frase de la entrada que le corresponde, también traducida entre
+  español e inglés, y si una lleva una negación que la otra no tiene, la clave va en
+  `_local_delegate.polarity_flipped_keys` (`{clave: {"value", "source", "flip"}}`) con aviso. El
+  valor no se toca. No salta en ninguna de las 177 respuestas guardadas en `tests/data/cross_fill/`
+  ni con ninguna frase de la wiki y del CHANGELOG copiada contra su propio fichero. El prompt no
+  cambia.
+- **Un fichero que no es UTF-8 ya no pierde caracteres en silencio ni da falsos «datos inventados»
+  (#672).** Con `path`, el servidor leía todo como UTF-8 sustituyendo lo que no entendía: un texto
+  en Latin-1 (la salida de `pdftotext` en Windows) perdía sus `²`, `³` y tildes sin aviso, y la
+  revisión de #630 tomaba por inventados los `m²`/`m³` que el resumen copiaba del fichero. Ahora se
+  prueba UTF-8 estricto; un fichero con BOM de UTF-16 se lee como UTF-16, y el resto como
+  Windows-1252 (o Latin-1 con los cinco bytes que Windows-1252 no define). Las seis tools que leen
+  `path` (`local_summarize`, `local_extract`, `local_explain_code`, `local_lint_summary`,
+  `local_commit_msg` y `local_translate`) lo avisan delante de la respuesta, y `local_extract` en
+  `_local_delegate.warning` e `input_encoding`. La revisión de #630 compara las dos partes en la
+  misma forma Unicode (NFC) y solo mira las letras de cada palabra, así que `m²` ya no es «una
+  palabra de otro idioma». Un fichero UTF-8 se lee igual que antes.
 - **Un mirror de apt lento o sin DNS ya no deja el CI de main en rojo.** Tras la 0.52.0, `lint`
   agotó los 5 minutos de `playwright install --with-deps` y `test-lang-es` salió con el código 100
   de apt, sin ningún cambio de código: el runner no resolvía los mirrors de Ubuntu. Ahora, en los
