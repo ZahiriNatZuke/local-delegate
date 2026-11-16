@@ -1,0 +1,95 @@
+{
+  "schemaVersion": 1,
+  "slug": "path-input-encoding",
+  "title": "Lectura con path: ficheros que no son UTF-8 y falsos «datos inventados» con m²/m³ (#672)",
+  "mode": "lite",
+  "traceability": "strict",
+  "status": "verifying",
+  "createdAt": "2026-11-16T12:22:05.098Z",
+  "updatedAt": "2026-11-16T12:39:16.199Z",
+  "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-11-16T12:39:14.987Z",
+      "evidence": "spec.md: 5 requisitos con criterio y método; lector y retornos de las seis tools inspeccionados",
+      "actor": "user"
+    },
+    "plan": {
+      "status": "approved",
+      "updatedAt": "2026-11-16T12:39:15.219Z",
+      "evidence": "plan.md: T1-T4 cubren REQ-001..005",
+      "actor": "user"
+    },
+    "quality": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "conformance": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "memory": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-11-16T12:22:05.098Z",
+      "reason": "SDD change created"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-11-16T12:39:14.987Z",
+      "evidence": "spec.md: 5 requisitos con criterio y método; lector y retornos de las seis tools inspeccionados",
+      "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-11-16T12:39:15.219Z",
+      "evidence": "plan.md: T1-T4 cubren REQ-001..005",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "specifying",
+      "at": "2026-11-16T12:39:15.488Z",
+      "reason": "spec y plan aprobados; implementación y tests de zona hechos"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-11-16T12:39:15.741Z",
+      "reason": "spec y plan aprobados; implementación y tests de zona hechos"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "implementing",
+      "at": "2026-11-16T12:39:15.966Z",
+      "reason": "spec y plan aprobados; implementación y tests de zona hechos"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-11-16T12:39:16.199Z",
+      "reason": "spec y plan aprobados; implementación y tests de zona hechos"
+    }
+  ]
+}

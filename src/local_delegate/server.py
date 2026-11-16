@@ -1073,14 +1073,90 @@ def _write_target(p: Path, content: str, *, event: dict, overwrite: bool = False
 _NO_TRUNCATE = 2**31
 
 
+#: #672: the encoding a `path` input of the operation in course was read with, when it was not
+#: UTF-8 (`"utf-16"`, `"cp1252"`, `"latin-1"`), or `None`. `_read_input` sets it on every call,
+#: so a value never outlives the read that produced it; the tools turn it into a notice.
+_INPUT_ENCODING: contextvars.ContextVar[str | None] = contextvars.ContextVar(
+    "local_delegate_input_encoding", default=None
+)
+
+#: #672: byte order marks that say, without guessing, that a file is UTF-16 (PowerShell 5 writes
+#: redirected output that way). Checked before UTF-8, which would fail on the NUL bytes.
+_UTF16_BOMS = (b"\xff\xfe", b"\xfe\xff")
+
+
+def _decode_input_file(p: Path) -> tuple[str, str | None]:
+    """The text of `p` and the encoding it was read with when it was not UTF-8 (#672).
+
+    Before, every file was decoded as UTF-8 with `errors="replace"`: a Latin-1 file lost its `²`,
+    `³` and accents to U+FFFD with no notice, and the check of the summary against that text took
+    what the file does hold for invented. Now UTF-8 is tried strictly; a UTF-16 file with its BOM
+    is read as UTF-16; anything else falls back to Windows-1252 (Latin-1 plus the `€`, `…`, quotes
+    of 0x80-0x9F, what Windows tools write), and to Latin-1, which decodes any byte, for the five
+    bytes Windows-1252 leaves undefined. Line ends are normalized as `read_text` did.
+    """
+    raw = p.read_bytes()
+    candidates: tuple[tuple[str, str | None], ...]
+    if raw.startswith(_UTF16_BOMS):
+        candidates = (("utf-16", "utf-16"),)
+    else:
+        candidates = (("utf-8", None), ("cp1252", "cp1252"), ("latin-1", "latin-1"))
+    for codec, label in candidates:
+        try:
+            decoded = raw.decode(codec)
+        except UnicodeDecodeError:
+            continue
+        return decoded.replace("\r\n", "\n").replace("\r", "\n"), label
+    # A UTF-16 BOM over an odd or broken body: what was done before, U+FFFD and all.
+    text = raw.decode("utf-8", errors="replace").replace("\r\n", "\n").replace("\r", "\n")
+    return text, None
+
+
+def _input_encoding_notice() -> str:
+    """#672: the warning line for a `path` input that was not UTF-8, or `""`."""
+    encoding = _INPUT_ENCODING.get()
+    if encoding is None:
+        return ""
+    return f"{WARNING_MARKER}{i18n.t('mcp.warning.input_not_utf8', encoding=encoding)}]"
+
+
+def _with_input_encoding_notice(result: str) -> str:
+    """#672: `result` with the encoding notice on top; an error keeps its prefix first."""
+    notice = _input_encoding_notice()
+    if not notice or result.startswith(ERROR_PREFIX):
+        return result
+    return f"{notice}\n{result}"
+
+
+def _with_input_encoding_meta(meta: dict) -> dict:
+    """#672: `local_extract` metadata with the encoding, in its own key and appended to
+    `warning` (as #497 does: an earlier warning keeps its exact text). Also on an error.
+    """
+    encoding = _INPUT_ENCODING.get()
+    if encoding is None:
+        return meta
+    notice = i18n.t("mcp.warning.input_not_utf8", encoding=encoding)
+    previous = meta.get("warning")
+    return {
+        **meta,
+        "input_encoding": encoding,
+        "warning": f"{previous}; {notice}" if previous else notice,
+    }
+
+
 def _read_input(text: str | None, path: str | None, max_chars: int) -> tuple[str, bool, int]:
-    """Devuelve (contenido, truncado, raw_len). Si viene 'path', lo lee server-side."""
+    """Devuelve (contenido, truncado, raw_len). Si viene 'path', lo lee server-side.
+
+    #672: la codificación con que se leyó (si no era UTF-8) queda en `_INPUT_ENCODING`.
+    """
+    _INPUT_ENCODING.set(None)
     if path:
         _check_path(path, path_guard.READ)
         p = Path(path)
         if not p.is_file():
             raise InputError(i18n.t("mcp.input.missing_file", path=path))
-        content = p.read_text(encoding="utf-8", errors="replace")
+        content, encoding = _decode_input_file(p)
+        _INPUT_ENCODING.set(encoding)
     elif text is not None:
         content = text
     else:
@@ -8027,7 +8103,7 @@ def local_summarize(
     )
     structure = sections.detect(content) if structured else None
     if structure is not None:
-        return _truncation_prefix(content, truncated_in, raw_len) + _structured_summary(
+        structured_result = _structured_summary(
             model=model,
             role=role,
             content=content,
@@ -8042,6 +8118,9 @@ def local_summarize(
             after=literal_notice,
             focus_terms=terms,
             focus_literal=literal,
+        )
+        return _with_input_encoding_notice(
+            _truncation_prefix(content, truncated_in, raw_len) + structured_result
         )
 
     # Sin estructura (o con el interruptor apagado): el camino de siempre. Desde la 0.36.0 lleva
@@ -8068,7 +8147,7 @@ def local_summarize(
     if len(content) > config.max_chars_for_role(role):
         # No cabe: se resume por partes y luego se resumen los resúmenes. Antes esto se
         # truncaba, o sea que se resumía el principio y el resto se ignoraba.
-        return _chat_map_reduce(
+        mapped = _chat_map_reduce(
             model,
             system,
             content,
@@ -8089,6 +8168,7 @@ def local_summarize(
             # #580: the same margin as the single call, in the map, the regroup and the reduce.
             max_tokens_for=_summary_max_tokens,
         )
+        return _with_input_encoding_notice(mapped)
 
     user = _build_with_note(content)
     result = _chat(
@@ -8111,7 +8191,7 @@ def local_summarize(
         focus=clean_focus is not None,
         postprocess=_notices,
     )
-    return _truncation_prefix(content, truncated_in, raw_len) + result
+    return _with_input_encoding_notice(_truncation_prefix(content, truncated_in, raw_len) + result)
 
 
 @mcp.tool(annotations=_annotations(TOOL_TITLES["local_classify"]))
@@ -8760,10 +8840,12 @@ def local_extract(
             # en vez de recibir una excepción de protocolo.
             # #586: whoever waited for the long model and got an error hears why it went there.
             error = {"error": i18n.t("mcp.extract.not_json"), "raw": result}
-            return {"_local_delegate": {**error, **truncation, **role_meta}}
+            return {
+                "_local_delegate": _with_input_encoding_meta({**error, **truncation, **role_meta})
+            }
     if not isinstance(data, dict):
         error = {"error": i18n.t("mcp.extract.not_object"), "raw": result}
-        return {"_local_delegate": {**error, **truncation, **role_meta}}
+        return {"_local_delegate": _with_input_encoding_meta({**error, **truncation, **role_meta})}
 
     if location_partials:
         # The location values are joined by program, never left to the reduce (#568).
@@ -8897,6 +8979,7 @@ def local_extract(
         lines_notice = i18n.t("mcp.warning.extract_lines_unverified", lines=", ".join(unverified))
         previous = meta.get("warning")
         meta["warning"] = f"{previous}; {lines_notice}" if previous else lines_notice
+    meta = _with_input_encoding_meta(meta)
     if path and config.FEEDBACK_ENABLED:
         # Tokens de Claude de la fila en curso (REQ-035), no del modelo local.
         event = cost.in_flight_row(tool="local_extract", source="path", path=path)
@@ -9059,7 +9142,7 @@ def local_lint_summary(
     # Such an input is answered by the program, before the backend.
     verdict = lint_patterns.clean_verdict(log)
     if verdict is not None:
-        return _lint_no_findings(verdict, path, len(log))
+        return _with_input_encoding_notice(_lint_no_findings(verdict, path, len(log)))
     # B2d-4: the program, not the model, compacts the lines with the same problem and counts them.
     content, _groups = compact_repeated_lines(content)
     system = _lint_system(max_words)
@@ -9098,7 +9181,7 @@ def local_lint_summary(
             checked = _lint_not_mentioned(_lint_other_files(checked, left_out), log, failures)
             return _lint_check_failures(checked, failures)
 
-        return _chat_map_reduce(
+        lint_mapped = _chat_map_reduce(
             model,
             system,
             content,
@@ -9116,6 +9199,7 @@ def local_lint_summary(
             final_max_tokens_for=_lint_final_max_tokens,
             postprocess=_add_not_mentioned,
         )
+        return _with_input_encoding_notice(lint_mapped)
 
     # B2f: con el rol largo, el inventario delante del log y la línea «sin mencionar» detrás, como
     # en el troceado; el rol mecánico, como antes.
@@ -9142,7 +9226,7 @@ def local_lint_summary(
         if role == "long"
         else (lambda answer, _t: _lint_check_failures(_lint_invented(answer, log), failures)),
     )
-    return _truncation_prefix(content, truncated_in, raw_len) + result
+    return _with_input_encoding_notice(_truncation_prefix(content, truncated_in, raw_len) + result)
 
 
 @mcp.tool(annotations=_annotations(TOOL_TITLES["local_commit_msg"]))
@@ -9321,7 +9405,7 @@ def local_commit_msg(
                 )
             commit_message += "\n\n" + scope
             commit_message = _with_commit_language_notice(commit_message, path)
-        return commit_message
+        return _with_input_encoding_notice(commit_message)
 
     result = _chat(
         config.MODEL_CODE,
@@ -9339,7 +9423,7 @@ def local_commit_msg(
     )
     if not result.startswith(ERROR_PREFIX):
         result = _with_commit_language_notice(result, path)
-    return _truncation_prefix(content, truncated_in, raw_len) + result
+    return _with_input_encoding_notice(_truncation_prefix(content, truncated_in, raw_len) + result)
 
 
 @mcp.tool(annotations=_annotations(TOOL_TITLES["local_translate"]))
@@ -9383,7 +9467,7 @@ def local_translate(
         raw_len=raw_len,
         path=path,
     )
-    return _truncation_prefix(content, truncated_in, raw_len) + result
+    return _with_input_encoding_notice(_truncation_prefix(content, truncated_in, raw_len) + result)
 
 
 @mcp.tool(annotations=_annotations(TOOL_TITLES["local_explain_code"]))
@@ -9708,7 +9792,7 @@ def local_explain_code(
                 answer = f"{answer.rstrip()}\n\n{header}\n{listing}"
             return answer
 
-        return _chat_map_reduce(
+        explained = _chat_map_reduce(
             config.MODEL_CODE,
             map_system,
             model_content,
@@ -9730,8 +9814,9 @@ def local_explain_code(
             # without one, #504 keeps every prompt and the answer byte for byte.
             widen_cut_regroup=bool(question),
         )
+        return _with_input_encoding_notice(explained)
 
-    return _chat(
+    explained = _chat(
         config.MODEL_CODE,
         system,
         f"Explica el siguiente código:\n\n{model_content}",
@@ -9744,6 +9829,7 @@ def local_explain_code(
         path=path,
         postprocess=check_lines,
     )
+    return _with_input_encoding_notice(explained)
 
 
 @mcp.tool(annotations=_annotations(TOOL_TITLES["local_describe_image"]))
