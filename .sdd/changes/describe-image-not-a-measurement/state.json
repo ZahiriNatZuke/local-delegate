@@ -1,0 +1,95 @@
+{
+  "schemaVersion": 1,
+  "slug": "describe-image-not-a-measurement",
+  "title": "local_describe_image no mide: aviso por programa ante alineación, píxeles o saltos de línea (#663)",
+  "mode": "lite",
+  "traceability": "strict",
+  "status": "verifying",
+  "createdAt": "2026-11-16T12:48:01.730Z",
+  "updatedAt": "2026-11-16T12:51:41.406Z",
+  "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-11-16T12:51:40.375Z",
+      "evidence": "spec.md: 4 requisitos con criterio y método; issue y comentario leídos; decisión de no tocar el prompt justificada",
+      "actor": "user"
+    },
+    "plan": {
+      "status": "approved",
+      "updatedAt": "2026-11-16T12:51:40.583Z",
+      "evidence": "plan.md: T1-T3 cubren REQ-001..004",
+      "actor": "user"
+    },
+    "quality": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "conformance": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "memory": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-11-16T12:48:01.730Z",
+      "reason": "SDD change created"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-11-16T12:51:40.375Z",
+      "evidence": "spec.md: 4 requisitos con criterio y método; issue y comentario leídos; decisión de no tocar el prompt justificada",
+      "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-11-16T12:51:40.583Z",
+      "evidence": "plan.md: T1-T3 cubren REQ-001..004",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "specifying",
+      "at": "2026-11-16T12:51:40.804Z",
+      "reason": "spec y plan aprobados; implementación y tests de zona hechos"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-11-16T12:51:41.006Z",
+      "reason": "spec y plan aprobados; implementación y tests de zona hechos"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "implementing",
+      "at": "2026-11-16T12:51:41.209Z",
+      "reason": "spec y plan aprobados; implementación y tests de zona hechos"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-11-16T12:51:41.406Z",
+      "reason": "spec y plan aprobados; implementación y tests de zona hechos"
+    }
+  ]
+}

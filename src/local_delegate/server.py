@@ -9746,6 +9746,27 @@ def local_explain_code(
     )
 
 
+#: #663: words, in Spanish and English, of a question or an answer about what only a measurement
+#: settles: alignment, pixels, offsets, sizes compared, spacing, line wraps. Plain alternatives of
+#: literals (and one `\d\s?px`), so it cannot backtrack on the answer, which is not trusted.
+_MEASUREMENT_TERMS = re.compile(
+    # Alignment and offsets.
+    r"\b(?:des)?alin[eé]a|\balign|misalign|\blines? up\b|\blined up\b"
+    r"|\bcent(?:ered|red)\b|\b(?:des)?centrad|\bdesplazad[oa]s?\b|\boffset|\bshifted\b"
+    # Pixels and distances.
+    r"|p[ií]xel|\d\s?px\b|\bdistanc|\bmargin|\bmargen|\bespaciado|\bspacing|\bpadding"
+    # Sizes compared.
+    r"|\bmism[oa]s? (?:ancho|alto|altura|anchura|tamaño)|\bsame (?:height|width|size)"
+    r"|\b(?:wider|taller|narrower)\b|\bmás (?:ancho|alto|estrecho)|\bdifferent sizes?\b"
+    r"|\bdistinto tamaño"
+    # Line wraps.
+    r"|\bsaltos? de l[ií]nea|\bsalta (?:de|a) (?:otra |la )?l[ií]nea|\bse (?:corta|part)"
+    r"|\botra l[ií]nea|\bdos l[ií]neas|\bwrap(?!per)|\bline ?breaks?\b|\bnext line\b"
+    r"|\btwo lines\b",
+    re.IGNORECASE,
+)
+
+
 @mcp.tool(annotations=_annotations(TOOL_TITLES["local_describe_image"]))
 def local_describe_image(
     path: str,
@@ -9761,6 +9782,12 @@ def local_describe_image(
 
     Scope guardrail: ONLY image->text (describe, read visible text, answer a specific question
     about the image). This tool NEVER generates or edits images.
+
+    It does NOT measure: use it for content and overall layout, never to verify alignment, sizes,
+    distances, spacing or whether a text wraps to another line at the pixel level. The vision model
+    asserts misalignments and wraps that the DOM disproves; measure instead (on a web page,
+    `getBoundingClientRect` or `Range.getClientRects`). When the question or the answer uses the
+    usual words for that (Spanish or English), a warning follows the model's answer.
 
     Args:
         path: Path to the image (png/jpg/jpeg/webp/gif), read server-side.
@@ -9784,6 +9811,14 @@ def local_describe_image(
         {"type": "text", "text": prompt},
         {"type": "image_url", "image_url": {"url": f"data:{mime};base64,{b64}"}},
     ]
+
+    def _measurement_notice(answer: str, _truncated: bool) -> str:
+        # #663: a guard by program, the prompt does not change (a prompt change broke live before).
+        if not (_MEASUREMENT_TERMS.search(question or "") or _MEASUREMENT_TERMS.search(answer)):
+            return answer
+        notice = i18n.t("mcp.warning.image_not_a_measurement")
+        return f"{answer.rstrip()}\n\n{WARNING_MARKER}{notice}]"
+
     return _chat(
         config.MODEL_VISION,
         system,
@@ -9797,6 +9832,7 @@ def local_describe_image(
         path=path,
         feedback_label="image_bytes",
         input_unit="bytes",
+        postprocess=_measurement_notice,
     )
 
 

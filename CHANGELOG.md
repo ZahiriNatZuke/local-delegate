@@ -25,6 +25,15 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ### Corregido
 
+- **`local_describe_image` avisa de que no mide (#663).** El modelo de visión afirmó que un botón
+  estaba desalineado entre dos barras de una captura y que un valor se partía en dos líneas, y las
+  medidas del DOM lo desmintieron; un agente con solo la imagen habría informado de dos defectos
+  que no existen. Ahora la descripción de la tool, la skill `local-delegation` y la wiki dicen que
+  sirve para el contenido y la composición, no para verificar alineación, tamaños, distancias ni
+  saltos de línea, y que eso se mide. Y cuando la pregunta o la respuesta hablan de eso (en
+  español o en inglés), la respuesta termina con un aviso por programa: el prompt del rol `vision`
+  no cambia y la respuesta del modelo se devuelve tal cual.
+
 - **Un mirror de apt lento o sin DNS ya no deja el CI de main en rojo.** Tras la 0.52.0, `lint`
   agotó los 5 minutos de `playwright install --with-deps` y `test-lang-es` salió con el código 100
   de apt, sin ningún cambio de código: el runner no resolvía los mirrors de Ubuntu. Ahora, en los

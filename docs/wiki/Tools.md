@@ -495,6 +495,18 @@ obligatorio — la imagen la lee el servidor, no la adjuntas tú.
 Es **imagen→texto** y nada más: no genera ni edita imágenes. El tope de tamaño lo pone
 `LOCAL_DELEGATE_MAX_IMAGE_MB` (8 MB por defecto).
 
+**No mide (desde #663).** Sirve para el contenido y la composición general, no para verificar
+alineación, tamaños, distancias, espaciados ni si un texto salta de línea al píxel: el modelo de
+visión afirmó que un botón estaba desalineado entre dos barras y que un valor se partía en dos
+líneas, y las medidas del DOM (`getBoundingClientRect`, `Range.getClientRects`) lo desmintieron.
+Eso se mide. Cuando la pregunta o la respuesta usan las palabras habituales de alineación,
+centrado, píxeles, distancias, márgenes, desplazamientos, tamaños comparados, espaciado o saltos
+de línea (en español o en inglés), detrás de la respuesta del modelo va un
+`[local-delegate warning: un modelo de visión no mide: …]`, antes del recibo de ahorro. Es una
+guarda por programa, por palabras: el prompt del rol `vision` no cambia, la respuesta del modelo
+se devuelve como vino y una descripción que use esas palabras sin medir nada («un margen amplio»)
+también lleva el aviso.
+
 ## `local_status`
 
 ```python
