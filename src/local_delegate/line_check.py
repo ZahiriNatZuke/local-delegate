@@ -970,6 +970,35 @@ def asks_for_files(question: str | None) -> bool:
     return any(w in FILE_QUESTION_WORDS for w in _QUESTION_WORD.findall(_fold(question)))
 
 
+#: #665: the words that, beside the location words, name the files of a diff and nothing else.
+_DIFF_FILE_SUBJECT_WORDS = frozenset(
+    {
+        "fichero", "ficheros", "archivo", "archivos", "file", "files", "ruta", "rutas", "path",
+        "paths", "y", "cada", "each", "per", "por", "changed", "modified", "touched",
+        "cambiado", "cambiados", "modificado", "modificados", "tocados", "diff", "patch",
+        "parche",
+    }
+)  # fmt: skip
+
+
+#: #665: the words of those that name the files, in plural: one must be in the field name. A
+#: singular (`fichero_con_lineas`, `file_line`) asks for one file, not the list of all of them.
+_FILE_WORDS = frozenset({"ficheros", "archivos", "files", "rutas", "paths"})
+
+
+def asks_for_diff_files(field_name: str) -> bool:
+    """#665: whether the location field `field_name` asks only for the files of a diff and lines.
+
+    `ficheros_con_lineas`, `files_with_lines`, `archivos_y_lineas`: once the location words are
+    gone, what is left names files and nothing more. `lineas_con_exec_con_lineas` (lines that hold
+    something) or `hunks_con_lineas` (finer than a file) do not.
+    """
+    if not is_location_field(field_name):
+        return False
+    subject = _name_words(field_name) - _LOCATION_NAME_WORDS
+    return bool(subject & _FILE_WORDS) and subject <= _DIFF_FILE_SUBJECT_WORDS
+
+
 #: #582: a hunk header and its line counts (`-a,b +c,d`; a missing count is 1).
 _HUNK_COUNTS = re.compile(r"@@ -\d+(?:,(\d+))? \+\d+(?:,(\d+))? @@")
 #: The `a/`, `b/` prefixes of git, and the `i/ w/ c/ o/` of `diff.mnemonicPrefix`.
