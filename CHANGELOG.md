@@ -19,6 +19,19 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   quita solo `"deferred"`, y sin flag `install` y `update` conservan la lista tal cual, también una
   lista escrita a mano. `doctor` lo enseña en la línea de la entrada MCP de Codex.
 
+- **Codex: resumen de lecturas y guard de escritura (#670).** Un tercer hook de Codex,
+  `codex-tool-guard` (`PreToolUse` sobre Bash, `apply_patch` y lecturas MCP), hace lo del mod de
+  lectura de Claude Code: una lectura entera por shell de prosa grande se deniega con el resumen de
+  `local_summarize` como motivo, así que la lectura no se ejecuta y el texto no entra al contexto;
+  los tramos suman y el que llevaría lo leído al 80 % también se resume; código, configuración y
+  ficheros pequeños o cortos pasan literales; y `apply_patch` o una escritura por shell sobre un
+  fichero leído solo resumido se rechaza hasta leer literal un tramo. El estado es por sesión y por
+  agente (principal y cada subagente aparte) y solo guarda rutas y tramos. Falla en abierto: sin
+  daemon, con el backend caído o con un resumen vacío, cortado o movido a segundo plano, la lectura
+  pasa. Codex no deja sustituir la salida de Bash después de ejecutarla (`PostToolUse`) ni da
+  diálogo a un hook: la wiki explica la vía, los límites y la prueba en vivo con un centinela.
+  Hay que aprobarlo en `/hooks`.
+
 - **Hooks de Codex (#669, núcleo).** Con Codex instalado (o `--clients codex`), `install` añade a
   `~/.codex/hooks.json` dos hooks consultivos: `UserPromptSubmit` (el aviso de tarea mecánica) y
   `SubagentStart` (cómo usar las `local_*` con `path` en cada subagente). No tocan ni mueven tus

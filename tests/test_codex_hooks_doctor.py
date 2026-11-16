@@ -52,12 +52,12 @@ def _result(home, python, tmp_path):
 
 
 def _ok_detail(home: Path, approved: int) -> str:
-    """The exact `ok` text with two configured, ``approved`` approved and none seen."""
+    """The exact `ok` text with all configured, ``approved`` approved and none seen."""
     return i18n.t(
         "doctor.probe.codex_hooks.ok",
         path=home / ".codex" / codex_hooks.HOOKS_FILE_NAME,
-        count=2,
-        total=2,
+        count=len(codex_hooks.SPECS),
+        total=len(codex_hooks.SPECS),
         approved=approved,
         seen=i18n.t("doctor.probe.codex_hooks.never_seen"),
     )

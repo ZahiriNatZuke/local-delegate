@@ -3,7 +3,7 @@
 - `*.command.input.schema.json` y `*.command.output.schema.json`: copiados sin cambios de
   `codex-rs/hooks/schema/generated/` en el tag `rust-v0.169.0` de `openai/codex`. Son los esquemas
   con los que Codex genera el payload de entrada y parsea la salida de un hook `command`.
-- `user_prompt_submit_*.json` y `subagent_start.json`: payloads con todos los campos que esos
+- `user_prompt_submit_*.json`, `subagent_start.json` y `pre_tool_use_*.json` (#670): payloads con todos los campos que esos
   esquemas de entrada marcan como requeridos; los ids tienen la forma de un `ThreadId` (UUID v7) y
   el texto es inventado. `tests/test_codex_hooks.py` comprueba que cumplen el esquema.
 

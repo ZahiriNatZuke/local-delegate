@@ -483,18 +483,17 @@ claude plugin test src/local_delegate/resources/claude-plugin/local-delegate
 
 ## Hooks de Codex
 
-Con Codex instalado (o `--clients codex`), `install` añade a `~/.codex/hooks.json` dos hooks consultivos (issue #669):
+Con Codex instalado (o `--clients codex`), `install` añade a `~/.codex/hooks.json` dos hooks consultivos (issue #669) y el del resumen de lecturas y el guard de escritura (issue #670):
 
 | Evento de Codex | Hook | Qué hace |
 |---|---|---|
 | `UserPromptSubmit` | `codex-prompt` | si el prompt es claramente mecánico (resumir, extraer, traducir…), le dice al modelo de qué tipo es y que evalúe la tool `local_*` específica con `path`; si no, calla |
 | `SubagentStart` | `codex-subagent-start` | le dice a cada subagente cómo usar las `local_*` con `path` ante un archivo grande |
+| `PreToolUse` (Bash, `apply_patch` y lecturas MCP) | `codex-tool-guard` | da el resumen local en lugar de una lectura grande de prosa por shell, lleva la cuenta de las lecturas por rangos y rechaza editar un fichero leído solo resumido hasta que leas literal el tramo; ver [Resumen de lecturas y guard de escritura](#resumen-de-lecturas-y-guard-de-escritura-en-codex) |
 
-**Qué no cubre todavía.** En esta versión no hay ningún hook sobre herramientas: ni sobre las
-llamadas MCP a `local-delegate` (tampoco las de *code mode*), ni sobre Bash, `apply_patch` o las
-lecturas. La atribución de cada delegación a su sesión de Codex es el siguiente paso de #669; el
-resumen de lecturas, el guard de escritura y los hooks de shell, #670; la interfaz y los comandos
-sin modelo, #671.
+**Qué no cubre todavía.** Ningún hook mira las llamadas MCP a `local-delegate` (tampoco las de
+*code mode*): la atribución de cada delegación a su sesión de Codex es el siguiente paso de #669;
+la interfaz y los comandos sin modelo, #671.
 
 **Telemetría global y atribución por sesión.** El daemon cuenta todas las delegaciones, vengan de
 donde vengan: en el log de uso las de Codex salen con su cliente (`codex-mcp-client`) y fuera del
@@ -523,16 +522,79 @@ dice por qué.
 `local-delegate` no la escribe por ti:
 
 1. `local-delegate install --clients codex`, con `local-delegate` instalado por `uv tool`.
-2. Abre Codex y escribe `/hooks`. Aparecen `codex-prompt` y `codex-subagent-start` como pendientes
-   de revisar; apruébalos.
+2. Abre Codex y escribe `/hooks`. Aparecen `codex-prompt`, `codex-subagent-start` y
+   `codex-tool-guard` como pendientes de revisar; apruébalos.
 3. Escribe un prompt mecánico, por ejemplo «resume este fichero en cinco viñetas»: el modelo
    recibe el aviso. Pídele luego algo que lance un subagente, para `codex-subagent-start`.
 4. `local-delegate doctor`: la línea «hooks de local-delegate en Codex» dice «aprobados en
-   /hooks: 2 de 2» y la hora en que vio despachar cada uno. Si tras aprobarlos dice «0 de 2»,
+   /hooks: 3 de 3» y la hora en que vio despachar cada uno. Si tras aprobarlos dice «0 de 3»,
    es un fallo: avísalo.
 
 Si `doctor` dice que no son los de esta versión, `local-delegate update` los repone en su sitio y
 hay que aprobarlos otra vez en `/hooks`.
+
+### Resumen de lecturas y guard de escritura en Codex
+
+`codex-tool-guard` hace en Codex lo que el mod de lectura hace en Claude Code (issue #670), por la
+única vía que abre Codex CLI 0.169.0. Leído en su código (`openai/codex`, etiqueta `rust-v0.169.0`):
+
+- **Lo que sí se puede.** Un hook `PreToolUse` que responde `permissionDecision: "deny"` impide que
+  la herramienta se ejecute (`core/src/tools/registry.rs`, `apply_pre_tool_use`), y el modelo recibe
+  `Command blocked by PreToolUse hook: <motivo>. Command: <comando>` (`core/src/hook_runtime.rs`).
+  Ese motivo es el resumen: la lectura **no se ejecuta** y el texto del fichero **no entra** al
+  contexto. Un `additionalContext` sin decisión llega como nota.
+- **Lo que no.** `PostToolUse` no puede sustituir la salida de Bash (`updatedMCPToolOutput` está
+  «unsupported» y falla en abierto, `hooks/src/events/post_tool_use.rs`) y, además, a esas alturas la
+  lectura ya se ejecutó. Reescribir el comando (`updatedInput` con `allow`) a un `echo` del resumen se
+  descartó: pasa por el sandbox y la aprobación del shell, y por el quoting de PowerShell. Codex no
+  da a un hook ningún diálogo, así que no hay «resumir o leer entero»: se resume solo, como en una
+  sesión de Claude Code sin diálogo. Sin caché de resúmenes: cada lectura resumida pide uno nuevo.
+
+Qué hace, en el orden del mod:
+
+| Llamada | Qué pasa |
+|---|---|
+| Lectura entera por shell (`cat`, `Get-Content`, `type`) de prosa por encima del umbral (`.md`, `.txt`, `.rst`, más de 8 KB) | se deniega con el resumen de `local_summarize` (pedido al daemon con `path`) como motivo, con una cabecera que dice que la lectura no se ejecutó, cuántas líneas puedes leer literales y con qué comando (`sed -n '1,120p'`, `Get-Content -TotalCount 120`); el fichero queda guardado |
+| Un tramo (`sed -n 'A,Bp'`, `head -n`, `Get-Content -TotalCount`) | pasa y suma; el tramo que llevaría lo leído en la sesión al 80 % de sus líneas se resume (como leerlo entero) |
+| Código, configuración, datos, prosa pequeña, un fichero corto (≤200 líneas y <32 KB) | pasa literal; un subagente que lee entero un fichero grande recibe la nota de localizar antes |
+| `apply_patch` (`Update/Add/Delete File`, `Move to`) o escritura por shell (`sed -i`, `>`, `cp`, `Set-Content`) sobre un fichero guardado | se rechaza hasta que leas literal un tramo de ese fichero |
+| Comando compuesto (`;`, `&&`, `$(…)`) que lee prosa grande | pasa (denegarlo quitaría también el resto) con la nota de usar `local_summarize` |
+| Lectura por una tool MCP ajena (`read_text_file`, `read_note`…) de un fichero grande | pasa con esa misma nota; nunca se deniega |
+
+**Fallo en abierto.** Si el daemon no contesta en 150 s, el backend está marcado caído, el resumen
+viene vacío, con `[local-delegate error]`, con el aviso de llamada movida a segundo plano o con un
+aviso de salida cortada o de presupuesto de tiempo, la lectura pasa tal cual y el fichero no queda
+guardado. El `timeout` del hook es 180 s: si Codex lo corta, también deja pasar la lectura. El guard
+no depende del backend. `LD_HOOK_ENABLED=0` apaga el hook entero, y el interruptor de lectura de
+siempre (`LD_HOOK_READ_ENABLED`, `LD_HOOK_READ_BLOCK`, `~/.claude/local-delegate-block-off`) decide
+si resume, igual que en Claude Code.
+
+**Alcance y estado.** El guard y la cuenta de líneas son de cada agente: el hilo principal por un
+lado y cada subagente (`agent_id`) por otro, así que el resumen de un subagente no impide editar al
+principal ni al revés. Se guardan en `<datos>/codex-read/<session_id>.jsonl` (solo rutas, tramos y
+marcas, nunca contenido), así que sobreviven a reanudar la sesión. Una lectura literal levanta el
+guard en el momento de permitirla. El resumen sale en el log de uso con el cliente
+`local-delegate-codex-read`, fuera del coste equivalente.
+
+**Coste.** El hook arranca un proceso de Python en cada llamada a Bash (unos 0,12 s medidos en
+Windows); en el hilo principal, un comando que no nombra un fichero de prosa y una sesión sin estado
+salen antes de cargar el clasificador.
+
+**Prueba en vivo (la haces tú: los tests no pueden abrir un Codex con tu cuenta).**
+
+1. Instala la rama con `uv tool`, `local-delegate install --clients codex` y aprueba
+   `codex-tool-guard` en `/hooks`. Con el daemon y el backend en marcha.
+2. Crea un `centinela.md` de prosa de más de 8 KB con una palabra rara solo a mitad del texto (por
+   ejemplo `ZEBRA-4417`) y pide a Codex «lee centinela.md con cat y dime de qué trata». Debe responder
+   con el resumen y el aviso de `/hooks` de que la orden se bloqueó. Pregúntale luego qué palabra rara
+   hay a mitad del fichero: no debe saberla. En el transcript de la sesión (`~/.codex/sessions/…`) la
+   palabra no debe aparecer.
+3. Pídele que cambie una línea de `centinela.md`: el `apply_patch` se rechaza con el aviso de leer un
+   tramo. Que lea `sed -n '1,40p' centinela.md` (o `Get-Content -TotalCount 40`) y repita: ahora pasa.
+4. Con el daemon parado, repite el punto 2: Codex lee el fichero entero (la lectura pasa).
+5. Si en el punto 2 no se resume nada, añade a mano un grupo tuyo de `PreToolUse` con matcher `Bash`
+   que vuelque su entrada a un fichero (`python -c "import sys; open(r'C:/tmp/pre.json','wb').write(sys.stdin.buffer.read())"`),
+   repite y adjunta ese JSON al issue: es el payload real de Windows que los tests no tienen.
 
 ## Comprobar la instalación: `local-delegate doctor`
 

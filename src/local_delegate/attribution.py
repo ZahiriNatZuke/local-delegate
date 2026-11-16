@@ -40,7 +40,11 @@ BUDGET_S = 0.050
 #: Clientes que no son Claude: sus delegaciones cuentan como uso, pero no se valoran (REQ-007).
 #: Los motivos son valores de máquina (REQ-033): el panel los recibe como claves de
 #: `excluded_by_reason` y no los pinta tal cual.
-NON_CLAUDE_CLIENTS = {"codex-mcp-client": "not_claude"}
+NON_CLAUDE_CLIENTS = {
+    "codex-mcp-client": "not_claude",
+    # The read summary of Codex's `codex-tool-guard` hook (#670, `codex_reads.CLIENT_NAME`).
+    "local-delegate-codex-read": "not_claude",
+}
 
 #: El cliente `mcp` es el de los scripts del repo: lo que hace es una prueba (test-windows-out-of-metrics).
 TEST_CLIENTS = {"mcp": "tests"}

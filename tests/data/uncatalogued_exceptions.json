@@ -1281,6 +1281,18 @@
       "text": "\\b(?:des)?alin[eé]a|\\balign|misalign|\\blines? up\\b|\\blined up\\b|\\bcent(?:ered|red)\\b|\\b(?:des)?centrad|\\bdesplazad[oa]s?\\b|\\boffset|\\bshifted\\b|p[ií]xel|\\d\\s?px\\b|\\bdistanc|\\bmargin|\\bmargen|\\bespaciado|\\bspacing|\\bpadding|\\bmism[oa]s? (?:ancho|alto|altura|anchura|tamaño)|\\bsame (?:height|width|size)|\\b(?:wider|taller|narrower)\\b|\\bmás (?:ancho|alto|estrecho)|\\bdifferent sizes?\\b|\\bdistinto tamaño|\\bsaltos? de l[ií]nea|\\bsalta (?:de|a) (?:otra |la )?l[ií]nea|\\bse (?:corta|part)|\\botra l[ií]nea|\\bdos l[ií]neas|\\bwrap(?!per)|\\bline ?breaks?\\b|\\bnext line\\b|\\btwo lines\\b",
       "kind": "machine_name",
       "reason": "regex de términos de medida de local_describe_image (#663): se compara contra la pregunta y la respuesta, no se muestra"
+    },
+    {
+      "file": "src/local_delegate/codex_reads.py",
+      "text": "*** Begin Patch",
+      "kind": "verbatim",
+      "reason": "primera línea del formato de apply_patch de Codex (#670): se busca en el comando, no se muestra"
+    },
+    {
+      "file": "src/local_delegate/codex_reads.py",
+      "text": "Bash",
+      "kind": "machine_name",
+      "reason": "nombre de la tool de shell en los hooks de Codex (hook_names.rs, #670)"
     }
   ]
 }
