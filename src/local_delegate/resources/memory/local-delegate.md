@@ -21,6 +21,10 @@ primero — el MCP los lee del lado del servidor y el contenido nunca entra al c
   pida líneas: `…_con_lineas`) las líneas que necesitas y lee solo
   ese rango con `offset`/`limit`. Citar o editar líneas exactas justifica leer el rango, no
   el archivo entero.
+- **Sin `ToolSearch` ni las `local_*`** (un agente cuya definición cierra la lista con
+  `tools:`) no se puede delegar: quien lo lanza delega antes y le pasa el resultado, o elige
+  un tipo que herede las tools o nombre `mcp__local-delegate__local_*`. Ese subagente lee por
+  rangos con `offset`/`limit` y lo dice en su informe; los hooks no lo mandan a ellas.
 
 Detalle completo y catálogo de tools en la skill `local-delegation`; diagnóstico del
 backend con `local_status`; panel de ahorro en `http://127.0.0.1:9393`.

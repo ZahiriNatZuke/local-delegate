@@ -21,6 +21,11 @@ first — the MCP reads them server-side and the content never enters the contex
   `…_with_lines`) for the lines you need and read only that range with
   `offset`/`limit`. Quoting or editing exact lines justifies reading the range, not the
   whole file.
+- **Without `ToolSearch` or the `local_*` tools** (an agent whose definition closes the list
+  with `tools:`) there is no delegating: whoever launches it delegates first and passes it the
+  result, or picks a type that inherits the tools or names `mcp__local-delegate__local_*`. That
+  subagent reads by ranges with `offset`/`limit` and says so in its report; the hooks do not
+  send it to them.
 
 Full details and the tool catalog in the `local-delegation` skill; backend diagnostics
 with `local_status`; savings dashboard at `http://127.0.0.1:9393`.

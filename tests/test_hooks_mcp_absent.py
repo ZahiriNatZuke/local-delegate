@@ -67,7 +67,7 @@ def world(tmp_path, request):
         key: value
         for key, value in os.environ.items()
         if not key.startswith(("LD_", "LOCAL_DELEGATE_", "CLAUDE_PLUGIN_"))
-        and key not in {"PYTHONPATH"}
+        and key not in {"PYTHONPATH", "CLAUDE_PROJECT_DIR", "CLAUDE_CONFIG_DIR"}
     }
     env.update(
         {
@@ -304,3 +304,256 @@ def test_doubt_means_suggest(hook_common, tmp_path, monkeypatch):
     # Por encima del tope no se lee.
     monkeypatch.setattr(hook_common, "TRANSCRIPT_MAX_BYTES", 10)
     assert hook_common.local_tools_absent({"transcript_path": str(transcript)}) is False
+
+
+# --- Subagente con lista cerrada de tools (issue #664) -------------------------------------------
+#
+# Medido en los transcripts de subagentes de una PC real: un agente con `tools:` cerrado y sin
+# ninguna MCP (`tools: Read, Grep, Glob`) no tiene NINGUN `deferred_tools_delta` en su transcript
+# (85 de 85), y uno que hereda las tools lo tiene antes de su primer `tool_use`. Pero un agente con
+# `tools:` cerrado que SI nombra las `local_*` tampoco tiene delta (se cargan de entrada), asi que la
+# falta de delta no basta: la prueba es la definicion del agente, que se busca por `agent_type`.
+
+CLOSED = "---\nname: closed-reviewer\ndescription: x\ntools: Read, Grep, Glob\n---\n\nCuerpo.\n"
+NAMED = (
+    "---\nname: named-helper\ndescription: x\n"
+    "tools: Read, Bash, mcp__local-delegate__local_extract\n---\n"
+)
+YAML_LIST = "---\nname: list-reviewer\ntools:\n  - Read\n  - Grep\n---\n"
+OPEN = "---\nname: open-helper\ndescription: x\ndisallowedTools: Write, Edit\n---\n"
+STAR = "---\nname: star-helper\ntools: '*'\n---\n"
+
+
+def _name_of(definition: str) -> str:
+    return definition.split("name: ", 1)[1].split("\n", 1)[0]
+
+
+def _agent(base: Path, text: str, where: str = "user") -> None:
+    root = base / ".claude" if where == "user" else base / "repo" / ".claude"
+    folder = root / "agents"
+    folder.mkdir(parents=True, exist_ok=True)
+    (folder / f"{_name_of(text)}.md").write_text(text, encoding="utf-8")
+
+
+def _subagent_payload(world, file: Path, agent_type: str, cwd: Path | None = None) -> dict:
+    main = _write_transcript(world["tmp"] / "proj" / "sess-595.jsonl", PRESENT)
+    _write_transcript(
+        world["tmp"] / "proj" / "sess-595" / "subagents" / "agent-abc664.jsonl",
+        [{"type": "assistant"}],
+    )
+    payload = _read_payload(file, main, agent_id="abc664", agent_type=agent_type)
+    if cwd is not None:
+        payload["cwd"] = str(cwd)
+    return payload
+
+
+@pytest.mark.parametrize(
+    ("definition", "absent"),
+    [(CLOSED, True), (YAML_LIST, True), (NAMED, False), (OPEN, False), (STAR, False)],
+    ids=["closed", "yaml-list", "names-local", "inherits", "star"],
+)
+def test_closed_subagent_is_not_sent_to_local_tools(world, definition, absent):
+    """El bloqueo de la prosa grande: solo calla si la lista cerrada no nombra las `local_*`."""
+    _mark_backend_alive(world)
+    doc = _prose(world)
+    _agent(world["tmp"], definition)
+    payload = _subagent_payload(world, doc, _name_of(definition))
+    out, log = _run(world, "suggest_delegate_read.py", payload)
+    if absent:
+        assert _decision(out) is None
+        assert log[-1]["reason"] == "mcp_absent"
+    else:
+        assert _decision(out) == "deny"
+        assert log[-1]["reason"] == "large_prose"
+
+
+def test_closed_subagent_reading_code_gets_no_hint(world):
+    _mark_backend_alive(world)
+    code = world["tmp"] / "big.py"
+    code.write_text("x = 1\n" * 5000, encoding="utf-8")
+    _agent(world["tmp"], CLOSED)
+    payload = _subagent_payload(world, code, "closed-reviewer")
+    out, log = _run(world, "suggest_delegate_read.py", payload)
+    assert _decision(out) is None
+    assert log[-1]["reason"] == "mcp_absent"
+    # Control positivo: el mismo subagente, de un tipo sin definicion conocida, recibe la pista.
+    out, _ = _run(world, "suggest_delegate_read.py", _subagent_payload(world, code, "unknown-type"))
+    assert "local_extract" in out
+
+
+def test_closed_subagent_shell_dump_is_not_blocked(world):
+    _mark_backend_alive(world)
+    doc = _prose(world)
+    _agent(world["tmp"], CLOSED)
+    payload = _subagent_payload(world, doc, "closed-reviewer")
+    payload.update({"tool_name": "Bash", "tool_input": {"command": f"cat {doc.as_posix()}"}})
+    out, log = _run(world, "suggest_delegate_shell.py", payload)
+    assert _decision(out) is None
+    assert log[-1]["reason"] == "mcp_absent"
+
+
+def test_project_agent_definition_is_found_from_cwd(world):
+    _mark_backend_alive(world)
+    doc = _prose(world)
+    _agent(world["tmp"], CLOSED, where="project")
+    nested = world["tmp"] / "repo" / "src" / "deep"
+    nested.mkdir(parents=True)
+    payload = _subagent_payload(world, doc, "closed-reviewer", cwd=nested)
+    out, log = _run(world, "suggest_delegate_read.py", payload)
+    assert _decision(out) is None
+    assert log[-1]["reason"] == "mcp_absent"
+
+
+def test_a_local_tool_use_beats_the_definition(hook_common, tmp_path, monkeypatch):
+    """Si el transcript del subagente ya usa una `local_*`, la definicion no manda."""
+    monkeypatch.setenv("USERPROFILE" if os.name == "nt" else "HOME", str(tmp_path))
+    monkeypatch.delenv("CLAUDE_CONFIG_DIR", raising=False)
+    monkeypatch.delenv("CLAUDE_PROJECT_DIR", raising=False)
+    _agent(tmp_path, CLOSED)
+    use = {
+        "type": "assistant",
+        "message": {
+            "content": [{"type": "tool_use", "name": "mcp__local-delegate__local_extract"}]
+        },
+    }
+    transcript = _write_transcript(tmp_path / "t.jsonl", [use])
+    payload = {"transcript_path": str(transcript), "agent_type": "closed-reviewer"}
+    assert hook_common.local_tools_absent(payload) is False
+    # Sin ese uso, la definicion cerrada basta (aunque no haya ningun delta).
+    transcript = _write_transcript(tmp_path / "t.jsonl", [{"type": "assistant"}])
+    assert hook_common.local_tools_absent(payload) is True
+    # Y tambien sin transcript: la definicion es la prueba.
+    assert hook_common.local_tools_absent({"agent_type": "closed-reviewer"}) is True
+    # Sin `agent_type` (hilo principal) no se mira ninguna definicion.
+    assert hook_common.local_tools_absent({"transcript_path": str(transcript)}) is False
+    # Un `agent_type` de plugin, con forma de ruta o vacio no se busca, aunque haya una definicion
+    # que se llame asi (sin la regex del nombre, estas dos se encontrarian).
+    for odd_name in ("plugin:closed-reviewer", "../closed-reviewer"):
+        (tmp_path / ".claude" / "agents" / f"odd{len(odd_name)}.md").write_text(
+            CLOSED.replace("name: closed-reviewer", f"name: {odd_name}"), encoding="utf-8"
+        )
+    for odd in ("plugin:closed-reviewer", "../closed-reviewer", "", None, 3):
+        probe = {"transcript_path": str(transcript), "agent_type": odd}
+        assert hook_common.local_tools_absent(probe) is False
+
+
+def test_own_transcript_decides_and_main_does_not(hook_common, tmp_path, monkeypatch):
+    """El transcript propio del subagente puede desmentir la definicion; el del principal, no."""
+    monkeypatch.setenv("USERPROFILE" if os.name == "nt" else "HOME", str(tmp_path))
+    monkeypatch.delenv("CLAUDE_CONFIG_DIR", raising=False)
+    monkeypatch.delenv("CLAUDE_PROJECT_DIR", raising=False)
+    _agent(tmp_path, CLOSED)
+    use = {
+        "type": "assistant",
+        "message": {
+            "content": [{"type": "tool_use", "name": "mcp__local-delegate__local_extract"}]
+        },
+    }
+    main = _write_transcript(tmp_path / "proj" / "s.jsonl", [*PRESENT, use])
+    payload = {"transcript_path": str(main), "agent_id": "a1", "agent_type": "closed-reviewer"}
+    # Sin transcript propio: el uso del principal no cuenta, manda la definicion.
+    assert hook_common.local_tools_absent(payload) is True
+    own = tmp_path / "proj" / "s" / "subagents" / "agent-a1.jsonl"
+    _write_transcript(own, [{"type": "assistant"}])
+    assert hook_common.local_tools_absent(payload) is True
+    # Un delta propio que anade las `local_*` prueba que estan (la definicion era otra).
+    _write_transcript(own, PRESENT)
+    assert hook_common.local_tools_absent(payload) is False
+    # Un delta propio sin ellas no desmiente la definicion.
+    _write_transcript(own, ABSENT)
+    assert hook_common.local_tools_absent(payload) is True
+
+
+@pytest.mark.parametrize(
+    ("tools_yaml", "closed"),
+    [
+        ("tools: Read, Grep, Glob", True),
+        ("tools: [Read, Grep]", True),
+        ('tools: "Read, Grep"', True),
+        ("tools:\n  - Read\n  - Grep", True),
+        ("tools:\n- Read\n- Grep", True),
+        ("tools:\n  - Read\n  # comentario\n  - Grep", True),
+        ("tools: [Read, Grep,\n  mcp__local-delegate__local_extract]", False),
+        ("tools: >-\n  Read, mcp__local-delegate__local_extract", False),
+        ("tools: |\n  Read", False),
+        ("tools:\n  - Read\n  - mcp__local-delegate__local_extract", False),
+        ("tools:\n  - Read\n  raro: x\n  - mcp__local-delegate__local_extract", False),
+        ("tools: Read  # mcp__local-delegate__local_extract", False),
+        ("tools: *", False),
+        ("tools:", False),
+    ],
+    ids=lambda value: value if isinstance(value, bool) else value.replace("\n", "/"),
+)
+def test_yaml_forms_never_give_a_false_closed(
+    hook_common, tmp_path, monkeypatch, tools_yaml, closed
+):
+    """Lo que el parser no lee entero es duda (como hoy), nunca un «cerrado» que silencie."""
+    monkeypatch.setenv("USERPROFILE" if os.name == "nt" else "HOME", str(tmp_path))
+    monkeypatch.delenv("CLAUDE_CONFIG_DIR", raising=False)
+    monkeypatch.delenv("CLAUDE_PROJECT_DIR", raising=False)
+    folder = tmp_path / ".claude" / "agents"
+    folder.mkdir(parents=True)
+    text = f"---\nname: shape\ndescription: x\n{tools_yaml}\nmodel: sonnet\n---\n"
+    (folder / "shape.md").write_text(text, encoding="utf-8")
+    assert hook_common.closed_agent_without_local_tools({"agent_type": "shape"}) is closed
+
+
+def test_definition_found_by_name_field_and_with_bom(hook_common, tmp_path, monkeypatch):
+    monkeypatch.setenv("USERPROFILE" if os.name == "nt" else "HOME", str(tmp_path))
+    monkeypatch.delenv("CLAUDE_CONFIG_DIR", raising=False)
+    monkeypatch.delenv("CLAUDE_PROJECT_DIR", raising=False)
+    folder = tmp_path / ".claude" / "agents"
+    folder.mkdir(parents=True)
+    # El fichero se llama distinto que el agente: manda `name:`. Con BOM y CRLF.
+    text = "﻿" + CLOSED.replace("\n", "\r\n")
+    (folder / "other-file.md").write_text(text, encoding="utf-8")
+    assert hook_common.local_tools_absent({"agent_type": "closed-reviewer"}) is True
+    # Control: un fichero `closed-reviewer.md` cuyo `name:` es otro no cuenta como ese agente.
+    (folder / "other-file.md").unlink()
+    (folder / "closed-reviewer.md").write_text(
+        CLOSED.replace("name: closed-reviewer", "name: someone-else"), encoding="utf-8"
+    )
+    assert hook_common.local_tools_absent({"agent_type": "closed-reviewer"}) is False
+
+
+def test_subagent_start_skips_the_reminder_for_a_closed_list(world):
+    _agent(world["tmp"], CLOSED)
+    _agent(world["tmp"], OPEN)
+    base = {"hook_event_name": "SubagentStart", "agent_id": "abc664", "cwd": str(world["tmp"])}
+    command = [sys.executable, str(HOOKS / "subagent_start.py")]
+
+    def run(agent_type: str) -> str:
+        done = subprocess.run(
+            command,
+            input=json.dumps({**base, "agent_type": agent_type}).encode("utf-8"),
+            capture_output=True,
+            env=world["env"],
+            timeout=TIMEOUT_S,
+            cwd=world["tmp"],
+        )
+        assert done.returncode == 0
+        return done.stdout.decode("utf-8")
+
+    assert run("closed-reviewer").strip() == ""
+    # Control positivo: un agente que hereda las tools sigue recibiendo el recordatorio.
+    assert "ToolSearch" in run("open-helper")
+
+
+@pytest.mark.parametrize("lang", ["es", "en"])
+def test_block_and_skill_say_what_to_do_without_tool_search(lang):
+    """REQ-005: el bloque y la skill tienen la salida para el subagente sin `ToolSearch`."""
+    from local_delegate import install
+
+    for source in (install.memory_source(lang), install.skill_source(lang)):
+        text = source.read_text(encoding="utf-8")
+        paragraph = next(
+            (
+                part
+                for part in text.split("\n\n")
+                if "ToolSearch` ni" in part or "ToolSearch` or" in part
+            ),
+            None,
+        )
+        assert paragraph is not None, source
+        for needle in ("`tools:`", "mcp__local-delegate__local_*", "`offset`/`limit`"):
+            assert needle in paragraph, (source, needle)
