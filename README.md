@@ -389,11 +389,16 @@ a propósito:
 |---|---|---|
 | Entrada MCP | config de Claude Code / `~/.codex/config.toml` / `~/.config/opencode/opencode.json[c]` | registra el servidor (stdio con `uvx` o HTTP contra el daemon) |
 | Hooks | plugin de Claude Code `local-delegate@local-delegate` (o `~/.claude/hooks/local-delegate/` + `settings.json`) | sugieren delegar; los de lectura además pueden **rechazar** una lectura completa de documentación, si se enciende; uno anota qué agente pidió cada delegación |
+| Hooks de Codex | `~/.codex/hooks.json`, junto a los tuyos | dos hooks consultivos (`UserPromptSubmit` y `SubagentStart`) que Codex ejecuta solo cuando los apruebas en `/hooks` |
 | Skill | `~/.claude/skills/local-delegation/` y `~/.config/opencode/skill/local-delegation/` | regla de oro y catálogo de tools |
 | Memoria | bloque gestionado en `~/.claude/CLAUDE.md`, `~/.codex/AGENTS.md` y `~/.config/opencode/AGENTS.md` | la regla en una nota corta siempre cargada |
 
 Por defecto se configuran **solo los clientes que tengas instalados**; se elige a mano con
-`--clients claude|codex|opencode`. Los **hooks** son solo de Claude Code: opencode extiende con
+`--clients claude|codex|opencode`. Los **hooks** son de Claude Code y, desde esta versión, también
+de Codex: dos consultivos en `~/.codex/hooks.json` que no tocan ni mueven los tuyos y que no
+corren hasta que los apruebas en `/hooks`; todavía no hay hooks sobre las herramientas de Codex
+(llamadas MCP, shell, `apply_patch`). Ver
+[Hooks de Codex](docs/wiki/Integration-install.md#hooks-de-codex). opencode extiende con
 plugins en TypeScript, que es otra superficie, y Claude Desktop no tiene hooks en absoluto. El
 plugin de Claude Code **no sirve en Codex**: Codex 0.169 rechaza su `hooks/hooks.json` entero (por
 el `modules` del mod) con solo un aviso al arrancar. Si lo importaste a mano, `local-delegate

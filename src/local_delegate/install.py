@@ -2774,6 +2774,121 @@ def _claude_hook_actions(opts: Options, claude: Path, lang: str) -> list[Action]
     return actions
 
 
+class CodexHooksRefused(UnreadableConfigError):
+    """`hooks.json` is one Codex rejects whole (a BOM, a key it does not know): ours are not
+    written into it. `install` and `update` say so and go on; it is not a failure of theirs,
+    so a file of the user's like that does not leave `update` failing on every run (#669)."""
+
+
+def _codex_hooks_bytes(path: Path, *, refuse_bom: bool = True) -> bytes | None:
+    """The bytes of `hooks.json` before a merge; refuses a file Codex would reject for its BOM."""
+    try:
+        raw = path.read_bytes()
+    except FileNotFoundError:
+        return None
+    except OSError as exc:
+        raise UnreadableConfigError(
+            t(
+                "install.config_unreadable",
+                path=path,
+                reason=str(exc.strerror or exc),
+                fix=t("install.config_unreadable.fix"),
+            )
+        ) from exc
+    if refuse_bom and raw.startswith(codecs.BOM_UTF8):
+        # Codex parses it with `serde_json` straight from `read_to_string`: a BOM rejects the
+        # whole file, so writing ours into it would load nothing (#669).
+        raise CodexHooksRefused(t("install.codex_hooks.bom", path=path))
+    return raw
+
+
+def _codex_hooks_action(opts: Options, codex: Path) -> Action:
+    """Issue #669: our two consultative hooks in `~/.codex/hooks.json`, next to the user's."""
+    codex_hooks = _sibling("codex_hooks")
+    claude_plugin = _sibling("claude_plugin")
+
+    path = codex / codex_hooks.HOOKS_FILE_NAME
+    ld_bin = opts.claude_ld_bin or claude_plugin.resolve_ld_bin()
+    python = getattr(ld_bin, "path", None)
+    names = ", ".join(spec.name for spec in codex_hooks.SPECS)
+    if python is not None and any(
+        codex_hooks.our_name(codex_hooks.group(spec, python, opts.platform)) != spec.name
+        for spec in codex_hooks.SPECS
+    ):
+        # A path the recognizer cannot read back (a quote inside it): the next run would not see
+        # its own groups and would add them again.
+        python, ld_bin = None, claude_plugin.LdBin(None, "unreadable_path")
+    if python is None:
+        reason = getattr(ld_bin, "reason", None) or "-"
+        return Action(
+            "codex-hooks",
+            path,
+            t("install.codex_hooks.no_python", reason=reason),
+            lambda: t("install.codex_hooks.no_python", reason=reason),
+        )
+
+    def _merge(data: dict) -> tuple[dict, list[str]]:
+        try:
+            return codex_hooks.merge(data, python, opts.platform)
+        except codex_hooks.RejectedFile as exc:
+            raise CodexHooksRefused(
+                t("install.codex_hooks.rejected", path=path, where=str(exc))
+            ) from exc
+
+    def _run() -> str:
+        try:
+            _codex_hooks_bytes(path)
+            changed = update_config_json(path, _merge)
+        except CodexHooksRefused as exc:
+            return str(exc)
+        if not changed:
+            return t("install.codex_hooks.up_to_date")
+        return t("install.codex_hooks.written", names=", ".join(dict.fromkeys(changed)))
+
+    literal = json.dumps(
+        {"hooks": codex_hooks.entries(python, opts.platform)}, ensure_ascii=False, indent=2
+    )
+    return Action(
+        "codex-hooks",
+        path,
+        t("install.codex_hooks.plan", names=names),
+        _run,
+        literal=literal,
+    )
+
+
+def _uninstall_codex_hooks_action(codex: Path) -> Action:
+    """Our groups out of `~/.codex/hooks.json`, without moving any group of the user's (#669)."""
+    codex_hooks = _sibling("codex_hooks")
+
+    path = codex / codex_hooks.HOOKS_FILE_NAME
+
+    def _run() -> str:
+        # A BOM does not stop the removal: Codex already rejects that file, and taking ours out
+        # of it breaks nothing (`update_config_json` keeps the BOM).
+        raw = _codex_hooks_bytes(path, refuse_bom=False)
+        if raw is None:
+            return t("install.codex_hooks.none")
+        backup = path.with_suffix(path.suffix + ".bak")
+        had_backup = backup.exists()
+        removed = update_config_json(path, codex_hooks.strip)
+        if not removed:
+            return t("install.codex_hooks.none")
+        try:
+            left = json.loads(path.read_text(encoding="utf-8-sig"))
+        except (OSError, ValueError):
+            left = None
+        if isinstance(left, dict) and codex_hooks.is_empty(left) and not had_backup:
+            # `install` created the file (it keeps a `.bak` of one that existed): only ours was
+            # ever in it. The copy this very write made holds only ours too.
+            path.unlink()
+            backup.unlink(missing_ok=True)
+            return t("install.codex_hooks.deleted", count=removed)
+        return t("install.codex_hooks.removed", count=removed)
+
+    return Action("codex-hooks", path, t("install.codex_hooks.remove_plan"), _run)
+
+
 def write_read_switch(home: Path, data_dir: Path | None, active: bool) -> Path | None:
     """`read-hook.json` (`{"active", "since"}`); `since` only moves when the value changes."""
     install_state = _sibling("install_state")
@@ -2895,6 +3010,9 @@ def plan_install(opts: Options) -> list[Action]:
 
     if "hooks" in opts.components and "claude" in opts.targets:
         actions.extend(_claude_hook_actions(opts, claude, lang))
+
+    if "hooks" in opts.components and "codex" in opts.targets:
+        actions.append(_codex_hooks_action(opts, codex))
 
     if "skill" in opts.components and "claude" in opts.targets:
         if retired_skill_dirs(claude / "skills"):
@@ -3297,6 +3415,9 @@ def plan_uninstall(opts: Options) -> list[Action]:
             return t("install.uninstall.did_not_exist")
 
         actions.append(Action("remove", hooks_dst, t("install.uninstall.scripts_plan"), _run_rm))
+
+    if "hooks" in opts.components and "codex" in opts.targets:
+        actions.append(_uninstall_codex_hooks_action(codex))
 
     if "skill" in opts.components and "claude" in opts.targets:
         skill_dst = claude / "skills" / SKILL_NAME

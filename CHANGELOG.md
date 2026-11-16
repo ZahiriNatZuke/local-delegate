@@ -8,6 +8,18 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ### Añadido
 
+- **Hooks de Codex (#669, núcleo).** Con Codex instalado (o `--clients codex`), `install` añade a
+  `~/.codex/hooks.json` dos hooks consultivos: `UserPromptSubmit` (el aviso de tarea mecánica) y
+  `SubagentStart` (cómo usar las `local_*` con `path` en cada subagente). No tocan ni mueven tus
+  grupos, así que no pierden su aprobación; Codex no los ejecuta hasta que los apruebas en
+  `/hooks`, y `local-delegate` no escribe esa aprobación. Fallan en abierto: con el backend caído
+  o un error, Codex sigue igual. `update` los repone si no son los de esta versión (hay que
+  aprobarlos otra vez), `uninstall` quita solo los nuestros sin tocar tus aprobaciones de `config.toml`, y el check
+  nuevo `codex.hooks` de `doctor` (37 en total) dice por separado si están configurados, aprobados
+  y vistos despachar. Aún sin hooks sobre las herramientas de Codex (llamadas MCP, *code mode*,
+  shell, `apply_patch`): la atribución de cada delegación a su sesión de Codex va en el siguiente
+  paso.
+
 - **`doctor` avisa si el plugin de Claude Code está importado en Codex, que no lo puede leer
   (#668).** Codex lee los marketplaces de Claude Code, así que el plugin se puede importar a mano
   (`codex plugin marketplace add` + `codex plugin add`). Pero Codex 0.169.0 solo admite

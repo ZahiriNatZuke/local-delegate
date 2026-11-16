@@ -81,13 +81,14 @@ def test_the_hook_catalog_is_not_empty():
 def test_every_key_the_hooks_use_exists():
     """Cada `hook_text("…")` literal de los hooks tiene su texto (los dos idiomas, por paridad)."""
     used = set()
-    for path in HOOK_FILES:
+    # The Codex hooks run inside the package and reach the catalogue as `common.hook_text` (#669).
+    codex = Path(inst.__file__).resolve().parent / "codex_hooks.py"
+    for path in [*HOOK_FILES, codex]:
         for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
-            if not (
-                isinstance(node, ast.Call)
-                and getattr(node.func, "id", None) == "hook_text"
-                and node.args
-            ):
+            if not isinstance(node, ast.Call):
+                continue
+            name = getattr(node.func, "id", None) or getattr(node.func, "attr", None)
+            if not (name == "hook_text" and node.args):
                 continue
             key = node.args[0]
             # Una clave literal, o las dos ramas de un `a if cond else b`.

@@ -70,3 +70,19 @@ Lo que hay que mirar: que tres instalaciones seguidas no dupliquen nada, que un 
 intacto, que el `config.toml` de Codex parsee, y que después de `uninstall` los archivos que ya
 existían queden **byte a byte** como estaban. `tests/test_install.py` cubre esto contra
 `tmp_path`; el paso manual sirve para probarlo en tu sistema real antes de tocar tu HOME.
+
+## 4. Hooks de Codex contra un Codex de verdad
+
+[`codex_hooks_live.py`](./codex_hooks_live.py) instala y desinstala los hooks de Codex (#669) en un
+HOME simulado y le pregunta a `codex app-server` qué hooks ve (`hooks/list`, lo mismo que `/hooks`),
+con `CODEX_HOME` en una carpeta temporal:
+
+```bash
+python scripts/dev/codex_hooks_live.py /tmp/ld669
+```
+
+Comprueba que la segunda instalación no escribe, que la clave que calcula `doctor` es la que lista
+Codex, que tras `uninstall` un grupo tuyo detrás del nuestro conserva su clave (y su aprobación),
+que reinstalar devuelve el nuestro a su índice y que con una marca BOM Codex no carga nada e
+`install` no escribe. Imprime los hashes del `~/.codex` real antes y después. No aprueba nada:
+eso se hace en Codex con `/hooks`.

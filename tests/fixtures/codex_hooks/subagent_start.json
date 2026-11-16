@@ -1,0 +1,11 @@
+{
+  "session_id": "0199a1b2-c3d4-7e5f-8a9b-0c1d2e3f4a5b",
+  "turn_id": "0199a1b2-c3d4-7e5f-8a9b-0c1d2e3f4a60",
+  "transcript_path": null,
+  "cwd": "/work/project",
+  "model": "gpt-5.5-codex",
+  "permission_mode": "default",
+  "agent_id": "0199a1b2-c3d4-7e5f-8a9b-0c1d2e3f4a61",
+  "agent_type": "explorer",
+  "hook_event_name": "SubagentStart"
+}

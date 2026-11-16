@@ -137,6 +137,9 @@ dev = [
     "pytest>=8",
     # Paraleliza la suite en el CI (`-n auto --dist loadgroup`); version exacta, revisada con Socket.
     "pytest-xdist==3.8.0",
+    # Valida la salida de los hooks de Codex contra sus esquemas oficiales (#669). Ya venía en el
+    # lock por el SDK MCP; se declara para no depender de eso. Version exacta, revisada con Socket.
+    "jsonschema==4.26.0",
     "ruff>=0.6",
     "pre-commit>=3.7",
     # `respx` sale de la suite: declara `httpx>=0.25.0` y no soporta `httpx2`, así que dejarlo

@@ -2,7 +2,7 @@
 
 Antes de este módulo cada subcomando sabía un pedazo del sistema: ``doctor`` solo miraba el
 backend, ``install`` escribía sin verificar y nadie miraba el daemon. Aquí vive **una sola
-definición de «estar a punto»**: los treinta y seis elementos del andamiaje, cada uno con un
+definición de «estar a punto»**: los treinta y siete elementos del andamiaje, cada uno con un
 ``probe`` que responde en qué estado está. Los cinco de la entrega por plugin de Claude Code
 viven en ``checks_plugin``, pero se registran aquí como los demás.
 
@@ -13,7 +13,7 @@ Tres reglas ordenan el módulo:
 2. **Lo que no se pudo comprobar es ``unknown``, nunca ``missing``.** Un cliente que no está
    instalado o un fichero ilegible por permisos no significan «falta»: si se reportaran así,
    un ``fix`` posterior sobrescribiría configuración ajena.
-3. **Es una lista, no un framework.** Treinta y seis checks son una tupla de objetos con una
+3. **Es una lista, no un framework.** Treinta y siete checks son una tupla de objetos con una
    función; no hay registro dinámico, ni entry points, ni herencia. Si hiciera falta algo de eso,
    el diseño se revisa antes de seguir.
 
@@ -43,6 +43,7 @@ from . import (
     checks_plugin,
     claude_plugin,
     clients,
+    codex_hooks,
     codex_plugin,
     config,
     cost,
@@ -84,6 +85,8 @@ DESKTOP_INSTALL_HINT = "local-delegate install --desktop"
 #: The two fixes of `scaffold.shell_completion` (REQ-033): commands, the same in every language.
 SHELL_COMPLETION_INSTALL_HINT = "local-delegate install --shell-completion"
 SHELL_COMPLETION_UPDATE_HINT = "local-delegate update"
+#: `update` rewrites our Codex hooks (`update.REPAIRS`, #669).
+CODEX_HOOKS_UPDATE_HINT = "local-delegate update"
 
 
 # Las pistas con prosa salen del catálogo al llamarlas: el idioma se resuelve en ejecución.
@@ -1354,6 +1357,77 @@ def _probe_codex_plugin(ctx: Context) -> Result:
     chosen = [result for result in results if result.status == worst]
     fixes = list(dict.fromkeys(result.fix_hint for result in chosen if result.fix_hint))
     return Result(worst, "; ".join(result.detail for result in chosen), " && ".join(fixes))
+
+
+def _codex_hooks_stale(ctx: Context, found: list) -> tuple[list[str], str | None]:
+    """(names of ours that are not what `install` would write now, a missing interpreter)."""
+    expected = getattr(ctx.expected_ld_bin(), "path", None)
+    specs = {spec.name: spec for spec in codex_hooks.SPECS}
+    stale: list[str] = []
+    missing_python = None
+    counted: set[str] = set()
+    for item in found:
+        spec = specs.get(item.name)
+        python = codex_hooks.python_of(item.group)
+        if not Path(python).is_file():
+            missing_python = python
+        # The same interpreter spelled another way (case, slashes) is not a change.
+        wanted = python if not expected or checks_plugin.same_path(python, expected) else expected
+        fresh = (
+            codex_hooks.group(spec, wanted)
+            if spec is not None and spec.event == item.event
+            else None
+        )
+        if fresh is None or item.name in counted or item.group != fresh:
+            stale.append(item.name)
+        counted.add(item.name)
+    stale.extend(name for name in specs if name not in counted)
+    return list(dict.fromkeys(stale)), missing_python
+
+
+def _probe_codex_hooks(ctx: Context) -> Result:
+    """Our hooks in `~/.codex/hooks.json` (#669): configured, approved and seen, told apart.
+
+    Approved is what `config.toml` says (a `trusted_hash` under our key in `[hooks.state]`), not
+    whether that hash still matches: Codex decides that when it loads them. Seen is the last
+    dispatch our handlers marked. Optional: none of ours is `ok`. Only reads; never runs `codex`.
+    """
+    if not ctx.codex_dir.is_dir():
+        return Result(
+            UNKNOWN,
+            i18n.t("doctor.common.client_absent", client=_client_name("codex"), path=ctx.codex_dir),
+        )
+    log_dir = ctx.log_dir if ctx.log_dir is not None else config.LOG_DIR
+    seen = codex_hooks.inspect(ctx.codex_dir, log_dir)
+    if seen.error:
+        return Result(
+            UNKNOWN, i18n.t("doctor.probe.codex_hooks.unreadable", path=seen.path, error=seen.error)
+        )
+    if seen.rejected:
+        return Result(
+            WARN, i18n.t("doctor.probe.codex_hooks.rejected", path=seen.path, where=seen.rejected)
+        )
+    if not seen.found:
+        return Result(OK, i18n.t("doctor.probe.codex_hooks.none", path=seen.path))
+    stale, missing_python = _codex_hooks_stale(ctx, seen.found)
+    if stale or missing_python:
+        detail = i18n.t("doctor.probe.codex_hooks.stale", names=", ".join(stale), path=seen.path)
+        if missing_python:
+            detail += "; " + i18n.t("doctor.probe.codex_hooks.no_python", python=missing_python)
+        return Result(WARN, detail, CODEX_HOOKS_UPDATE_HINT)
+    total = len(codex_hooks.SPECS)
+    dispatched = ", ".join(f"{name} {when}" for name, when in sorted(seen.seen.items()))
+    detail = i18n.t(
+        "doctor.probe.codex_hooks.ok",
+        path=seen.path,
+        count=len(seen.found),
+        total=total,
+        approved=len(seen.trusted),
+        seen=dispatched or i18n.t("doctor.probe.codex_hooks.never_seen"),
+    )
+    if seen.toml_events:
+        detail += i18n.t("doctor.probe.codex_hooks.toml_too")
+    return Result(OK, detail)
 
 
 def _opencode_mcp_entry(ctx: Context) -> tuple[dict | None, Path | None, str | None]:
@@ -3205,7 +3279,7 @@ def _probe_read_overlap(ctx):
 
 
 # --- El registro --------------------------------------------------------------
-# Treinta y seis elementos, en orden de grupo. Una tupla: si esto necesitara alguna vez cargarse
+# Treinta y siete elementos, en orden de grupo. Una tupla: si esto necesitara alguna vez cargarse
 # solo, el problema no sería el registro sino el diseño.
 #
 # El número se dice en cinco sitios de este módulo y llegó a decir «once» con doce checks ya
@@ -3268,6 +3342,8 @@ CHECKS: tuple[Check, ...] = (
     Check("scaffold.mcp_codex", "scaffold", "doctor.check.scaffold.mcp_codex", _probe_mcp_codex),
     # Issue #668: in `scaffold` because it only reads `~/.codex`, without launching `codex`.
     Check("codex.plugin", "scaffold", "doctor.check.codex.plugin", _probe_codex_plugin),
+    # Issue #669: our user hooks in `~/.codex/hooks.json`; only reads, like `codex.plugin`.
+    Check("codex.hooks", "scaffold", "doctor.check.codex.hooks", _probe_codex_hooks),
     Check(
         "scaffold.mcp_opencode",
         "scaffold",
@@ -3340,7 +3416,7 @@ CHECKS: tuple[Check, ...] = (
 
 
 def run_all(ctx: Context, *, groups: tuple[str, ...] | None = None) -> list[tuple[Check, Result]]:
-    """Corre los treinta y seis probes. Un probe que falle es ``unknown``, nunca tumba el diagnóstico.
+    """Corre los treinta y siete probes. Un probe que falle es ``unknown``, nunca tumba el diagnóstico.
 
     Con ``groups`` se corren solo los de esos grupos, en el mismo orden del registro. Lo pide
     ``install``: su reporte final habla del andamiaje que acaba de escribir, y correr también
@@ -3354,7 +3430,7 @@ def run_all(ctx: Context, *, groups: tuple[str, ...] | None = None) -> list[tupl
             continue
         try:
             result = check.probe(ctx)
-        except Exception as exc:  # un check roto no debe impedir ver los otros treinta y cinco
+        except Exception as exc:  # un check roto no debe impedir ver los otros treinta y seis
             result = Result(UNKNOWN, i18n.t("doctor.probe.failed", error=exc))
         results.append((check, result))
     return results

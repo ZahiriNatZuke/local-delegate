@@ -255,6 +255,10 @@ REPAIRS: tuple[Repair, ...] = (
     # una escrita a mano. Es la misma situación que con Claude Code, y se trata igual: solo se
     # repone si falta.
     Repair("scaffold.mcp_opencode", (checks.MISSING,), frozenset({"mcp"}), frozenset({"opencode"})),
+    # Issue #669: `warn` = hooks of ours in `~/.codex/hooks.json` that are not this version's (or
+    # whose interpreter is gone). Only `warn`: with none of ours the check is `ok` and nothing is
+    # added, and a file Codex rejects is also `warn` but the action refuses to write it, saying so.
+    Repair("codex.hooks", (checks.WARN,), frozenset({"hooks"}), frozenset({"codex"})),
 )
 
 

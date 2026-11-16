@@ -1600,6 +1600,17 @@ _WINDOWS_PRIMARY_LANGUAGES = {0x0A: "es", 0x09: "en"}
 # un bloqueo en un transcript: no se cambian sin cambiar alli `BLOCK_MARKERS`.
 HOOK_TEXTS: dict[str, dict[str, str]] = {
     "es": {
+        "codex.prompt.mechanical": (
+            "Oportunidad mecanica detectada ({category}). Si tienes las tools local_* del MCP "
+            "`local-delegate`, evalua usar la especifica con path antes de leer contenido grande. "
+            "Haz tu mismo cualquier parte que exija criterio, varias fuentes, tools externas o "
+            "acciones de riesgo."
+        ),
+        "codex.subagent.start": (
+            "Si tienes las tools `local_*` del MCP `local-delegate`, ante un archivo grande pide a "
+            "`local_extract` o `local_explain_code` (con `path`) las lineas que necesitas y lee "
+            "solo ese rango; para un resumen, `local_summarize` con `path`."
+        ),
         "prompt.mechanical": (
             "Oportunidad mecanica detectada ({category}). Antes de leer contenido grande, evalua "
             "usar la tool local_* especifica con path. Conserva en Claude cualquier parte que "
@@ -1651,6 +1662,17 @@ HOOK_TEXTS: dict[str, dict[str, str]] = {
         ),
     },
     "en": {
+        "codex.prompt.mechanical": (
+            "Mechanical task detected ({category}). If you have the local_* tools of the MCP "
+            "`local-delegate`, consider the specific one with path before reading large content. "
+            "Do yourself any part that needs judgment, several sources, external tools or risky "
+            "actions."
+        ),
+        "codex.subagent.start": (
+            "If you have the `local_*` tools of the MCP `local-delegate`, for a large file ask "
+            "`local_extract` or `local_explain_code` (with `path`) for the lines you need and read "
+            "only that range; for a summary, `local_summarize` with `path`."
+        ),
         "prompt.mechanical": (
             "Mechanical task detected ({category}). Before reading large content, consider the "
             "specific local_* tool with path. Keep in Claude any part that needs judgment, "
