@@ -79,7 +79,10 @@ def test_the_mcp_hook_is_the_last_entry_and_the_first_two_do_not_change():
     ]
     mine = next(s for s in codex_hooks.SPECS if s.name == "codex-mcp-call")
     assert (mine.event, mine.matcher) == ("PreToolUse", r"^mcp__local[-_]delegate__")
-    [group] = codex_hooks.entries(PYTHON, "win32")["PreToolUse"]
+    # `codex-tool-guard` (#670) is also a `PreToolUse` group: pick ours by name, the last one.
+    pre_tool_use = codex_hooks.entries(PYTHON, "win32")["PreToolUse"]
+    group = pre_tool_use[-1]
+    assert codex_hooks.our_name(group) == "codex-mcp-call"
     assert group["matcher"] == mine.matcher
     [only] = group["hooks"]
     assert set(only) == {"type", "command", "timeout"} and only["timeout"] == 30
@@ -88,20 +91,23 @@ def test_the_mcp_hook_is_the_last_entry_and_the_first_two_do_not_change():
 
 
 def test_merge_puts_the_new_hook_behind_a_users_pre_tool_use_group(tmp_path):
-    """A user's `PreToolUse/Bash` group keeps index 0 (and its approval key); ours gets index 1,
-    and `doctor` counts its approval under the key of that index."""
+    """A user's `PreToolUse/Bash` group keeps index 0 (and its approval key); ours go behind it
+    (`codex-tool-guard` of #670 at 1, this one at 2), and `doctor` counts its approval under the
+    key of that index."""
     users = {"matcher": "Bash", "hooks": [{"type": "command", "command": "audit.sh"}]}
     data, changed = codex_hooks.merge({"hooks": {"PreToolUse": [users]}}, PYTHON, "win32")
     assert data["hooks"]["PreToolUse"][0] == users
-    assert codex_hooks.our_name(data["hooks"]["PreToolUse"][1]) == "codex-mcp-call"
+    assert codex_hooks.our_name(data["hooks"]["PreToolUse"][2]) == "codex-mcp-call"
     assert "codex-mcp-call" in changed
     codex_dir = tmp_path / ".codex"
     codex_dir.mkdir()
     path = codex_dir / codex_hooks.HOOKS_FILE_NAME
     path.write_text(json.dumps(data), encoding="utf-8")
-    [found] = [f for f in codex_hooks.inspect(codex_dir, tmp_path).found if f.event == "PreToolUse"]
+    [found] = [
+        f for f in codex_hooks.inspect(codex_dir, tmp_path).found if f.name == "codex-mcp-call"
+    ]
     key = codex_hooks.hook_key(path, found.event, found.group_index)
-    assert key.endswith(":pre_tool_use:1:0")
+    assert key.endswith(":pre_tool_use:2:0")
     (codex_dir / "config.toml").write_text(
         f'[hooks.state."{key}"]\ntrusted_hash = "sha256:aa"\n'.replace("\\", "\\\\"), "utf-8"
     )

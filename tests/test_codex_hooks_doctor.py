@@ -153,10 +153,13 @@ def test_one_missing_is_a_warn(home, python, tmp_path):
 
 
 def test_from_the_two_hooks_of_the_core_to_three(home, python, tmp_path):
-    """#669, second part: the file the core wrote (two hooks, one approved) gets only the new one.
+    """#669, second part: the file the core wrote (two hooks, one approved) gets only the new ones.
 
-    `doctor` names it as missing, not as stale: the two old ones keep index and approval.
+    `doctor` names them as missing, not as stale: the two old ones keep index and approval. The new
+    ones are every spec after the core's two (`codex-tool-guard` of #670, `codex-mcp-call` of #669).
     """
+    new = [spec.name for spec in codex_hooks.SPECS[2:]]
+    assert "codex-mcp-call" in new
     old = {
         "hooks": {
             "UserPromptSubmit": [codex_hooks.group(codex_hooks.SPECS[0], python)],
@@ -171,11 +174,11 @@ def test_from_the_two_hooks_of_the_core_to_three(home, python, tmp_path):
     result = _result(home, python, tmp_path)
     assert result.status == checks.WARN
     assert result.detail == i18n.t(
-        "doctor.probe.codex_hooks.missing", names="codex-mcp-call", path=path
+        "doctor.probe.codex_hooks.missing", names=", ".join(new), path=path
     )
 
     merged, changed = codex_hooks.merge(json.loads(path.read_text("utf-8")), python)
-    assert changed == ["codex-mcp-call"]
+    assert changed == new
     assert merged["hooks"]["UserPromptSubmit"] == old["hooks"]["UserPromptSubmit"]
     assert merged["hooks"]["SubagentStart"] == old["hooks"]["SubagentStart"]
     _write(home, merged)

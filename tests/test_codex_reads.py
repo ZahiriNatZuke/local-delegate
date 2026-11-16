@@ -141,7 +141,8 @@ def test_the_guard_entry_goes_after_the_two_hooks_of_669():
     assert names[:2] == ["codex-prompt", "codex-subagent-start"]
     assert codex_reads.NAME in names
     entries = codex_hooks.entries(PYTHON, "win32")
-    [group] = entries["PreToolUse"]
+    # `codex-mcp-call` (#669) is also a `PreToolUse` group: pick ours by name.
+    [group] = [g for g in entries["PreToolUse"] if codex_hooks.our_name(g) == codex_reads.NAME]
     assert group["matcher"] == codex_reads.MATCHER
     [only] = group["hooks"]
     assert only["timeout"] == codex_reads.HOOK_TIMEOUT_S == 180
