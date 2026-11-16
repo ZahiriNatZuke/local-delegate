@@ -339,7 +339,7 @@ legítimos (el CLI fuera del PATH si se instaló con `uvx`, o un cliente que no 
 
 Reinicia el cliente. Verifica con:
 
-- `local-delegate doctor` → comprueba de una vez las treinta y cinco piezas (ver abajo), incluidos el
+- `local-delegate doctor` → comprueba de una vez las treinta y seis piezas (ver abajo), incluidos el
   daemon y el backend, que el reporte de `install` no mira a propósito.
 - `local_status` → backend, catálogo y si el cómputo es local o remoto.
 - Un prompt tipo "resume este archivo en cinco viñetas" → debe aparecer la sugerencia del hook.
@@ -515,6 +515,7 @@ local-delegate doctor --home /tmp/x  # diagnostica contra un HOME simulado (solo
 | Andamiaje | memoria global | el bloque entre marcadores en `CLAUDE.md` y `AGENTS.md`, y que sea **el del paquete** (sin contar saltos de línea ni espacios al final). Con otro texto da `warn` («desfasado») y `update` lo repone dejando el `.bak`; también si lo editaste a mano dentro de los marcadores |
 | Andamiaje | MCP en Claude Code | la entrada `local-delegate` en `~/.claude.json` |
 | Andamiaje | MCP en Codex | la sección `[mcp_servers.local-delegate]` de `~/.codex/config.toml`, **también con sangría**: otros programas reescriben ese fichero a su manera (el plugin de JetBrains lo indenta entero y se come los comentarios). Con el marcador de apertura es nuestra y `[ OK ]`, aunque falte el de cierre; sin marcadores, `warn` y no se pisa |
+| Andamiaje | plugin de local-delegate en Codex | si el plugin de **Claude Code** se importó a mano en Codex (`codex plugin marketplace add` + `codex plugin add`): lee la caché `~/.codex/plugins/cache/<marketplace>/local-delegate/<versión>/hooks/hooks.json` y `[plugins."local-delegate@<marketplace>"]` de `~/.codex/config.toml`, sin lanzar `codex`. Codex 0.169.0 solo admite `description` y `hooks` arriba del todo: el `modules` del mod de Claude Code hace que **rechace el fichero entero** con un simple aviso al arrancar, aunque el proceso termine bien. Habilitado así, `warn` con `codex plugin remove local-delegate@<marketplace>` (quita el plugin y su caché y deja intacta la entrada MCP). Sin `modules` también es `warn`: Codex lo carga pero tira los `args` y no expande `${user_config.ld_bin}`. Deshabilitado (o solo en la caché, sin tabla en `config.toml`) o sin plugin, `[ OK ]`; sin `~/.codex`, `[ -- ]`. Una tabla sin `enabled` cuenta como habilitada, como en Codex. Con el formato de Codex, `[ OK ]`, pero eso no prueba que cargue ni que sus hooks estén aprobados: se mira en Codex con `/hooks`. `install` nunca pone este plugin en Codex: a Codex le da la entrada MCP y `AGENTS.md` (issue #668) |
 | Andamiaje | MCP en opencode | la clave `mcp.local-delegate` de `~/.config/opencode/opencode.json` **o** `opencode.jsonc` — opencode lee los dos y los fusiona |
 | Andamiaje | autocompletado del shell | el de `install --shell-completion`, si está: lee el manifiesto `installed.json` y compara cada fichero con el que genera la versión instalada **en el idioma del manifiesto** (así el veredicto no cambia con el idioma de la sesión), y mira que cada perfil listado siga teniendo el bloque que lo carga. No lanza ningún shell. Sin nada instalado, `[ OK ]` «no instalado (opcional)»; fichero de otra versión o distinto, `warn` con `local-delegate update`; fichero ausente, bloque borrado o ficheros sin manifiesto, `warn` con `local-delegate install --shell-completion`; manifiesto, fichero o perfil ilegible, `unknown` |
 | Servicios | daemon | `http://127.0.0.1:9393/api/daemon` (versión y pid), y si sirve una versión **distinta de la instalada** |
@@ -543,7 +544,7 @@ Cuatro estados, y la diferencia entre los dos últimos importa:
 como «falta», un arreglo automático posterior sobrescribiría configuración que no es nuestra. El
 exit code es **0** sin avisos y **1** con al menos uno.
 
-De las treinta y cinco comprobaciones, **«versión publicada» es la única que consulta PyPI**, con un timeout
+De las treinta y seis comprobaciones, **«versión publicada» es la única que consulta PyPI**, con un timeout
 de dos segundos y degradando a `[ -- ]` si no hay red. Y lo hace **solo en `doctor`**: ni el
 reporte de `install` ni el diagnóstico interno de `update` salen a internet por ella —el primero
 porque instalar unos hooks no es motivo para hacerlo, y el segundo porque ya pregunta la versión

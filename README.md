@@ -394,8 +394,11 @@ a propósito:
 
 Por defecto se configuran **solo los clientes que tengas instalados**; se elige a mano con
 `--clients claude|codex|opencode`. Los **hooks** son solo de Claude Code: opencode extiende con
-plugins en TypeScript, que es otra superficie, y Claude Desktop no tiene hooks en absoluto. Cada
-pieza se puede excluir (`--no-hooks`, `--no-skill`, `--no-memory`, `--no-mcp`).
+plugins en TypeScript, que es otra superficie, y Claude Desktop no tiene hooks en absoluto. El
+plugin de Claude Code **no sirve en Codex**: Codex 0.169 rechaza su `hooks/hooks.json` entero (por
+el `modules` del mod) con solo un aviso al arrancar. Si lo importaste a mano, `local-delegate
+doctor` lo dice y da `codex plugin remove local-delegate@<marketplace>`, que deja intacta la entrada
+MCP. Cada pieza se puede excluir (`--no-hooks`, `--no-skill`, `--no-memory`, `--no-mcp`).
 
 Todo sale en **español o en inglés**. `install` y `update` guardan el idioma de la sesión en
 que corren (`LOCAL_DELEGATE_LANG=es|en`, o el del sistema) en `language.json`, para que el

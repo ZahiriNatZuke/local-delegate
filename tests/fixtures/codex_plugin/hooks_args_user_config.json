@@ -1,0 +1,22 @@
+{
+  "description": "Negative fixture: the Claude plugin without `modules`. Codex 0.169.0 loads it with no warning, but drops `args` and runs `${user_config.ld_bin}` unexpanded.",
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${user_config.ld_bin}",
+            "args": [
+              "-I",
+              "-m",
+              "local_delegate.hook",
+              "prompt"
+            ],
+            "timeout": 30
+          }
+        ]
+      }
+    ]
+  }
+}

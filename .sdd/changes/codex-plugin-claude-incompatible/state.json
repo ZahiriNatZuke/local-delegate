@@ -1,0 +1,95 @@
+{
+  "schemaVersion": 1,
+  "slug": "codex-plugin-claude-incompatible",
+  "title": "Doctor detecta el plugin de Claude importado en Codex: hooks.json con modules rechazado (#668)",
+  "mode": "lite",
+  "traceability": "strict",
+  "status": "verifying",
+  "createdAt": "2026-11-16T11:31:08.047Z",
+  "updatedAt": "2026-11-16T12:01:15.580Z",
+  "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-11-16T11:44:53.144Z",
+      "evidence": "spec.md 7 requisitos con método; plan.md T1-T4 cubren REQ-001..007; reglas citadas del parser de openai/codex rust-v0.169.0 y reproducidas en Codex real",
+      "actor": "agent"
+    },
+    "plan": {
+      "status": "approved",
+      "updatedAt": "2026-11-16T11:44:53.144Z",
+      "evidence": "spec.md 7 requisitos con método; plan.md T1-T4 cubren REQ-001..007; reglas citadas del parser de openai/codex rust-v0.169.0 y reproducidas en Codex real",
+      "actor": "agent"
+    },
+    "quality": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "conformance": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "memory": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-11-16T11:31:08.047Z",
+      "reason": "SDD change created"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "specifying",
+      "at": "2026-11-16T11:44:52.948Z",
+      "reason": "spec escrita tras reproducir en Codex 0.169.0"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-11-16T11:44:53.144Z",
+      "evidence": "spec.md 7 requisitos con método; plan.md T1-T4 cubren REQ-001..007; reglas citadas del parser de openai/codex rust-v0.169.0 y reproducidas en Codex real",
+      "actor": "agent"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-11-16T11:44:53.144Z",
+      "evidence": "spec.md 7 requisitos con método; plan.md T1-T4 cubren REQ-001..007; reglas citadas del parser de openai/codex rust-v0.169.0 y reproducidas en Codex real",
+      "actor": "agent"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-11-16T11:45:06.626Z",
+      "reason": "plan escrito"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "implementing",
+      "at": "2026-11-16T11:45:06.843Z",
+      "reason": "T1-T4 implementados"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-11-16T12:01:15.580Z",
+      "reason": "zona, mutantes y suite en verde"
+    }
+  ]
+}
