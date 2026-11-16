@@ -4,9 +4,9 @@
   "title": "local_extract: aviso cuando un valor invierte la negacion de la fuente",
   "mode": "lite",
   "traceability": "strict",
-  "status": "verifying",
+  "status": "result-review",
   "createdAt": "2026-11-16T12:34:14.110Z",
-  "updatedAt": "2026-11-16T13:44:18.793Z",
+  "updatedAt": "2026-11-16T13:44:36.245Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -114,6 +114,13 @@
       "at": "2026-11-16T13:44:18.793Z",
       "evidence": "handoff.md; sin secretos ni datos personales",
       "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "verifying",
+      "to": "result-review",
+      "at": "2026-11-16T13:44:36.245Z",
+      "reason": "CI verde y revisión hecha"
     }
   ]
 }
