@@ -49,7 +49,9 @@ The model ids in the catalog (mechanical/long/code/vision) are configurable thro
 env and can change between machines: check `local_status` to see the active catalog
 instead of assuming fixed names. `local_describe_image` is **image→text only**
 (describe, read visible text, answer a specific question) — it never generates or edits
-images.
+images. And it **does not measure**: use it for content and overall layout, not to verify
+alignment, sizes, distances or whether a text wraps; measure that instead (on a web page, in the
+DOM with `getBoundingClientRect`).
 
 ## Long documents
 

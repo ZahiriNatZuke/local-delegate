@@ -230,6 +230,7 @@
   "mcp.warning.extract_outline_kept": "sin un título único, se deja como vino",
   "mcp.warning.extract_role_reason_table": "la entrada trae una tabla y por eso fue al modelo de contexto largo, que separa mejor las filas pero tarda más y puede tener que cargarse; `LOCAL_DELEGATE_EXTRACT_TABLE_LONG=0` lo apaga",
   "mcp.warning.summarize_role_reason_table": "la entrada trae una tabla ({format}) y por eso fue al modelo de contexto largo, que separa mejor las filas pero tarda más y puede tener que cargarse; `LOCAL_DELEGATE_SUMMARIZE_TABLE_LONG=0` lo apaga",
+  "mcp.warning.image_not_a_measurement": "un modelo de visión no mide: si la respuesta habla de alineación, píxeles, tamaños, distancias o saltos de línea, tómalo como una impresión y compruébalo midiendo (en una página web, `getBoundingClientRect` o `Range.getClientRects` en el DOM) antes de darlo por cierto",
   "mcp.warning.input_not_utf8": "el fichero no es UTF-8 válido y se leyó como {encoding}; si el texto sale raro (letras cambiadas, símbolos que faltan), conviértelo a UTF-8 y vuelve a llamar",
   "mcp.warning.lint_failures_mismatch": "el resumen no cuadra con los fallos que el programa leyó en el log ({count} en total: {failures}).{details}",
   "mcp.warning.lint_failures_missing": " No nombra estos ficheros con fallos: {files}.",
