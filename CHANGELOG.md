@@ -80,7 +80,9 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   se descartaba: un parche de ~151 KB pasó por 7 trozos y tardó 129 s para nada. Ahora, si todos
   los campos pedidos son de ese tipo, la respuesta se arma solo por programa, en milisegundos y sin
   ocupar el turno del backend, con el mismo resultado y el mismo `_local_delegate` (`diff_files`,
-  `read_server_side`). Como no hay llamada al backend, no se escribe fila en el log de uso. Con
+  `read_server_side`). La llamada sigue escribiendo su fila en el log de uso, para que salga en el
+  panel y cuente el contexto ahorrado: lleva `program_only: true` y `model: "program"`, 0 tokens
+  locales y la latencia real, y el panel la cuenta como delegación con 0 llamadas al backend. Con
   cualquier otro campo en la lista, el modelo se llama como antes.
 - **`local_summarize` avisa cuando el resumen niega lo que contó un runner de tests** (#684).
   Sobre una salida corta de `pytest -q` que termina en `750 passed, 2 skipped`, el resumen decía

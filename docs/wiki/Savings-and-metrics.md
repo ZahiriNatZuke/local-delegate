@@ -86,6 +86,9 @@ con saltos pudo contaminarla un swap.
   `connect_timeout`, `credential`…; tabla en [Troubleshooting](Troubleshooting.md)). `error` sigue
   valiendo `connect_error`. Hasta la 0.34.0 la clave era `fallo_conexion` y los valores iban en
   español (`rechazada`, `timeout_conexion`…): se siguen leyendo.
+- `program_only` (solo si vale `true`): el programa respondió solo, sin llamar al backend (`local_extract`
+  con todos los campos de ficheros de un diff, #687). La fila lleva `model: "program"` y 0 tokens
+  locales; el panel la cuenta como delegación, con su ahorro de lectura, y con 0 llamadas al backend.
 - `read_timeout_cause` (solo en un `read_timeout` con la causa sabida): `model_swap` si llama-swap
   tenía cargado otro modelo y no llegó a cambiar (el mensaje lo nombra, con la máquina que lo usaba
   cuando se sabe) o `busy` si el modelo pedido estaba cargado pero no contestó a tiempo. `error`

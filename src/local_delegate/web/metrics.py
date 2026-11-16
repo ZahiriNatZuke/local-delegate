@@ -3589,7 +3589,8 @@ function acct(e){
   // `chunks` son LLAMADAS al backend; se omite cuando es 1. Un fallo de conexión no llegó al
   // backend (issue #436): solo cuentan las que `chunks` diga que se hicieron antes, si las hubo.
   const connectionFailed = failed && !!e.connection_failure;
-  const calls = connectionFailed ? (e.chunks || 0) : (e.chunks || 1);
+  // #687: a row the program answered alone (`program_only`) made no backend call.
+  const calls = e.program_only ? 0 : (connectionFailed ? (e.chunks || 0) : (e.chunks || 1));
   const tIn = e.tokens_in, tOut = e.tokens_out;
   const tInRep = tIn!==undefined&&tIn!==null, tOutRep = tOut!==undefined&&tOut!==null;
   // chars_in no siempre son caracteres: en local_describe_image son BYTES de la imagen

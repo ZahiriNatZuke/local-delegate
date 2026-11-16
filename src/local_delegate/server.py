@@ -1391,6 +1391,10 @@ def _describe_pace() -> str:
     return i18n.t("mcp.status.pace.line", parts="; ".join(parts))
 
 
+#: The `model` of a usage row the program answered alone (`program_only`, #687): no model ran.
+PROGRAM_MODEL = "program"
+
+
 def _log_event(
     *,
     tool: str,
@@ -1443,8 +1447,13 @@ def _log_event(
     exception_type: str | None = None,
     concurrency_trace: dict | None = None,
     role_reason: str | None = None,
+    program_only: bool = False,
 ) -> None:
     """Escribe una línea JSONL en el log activo (rotado por mes o fijo). Nunca rompe una tool.
+
+    `program_only` (#687): the program answered the call by itself, with no backend call. The row
+    then carries `program_only: true` and `model: PROGRAM_MODEL`, and `_accounting` gives it 0
+    backend calls; its reading server-side counts as any other with `path`.
 
     Los campos del respaldo (F3, REQ-013) son aditivos: `model` sigue siendo el modelo que
     RESPONDIÓ, así que un evento sin salto se escribe igual que antes y el histórico se lee igual.
@@ -1514,6 +1523,8 @@ def _log_event(
         # `chunks` es el número REAL de llamadas al backend, no el de trozos: una operación
         # troceada gasta la GPU N veces y esta es la única huella que queda de ello. Se omite
         # cuando vale 1, así que quien agregue debe leerlo como `chunks or 1`.
+        if program_only:
+            rec["program_only"] = True
         if chunks is not None and chunks > 1:
             rec["chunks"] = int(chunks)
             # Issue #454: the pieces announced to the panel, next to the calls (`chunks`), so
@@ -1844,6 +1855,9 @@ def _accounting(row: dict) -> dict:
     connection_failed = failed and bool(row.get("connection_failure"))
     chunks = int(row.get("chunks") or 0)
     backend_calls = chunks if connection_failed else (chunks or 1)
+    if row.get("program_only"):
+        # #687: the program answered alone (`local_extract` over a diff): no backend call.
+        backend_calls = 0
 
     raw_in = row.get("tokens_in")
     raw_out = row.get("tokens_out")
@@ -8748,6 +8762,7 @@ def local_extract(
     probe = path and Path(path).is_file()
     probe_len = Path(path).stat().st_size if probe else len(text or "")
     # Entera (B2c): lo que no cabe en una llamada se trocea en vez de truncarse.
+    started = time.monotonic()
     content, _truncated_in, raw_len = _read_input(text, path, _NO_TRUNCATE)
     # #586: the role is decided after reading, because the table rule needs the content.
     role, model, table_format = _extract_role(probe_len, content, fields)
@@ -8851,7 +8866,8 @@ def local_extract(
 
     # #687: every field asked is answered by program from the diff, so the model's reply would be
     # thrown away: no backend call (a 151 KB patch went through 7 chunks and 129 s for nothing).
-    # The answer is built below exactly as when the model gave no value; no backend call, no row.
+    # The answer is built below exactly as when the model gave no value; no backend call. The row
+    # of the usage log is still written (`program_only`), at the end, so the panel sees it.
     program_only = bool(diff_file_fields) and all(name in diff_file_fields for name in fields)
     if program_only:
         raw = "{}"
@@ -9211,6 +9227,23 @@ def local_extract(
         meta["fallback"] = fallback_info
     if meta:
         data["_local_delegate"] = meta
+    if program_only:
+        # #687: every delegation is in the usage log. No model ran: `PROGRAM_MODEL`, 0 tokens and
+        # 0 backend calls (`_accounting`); the reading server-side counts as with any `path`.
+        _log_event(
+            tool="local_extract",
+            model=PROGRAM_MODEL,
+            source=source,
+            chars_in=len(content),
+            chars_out=len(json.dumps(data, ensure_ascii=False)),
+            latency_ms=int((time.monotonic() - started) * 1000),
+            ok=True,
+            tokens_in=0,
+            tokens_out=0,
+            raw_len=raw_len,
+            path=path,
+            program_only=True,
+        )
     return data
 
 

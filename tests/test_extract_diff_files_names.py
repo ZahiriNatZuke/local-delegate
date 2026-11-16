@@ -14,9 +14,11 @@ doubled, a model that answers null), no network; the usage log goes to `tmp_path
 
 from __future__ import annotations
 
+import json
+
 import pytest
 
-from local_delegate import config, i18n, line_check, server
+from local_delegate import config, cost, i18n, line_check, server
 
 HUNKS_FIELD = "ficheros_y_hunks_con_lineas"
 FILES_FIELD = "ficheros_con_lineas"
@@ -260,8 +262,71 @@ def test_only_diff_fields_never_reach_the_backend(backend, tmp_path):
         fields=[HUNKS_FIELD, "changed_files_with_lines"], path=_write(tmp_path, text, "pr.patch")
     )
     assert backend == [], "no backend call when the program answers every field"
-    usage = tmp_path / "usage.jsonl"
-    assert not usage.exists() or usage.read_text(encoding="utf-8") == "", "no backend, no row"
+
+
+def _rows(tmp_path) -> list[dict]:
+    return [
+        json.loads(line)
+        for log in sorted(tmp_path.glob("usage*.jsonl"))
+        for line in log.read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+
+
+def test_only_diff_fields_still_write_their_usage_row(backend, tmp_path):
+    """Every delegation is in the usage log, also the one the program answers alone.
+    Mutant "no `_log_event` on the program path" (the code of 24a10f28): no row, the first
+    assert fails. Mutant "row without the mark": the `program_only` assert fails."""
+    text, _files, _hunks = _big_pr_diff()
+    path = _write(tmp_path, text, "pr.patch")
+    data = server.local_extract(fields=[HUNKS_FIELD], path=path)
+    assert backend == []
+    (row,) = _rows(tmp_path)
+    assert row["tool"] == "local_extract" and row["ok"] is True
+    assert row["program_only"] is True
+    assert row["model"] == server.PROGRAM_MODEL
+    assert row["source"] == "path" and row["path"] == path
+    assert row["chars_in"] == len(text)
+    assert row["chars_out"] == len(json.dumps(data, ensure_ascii=False))
+    assert (row["tokens_in"], row["tokens_out"]) == (0, 0)
+    assert "chunks" not in row and "inference_ms" not in row
+    assert 0 <= row["latency_ms"] < 60_000
+    acc = server._accounting(cost.merge_row(row))  # as the panel reads it
+    assert acc["backend_calls"] == 0 and acc["tokens_in"] == 0 and not acc["estimated"]
+    assert acc["chars_saved_text"] == len(text) and acc["saved"] > 0
+
+
+def test_a_backend_call_row_has_no_program_mark(backend, tmp_path):
+    """Control: a field of the model writes the row of before, with its backend calls."""
+    text, _files, _hunks = _shaped_diff(2, 1, 5, 1, 4, [])
+    server.local_extract(fields=[FILES_FIELD, "summary"], path=_write(tmp_path, text, "s.patch"))
+    (row,) = _rows(tmp_path)
+    assert "program_only" not in row and row["model"] != server.PROGRAM_MODEL
+    assert server._accounting(row)["backend_calls"] == 1
+
+
+def test_the_panel_counts_the_program_row_as_a_delegation(backend, tmp_path):
+    """`/api/stats`: one delegation of `local_extract`, with its saving and 0 backend calls."""
+    from fastapi.testclient import TestClient
+
+    from local_delegate.web import metrics
+
+    text, _files, _hunks = _big_pr_diff()
+    server.local_extract(fields=[FILES_FIELD], path=_write(tmp_path, text, "pr.patch"))
+    (row,) = _rows(tmp_path)
+    metrics._FILE_CACHE.clear()
+    day = row["ts"][:10]
+    response = TestClient(metrics.app).get(
+        f"/api/stats?from={day}T00:00:00%2B00:00&to={day}T23:59:59%2B00:00"
+    )
+    assert response.status_code == 200, response.text
+    stats = response.json()
+    (tool,) = [t for t in stats["by_tool"] if t["tool"] == "local_extract"]
+    assert tool["calls"] == 1 and tool["errors"] == 0
+    assert tool["backend_calls"] == 0 and stats["backend_calls"] == 0
+    assert (tool["tokens_in"], tool["tokens_out"]) == (0, 0)
+    assert tool["tokens_saved"] > 0
+    assert stats["total"]["calls"] == 1
 
 
 def test_only_diff_fields_give_the_same_answer_as_with_the_model(backend, tmp_path):
