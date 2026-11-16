@@ -322,7 +322,9 @@ class DaemonClient:
         try:
             self._send(None, method="DELETE")
         except (OSError, urllib.error.URLError, ValueError):
-            pass
+            # Closing the session is a courtesy to the daemon, which also expires it on its own:
+            # the answer is already in hand, so a failed DELETE must not turn it into a failure.
+            return
 
 
 def _version() -> str:
@@ -534,11 +536,11 @@ def decide(
     if tool == "apply_patch":
         return None
 
-    from . import hook_entry
+    from . import hook_classify
 
     name = _shell_tool() if tool == "Bash" else tool
     request = {"tool_name": name, "tool_input": tool_input, "cwd": cwd}
-    classified = json.loads(hook_entry.classify_text(request, environ))
+    classified = json.loads(hook_classify.classify_text(request, environ))
     path = classified.get("path")
     if classified.get("kind") != "read" or classified.get("read_switch") != "on" or not path:
         return None

@@ -22,7 +22,15 @@ from typing import ClassVar
 import jsonschema
 import pytest
 
-from local_delegate import attribution, codex_hooks, codex_plugin, codex_reads, config, hook_entry
+from local_delegate import (
+    attribution,
+    codex_hooks,
+    codex_plugin,
+    codex_reads,
+    config,
+    hook_classify,
+    hook_entry,
+)
 
 FIXTURES = Path(__file__).parent / "fixtures" / "codex_hooks"
 SRC = Path(config.__file__).resolve().parents[1]
@@ -484,7 +492,7 @@ def test_the_prefilter_skips_the_classifier_without_prose_or_state(world, monkey
     def boom(*_args, **_kwargs):
         raise AssertionError("classifier loaded")
 
-    monkeypatch.setattr(hook_entry, "classify_text", boom)
+    monkeypatch.setattr(hook_classify, "classify_text", boom)
     assert _bash(world, "ls -la") is None
     assert _bash(world, "cat big.py") is None
     with pytest.raises(AssertionError, match="classifier loaded"):
