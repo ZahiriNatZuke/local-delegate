@@ -163,7 +163,7 @@ def test_files_and_hunks_of_a_92_kb_patch_come_back_by_program(backend, tmp_path
     text, _files, hunks = _shaped_diff(14, 6, 330, 3, 40, [])
     assert len(text) > 90_000 and len(text) > config.max_chars_for_role("long"), "guard: chunks"
     data = server.local_extract(fields=[HUNKS_FIELD], path=_write(tmp_path, text, "pr.patch"))
-    assert len(backend) > 1, "guard: it chunked"
+    assert backend == [], "#687: the program answers every field, no backend call"
     assert data[HUNKS_FIELD] == hunks
     meta = data["_local_delegate"]
     assert meta["diff_files"]["fields"] == [HUNKS_FIELD]
@@ -176,7 +176,7 @@ def test_files_of_a_6000_line_format_patch_come_back_by_program(backend, tmp_pat
     text, files, _hunks = _shaped_diff(20, 8, 500, 4, 45, FORMAT_PATCH_HEAD)
     assert text.count("\n") > 5500
     data = server.local_extract(fields=[FILES_FIELD], path=_write(tmp_path, text, "series.patch"))
-    assert len(backend) > 1, "guard: it chunked"
+    assert backend == [], "#687: the program answers every field, no backend call"
     assert data[FILES_FIELD] == files
 
 
@@ -241,3 +241,58 @@ def test_a_file_without_hunks_gets_its_range_alone(backend, tmp_path):
     )
     data = server.local_extract(fields=[HUNKS_FIELD], path=_write(tmp_path, text, "bin.patch"))
     assert data[HUNKS_FIELD] == [*hunks, f"assets/logo.png: {first}-{first + 3}"]
+
+
+# --- #687: only program fields, no backend call ------------------------------------------------
+
+
+def _big_pr_diff() -> tuple[str, list[str], list[str]]:
+    """The shape of the #687 report: a ~150 KB patch of 26 files that the long role chunks."""
+    text, files, hunks = _shaped_diff(26, 10, 330, 3, 40, [])
+    assert len(text) > 140_000 and len(text) > config.max_chars_for_role("long"), "guard: chunks"
+    return text, files, hunks
+
+
+def test_only_diff_fields_never_reach_the_backend(backend, tmp_path):
+    """Every field answered by program: the model's reply would be thrown away, so no call."""
+    text, _files, _hunks = _big_pr_diff()
+    server.local_extract(
+        fields=[HUNKS_FIELD, "changed_files_with_lines"], path=_write(tmp_path, text, "pr.patch")
+    )
+    assert backend == [], "no backend call when the program answers every field"
+    usage = tmp_path / "usage.jsonl"
+    assert not usage.exists() or usage.read_text(encoding="utf-8") == "", "no backend, no row"
+
+
+def test_only_diff_fields_give_the_same_answer_as_with_the_model(backend, tmp_path):
+    """The answer is the one the model path gave when the model added nothing (`{}`)."""
+    text, files, hunks = _big_pr_diff()
+    fields = [HUNKS_FIELD, "changed_files_with_lines"]
+    data = server.local_extract(fields=fields, path=_write(tmp_path, text, "pr.patch"))
+    notice = i18n.t("mcp.extract.diff_files_by_program", fields=", ".join(fields), count=26)
+    assert data == {
+        HUNKS_FIELD: hunks,
+        "changed_files_with_lines": files,
+        "_local_delegate": {"diff_files": {"fields": fields, "files": 26, "notice": notice}},
+    }
+
+
+def test_only_diff_fields_still_say_the_file_was_read_server_side(backend, tmp_path, monkeypatch):
+    monkeypatch.setattr(config, "FEEDBACK_ENABLED", True)
+    text, _files, _hunks = _big_pr_diff()
+    data = server.local_extract(fields=[FILES_FIELD], path=_write(tmp_path, text, "pr.patch"))
+    assert backend == []
+    meta = data["_local_delegate"]
+    assert meta["read_server_side"]["chars"] == len(text)
+    assert "chunked" not in meta
+
+
+def test_an_extra_field_still_goes_to_the_backend(backend, tmp_path):
+    """One field the program does not answer: the model is called as before (#687 scope)."""
+    text, files, _hunks = _big_pr_diff()
+    data = server.local_extract(
+        fields=[FILES_FIELD, "summary"], path=_write(tmp_path, text, "pr.patch")
+    )
+    assert len(backend) > 1, "the extra field is the model's: it chunked"
+    assert data[FILES_FIELD] == files
+    assert data["summary"] is None

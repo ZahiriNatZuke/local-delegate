@@ -8849,8 +8849,17 @@ def local_extract(
         )
         return joined
 
+    # #687: every field asked is answered by program from the diff, so the model's reply would be
+    # thrown away: no backend call (a 151 KB patch went through 7 chunks and 129 s for nothing).
+    # The answer is built below exactly as when the model gave no value; no backend call, no row.
+    program_only = bool(diff_file_fields) and all(name in diff_file_fields for name in fields)
+    if program_only:
+        raw = "{}"
+        truncated_calls = retried_calls = calls = 0
+        pieces = 1
+        unreduced = False
     # Chunking is decided on the bare text, as in #460: the prefix travels, the threshold stays.
-    if len(content) > max_chars:
+    elif len(content) > max_chars:
         raw = _map_reduce(_map_budget(max_chars), report)
         truncated_calls = report.get("truncated_calls", 0)
         retried_calls = report.get("retried_calls", 0)

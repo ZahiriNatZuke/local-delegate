@@ -74,6 +74,14 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ### Corregido
 
+- **`local_extract` ya no llama al modelo cuando el programa resuelve todos los campos de un diff**
+  (#687). Con campos como `files_with_lines` o `ficheros_y_hunks_con_lineas` sobre un `.patch`, el
+  programa ya daba los ficheros y sus líneas (#665), pero el modelo se llamaba igual y su respuesta
+  se descartaba: un parche de ~151 KB pasó por 7 trozos y tardó 129 s para nada. Ahora, si todos
+  los campos pedidos son de ese tipo, la respuesta se arma solo por programa, en milisegundos y sin
+  ocupar el turno del backend, con el mismo resultado y el mismo `_local_delegate` (`diff_files`,
+  `read_server_side`). Como no hay llamada al backend, no se escribe fila en el log de uso. Con
+  cualquier otro campo en la lista, el modelo se llama como antes.
 - **`local_summarize` avisa cuando el resumen niega lo que contó un runner de tests** (#684).
   Sobre una salida corta de `pytest -q` que termina en `750 passed, 2 skipped`, el resumen decía
   «omitiendo 2» y en la frase siguiente «No se reportaron fallos ni saltos», sin aviso: la cifra
