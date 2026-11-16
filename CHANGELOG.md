@@ -53,6 +53,17 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   era que el modelo nombraba solo el primer `diff --git` de lo que leía. Ahora un campo que solo
   pide los ficheros y sus líneas lo calcula el programa desde el parche (`ruta: primera-última`,
   uno por fichero) y `_local_delegate.diff_files` lo dice.
+- **`local_extract` sobre un diff da también los ficheros con sus hunks y no deja un `null` mudo**
+  (#665, reabierto). Dos informes con `.patch` grandes y troceados (14 ficheros con hunks
+  `@@ -0,0 +1,N @@` largos; unas 6000 líneas) volvieron con `null` en todos los trozos: corrían la
+  0.52.0, anterior al arreglo de arriba, y además `main` seguía mandando al modelo, trozo a trozo,
+  tres casos. Ahora un campo que pide los ficheros y sus hunks (`ficheros_y_hunks_con_lineas`,
+  `files_and_hunks_with_lines`) recibe por programa `ruta: primera-última (hunks: a-b, c-d)`, en
+  líneas del parche; `changed_files_with_lines` y `modified_files_with_lines` cuentan como campos
+  de ficheros (no como recuentos de líneas), y un `.patch`/`.diff` con un preámbulo antes del
+  primer `diff --git` se lee como diff. Si un `.patch` no tiene cabeceras de fichero, o un campo de
+  líneas que el programa no responde queda en `null` en todos los trozos de un diff, `warning` lo
+  dice y nombra los campos que sí se responden por programa.
 - **`local_extract` con un campo de líneas ya no devuelve un JSON cortado en silencio** (#666). Si
   la llamada única se cortaba por `max_tokens`, el resultado era el error «respuesta no parseable
   como JSON» y las líneas inventadas no se comprobaban. Ahora esa llamada se rehace en mitades y
