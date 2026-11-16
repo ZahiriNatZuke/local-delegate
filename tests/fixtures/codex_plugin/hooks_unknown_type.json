@@ -1,0 +1,15 @@
+{
+  "description": "Negative fixture: a handler type Codex 0.169.0 does not know. The whole file is rejected.",
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "http",
+            "url": "http://127.0.0.1:1/"
+          }
+        ]
+      }
+    ]
+  }
+}

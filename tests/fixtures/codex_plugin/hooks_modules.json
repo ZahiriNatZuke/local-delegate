@@ -1,0 +1,19 @@
+{
+  "description": "Negative fixture: a Claude Code mod in `modules`. Codex 0.169.0 rejects the whole file: unknown field `modules`, expected `description` or `hooks`.",
+  "modules": [
+    "../register.js"
+  ],
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python -I -m local_delegate.hook prompt",
+            "timeout": 30
+          }
+        ]
+      }
+    ]
+  }
+}

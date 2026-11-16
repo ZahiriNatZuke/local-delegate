@@ -2,7 +2,7 @@
 
 Antes de este módulo cada subcomando sabía un pedazo del sistema: ``doctor`` solo miraba el
 backend, ``install`` escribía sin verificar y nadie miraba el daemon. Aquí vive **una sola
-definición de «estar a punto»**: los treinta y cinco elementos del andamiaje, cada uno con un
+definición de «estar a punto»**: los treinta y seis elementos del andamiaje, cada uno con un
 ``probe`` que responde en qué estado está. Los cinco de la entrega por plugin de Claude Code
 viven en ``checks_plugin``, pero se registran aquí como los demás.
 
@@ -13,7 +13,7 @@ Tres reglas ordenan el módulo:
 2. **Lo que no se pudo comprobar es ``unknown``, nunca ``missing``.** Un cliente que no está
    instalado o un fichero ilegible por permisos no significan «falta»: si se reportaran así,
    un ``fix`` posterior sobrescribiría configuración ajena.
-3. **Es una lista, no un framework.** Treinta y cinco checks son una tupla de objetos con una
+3. **Es una lista, no un framework.** Treinta y seis checks son una tupla de objetos con una
    función; no hay registro dinámico, ni entry points, ni herencia. Si hiciera falta algo de eso,
    el diseño se revisa antes de seguir.
 
@@ -43,6 +43,7 @@ from . import (
     checks_plugin,
     claude_plugin,
     clients,
+    codex_plugin,
     config,
     cost,
     desktop_config,
@@ -1267,6 +1268,92 @@ def _probe_mcp_codex(ctx: Context) -> Result:
             OK, i18n.t("doctor.probe.mcp_codex.closing_marker_lost", path=path, details=kind)
         )
     return Result(OK, i18n.t("doctor.probe.mcp_codex.managed", path=path, details=kind))
+
+
+def _codex_findings_text(findings) -> str:
+    """The first three places of ``hooks.json`` Codex does not read, and how many more."""
+    shown = ", ".join(f.where for f in findings[:3])
+    rest = len(findings) - 3
+    return shown + (i18n.t("doctor.probe.codex_plugin.more", count=rest) if rest > 0 else "")
+
+
+def _safe_plugin_id(plugin_id: str) -> bool:
+    """A plugin id that can go into a command to copy and paste as it is."""
+    return all(char.isalnum() or char in "._-@" for char in plugin_id)
+
+
+def _codex_plugin_result(plugin) -> Result:
+    """One cached version of our plugin in Codex → its verdict (issue #668)."""
+    names = {
+        "id": plugin.plugin_id,
+        "version": plugin.version,
+        "path": plugin.root / codex_plugin.HOOKS_FILE,
+        "codex": codex_plugin.CODEX_VERSION_CHECKED,
+    }
+    # The marketplace name comes from a folder name: only a plain id goes into the command.
+    fix = f"codex plugin remove {plugin.plugin_id}" if _safe_plugin_id(plugin.plugin_id) else ""
+    findings = list(plugin.findings or ())
+    if plugin.enabled is not True:
+        # Disabled, or only in the cache: Codex does not load it, so nothing breaks. Still said,
+        # so an `enable` later does not come as a surprise.
+        if not findings:
+            return Result(OK, i18n.t("doctor.probe.codex_plugin.disabled_compatible", **names))
+        return Result(
+            OK,
+            i18n.t(
+                "doctor.probe.codex_plugin.disabled_incompatible",
+                where=_codex_findings_text(findings),
+                **names,
+            ),
+        )
+    if plugin.findings is None:
+        if plugin.read_error:
+            return Result(
+                UNKNOWN,
+                i18n.t("doctor.probe.codex_plugin.unreadable", error=plugin.read_error, **names),
+            )
+        return Result(OK, i18n.t("doctor.probe.codex_plugin.no_hooks", **names))
+    if codex_plugin.rejected(findings):
+        rejected = [f for f in findings if f.effect == codex_plugin.REJECTED]
+        detail = i18n.t(
+            "doctor.probe.codex_plugin.rejected", where=_codex_findings_text(rejected), **names
+        )
+        if any(f.where == "modules" for f in rejected):
+            detail += i18n.t("doctor.probe.codex_plugin.claude_mod")
+        return Result(WARN, detail, fix)
+    if findings:
+        return Result(
+            WARN,
+            i18n.t(
+                "doctor.probe.codex_plugin.dropped", where=_codex_findings_text(findings), **names
+            ),
+            fix,
+        )
+    # The format is right, but that is not proof of loading: Codex still asks to trust the hooks.
+    return Result(OK, i18n.t("doctor.probe.codex_plugin.readable", **names))
+
+
+def _probe_codex_plugin(ctx: Context) -> Result:
+    """Our plugin cached and enabled in Codex, and whether Codex reads its ``hooks.json`` (#668).
+
+    `install` never puts the plugin in Codex (Codex gets the MCP entry and `AGENTS.md`); this
+    sees the Claude Code plugin imported by hand, whose `modules` makes Codex reject the whole
+    file with only a startup warning. Optional: no plugin is `ok`; no Codex is `unknown`, like
+    every check of an absent client (REQ-003). Only reads.
+    """
+    if not ctx.codex_dir.is_dir():
+        return Result(
+            UNKNOWN,
+            i18n.t("doctor.common.client_absent", client=_client_name("codex"), path=ctx.codex_dir),
+        )
+    plugins = codex_plugin.cached_plugins(ctx.codex_dir)
+    if not plugins:
+        return Result(OK, i18n.t("doctor.probe.codex_plugin.none", path=ctx.codex_dir))
+    results = [_codex_plugin_result(plugin) for plugin in plugins]
+    worst = _worst([result.status for result in results])
+    chosen = [result for result in results if result.status == worst]
+    fixes = list(dict.fromkeys(result.fix_hint for result in chosen if result.fix_hint))
+    return Result(worst, "; ".join(result.detail for result in chosen), " && ".join(fixes))
 
 
 def _opencode_mcp_entry(ctx: Context) -> tuple[dict | None, Path | None, str | None]:
@@ -3118,7 +3205,7 @@ def _probe_read_overlap(ctx):
 
 
 # --- El registro --------------------------------------------------------------
-# Treinta y cinco elementos, en orden de grupo. Una tupla: si esto necesitara alguna vez cargarse
+# Treinta y seis elementos, en orden de grupo. Una tupla: si esto necesitara alguna vez cargarse
 # solo, el problema no sería el registro sino el diseño.
 #
 # El número se dice en cinco sitios de este módulo y llegó a decir «once» con doce checks ya
@@ -3179,6 +3266,8 @@ CHECKS: tuple[Check, ...] = (
     Check("scaffold.memory", "scaffold", "doctor.check.scaffold.memory", _probe_memory),
     Check("scaffold.mcp_claude", "scaffold", "doctor.check.scaffold.mcp_claude", _probe_mcp_claude),
     Check("scaffold.mcp_codex", "scaffold", "doctor.check.scaffold.mcp_codex", _probe_mcp_codex),
+    # Issue #668: in `scaffold` because it only reads `~/.codex`, without launching `codex`.
+    Check("codex.plugin", "scaffold", "doctor.check.codex.plugin", _probe_codex_plugin),
     Check(
         "scaffold.mcp_opencode",
         "scaffold",
@@ -3251,7 +3340,7 @@ CHECKS: tuple[Check, ...] = (
 
 
 def run_all(ctx: Context, *, groups: tuple[str, ...] | None = None) -> list[tuple[Check, Result]]:
-    """Corre los treinta y cinco probes. Un probe que falle es ``unknown``, nunca tumba el diagnóstico.
+    """Corre los treinta y seis probes. Un probe que falle es ``unknown``, nunca tumba el diagnóstico.
 
     Con ``groups`` se corren solo los de esos grupos, en el mismo orden del registro. Lo pide
     ``install``: su reporte final habla del andamiaje que acaba de escribir, y correr también
@@ -3265,7 +3354,7 @@ def run_all(ctx: Context, *, groups: tuple[str, ...] | None = None) -> list[tupl
             continue
         try:
             result = check.probe(ctx)
-        except Exception as exc:  # un check roto no debe impedir ver los otros treinta y cuatro
+        except Exception as exc:  # un check roto no debe impedir ver los otros treinta y cinco
             result = Result(UNKNOWN, i18n.t("doctor.probe.failed", error=exc))
         results.append((check, result))
     return results
