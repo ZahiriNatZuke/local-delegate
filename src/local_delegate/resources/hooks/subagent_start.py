@@ -5,6 +5,9 @@ Las tools `local_*` son diferidas: un subagente no las ve hasta hacer `ToolSearc
 claro nunca da ese paso (dos revisores midieron 26 `Grep` + 16 `Read` y 0 `local_*`). Claude Code
 anade `additionalContext` al principio de la conversacion del subagente, antes de su primer prompt.
 
+Un subagente cuya definicion cierra la lista de tools sin las `local_*` (issue #664) no recibe el
+recordatorio: no tiene `ToolSearch` ni las tools, y mandarlo a cargarlas solo le hace perder turnos.
+
 Solo aconseja: SubagentStart no puede bloquear. No escribe telemetria (el evento no es una lectura
 ni un prompt, y las metricas no lo esperan). Sale con 0 siempre, tambien con la entrada rota.
 """
@@ -14,7 +17,13 @@ from __future__ import annotations
 import json
 import sys
 
-from hook_common import backend_down, enabled, hook_text, utf8_stdio
+from hook_common import (
+    backend_down,
+    closed_agent_without_local_tools,
+    enabled,
+    hook_text,
+    utf8_stdio,
+)
 
 
 def main() -> None:
@@ -27,7 +36,7 @@ def main() -> None:
         payload = json.loads(sys.stdin.buffer.read().decode("utf-8", "replace"))
     except (OSError, ValueError, AttributeError):
         return
-    if not isinstance(payload, dict):
+    if not isinstance(payload, dict) or closed_agent_without_local_tools(payload):
         return
     print(
         json.dumps(

@@ -1,0 +1,103 @@
+{
+  "schemaVersion": 1,
+  "slug": "hooks-subagente-lista-cerrada",
+  "title": "Hooks y bloque gestionado ante subagentes con lista cerrada de tools (#664)",
+  "mode": "lite",
+  "traceability": "strict",
+  "status": "verifying",
+  "createdAt": "2026-11-16T13:27:56.499Z",
+  "updatedAt": "2026-11-16T13:45:33.395Z",
+  "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-11-16T13:37:26.293Z",
+      "evidence": "spec.md con 7 requisitos sobre evidencia medida (doc oficial de hooks y transcripts reales de subagentes: 85/85 de lista cerrada sin delta; uno que nombra las local_* tampoco lo tiene, de ahi la prueba por definicion). plan.md con 6 tareas trazadas; test en rojo antes del arreglo.",
+      "actor": "user"
+    },
+    "plan": {
+      "status": "approved",
+      "updatedAt": "2026-11-16T13:37:26.293Z",
+      "evidence": "spec.md con 7 requisitos sobre evidencia medida (doc oficial de hooks y transcripts reales de subagentes: 85/85 de lista cerrada sin delta; uno que nombra las local_* tampoco lo tiene, de ahi la prueba por definicion). plan.md con 6 tareas trazadas; test en rojo antes del arreglo.",
+      "actor": "user"
+    },
+    "quality": {
+      "status": "approved",
+      "updatedAt": "2026-11-16T13:45:33.395Z",
+      "evidence": "Suite completa -n 2: 7788 passed, 31 skipped; los 5 casos plugin rojos por el .venv que importa main, verdes (16/16) con el src del worktree; detector corregido. Area tras la revision: 84 + 16 passed. ruff limpio. Prueba instalada con HOME simulado: hooks callan con el subagente cerrado, avisan con el abierto; config real con los mismos hashes.",
+      "actor": "user"
+    },
+    "conformance": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "memory": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-11-16T13:27:56.499Z",
+      "reason": "SDD change created"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "specifying",
+      "at": "2026-11-16T13:37:11.585Z",
+      "reason": "Investigacion hecha: payload sin lista de tools, transcripts de lista cerrada sin deferred_tools_delta"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-11-16T13:37:26.293Z",
+      "evidence": "spec.md con 7 requisitos sobre evidencia medida (doc oficial de hooks y transcripts reales de subagentes: 85/85 de lista cerrada sin delta; uno que nombra las local_* tampoco lo tiene, de ahi la prueba por definicion). plan.md con 6 tareas trazadas; test en rojo antes del arreglo.",
+      "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-11-16T13:37:26.293Z",
+      "evidence": "spec.md con 7 requisitos sobre evidencia medida (doc oficial de hooks y transcripts reales de subagentes: 85/85 de lista cerrada sin delta; uno que nombra las local_* tampoco lo tiene, de ahi la prueba por definicion). plan.md con 6 tareas trazadas; test en rojo antes del arreglo.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-11-16T13:45:32.730Z",
+      "reason": "spec y plan aprobados; implementacion y verificacion hechas (ver verification.md)"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "implementing",
+      "at": "2026-11-16T13:45:32.945Z",
+      "reason": "spec y plan aprobados; implementacion y verificacion hechas (ver verification.md)"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-11-16T13:45:33.163Z",
+      "reason": "spec y plan aprobados; implementacion y verificacion hechas (ver verification.md)"
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-11-16T13:45:33.395Z",
+      "evidence": "Suite completa -n 2: 7788 passed, 31 skipped; los 5 casos plugin rojos por el .venv que importa main, verdes (16/16) con el src del worktree; detector corregido. Area tras la revision: 84 + 16 passed. ruff limpio. Prueba instalada con HOME simulado: hooks callan con el subagente cerrado, avisan con el abierto; config real con los mismos hashes.",
+      "actor": "user"
+    }
+  ]
+}
