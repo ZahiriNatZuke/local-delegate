@@ -197,6 +197,21 @@ Dos cosas que conviene saber y solo estaban en el código:
   `## Tareas`). Si un campo pide elementos (`tareas_con_lineas`, `requisitos_con_lineas`) y el
   modelo solo da el rango del apartado que los contiene, el campo va en
   `_local_delegate.section_only_keys` con aviso: lee ese rango (#633).
+- **Los ficheros de un diff los da el programa** (#665). Con `path` a un diff unificado, un campo
+  que solo pide los ficheros y sus líneas (`ficheros_con_lineas`, `files_with_lines`,
+  `archivos_y_lineas`) vuelve con una entrada `ruta: primera-última` por cada fichero del parche,
+  en líneas del propio parche, calculada por el programa aunque el modelo nombre solo algunos. Lo
+  dice `_local_delegate.diff_files` (`fields`, `files`, `notice`), sin aviso de fallo. Si la
+  respuesta del modelo no sirve (no es JSON, no es un objeto o el backend falló), esos valores se
+  mantienen, el resto queda a `null` y el motivo va en `_local_delegate.model_error` (`error`,
+  `raw`) y en `warning`. Un nombre en singular (`fichero_con_lineas`) no cuenta. El modelo
+  recibe además la advertencia de que los números de `@@` no son líneas del parche. Otro campo de
+  líneas sobre un diff (`hunks_con_lineas`, `lineas_con_exec_con_lineas`) sigue siendo del modelo.
+- **Una respuesta de líneas cortada por `max_tokens` se rehace en mitades** (#666). Si la llamada
+  única con un campo de líneas se corta, se repite troceada (y el troceo vuelve a partir lo que
+  siga cortado), y los campos de líneas se unen por programa. Si aun así no queda JSON, el error
+  dice que el corte fue por `max_tokens` y las líneas citadas que no casan van en
+  `lines_unverified` como `raw: …`; también las de un trozo cortado que se quedó fuera de la unión.
 - **Valor de otra fila** (#650). Si el valor de una clave solo aparece en una fila o línea
   etiquetada de la entrada (tabla HTML, Markdown, CSV o TSV, clave de un JSON, `etiqueta: valor`)
   cuya etiqueta casa mejor con otra clave pedida, la clave va en

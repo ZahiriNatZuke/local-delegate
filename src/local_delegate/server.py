@@ -1630,6 +1630,34 @@ _DEFERRED_EVENTS: contextvars.ContextVar[list[dict] | None] = contextvars.Contex
     "local_delegate_deferred_events", default=None
 )
 
+
+def _fold_retried_row(index: int | None) -> None:
+    """#666: the held row at `index` (a cut call redone split) folded into the last held row.
+
+    The redo reads the same file again, so two rows would count it twice as read server-side.
+    The last row keeps its own fields and adds the folded call: its backend calls (`chunks`),
+    latency and tokens, and the cut call as the first step, marked `retried` as the map/reduce
+    marks a cut step it redid split. Nothing happens if the rows are not held or there is no redo.
+    """
+    pending = _DEFERRED_EVENTS.get()
+    if pending is None or index is None or not 0 <= index < len(pending) - 1:
+        return
+    first = pending.pop(index)
+    last = pending[-1]
+    last["chunks"] = int(last.get("chunks") or 1) + int(first.get("chunks") or 1)
+    last["latency_ms"] = int(last.get("latency_ms") or 0) + int(first.get("latency_ms") or 0)
+    for key in ("tokens_in", "tokens_out"):
+        if first.get(key) is not None:
+            last[key] = int(last.get(key) or 0) + int(first[key])
+    step = {
+        "kind": "map",
+        "chars_out": int(first.get("chars_out") or 0),
+        "finish_reason": first.get("finish_reason"),
+        "retried": True,
+    }
+    last["steps"] = [step, *(last.get("steps") or [])]
+
+
 #: #649: the `error` of a `local_extract` row whose backend reply came back but was not a JSON
 #: object (cut by `max_tokens`, prose, a list): the tool answered `_local_delegate.error`.
 EXTRACT_INVALID_JSON = "invalid_json"
@@ -8566,6 +8594,8 @@ def local_extract(
     (and a Markdown file's headings with their lines), so it can answer for `Read` offset/limit;
     cited lines that do not hold in the file are listed in `lines_unverified`, and a field that
     asks for items (`tasks_with_lines`) but got only section ranges in `section_only_keys`.
+    Over a unified diff, a field that asks only for the files and their lines (`files_with_lines`)
+    gets one `path: first-last` per file, by program (`diff_files` says so).
     A value that is a "no data" marker ("N/A", "unknown", "-", "", also the strings "null" and
     "undefined") comes back as null, listed in `missing_keys`, with the model's text in
     `placeholder_keys`. With a JSON object as input, a field that counts one of its top-level
@@ -8622,6 +8652,19 @@ def local_extract(
         # Only a Markdown file: in Python, YAML or shell a `# comment` would pass for a heading.
         if Path(path).suffix.lower() in _MARKDOWN_SUFFIXES:
             outline_block = _extract_outline_block(content, _map_budget(max_chars))
+    # #665: with `path` and a unified diff, each file's lines in the patch, by program (#582). A
+    # field that asks only for the files and their lines is answered from them, whatever the
+    # model listed: asked per chunk, it named the first file of each and the rest went missing.
+    diff_ranges = (
+        line_check.diff_file_ranges(content)
+        if numbered and sections.is_unified_diff(content)
+        else []
+    )
+    diff_file_fields = (
+        [f for f in location_fields if line_check.asks_for_diff_files(f)] if diff_ranges else []
+    )
+    if diff_ranges:
+        system += _DIFF_LINES_CLAUSE
     use_schema = config.JSON_SCHEMA_MODE != "off"
     response_format = _json_schema_payload(fields) if use_schema else None
     json_schema_fallback = config.JSON_SCHEMA_MODE == "auto"
@@ -8644,11 +8687,10 @@ def local_extract(
             " Deja a null las claves de ubicación: el programa une las de todos los objetos."
         )
 
-    # Chunking is decided on the bare text, as in #460: the prefix travels, the threshold stays.
-    if len(content) > max_chars:
-        # SIN nada pegado al texto (`report`): esta tool parsea el resultado. El aviso de truncado,
+    def _map_reduce(budget: int, into: dict) -> str:
+        # SIN nada pegado al texto (`into`): esta tool parsea el resultado. El aviso de truncado,
         # el respaldo y el ahorro bajan a `_local_delegate`.
-        raw = _chat_map_reduce(
+        joined = _chat_map_reduce(
             model,
             system + " Si un campo no aparece en este fragmento, ponlo a null.",
             content,
@@ -8674,14 +8716,17 @@ def local_extract(
             path=path,
             # #568: each piece numbered with its absolute lines; the outline leaves room for itself.
             pieces=(
-                _numbered_code_pieces(content, _map_budget(max_chars) - len(outline_block))
-                if numbered
-                else None
+                _numbered_code_pieces(content, budget - len(outline_block)) if numbered else None
             ),
             response_format=response_format,
             json_schema_fallback=json_schema_fallback,
-            report=report,
+            report=into,
         )
+        return joined
+
+    # Chunking is decided on the bare text, as in #460: the prefix travels, the threshold stays.
+    if len(content) > max_chars:
+        raw = _map_reduce(_map_budget(max_chars), report)
         truncated_calls = report.get("truncated_calls", 0)
         retried_calls = report.get("retried_calls", 0)
         calls = report.get("calls", 0)
@@ -8717,6 +8762,31 @@ def local_extract(
         calls = 1
         pieces = 1
         unreduced = False
+        if (
+            numbered
+            and truncated_calls
+            and len(content) > 2 * config.CHUNK_MIN_CHARS
+            # #665: fields the program answers gain nothing from more calls.
+            and any(f not in diff_file_fields for f in location_fields)
+        ):
+            # #666: a location answer cut by `max_tokens` (the lines of a long list) was a JSON
+            # cut in two, with the error as the only answer. Redone in halves (the map/reduce
+            # splits again what is still cut), and the location fields are joined by program.
+            split_report: dict = {}
+            pending_rows = _DEFERRED_EVENTS.get()
+            first_row = len(pending_rows) - 1 if pending_rows else None
+            raw = _map_reduce(len(content) // 2 + 1 + len(outline_block), split_report)
+            # One tool call, one usage row: the cut call is folded into the row of its redo, so
+            # the file read server-side is counted once (`_accounting`), as the map/reduce does.
+            _fold_retried_row(first_row)
+            report = split_report
+            truncated_calls = report.get("truncated_calls", 0)
+            retried_calls = 1 + report.get("retried_calls", 0)
+            calls = 1 + report.get("calls", 0)
+            pieces = report.get("pieces", 0)
+            unreduced = bool(report.get("unreduced"))
+            if report.get("fallback"):
+                fallback_info.update(report["fallback"])
     result = _strip_fences(raw)
 
     # `truncated`/`warning` significan desde B2c «salida truncada en un trozo» (REQ-010): la
@@ -8748,22 +8818,61 @@ def local_extract(
         if numbered and pieces > 1
         else []
     )
+    # #666: what the model wrote before a cut is not data, but the lines it cites still say
+    # whether it was inventing them: the cut answer and the cut map partials left out of the join
+    # are checked against the file too, labelled `raw`.
+    check_outline = (
+        line_check.markdown_outline(content)
+        if numbered and Path(path).suffix.lower() in _MARKDOWN_SUFFIXES
+        else []
+    )
+    cut_partials = (
+        [p for p in report.get("partials") or [] if not _partial_objects([p], strict=True)]
+        if numbered and truncated_calls and pieces > 1
+        else []
+    )
+
+    def _raw_unverified(texts: list[str]) -> list[str]:
+        out: list[str] = []
+        for raw_text in texts:
+            for citation in line_check.check_values(raw_text, content, check_outline):
+                label = f"raw: {citation.label()}"
+                if label not in out:
+                    out.append(label)
+        return out
+
+    # #665: with a field answered by program, a reply the tool cannot use is not the whole answer:
+    # the error travels in `model_error` beside the program's values instead of replacing them.
+    model_error: dict = {}
     try:
         data = json.loads(result)
     except json.JSONDecodeError:
+        # #666: a JSON cut by `max_tokens` says so in the error itself, not only in `warning`.
+        error_key = "mcp.extract.not_json_cut" if truncated_calls else "mcp.extract.not_json"
         if location_partials:
             # A reduce cut (or not JSON) does not lose what the chunks found: built by program.
             data = _merged_from_partials(location_partials, fields, location_fields)
+        elif diff_file_fields:
+            # #665: the files of the diff do not depend on the model; the rest stays null.
+            data = {}
+            model_error = {"error": i18n.t(error_key), "raw": result}
         else:
             # El modelo devolvió algo que no es JSON, o el backend falló y `result` trae el aviso
             # de error. Degradar con la carga cruda es mejor que lanzar: quien llama ve qué pasó
             # en vez de recibir una excepción de protocolo.
             # #586: whoever waited for the long model and got an error hears why it went there.
-            error = {"error": i18n.t("mcp.extract.not_json"), "raw": result}
+            error: dict = {"error": i18n.t(error_key), "raw": result}
+            raw_lines = (
+                _raw_unverified([result, *cut_partials]) if numbered and truncated_calls else []
+            )
+            if raw_lines:
+                error["lines_unverified"] = raw_lines
             return {"_local_delegate": {**error, **truncation, **role_meta}}
     if not isinstance(data, dict):
-        error = {"error": i18n.t("mcp.extract.not_object"), "raw": result}
-        return {"_local_delegate": {**error, **truncation, **role_meta}}
+        if not diff_file_fields:
+            error = {"error": i18n.t("mcp.extract.not_object"), "raw": result}
+            return {"_local_delegate": {**error, **truncation, **role_meta}}
+        data, model_error = {}, {"error": i18n.t("mcp.extract.not_object"), "raw": result}
 
     if location_partials:
         # The location values are joined by program, never left to the reduce (#568).
@@ -8777,6 +8886,11 @@ def local_extract(
     # or `auto` after the backend refused the schema) nothing forces the model to it. Normalize
     # always, here, before `_local_delegate` is added (so it is never counted as an extra key).
     missing_keys, renamed_keys, dropped = _normalize_extract_keys(data, fields)
+    for name in diff_file_fields:
+        # #665: one entry per file of the diff, `path: first-last` in lines of the patch; what the
+        # model listed is replaced, never merged (it may name a file twice or at a hunk's lines).
+        data[name] = [f"{diff_path}: {first}-{last}" for first, last, diff_path in diff_ranges]
+    missing_keys = [name for name in missing_keys if name not in diff_file_fields]
     # #586: a "no data" marker is null (and counts as missing); a count of a JSON input's list is
     # the program's, not the model's.
     total_lines = len(content.split("\n")) - (1 if content.endswith("\n") else 0)
@@ -8805,7 +8919,7 @@ def local_extract(
         # #568: the prefix is the input's format, not data: it leaves the other fields; the lines
         # cited in the location fields are checked against the whole file.
         for name in dict.fromkeys(fields):
-            if name == _EXTRACT_META_KEY or data.get(name) is None:
+            if name == _EXTRACT_META_KEY or data.get(name) is None or name in diff_file_fields:
                 continue
             if name in location_fields:
                 copied, target = line_check.outline_copy(name, data[name], outline)
@@ -8822,6 +8936,10 @@ def local_extract(
                     section_only.append(name)
             else:
                 data[name] = _strip_extract_prefixes(data[name], total_lines)
+        if truncated_calls:
+            # #666: the cut map partials left out of the join, and a cut reply the program's
+            # values stand beside (#665), are checked too, as `raw`.
+            unverified.extend(_raw_unverified([*cut_partials, *([result] if model_error else [])]))
     # #650: a value that sits only in the row of another requested key; a warning, never a null.
     cross_filled = cross_fill.cross_filled(content, fields, data, skip=location_fields)
     meta: dict = dict(truncation)
@@ -8881,6 +8999,22 @@ def local_extract(
         late_notices.append(
             i18n.t("mcp.warning.extract_section_only", fields=", ".join(section_only))
         )
+    if diff_file_fields:
+        # #665: its own key, never `warning`: a value by program is not a failure (as `chunked`).
+        meta["diff_files"] = {
+            "fields": diff_file_fields,
+            "files": len(diff_ranges),
+            "notice": i18n.t(
+                "mcp.extract.diff_files_by_program",
+                fields=", ".join(diff_file_fields),
+                count=len(diff_ranges),
+            ),
+        }
+    if model_error:
+        # #665: the model's reply (or the backend's error) was not usable; the program's values
+        # stand, the rest is null, and the caller hears why instead of a silent null.
+        meta["model_error"] = model_error
+        late_notices.append(model_error["error"])
     if cross_filled:
         meta["cross_filled_keys"] = cross_filled
         pairs = ", ".join(

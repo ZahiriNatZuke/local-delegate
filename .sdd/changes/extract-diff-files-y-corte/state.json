@@ -1,0 +1,102 @@
+{
+  "schemaVersion": 1,
+  "slug": "extract-diff-files-y-corte",
+  "title": "local_extract: ficheros de un diff por programa y respuesta de líneas cortada (#665, #666)",
+  "mode": "lite",
+  "traceability": "strict",
+  "status": "verifying",
+  "createdAt": "2026-11-16T11:37:30.936Z",
+  "updatedAt": "2026-11-16T12:01:20.504Z",
+  "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-11-16T11:38:27.480Z",
+      "evidence": "spec.md: 8 requisitos verificados por test; plan.md: 4 tareas trazadas a REQ-001..008; reproducción previa en brief.md L2",
+      "actor": "user"
+    },
+    "plan": {
+      "status": "approved",
+      "updatedAt": "2026-11-16T11:38:27.480Z",
+      "evidence": "spec.md: 8 requisitos verificados por test; plan.md: 4 tareas trazadas a REQ-001..008; reproducción previa en brief.md L2",
+      "actor": "user"
+    },
+    "quality": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "conformance": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "memory": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-11-16T11:37:30.936Z",
+      "reason": "SDD change created"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "specifying",
+      "at": "2026-11-16T11:38:27.231Z",
+      "reason": "issues leídos y reproducidos con backend doblado (control positivo)"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-11-16T11:38:27.480Z",
+      "evidence": "spec.md: 8 requisitos verificados por test; plan.md: 4 tareas trazadas a REQ-001..008; reproducción previa en brief.md L2",
+      "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-11-16T11:38:27.480Z",
+      "evidence": "spec.md: 8 requisitos verificados por test; plan.md: 4 tareas trazadas a REQ-001..008; reproducción previa en brief.md L2",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-11-16T12:01:19.833Z",
+      "reason": "avance del expediente: spec y plan aprobados, T1-T5 hechas y verificadas"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "plan-review",
+      "at": "2026-11-16T12:01:20.048Z",
+      "reason": "avance del expediente: spec y plan aprobados, T1-T5 hechas y verificadas"
+    },
+    {
+      "type": "transition",
+      "from": "plan-review",
+      "to": "implementing",
+      "at": "2026-11-16T12:01:20.272Z",
+      "reason": "avance del expediente: spec y plan aprobados, T1-T5 hechas y verificadas"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-11-16T12:01:20.504Z",
+      "reason": "avance del expediente: spec y plan aprobados, T1-T5 hechas y verificadas"
+    }
+  ]
+}
