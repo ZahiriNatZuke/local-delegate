@@ -2,7 +2,7 @@
 
 `locate.classify_field` reads a field name by PRESENCE: the categories of a closed vocabulary are
 taken first, and an unknown word never cancels them (#697: `lista_de_ficheros_con_sus_lineas` went
-to the model because «sus» was not in the subject words of `asks_for_diff_files`).
+to the model because «sus» was not in the closed list of subject words of the old rule).
 """
 
 from __future__ import annotations
