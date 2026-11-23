@@ -2,12 +2,11 @@
 
 Two subagents asked `local_extract` (with `path`) for `tareas_con_lineas`,
 `tabla_de_mutantes_con_lineas` and the like over a plan. The model answered each with the range of
-the section that holds them («Tareas: líneas 24-63»), without the items, and the check of the cited
-lines reported correct ranges as false: the range starts after the heading and its blank line, so
-the words it names («Tareas») are not on the cited lines. Now a range is held by the heading of the
-section it starts in, a field that asks for items and got only section ranges is reported in
-`section_only_keys` with a warning. The prompt stays: asking for each item with its line ran the
-model out of tokens mid-list, with no valid JSON. Backend faked (`_run_chat` doubled), no network.
+the section that holds them, without the items. A field that asks for items and got only section
+ranges is reported in `section_only_keys` with a warning. Since 0.54.0 the model anchors the
+heading and the program gives the section's lines (#692-#698): the check by words of #633 is
+gone with the model's numbers, and `section_only` reads the items already placed. Backend faked
+(`_run_chat` doubled), no network.
 """
 
 from __future__ import annotations
@@ -16,7 +15,7 @@ import json
 
 import pytest
 
-from local_delegate import config, i18n, line_check, server
+from local_delegate import config, i18n, locate, server
 
 
 def _ok(text: str):
@@ -79,29 +78,11 @@ def _write(tmp_path, text: str, name: str = "plan.md") -> str:
     return str(path)
 
 
-def test_a_section_range_is_held_by_its_heading():
-    text = _plan()
-    outline = line_check.markdown_outline(text)
-    start, end = _body(text, "## Tareas")
-    # «Tareas» is on no line of 24-63 nor around them: only the heading of the section says it.
-    assert line_check.check_values(f"Tareas: líneas {start}-{end}", text, outline) == []
-    start, end = _body(text, "## Tabla de mutantes")
-    assert line_check.check_values(f"Tabla de mutantes: líneas {start}-{end}", text, outline) == []
-
-
-def test_a_range_in_another_section_is_still_reported():
-    text = _plan()
-    outline = line_check.markdown_outline(text)
-    start, end = _body(text, "## Tabla de mutantes")
-    bad = line_check.check_values(f"Tareas: líneas {start}-{end}", text, outline)
-    assert [c.label() for c in bad] == [f"{start}-{end}"]
-
-
-def test_without_the_outline_the_check_is_unchanged():
-    text = _plan()
-    start, end = _body(text, "## Tareas")
-    bad = line_check.check_values(f"Tareas: líneas {start}-{end}", text)
-    assert [c.label() for c in bad] == [f"{start}-{end}"]
+def _section(text: str, heading: str) -> locate.Item:
+    """The item of a whole section, heading included, as an anchor on its heading gives it."""
+    index = locate.build_index(text, "plan.md")
+    [block] = [b for b in index.blocks if b.kind == "section" and b.name == heading]
+    return locate.Item(name=heading, start=block.start, end=block.end, source="anchor")
 
 
 @pytest.mark.parametrize(
@@ -116,36 +97,40 @@ def test_without_the_outline_the_check_is_unchanged():
 )
 def test_section_only_depends_on_what_the_field_asks_for(field, expected):
     text = _plan()
-    outline = line_check.markdown_outline(text)
-    start, end = _body(text, "## Tareas")
-    value = f"Tareas: líneas {start}-{end}"
-    assert line_check.section_only(field, value, outline) is expected
+    index = locate.build_index(text, "plan.md")
+    items = [_section(text, "## Tareas")]
+    assert locate.section_only(locate.classify_field(field), items, index) is expected
 
 
 def test_items_with_their_lines_are_not_section_only():
     text = _plan()
-    outline = line_check.markdown_outline(text)
+    index = locate.build_index(text, "plan.md")
+    req = locate.classify_field("tareas_con_lineas")
     first = _line_of(text, "- [ ] T1:")
-    value = [f"T{i}: implementar la pieza {i}: línea {first + 2 * (i - 1)}" for i in range(1, 11)]
-    assert line_check.section_only("tareas_con_lineas", value, outline) is False
-    assert line_check.check_values(value, text, outline) == []
+    lines = [
+        locate.Item(name=f"T{i}", start=first + 2 * (i - 1), end=first + 2 * (i - 1))
+        for i in range(1, 11)
+    ]
+    assert locate.section_only(req, lines, index) is False
     # Each task with its two lines: ranges too, but inside the section, not its whole body.
-    ranges = [f"T{i}: líneas {first + 2 * (i - 1)}-{first + 2 * i - 1}" for i in range(1, 11)]
-    assert line_check.section_only("tareas_con_lineas", ranges, outline) is False
+    ranges = [
+        locate.Item(name=f"T{i}", start=first + 2 * (i - 1), end=first + 2 * i - 1)
+        for i in range(1, 11)
+    ]
+    assert locate.section_only(req, ranges, index) is False
 
 
-def test_the_shape_of_the_issue_is_reported_and_its_ranges_hold(backend, tmp_path):
+def test_the_shape_of_the_issue_is_reported(backend, tmp_path):
     _calls, state = backend
     text = _plan()
-    tasks = _body(text, "## Tareas")
-    table = _body(text, "## Tabla de mutantes")
-    steps = _body(text, "## Estrategia de verificación")
+    headings = {
+        "tareas_con_lineas": "## Tareas",
+        "tabla_de_mutantes_con_lineas": "## Tabla de mutantes",
+        "estrategia_de_verificacion_con_lineas": "## Estrategia de verificación",
+    }
     answer = {
-        "tareas_con_lineas": f"Tareas: líneas {tasks[0]}-{tasks[1]}",
-        "tabla_de_mutantes_con_lineas": f"Tabla de mutantes: líneas {table[0]}-{table[1]}",
-        "estrategia_de_verificacion_con_lineas": (
-            f"Estrategia de verificación: líneas {steps[0]}-{steps[1]}"
-        ),
+        field: [{"name": heading.lstrip("# "), "anchor": heading}]
+        for field, heading in headings.items()
     }
     state["answer"] = lambda call: _ok(json.dumps(answer))
     data = server.local_extract(fields=list(answer), path=_write(tmp_path, text))
@@ -153,13 +138,19 @@ def test_the_shape_of_the_issue_is_reported_and_its_ranges_hold(backend, tmp_pat
     assert "lines_unverified" not in meta
     assert meta["section_only_keys"] == ["tareas_con_lineas"]
     assert meta["warning"] == i18n.t("mcp.warning.extract_section_only", fields="tareas_con_lineas")
-    # The values are never rewritten.
-    assert {k: data[k] for k in answer} == answer
+    for field, heading in headings.items():
+        [item] = data[field]
+        assert item["start"] == _line_of(text, heading), field
+        section = _section(text, heading)
+        assert (item["start"], item["end"]) == (section.start, section.end), field
 
 
-def test_the_prompt_does_not_ask_for_each_item(backend, tmp_path):
-    """Asking for each item with its line ran the model out of tokens mid-list (live, PR #645)."""
+def test_the_prompt_does_not_ask_for_line_numbers(backend, tmp_path):
+    """#694: the example «Título: líneas 120-160» biased the model to headings and bullets."""
     calls, _state = backend
     server.local_extract(fields=["tareas_con_lineas"], path=_write(tmp_path, _plan()))
     (call,) = calls
-    assert call["system"].endswith("(por ejemplo «Título: líneas 120-160»).")
+    assert "Título" not in call["system"]
+    assert "líneas 1" not in call["system"]
+    assert "anchor" in call["system"]
+    assert "No escribas números de línea" in call["system"]

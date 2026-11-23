@@ -79,7 +79,7 @@ def _line_of(text: str, needle: str) -> int:
 # --- inputs ----------------------------------------------------------------------------------
 
 
-def _python(functions: int = 6) -> str:
+def _python(functions: int = 6, with_class: bool = True) -> str:
     out = ['"""Módulo de prueba."""', "", "import os", "", "LIMIT = 3", ""]
     for k in range(functions):
         name = f"validate_{k}" if k % 2 == 0 else f"render_{k}"
@@ -89,7 +89,8 @@ def _python(functions: int = 6) -> str:
             f"    return value + {k}",
             "",
         ]
-    out += ["class Store:", "    def save(self):", "        return 1", ""]
+    if with_class:
+        out += ["class Store:", "    def save(self):", "        return 1", ""]
     return "\n".join(out)
 
 
@@ -426,7 +427,7 @@ def test_an_answer_by_program_has_no_role(backend, tmp_path):
 
 def test_the_real_max_tokens(backend, tmp_path, monkeypatch):
     """#698: 60 functions to choose from ask 64 + 40*60 tokens, in one call and in each piece."""
-    text = _python(60)
+    text = _python(60, with_class=False)
     field = "funciones_que_validan_con_lineas"
     backend["answer"] = _selection_answer(field)
     path = _write(tmp_path, text, "m.py")

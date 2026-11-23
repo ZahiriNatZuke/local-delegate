@@ -8649,21 +8649,15 @@ def _is_no_data_marker(value: Any) -> bool:
     return text in _NO_DATA_MARKERS
 
 
-def _null_placeholders(
-    data: dict, fields: list[str], strip_prefix: Callable[[Any], Any] | None = None
-) -> dict[str, str]:
+def _null_placeholders(data: dict, fields: list[str]) -> dict[str, str]:
     """Set to null, in place, each requested key whose value is a "no data" marker.
 
-    `strip_prefix` (numbered input, #568) drops a copied `12| ` before looking (`"12| N/A"`).
     Returns {key: original value}, in request order. `_local_delegate` is left alone, as in
     `_normalize_extract_keys`.
     """
     found: dict[str, str] = {}
     for name in dict.fromkeys(fields):
-        value = data.get(name)
-        if strip_prefix is not None:
-            value = strip_prefix(value)
-        if name != _EXTRACT_META_KEY and _is_no_data_marker(value):
+        if name != _EXTRACT_META_KEY and _is_no_data_marker(data.get(name)):
             found[name] = data[name]
             data[name] = None
     return found
@@ -8883,10 +8877,13 @@ def _location_meta(
     by = max(dict.fromkeys(sources), key=sources.count)
     entry: dict[str, Any] = {
         "by": by,
+        # REQ-022: an index that could not be built is null, whatever the items carry.
         "index": (
-            max(dict.fromkeys(indexes), key=indexes.count)
+            None
+            if index.unavailable_reason
+            else max(dict.fromkeys(indexes), key=indexes.count)
             if indexes
-            else (None if index.unavailable_reason else index.language)
+            else index.language
         ),
         "items": len(items),
         "unlocated": len(items) - len(placed),
@@ -9288,7 +9285,11 @@ def local_extract(
     except json.JSONDecodeError:
         # #666: a JSON cut by `max_tokens` says so in the error itself, not only in `warning`.
         error_key = "mcp.extract.not_json_cut" if truncated_calls else "mcp.extract.not_json"
-        if by_program:
+        if pieces > 1 and any(_extract_object(p) is not None for p in report.get("partials") or []):
+            # #568: a reduce cut (or not JSON) does not lose what the pieces found: the fields
+            # are filled from the partials by program, below.
+            data = {}
+        elif by_program:
             # The pieces' items and the index's answers do not depend on the reply; the rest
             # stays null.
             data = {}
@@ -9441,7 +9442,7 @@ def local_extract(
         asks_files
         and path
         and Path(path).suffix.lower() in _DIFF_SUFFIXES
-        and (index is None or index.language != "diff")
+        and (index is None or not any(block.kind == "file" for block in index.blocks))
     ):
         # #665: a `.patch`/`.diff` where the program found no file: say so, never a silent null.
         late_notices.append(

@@ -1,18 +1,19 @@
 """#665 and #666: `local_extract` with `path` and a field that asks for lines.
 
 #665: over a large multi-file `.patch`, a field that asks for the files and their lines
-(`ficheros_con_lineas`) came back with the first file only. The join of the chunks was right
-(lists add up, #568); what each chunk got was the model's list, and a model that names the first
-`diff --git` of each chunk leaves the rest out without a word. Now such a field is answered by
-program from the patch (`line_check.diff_file_ranges`, #582), with `_local_delegate.diff_files`.
+(`ficheros_con_lineas`) came back with the first file only: a model that names the first
+`diff --git` of each chunk leaves the rest out without a word. Such a field is answered by
+program from the patch, with no backend call when it is the only one (#687).
 
 #666: a location answer longer than the single call's `max_tokens` came back as a JSON cut in two,
-an error whose only words were "not parseable", and the lines it invented unchecked. Now the cut
-single call is redone in halves (the map/reduce splits again what is still cut), the location
-values are joined by program, and an answer that stays cut says `max_tokens` in its error and
-lists the cited lines that do not hold in `lines_unverified`.
+an error whose only words were "not parseable". The cut single call is redone in halves (the
+map/reduce splits again what is still cut), the location items are joined by program, and an
+answer that stays cut says `max_tokens` in its error.
 
-Backend faked (`_run_chat` doubled), no network; the usage log goes to `tmp_path`.
+Since 0.54.0 (#692-#698) the value is a list of `{name, start, end}` with the program's lines,
+the meta key is `located` (no more `diff_files` nor `lines_unverified`), and the model answers a
+location field with anchors, never with numbers. Backend faked (`_run_chat` doubled), no network;
+the usage log goes to `tmp_path`.
 """
 
 from __future__ import annotations
@@ -22,12 +23,13 @@ import re
 
 import pytest
 
-from local_delegate import config, i18n, line_check, server
+from local_delegate import config, i18n, line_check, locate, server
 
 FILES_FIELD = "ficheros_con_lineas"
 EXEC_FIELD = "lineas_con_red_o_exec_con_lineas"
-DIFF_HEADER = re.compile(r"^(\d+)\| diff --git a/(\S+) ", re.MULTILINE)
-EXEC_LINE = re.compile(r"^(\d+)\| .*subprocess", re.MULTILINE)
+INSTRUCTION = "Extrae los campos del siguiente contenido:\n\n"
+#: The anchor of an exec line of `_skills`: unique in the file.
+EXEC_ANCHOR = re.compile(r"en el paso \d+-\d+ con red")
 
 
 def _ok(text: str, finish_reason: str = "stop"):
@@ -59,13 +61,13 @@ def _write(tmp_path, text: str, name: str) -> str:
     return str(path)
 
 
-def _diff(files: int, lines_per_file: int) -> tuple[str, list[str]]:
-    """A unified diff of `files` files with distinct names and the expected `path: first-last`.
+def _diff(files: int, lines_per_file: int) -> tuple[str, list[dict]]:
+    """A unified diff of `files` files with distinct names and the expected items.
 
-    The expected ranges are counted here, line by line, not taken from `diff_file_ranges`.
+    The expected ranges are counted here, line by line, not taken from the index.
     """
     out: list[str] = []
-    expected: list[str] = []
+    expected: list[dict] = []
     for f in range(files):
         name = "package.json" if f == 0 else f"src/mod{f:02d}/pieza_{chr(97 + f % 26)}{f}.ts"
         first = len(out) + 1
@@ -80,67 +82,74 @@ def _diff(files: int, lines_per_file: int) -> tuple[str, list[str]]:
             f"+const valor_{f}_{i} = calculaAlgoLargo({i}, 'texto de relleno');"
             for i in range(lines_per_file)
         ]
-        expected.append(f"{name}: {first}-{len(out)}")
+        expected.append({"name": name, "start": first, "end": len(out)})
     return "\n".join(out) + "\n", expected
 
 
-def _first_file_only(call):
-    """The model of the issue: it names the first `diff --git` of what it reads, and stops."""
-    found = DIFF_HEADER.findall(call["user"])[:1]
-    return _ok(json.dumps({FILES_FIELD: [f"{name}: líneas {line}-21" for line, name in found]}))
+def _summary_only(call):
+    """The model answers the field it is asked; the files never reach it."""
+    return _ok(json.dumps({"summary": "un cambio"}))
 
 
 # --- #665 -----------------------------------------------------------------------------------
 
 
 @pytest.mark.parametrize(
-    "name", [FILES_FIELD, "files_with_lines", "archivos_y_lineas", "rutas_con_lineas"]
-)
-def test_fields_that_ask_for_the_files_of_a_diff(name):
-    assert line_check.asks_for_diff_files(name)
-
-
-@pytest.mark.parametrize(
     "name",
     [
-        EXEC_FIELD,
-        "hunks_with_lines",
-        "sections_with_lines",
-        "file_name",
-        "files",
-        "fichero_con_lineas",
+        FILES_FIELD,
+        "files_with_lines",
+        "archivos_y_lineas",
+        "rutas_con_lineas",
+        "lista_de_ficheros_con_sus_lineas",
+        "fichero_con_lineas",  # singular: one file, chosen by the model
     ],
 )
-def test_fields_that_do_not(name):
-    assert not line_check.asks_for_diff_files(name)
+def test_fields_that_ask_for_the_files_of_a_diff(name):
+    assert line_check.is_location_field(name)
+    assert "files" in locate.classify_field(name).categories
+
+
+@pytest.mark.parametrize("name", [EXEC_FIELD, "hunks_with_lines", "sections_with_lines"])
+def test_location_fields_that_do_not(name):
+    assert "files" not in locate.classify_field(name).categories
+
+
+@pytest.mark.parametrize("name", ["file_name", "files"])
+def test_fields_that_are_no_location(name):
+    assert not line_check.is_location_field(name)
 
 
 def test_every_file_of_a_chunked_diff_comes_back(backend, tmp_path):
-    calls, state = backend
-    state["answer"] = _first_file_only
+    calls, _state = backend
     text, expected = _diff(30, 60)
-    assert len(text) > config.max_chars_for_role("long"), "guard: it must chunk"
+    assert len(text) > config.max_chars_for_role("long"), "guard: it would chunk"
     data = server.local_extract(fields=[FILES_FIELD], path=_write(tmp_path, text, "big.patch"))
     assert calls == [], "#687: the program answers every field, no backend call"
     assert data[FILES_FIELD] == expected
     meta = data["_local_delegate"]
-    assert meta["diff_files"]["fields"] == [FILES_FIELD]
-    assert meta["diff_files"]["files"] == 30
-    assert "30" in meta["diff_files"]["notice"]
+    assert meta["located"][FILES_FIELD] == {
+        "by": "program",
+        "index": "diff",
+        "items": 30,
+        "unlocated": 0,
+    }
     assert "warning" not in meta, "a value by program is not a failure"
 
 
 def test_a_single_call_diff_is_answered_by_program_too(backend, tmp_path):
     calls, state = backend
-    state["answer"] = _first_file_only
+    state["answer"] = _summary_only
     text, expected = _diff(3, 4)
     data = server.local_extract(
         fields=["summary", FILES_FIELD], path=_write(tmp_path, text, "small.patch")
     )
     assert len(calls) == 1
-    assert data[FILES_FIELD] == expected
-    # #582: the model is told the `@@` numbers are not lines of the patch.
-    assert server._DIFF_LINES_CLAUSE in calls[0]["system"]
+    assert data == {"summary": "un cambio", FILES_FIELD: expected, "_local_delegate": data[
+        "_local_delegate"
+    ]}  # fmt: skip
+    assert f'"{FILES_FIELD}"' not in calls[0]["system"], "the model is not asked for it"
+    assert server._DIFF_LINES_CLAUSE not in calls[0]["system"]
 
 
 def test_the_diff_files_survive_an_answer_that_is_not_json(backend, tmp_path):
@@ -184,7 +193,7 @@ def test_json_that_is_not_an_object_keeps_the_diff_files(backend, tmp_path):
 
 def test_a_cut_call_with_only_diff_files_is_not_retried(backend, tmp_path):
     calls, state = backend
-    state["answer"] = lambda call: _ok(f'{{"{FILES_FIELD}": ["package.json: 1-', "length")
+    state["answer"] = lambda call: _ok('{"summary": "algo cort', "length")
     text, expected = _diff(6, 30)
     assert len(text) > 2 * config.CHUNK_MIN_CHARS and len(text) < config.max_chars_for_role("long")
     data = server.local_extract(
@@ -194,26 +203,32 @@ def test_a_cut_call_with_only_diff_files_is_not_retried(backend, tmp_path):
     assert data[FILES_FIELD] == expected
 
 
-def test_another_location_field_over_a_diff_keeps_the_models_value(backend, tmp_path):
+def test_another_location_field_over_a_diff_gets_the_programs_lines(backend, tmp_path):
     _calls, state = backend
-    value = ["package.json: línea 6"]
-    state["answer"] = lambda call: _ok(json.dumps({"hunks_with_lines": value}))
     text, _expected = _diff(3, 4)
-    data = server.local_extract(
-        fields=["hunks_with_lines"], path=_write(tmp_path, text, "small.patch")
+    anchor = "+const valor_1_2 = calculaAlgoLargo(2"
+    state["answer"] = lambda call: _ok(
+        json.dumps({EXEC_FIELD: [{"name": "valor_1_2", "anchor": anchor, "start": 1}]})
     )
-    assert data["hunks_with_lines"] == value
-    assert "diff_files" not in data.get("_local_delegate", {})
+    data = server.local_extract(fields=[EXEC_FIELD], path=_write(tmp_path, text, "small.patch"))
+    line = text.split("\n").index(
+        "+const valor_1_2 = calculaAlgoLargo(2, 'texto de relleno');"
+    ) + 1  # fmt: skip
+    assert data[EXEC_FIELD] == [{"name": "valor_1_2", "start": line, "end": line}]
+    assert data["_local_delegate"]["located"][EXEC_FIELD]["by"] == "anchor"
 
 
 def test_a_file_that_is_not_a_diff_is_left_to_the_model(backend, tmp_path):
     calls, state = backend
-    value = ["README.md: líneas 1-3"]
-    state["answer"] = lambda call: _ok(json.dumps({FILES_FIELD: value}))
-    data = server.local_extract(
-        fields=[FILES_FIELD], path=_write(tmp_path, "# Título\n\nTexto\n", "notes.md")
+    state["answer"] = lambda call: _ok(
+        json.dumps({FILES_FIELD: [{"name": "README.md", "anchor": "Texto del documento"}]})
     )
-    assert data[FILES_FIELD] == value
+    data = server.local_extract(
+        fields=[FILES_FIELD],
+        path=_write(tmp_path, "# Título\n\nTexto del documento\n", "notes.md"),
+    )
+    assert len(calls) == 1
+    assert data[FILES_FIELD] == [{"name": "README.md", "start": 3, "end": 3}]
     assert server._DIFF_LINES_CLAUSE not in calls[0]["system"]
 
 
@@ -250,15 +265,16 @@ def _exec_lines(text: str) -> list[int]:
 
 
 def _answer_up_to(cap: int):
-    """A model whose answer is cut by `max_tokens` past `cap` items, after an invented line."""
+    """A model whose answer is cut by `max_tokens` past `cap` items: it anchors each exec line
+    of the piece it reads (never a number)."""
 
     def answer(call):
-        found = EXEC_LINE.findall(call["user"])
+        found = EXEC_ANCHOR.findall(call["user"].split(INSTRUCTION, 1)[-1])
+        items = [{"name": "subprocess", "anchor": anchor} for anchor in found]
         if len(found) > cap:
-            found = found or ["1"]
-            cut = f'{{"{EXEC_FIELD}": ["subprocess: línea 99999", "subprocess: línea {found[0]}", "'
+            cut = json.dumps({EXEC_FIELD: items[:2]})[:-3]
             return _ok(cut, "length")
-        return _ok(json.dumps({EXEC_FIELD: [f"subprocess: línea {n}" for n in found]}))
+        return _ok(json.dumps({EXEC_FIELD: items}))
 
     return answer
 
@@ -270,9 +286,9 @@ def test_a_cut_single_call_is_retried_in_halves(backend, tmp_path):
     data = server.local_extract(fields=[EXEC_FIELD], path=_write(tmp_path, text, "skills.md"))
     assert len(calls) > 1, "the cut call was redone"
     assert "error" not in data.get("_local_delegate", {})
-    cited = [int(re.search(r"\d+$", v).group()) for v in data[EXEC_FIELD]]
+    cited = [item["start"] for item in data[EXEC_FIELD]]
     assert cited == _exec_lines(text), "every line, each once, none invented"
-    assert "lines_unverified" not in data.get("_local_delegate", {})
+    assert "unlocated" not in data["_local_delegate"]
 
 
 def _rows(tmp_path) -> list[dict]:
@@ -298,7 +314,7 @@ def test_a_retried_call_is_one_usage_row_that_reads_the_file_once(backend, tmp_p
     assert server._accounting(row)["chars_saved_text"] == len(text), "the file, once"
 
 
-def test_an_answer_that_stays_cut_says_max_tokens_and_checks_its_lines(backend, tmp_path):
+def test_an_answer_that_stays_cut_says_max_tokens(backend, tmp_path):
     calls, state = backend
     state["answer"] = _answer_up_to(-1)  # every call is cut, the reduce too
     text = _skills()
@@ -306,21 +322,20 @@ def test_an_answer_that_stays_cut_says_max_tokens_and_checks_its_lines(backend, 
     meta = data["_local_delegate"]
     assert len(calls) > 1, "guard: it was redone"
     assert meta["truncated"] is True
-    unverified = meta["lines_unverified"]
-    assert unverified.count("raw: 99999") == 1, "the invented line, once"
-    assert not {f"raw: {n}" for n in _exec_lines(text)} & set(unverified), "real lines hold"
+    assert "lines_unverified" not in meta
     assert meta["error"] == i18n.t("mcp.extract.not_json_cut")
 
 
-def test_a_cut_chunk_beside_good_ones_has_its_lines_checked(backend, tmp_path):
-    """The redone call recovers the good chunks; the one still cut is left out, but checked."""
+def test_a_cut_chunk_beside_good_ones_leaves_the_others(backend, tmp_path):
+    """The redone call recovers the good chunks; the one still cut is left out."""
     _calls, state = backend
     good = _answer_up_to(40)
+    first_anchor = EXEC_ANCHOR.findall(_skills())[0]
 
     def answer(call):
-        found = EXEC_LINE.findall(call["user"])
-        if found and found[0] == str(_exec_lines(_skills())[0]) and len(found) <= 40:
-            return _ok(f'{{"{EXEC_FIELD}": ["subprocess: línea 88888", "', "length")
+        found = EXEC_ANCHOR.findall(call["user"].split(INSTRUCTION, 1)[-1])
+        if found and found[0] == first_anchor and len(found) <= 40:
+            return _ok(f'{{"{EXEC_FIELD}": [{{"name": "x", "anchor": "', "length")
         return good(call)
 
     state["answer"] = answer
@@ -328,20 +343,19 @@ def test_a_cut_chunk_beside_good_ones_has_its_lines_checked(backend, tmp_path):
     meta = data["_local_delegate"]
     assert "error" not in meta and data[EXEC_FIELD], "the other chunks are kept"
     assert meta["truncated"] is True
-    assert "raw: 88888" in meta["lines_unverified"]
 
 
 def test_a_cut_call_too_small_to_split_says_max_tokens(backend, tmp_path):
     calls, state = backend
     state["answer"] = _answer_up_to(-1)
-    text = "# Skill\n\nEjecuta `subprocess.run` con red.\n"
+    text = "# Skill\n\nEjecuta `subprocess.run` en el paso 0-0 con red.\n"
     data = server.local_extract(fields=[EXEC_FIELD], path=_write(tmp_path, text, "tiny.md"))
     meta = data["_local_delegate"]
     assert len(calls) == 1, "nothing to split"
     assert meta["error"] == i18n.t("mcp.extract.not_json_cut")
     assert "max_tokens" in meta["error"]
     assert meta["truncated"] is True
-    assert meta["lines_unverified"] == ["raw: 99999"]
+    assert "lines_unverified" not in meta
 
 
 def test_a_cut_answer_without_location_fields_is_not_retried(backend, tmp_path):

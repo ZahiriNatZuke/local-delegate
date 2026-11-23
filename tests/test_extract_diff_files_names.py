@@ -8,6 +8,10 @@ but a field that asks for the files AND their hunks, `changed_files_with_lines` 
 `changed` read as a count of lines) and a `.patch` that does not open with a patch header (a
 preamble before the first `diff --git`) still went to the model, chunk by chunk.
 
+Since 0.54.0 (#692-#698) the value is a list of `{name, start, end}` (with `hunks` when asked)
+and the meta key is `located`; `asks_for_diff_files`/`asks_for_diff_hunks` gave way to
+`locate.classify_field`, which reads the categories by presence (#697).
+
 Inputs here have the SHAPE of the reports, never their content. Backend faked (`_run_chat`
 doubled, a model that answers null), no network; the usage log goes to `tmp_path`.
 """
@@ -18,7 +22,7 @@ import json
 
 import pytest
 
-from local_delegate import config, cost, i18n, line_check, server
+from local_delegate import config, cost, i18n, line_check, locate, server
 
 HUNKS_FIELD = "ficheros_y_hunks_con_lineas"
 FILES_FIELD = "ficheros_con_lineas"
@@ -68,20 +72,20 @@ FORMAT_PATCH_HEAD = [
 
 def _shaped_diff(
     files: int, new_files: int, new_len: int, mod_hunks: int, hunk_len: int, head: list[str]
-) -> tuple[str, list[str], list[str]]:
+) -> tuple[str, list[dict], list[dict]]:
     """A diff of `files` files: the first `new_files` new (one `@@ -0,0 +1,N @@` hunk of `new_len`
     lines), the rest modified with `mod_hunks` hunks of `hunk_len` lines each.
 
-    Returns the text, the expected `path: first-last` per file and the expected value of a
-    files-and-hunks field, counted here line by line, not taken from `diff_file_ranges`.
+    Returns the text, the expected item per file and the expected value of a files-and-hunks
+    field, counted here line by line, not taken from the index.
     """
     out: list[str] = list(head)
-    files_expected: list[str] = []
-    hunks_expected: list[str] = []
+    files_expected: list[dict] = []
+    hunks_expected: list[dict] = []
     for f in range(files):
         name = f"src/modulo{f:02d}/componente_{f}.spec.ts"
         first = len(out) + 1
-        hunks: list[str] = []
+        hunks: list[list[int]] = []
         if f < new_files:
             out += [
                 f"diff --git a/{name} b/{name}",
@@ -96,7 +100,7 @@ def _shaped_diff(
                 f"+  it('caso {i} del fichero {f}', () => expect(valor).toBe({i}));"
                 for i in range(new_len)
             ]
-            hunks.append(f"{start}-{len(out)}")
+            hunks.append([start, len(out)])
         else:
             out += [
                 f"diff --git a/{name} b/{name}",
@@ -110,9 +114,9 @@ def _shaped_diff(
                 out.append(f"@@ -{base},{hunk_len} +{base},{hunk_len + 1} @@ export class Algo {{")
                 out += [f"   const contexto_{h}_{i} = {i};" for i in range(hunk_len - 1)]
                 out += ["-  viejo();", "+  nuevo();", "+  otro();"]
-                hunks.append(f"{start}-{len(out)}")
-        files_expected.append(f"{name}: {first}-{len(out)}")
-        hunks_expected.append(f"{name}: {first}-{len(out)} (hunks: {', '.join(hunks)})")
+                hunks.append([start, len(out)])
+        files_expected.append({"name": name, "start": first, "end": len(out)})
+        hunks_expected.append({"name": name, "start": first, "end": len(out), "hunks": hunks})
     return "\n".join(out) + "\n", files_expected, hunks_expected
 
 
@@ -120,34 +124,42 @@ def _shaped_diff(
 
 
 @pytest.mark.parametrize(
-    "name",
+    ("name", "singular"),
     [
-        HUNKS_FIELD,
-        "files_and_hunks_with_lines",
-        "archivos_y_hunks_con_lineas",
-        "files_with_hunks_and_lines",
+        (HUNKS_FIELD, False),
+        ("files_and_hunks_with_lines", False),
+        ("archivos_y_hunks_con_lineas", False),
+        ("files_with_hunks_and_lines", False),
+        ("fichero_y_hunks_con_lineas", False),  # the plural `hunks` asks for several
     ],
 )
-def test_fields_that_ask_for_the_files_and_their_hunks(name):
-    assert line_check.asks_for_diff_hunks(name)
-    assert not line_check.asks_for_diff_files(name), "files only is the other answer"
+def test_fields_that_ask_for_the_files_and_their_hunks(name, singular):
+    req = locate.classify_field(name)
+    assert {"files", "hunks"} <= req.categories and req.hunks
+    assert req.singular is singular
+    assert req.residual == ()
+
+
+@pytest.mark.parametrize("name", ["hunks_with_lines", "hunks_con_lineas"])
+def test_fields_that_ask_for_the_hunks_only(name):
+    req = locate.classify_field(name)
+    assert req.categories == {"hunks"} and req.hunks
 
 
 @pytest.mark.parametrize(
     "name",
-    ["hunks_with_lines", "hunks_con_lineas", "fichero_y_hunks_con_lineas", "files_and_hunks"],
-)
-def test_fields_that_do_not_ask_for_files_and_hunks(name):
-    assert not line_check.asks_for_diff_hunks(name)
-
-
-@pytest.mark.parametrize(
-    "name",
-    ["changed_files_with_lines", "modified_files_with_lines", "ficheros_modificados_con_lineas"],
+    [
+        "changed_files_with_lines",
+        "modified_files_with_lines",
+        "ficheros_modificados_con_lineas",
+        "ficheros_que_cambian_con_sus_lineas",
+        "lista_de_ficheros_con_sus_lineas",
+    ],
 )
 def test_changed_files_is_not_a_count_of_lines(name):
     assert line_check.is_location_field(name)
-    assert line_check.asks_for_diff_files(name)
+    req = locate.classify_field(name)
+    assert req.categories == {"files"} and req.residual == () and not req.singular
 
 
 @pytest.mark.parametrize(
@@ -168,8 +180,12 @@ def test_files_and_hunks_of_a_92_kb_patch_come_back_by_program(backend, tmp_path
     assert backend == [], "#687: the program answers every field, no backend call"
     assert data[HUNKS_FIELD] == hunks
     meta = data["_local_delegate"]
-    assert meta["diff_files"]["fields"] == [HUNKS_FIELD]
-    assert meta["diff_files"]["files"] == 14
+    assert meta["located"][HUNKS_FIELD] == {
+        "by": "program",
+        "index": "diff",
+        "items": 14,
+        "unlocated": 0,
+    }
     assert "chunked" not in meta and "warning" not in meta
 
 
@@ -206,7 +222,9 @@ def test_a_preamble_in_a_file_that_is_not_a_patch_is_not_read_as_one(backend, tm
     head = ["# Notas", "", "Texto que enseña un diff:", ""]
     text, _files, _hunks = _shaped_diff(2, 1, 5, 1, 5, head)
     data = server.local_extract(fields=[FILES_FIELD], path=_write(tmp_path, text, "notes.md"))
-    assert "diff_files" not in data.get("_local_delegate", {})
+    located = data.get("_local_delegate", {}).get("located", {})
+    assert located.get(FILES_FIELD, {}).get("index") != "diff"
+    assert backend, "not a diff: the model is asked"
 
 
 def test_a_patch_without_file_headers_says_so(backend, tmp_path):
@@ -218,17 +236,14 @@ def test_a_patch_without_file_headers_says_so(backend, tmp_path):
     assert i18n.t("mcp.warning.extract_diff_unparsed", fields=HUNKS_FIELD) in meta["warning"]
 
 
-def test_a_null_location_field_over_a_chunked_diff_names_the_program_fields(backend, tmp_path):
-    """A field the program does not answer, null in every chunk: the warning says what would."""
-    text, _files, _hunks = _shaped_diff(14, 6, 330, 3, 40, [])
+def test_the_hunks_of_a_chunked_diff_are_answered_by_program(backend, tmp_path):
+    """`hunks_with_lines` named a category the old word lists missed: now the index answers."""
+    text, _files, hunks = _shaped_diff(14, 6, 330, 3, 40, [])
     data = server.local_extract(
         fields=["hunks_with_lines"], path=_write(tmp_path, text, "pr.patch")
     )
-    meta = data["_local_delegate"]
-    assert data["hunks_with_lines"] is None
-    hint = i18n.t("mcp.warning.extract_diff_null_hint", fields="hunks_with_lines")
-    assert hint in meta["warning"]
-    assert meta["chunked"]["null_fields"] == ["hunks_with_lines"]
+    assert backend == []
+    assert data["hunks_with_lines"] == hunks
 
 
 def test_a_file_without_hunks_gets_its_range_alone(backend, tmp_path):
@@ -242,13 +257,14 @@ def test_a_file_without_hunks_gets_its_range_alone(backend, tmp_path):
         "Binary files /dev/null and b/assets/logo.png differ\n"
     )
     data = server.local_extract(fields=[HUNKS_FIELD], path=_write(tmp_path, text, "bin.patch"))
-    assert data[HUNKS_FIELD] == [*hunks, f"assets/logo.png: {first}-{first + 3}"]
+    binary = {"name": "assets/logo.png", "start": first, "end": first + 3, "hunks": []}
+    assert data[HUNKS_FIELD] == [*hunks, binary]
 
 
 # --- #687: only program fields, no backend call ------------------------------------------------
 
 
-def _big_pr_diff() -> tuple[str, list[str], list[str]]:
+def _big_pr_diff() -> tuple[str, list[dict], list[dict]]:
     """The shape of the #687 report: a ~150 KB patch of 26 files that the long role chunks."""
     text, files, hunks = _shaped_diff(26, 10, 330, 3, 40, [])
     assert len(text) > 140_000 and len(text) > config.max_chars_for_role("long"), "guard: chunks"
@@ -334,11 +350,11 @@ def test_only_diff_fields_give_the_same_answer_as_with_the_model(backend, tmp_pa
     text, files, hunks = _big_pr_diff()
     fields = [HUNKS_FIELD, "changed_files_with_lines"]
     data = server.local_extract(fields=fields, path=_write(tmp_path, text, "pr.patch"))
-    notice = i18n.t("mcp.extract.diff_files_by_program", fields=", ".join(fields), count=26)
+    located = {"by": "program", "index": "diff", "items": 26, "unlocated": 0}
     assert data == {
         HUNKS_FIELD: hunks,
         "changed_files_with_lines": files,
-        "_local_delegate": {"diff_files": {"fields": fields, "files": 26, "notice": notice}},
+        "_local_delegate": {"located": dict.fromkeys(fields, located)},
     }
 
 
