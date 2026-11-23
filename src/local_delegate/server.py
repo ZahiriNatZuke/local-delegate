@@ -8173,7 +8173,8 @@ def _test_figures(content: str, answer: str, text: str) -> str:
     versions = (
         i18n.t("mcp.test_facts.versions", python=header[0], pytest=header[1]) if header else ""
     )
-    out = f"{text.rstrip()}\n\n{i18n.t('mcp.test_facts.line', totals=totals, versions=versions)}"
+    # Review of #717 (R6): right after the summary, before the warnings, as the lint counts.
+    out = _before_warnings(text, i18n.t("mcp.test_facts.line", totals=totals, versions=versions))
     if other and header is not None:
         notice = i18n.t(
             "mcp.warning.summary_other_python",
@@ -8182,6 +8183,16 @@ def _test_figures(content: str, answer: str, text: str) -> str:
         )
         out = f"{out}\n\n{WARNING_MARKER}{notice}]"
     return out
+
+
+def _before_warnings(text: str, line: str) -> str:
+    """`text` with `line` after its body and before the warnings other checks added (#717).
+
+    The lines of the program (`_test_figures`, `_lint_counts`) go together right after the
+    summary, in the order they are added; the warnings keep closing the answer, as they did.
+    """
+    body, marker, warnings = text.rstrip().partition(f"\n\n{WARNING_MARKER}")
+    return f"{body.rstrip()}\n\n{line}" + (f"{marker}{warnings}" if marker else "")
 
 
 #: #717: how many files and codes the line of the counts lists before saying how many more.
@@ -8214,11 +8225,8 @@ def _lint_counts(log: str, answer: str, text: str) -> str:
     codes = ", ".join(f"{code} {n}" for code, n in ranked[:_LINT_COUNTS_ITEMS])
     if len(ranked) > _LINT_COUNTS_ITEMS:
         codes += i18n.t("mcp.lint_counts.more_codes", count=len(ranked) - _LINT_COUNTS_ITEMS)
-    # The line goes right after the summary, before the warnings the other checks added: those
-    # keep closing the answer, as they did.
-    line = i18n.t("mcp.lint_counts.line", files=files, codes=codes)
-    body, marker, warnings = text.rstrip().partition(f"\n\n{WARNING_MARKER}")
-    out = f"{body.rstrip()}\n\n{line}" + (f"{marker}{warnings}" if marker else "")
+    # After the summary and the totals of `_test_figures`, before the warnings.
+    out = _before_warnings(text, i18n.t("mcp.lint_counts.line", files=files, codes=codes))
     found = lint_patterns.count_mismatches(answer, per_file)
     if not found:
         return out

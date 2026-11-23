@@ -35,6 +35,12 @@ el modelo nuevo.
   fichero y el recuento por código del log entero, y con un aviso cuando el resumen da otra cifra
   para un fichero o un código, o le pone a un fichero un código que el log no le da. Otros formatos
   (eslint stylish, pytest, logs de CI) salen como antes.
+- **`local_lint_summary` y `local_summarize`: las líneas del programa van juntas y sin avisos de
+  más** (revisión del #717). La línea de totales de tests (#715) iba detrás de los avisos y la de
+  recuentos del lint delante; ahora las dos van tras el resumen, en ese orden, y los avisos cierran
+  la respuesta. Y un párrafo sin sangría bajo un título de fichero (`### a.py`), o una línea que
+  nombra un fichero del log a media línea, ya no se compara con el total del log entero: con un
+  código repartido en varios ficheros daba un aviso de más.
 - **`local_summarize` troceado: una sección vacía dos veces ya no deja su título en el cuerpo**
   (#691). Si una sección salía vacía en su trozo y otra vez en el reintento, su título se quedaba
   vacío en el cuerpo y además se nombraba en el aviso. Ahora sale una sola vez, en el aviso.
