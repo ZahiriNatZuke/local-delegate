@@ -141,7 +141,10 @@ HARMLESS_FIRST = (
 )
 
 _TOKEN = re.compile(
-    r"""'[^']*'|"(?:\\.|[^"\\])*"|\|\||&&|>>|<<-?|2>&1|2>|[|;<>()&]|\n|[^\s|;<>()&'"]+"""
+    # `\"` y `\'` fuera de comillas son parte de la palabra (en Bash, una comilla escapada): sin
+    # eso, cada `\"` abría una cadena sin cierre que se recorría hasta el final, en tiempo
+    # cuadrático, y un comando largo pasaba del plazo del hook (issue #707).
+    r"""'[^']*'|"(?:\\.|[^"\\])*"|\|\||&&|>>|<<-?|2>&1|2>|[|;<>()&]|\n|(?:\\["']|[^\s|;<>()&'"])+"""
 )
 _HEREDOC = re.compile(r"<<-?\s*(['\"]?)([A-Za-z_][A-Za-z0-9_]*)\1")
 _HERESTRING = re.compile(r"@'.*?'@|@\".*?\"@", re.DOTALL)
@@ -175,6 +178,9 @@ class Access:
     #: El comando entero es exactamente «verbo + una ruta», sin tubería, redirección, encadenado,
     #: sustitución ni opciones. Solo con esto bloquea el hook de shell de la entrega por settings.
     simple: bool = False
+    #: La salida de su tubería acaba en un fichero (`cat a | head > b`, `| Out-File b`): nada de
+    #: la lectura entra al contexto. El guard de Codex no la cuenta como lectura literal (#707).
+    to_file: bool = False
 
 
 # --- Trocear el comando ----------------------------------------------------------------------------
@@ -472,8 +478,18 @@ def classify_shell(command: str, tool: str = "Bash") -> list[Access]:
                 n = _int(_flag_value(next_args, "-n", "-first")) or next(
                     (_int(a[1:]) for a in next_args if _NEGATIVE_NUMBER.fullmatch(a)), None
                 )
-                if n:
-                    call.scope, call.lines = "range", (1, n)
+                # `Select-Object -Skip N` salta antes de `-First` (issue #707): N+1..N+M, o de N+1
+                # al final sin `-First`. Con `-Last`, `-SkipLast` o `-Index` no es una franja fija.
+                skip = _int(_flag_value(next_args, "-skip")) if next_verb == "select-object" else 0
+                if {a.lower() for a in next_args} & {"-last", "-skiplast", "-index"}:
+                    pass
+                elif n:
+                    call.scope, call.lines = "range", ((skip or 0) + 1, (skip or 0) + n)
+                elif skip:
+                    call.scope, call.lines = "range", (skip + 1, None)
+        call.to_file = segment.redirected or _verb(segment.stages[-1])[0] in (
+            _WRITE_CONTENT - {verb}
+        )
         call.simple = (
             not compound
             and call.via == "shell_cat"

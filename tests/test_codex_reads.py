@@ -247,7 +247,7 @@ def test_other_whole_reads_are_summarized_too(world, command):
 @pytest.mark.parametrize(
     "command", ["cat notes.md; rm other.txt", "cat notes.md && git status", "echo $(cat notes.md)"]
 )
-def test_a_compound_command_is_never_denied_for_a_read(world, command):
+def test_a_compound_command_with_other_commands_is_never_denied_for_a_read(world, command):
     _prose(world["work"] / "notes.md")
     out = _bash(world, command)
     assert out is None or "permissionDecision" not in out["hookSpecificOutput"]
@@ -302,16 +302,23 @@ def test_the_read_switch_off_lets_it_through(world, change):
     assert world["calls"] == []
 
 
-def test_backend_down_lets_it_through_but_keeps_the_guard(world):
-    _prose(world["work"] / "notes.md")
-    _denied(_bash(world, "cat notes.md"))
+def _cut_the_backend(world) -> None:
     world["data"].mkdir(exist_ok=True)
     breaker = world["data"] / COMMON.BACKEND_BREAKER_FILE
     breaker.write_text(json.dumps({"127.0.0.1:1": {"until": time.time() + 600}}), "utf-8")
     assert COMMON.backend_down(world["env"]), "the cut did not open: the test proves nothing"
+
+
+def test_backend_down_lets_it_through_and_the_literal_read_lifts_the_guard(world):
+    """Issue #707: the whole file entered the context literally, so the guard goes (it used to stay,
+    and `apply_patch` was refused in a loop for as long as the backend was down)."""
+    _prose(world["work"] / "notes.md")
+    _denied(_bash(world, "cat notes.md"))
+    _denied(_patch(world, "*** Update File: notes.md\n@@\n-a\n+b"))  # control: guarded
+    _cut_the_backend(world)
     world["calls"].clear()
     assert _bash(world, "cat notes.md") is None and world["calls"] == []
-    _denied(_patch(world, "*** Update File: notes.md\n@@\n-a\n+b"))
+    assert _patch(world, "*** Update File: notes.md\n@@\n-a\n+b") is None
 
 
 @pytest.mark.parametrize("session", [None, "", "../x", "a" * 129, "con espacio"])
@@ -504,6 +511,7 @@ class _FakeMcp(http.server.BaseHTTPRequestHandler):
     seen: ClassVar[list] = []
     mode = "sse"
     delay = 0.0
+    step = 0.0  # before every request: each one in time, all of them together not
 
     def log_message(self, *_args):
         pass
@@ -523,6 +531,7 @@ class _FakeMcp(http.server.BaseHTTPRequestHandler):
         self.wfile.write(body)
 
     def do_POST(self):
+        time.sleep(self.step)
         body = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
         type(self).seen.append(("POST", body, dict(self.headers)))
         if self.mode == "401":
@@ -547,6 +556,7 @@ class _FakeMcp(http.server.BaseHTTPRequestHandler):
             self._answer({"jsonrpc": "2.0", "id": body["id"], "result": result})
 
     def do_DELETE(self):
+        time.sleep(self.step)
         type(self).seen.append(("DELETE", None, dict(self.headers)))
         self.send_response(200)
         self.end_headers()
@@ -557,6 +567,7 @@ def fake_mcp():
     _FakeMcp.seen = []
     _FakeMcp.mode = "sse"
     _FakeMcp.delay = 0.0
+    _FakeMcp.step = 0.0
     server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), _FakeMcp)
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
@@ -663,3 +674,269 @@ def test_the_experiment_switch_off_silences_the_guard_too(world, tmp_path):
     env = {**_sandbox(tmp_path, world), "LD_HOOK_ENABLED": "0"}
     result = _hook(json.dumps(payload).encode("utf-8"), env)
     assert result.returncode == 0 and result.stdout == b""
+
+
+# --- codex-guard-fixes (issues #706 and #707) -----------------------------------------------------
+_PATCH_ON_NOTES = "*** Update File: notes.md\n@@\n-a\n+b"
+
+
+def test_the_patch_paths_come_out_in_linear_time():
+    """REQ-001 (#706): `(.+?)\\s*$` backtracked over every blank, quadratic (40 000: about 5 s)."""
+    command = "*** Begin Patch\n*** Update File: a" + " " * 40_000 + "b\n*** End Patch\n"
+    start = time.process_time()
+    found = [m.group(1).strip() for m in codex_reads._PATCH_PATH.finditer(command)]
+    spent = time.process_time() - start
+    assert found == ["a" + " " * 40_000 + "b"]
+    assert spent < 1.0, f"{spent:.2f} s of CPU for one patch header"
+
+
+def test_a_patch_path_loses_its_trailing_blanks_and_the_cr(world):
+    _prose(world["work"] / "notes.md")
+    _denied(_bash(world, "cat notes.md"))
+    patch = "*** Begin Patch\r\n*** Update File: notes.md   \r\n@@\r\n-a\r\n+b\r\n*** End Patch\r\n"
+    _denied(_decide(world, _payload(world, "apply_patch", {"command": patch}), None))
+    empty = "*** Begin Patch\n*** Delete File:    \n*** End Patch\n"
+    assert codex_reads.write_targets("apply_patch", {"command": empty}, None, world["env"]) == []
+
+
+def _switch_off(world, how: str) -> None:
+    if how == "variable":
+        world["env"]["LD_HOOK_READ_BLOCK"] = "0"
+    elif how == "disabled":
+        world["env"]["LD_HOOK_READ_ENABLED"] = "0"
+    elif how == "file":
+        switch = Path(world["env"]["USERPROFILE" if os.name == "nt" else "HOME"]) / ".claude"
+        switch.mkdir(parents=True, exist_ok=True)
+        (switch / COMMON.SWITCH_FILE_NAME).write_text("", "utf-8")
+        assert COMMON.block_state(world["env"]) == "off_file", (
+            "the file is not seen: proves nothing"
+        )
+    else:
+        _cut_the_backend(world)
+
+
+@pytest.mark.parametrize("how", ["variable", "disabled", "file", "backend"])
+@pytest.mark.parametrize("command", ["sed -n '1,40p' notes.md", "cat notes.md"])
+def test_a_literal_read_lifts_the_guard_with_the_switch_off(world, how, command):
+    """REQ-002 (#707, F1): `decide` went out before `note_real_read`, so the patch was refused in a
+    loop for as long as the switch stayed off."""
+    _prose(world["work"] / "notes.md")
+    _denied(_bash(world, "cat notes.md"))
+    _denied(_patch(world, _PATCH_ON_NOTES))  # control: guarded
+    _switch_off(world, how)
+    world["calls"].clear()
+    assert _bash(world, command) is None and world["calls"] == []
+    assert _patch(world, _PATCH_ON_NOTES) is None
+
+
+def test_ranges_read_with_the_switch_off_still_count(world):
+    _prose(world["work"] / "notes.md", lines=400, width=100)
+    world["env"]["LD_HOOK_READ_BLOCK"] = "0"
+    assert _bash(world, "sed -n '1,300p' notes.md") is None
+    world["env"]["LD_HOOK_READ_BLOCK"] = "1"
+    _denied(_bash(world, "sed -n '301,330p' notes.md"))  # 330 of 400 counted: 82 %
+
+
+def test_the_switch_off_does_not_lift_another_agents_guard(world):
+    _prose(world["work"] / "notes.md")
+    _denied(_bash(world, "cat notes.md"))
+    world["env"]["LD_HOOK_READ_BLOCK"] = "0"
+    assert _bash(world, "sed -n '1,40p' notes.md", AGENT) is None
+    _denied(_patch(world, _PATCH_ON_NOTES))
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        "cat notes.md other.py",
+        "cat notes.md | cat",
+        "cat notes.md | grep Linea",
+        "Get-Content notes.md | Out-String",
+    ],
+)
+def test_a_read_with_more_files_or_a_pipe_passes_with_the_note(world, command):
+    """REQ-003 (#707, F2): denying would drop the other file or the filter's output too."""
+    _prose(world["work"] / "notes.md")
+    (world["work"] / "other.py").write_text("x = 1\n", encoding="utf-8")
+    assert "puede meter mucho texto" in _note(_bash(world, command))
+    assert world["calls"] == []
+
+
+def test_a_pipe_into_a_range_filter_is_still_the_read(world):
+    """Control of the test above: `| head -n` and `| Select-Object -First` choose lines, so the
+    command is still only the read and the range check applies."""
+    _prose(world["work"] / "notes.md")  # 800 lines
+    _denied(_bash(world, "cat notes.md | head -n 700"))
+    _denied(_bash(world, "Get-Content notes.md | Select-Object -First 700"))
+    assert world["calls"] == [str(world["work"] / "notes.md")] * 2
+
+
+def test_select_object_skip_counts_its_own_lines(world):
+    """REQ-004 (#707, F3): `-Skip 200 -First 100` is 201..300, not 1..100."""
+    _prose(world["work"] / "notes.md", lines=400, width=100)
+    assert _bash(world, "Get-Content notes.md | Select-Object -Skip 200 -First 100") is None
+    assert _bash(world, "sed -n '1,200p' notes.md") is None  # 1..300: 75 %
+    _denied(_bash(world, "sed -n '301,330p' notes.md"))  # 82 %
+
+
+@pytest.mark.parametrize("joiner", ["; ", " && ", "\n"])
+def test_the_ranges_of_one_compound_command_add_up(world, joiner):
+    """REQ-005 (#707, F4): two ranges in one command were one range, under the 80 %."""
+    _prose(world["work"] / "notes.md", lines=500, width=100)
+    command = f"sed -n '1,300p' notes.md{joiner}sed -n '301,400p' notes.md"
+    reason = _denied(_bash(world, command))
+    assert "llegaria al 80 % de sus 500 lineas" in reason
+
+
+def test_ranges_of_one_command_under_the_share_pass(world):
+    """Control of the test above: 399 of 500 lines (79 %) passes, and both ranges count."""
+    _prose(world["work"] / "notes.md", lines=500, width=100)
+    assert _bash(world, "sed -n '1,300p' notes.md; sed -n '301,399p' notes.md") is None
+    _denied(_bash(world, "sed -n '400,400p' notes.md"))
+
+
+def test_ranges_in_a_mixed_compound_command_count_for_the_next_read(world):
+    _prose(world["work"] / "notes.md", lines=500, width=100)
+    command = "sed -n '1,200p' notes.md; echo ---; sed -n '201,390p' notes.md"
+    assert "puede meter mucho texto" in _note(_bash(world, command))
+    assert world["calls"] == []
+    _denied(_bash(world, "sed -n '391,400p' notes.md"))  # 400 of 500: 80 %
+
+
+def test_reads_of_two_files_in_one_command_are_not_only_the_read(world):
+    _prose(world["work"] / "notes.md", lines=500, width=100)
+    _prose(world["work"] / "other.md", lines=500, width=100)
+    command = "sed -n '1,450p' notes.md; sed -n '1,10p' other.md"
+    assert "puede meter mucho texto" in _note(_bash(world, command))
+    assert world["calls"] == []
+
+
+def test_get_content_total_count_is_a_range_that_counts(world):
+    _prose(world["work"] / "notes.md", lines=400, width=100)
+    assert _bash(world, "Get-Content notes.md -TotalCount 300") is None
+    _denied(_bash(world, "sed -n '301,330p' notes.md"))
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        "Set-Content notes.md 'nuevo'",
+        "Set-Content -Path notes.md -Value nuevo",
+        "'nuevo' | Out-File notes.md",
+        "Out-File -FilePath notes.md -InputObject nuevo",
+        "mv other.md notes.md",
+        "Move-Item other.md notes.md",
+    ],
+)
+def test_more_shell_writes_on_a_summarized_file_are_refused(world, command):
+    """REQ-009 (#707, F10): the PowerShell writes and `mv`, with their control (unguarded: pass)."""
+    _prose(world["work"] / "notes.md")
+    assert _bash(world, command) is None
+    _denied(_bash(world, "cat notes.md"))
+    _denied(_bash(world, command))
+
+
+def test_a_mcp_read_never_lifts_the_guard(world):
+    """REQ-007 (#707, F7): the hook cannot see which part of the file an MCP read returns."""
+    _prose(world["work"] / "notes.md")
+    _denied(_bash(world, "cat notes.md"))
+    payload = _payload(world, "mcp__filesystem__read_text_file", {"path": "notes.md"})
+    _note(_decide(world, payload))
+    _denied(_patch(world, _PATCH_ON_NOTES))
+
+
+def test_old_session_logs_are_pruned_when_a_session_starts(world):
+    """REQ-008 (#707, F9): 31 days old goes, 29 stays, and only `*.jsonl`."""
+    folder = world["data"] / codex_reads.STATE_DIR
+    folder.mkdir(parents=True)
+    old, recent, other = folder / "old.jsonl", folder / "recent.jsonl", folder / "keep.txt"
+    for item, days in ((old, 31), (recent, 29), (other, 31)):
+        item.write_text("{}\n", encoding="utf-8")
+        past = time.time() - days * 86400
+        os.utime(item, (past, past))
+    _prose(world["work"] / "notes.md")
+    _denied(_bash(world, "cat notes.md"))
+    assert (folder / f"{SESSION}.jsonl").exists()
+    assert not old.exists()
+    assert recent.exists() and other.exists()
+
+
+def test_the_summary_deadline_is_for_the_whole_call(fake_mcp):
+    """REQ-006 (#707, F5): four requests of 0.4 s each are all in time for a socket, not in total."""
+    _server, url = fake_mcp
+    _FakeMcp.step = 0.4
+    start = time.monotonic()
+    assert codex_reads.daemon_summarize("C:/w/n.md", url=url, token="t", timeout=1.0) is None
+    assert time.monotonic() - start < 1.5
+
+
+def test_the_same_slow_daemon_answers_within_a_longer_deadline(fake_mcp):
+    """Control of the test above: with room for the four requests the summary comes back."""
+    _server, url = fake_mcp
+    _FakeMcp.step = 0.4
+    assert codex_reads.daemon_summarize("C:/w/n.md", url=url, token="t", timeout=5.0) == (
+        "Resumen del daemon."
+    )
+
+
+def test_a_write_in_the_same_command_does_not_hide_the_read(world):
+    """A write wins as the call's primary access: the read beside it still lifts the guard."""
+    _prose(world["work"] / "notes.md")
+    _denied(_bash(world, "cat notes.md"))
+    assert _bash(world, "sed -n '1,40p' notes.md; echo x > out.txt") is None
+    assert _patch(world, _PATCH_ON_NOTES) is None
+
+
+def test_a_search_does_not_lift_the_guard(world):
+    """Control of the lifts: `grep` shows loose lines, not a known part of the file."""
+    _prose(world["work"] / "notes.md")
+    _denied(_bash(world, "cat notes.md"))
+    _bash(world, "grep Linea notes.md")
+    _denied(_patch(world, _PATCH_ON_NOTES))
+
+
+def test_a_prune_that_cannot_delete_leaves_the_read_alone(world, monkeypatch):
+    folder = world["data"] / codex_reads.STATE_DIR
+    folder.mkdir(parents=True)
+    old = folder / "old.jsonl"
+    old.write_text("{}\n", encoding="utf-8")
+    past = time.time() - 31 * 86400
+    os.utime(old, (past, past))
+
+    def refuse(self, *_args, **_kwargs):
+        raise PermissionError("in use")
+
+    monkeypatch.setattr(Path, "unlink", refuse)
+    _prose(world["work"] / "notes.md")
+    _denied(_bash(world, "cat notes.md"))
+    assert old.exists()
+    _denied(_patch(world, _PATCH_ON_NOTES))
+
+
+def test_a_patch_header_with_blanks_before_it_is_still_guarded(world):
+    """Security review: a parser that trims the line applies `  *** Update File:` too."""
+    _prose(world["work"] / "notes.md")
+    _denied(_bash(world, "cat notes.md"))
+    _denied(_patch(world, "  *** Update File: notes.md\n@@\n-a\n+b"))
+    _denied(_patch(world, "\t*** Delete File: notes.md"))
+    command = "*** Begin Patch\n" + " " * 40_000 + "x\n*** End Patch\n"
+    start = time.process_time()
+    assert list(codex_reads._PATCH_PATH.finditer(command)) == []
+    assert time.process_time() - start < 1.0
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        "cat notes.md | head -n 5 > out.txt",
+        "Get-Content notes.md | Select-Object -First 1 | Out-File out.txt",
+    ],
+)
+def test_a_read_that_goes_to_a_file_does_not_lift_the_guard(world, command):
+    """Security review: the output went to a file, so nothing entered the context."""
+    _prose(world["work"] / "notes.md")
+    _denied(_bash(world, "cat notes.md"))
+    assert _bash(world, command) is None
+    _denied(_patch(world, _PATCH_ON_NOTES))
+    assert _bash(world, "sed -n '1,5p' notes.md") is None  # control: a real range does lift it
+    assert _patch(world, _PATCH_ON_NOTES) is None

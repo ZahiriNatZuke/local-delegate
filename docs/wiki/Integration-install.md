@@ -564,13 +564,14 @@ Qué hace, en el orden del mod:
 | Llamada | Qué pasa |
 |---|---|
 | Lectura entera por shell (`cat`, `Get-Content`, `type`) de prosa por encima del umbral (`.md`, `.txt`, `.rst`, más de 8 KB) | se deniega con el resumen de `local_summarize` (pedido al daemon con `path`) como motivo, con una cabecera que dice que la lectura no se ejecutó, cuántas líneas puedes leer literales y con qué comando (`sed -n '1,120p'`, `Get-Content -TotalCount 120`); el fichero queda guardado |
-| Un tramo (`sed -n 'A,Bp'`, `head -n`, `Get-Content -TotalCount`) | pasa y suma; el tramo que llevaría lo leído en la sesión al 80 % de sus líneas se resume (como leerlo entero) |
+| Un tramo (`sed -n 'A,Bp'`, `head -n`, `Get-Content -TotalCount`, `\| Select-Object -Skip N -First M`), o varios del mismo fichero en un comando | pasa y suma cada tramo; el que llevaría lo leído en la sesión al 80 % de sus líneas se resume (como leerlo entero) |
 | Código, configuración, datos, prosa pequeña, un fichero corto (≤200 líneas y <32 KB) | pasa literal; un subagente que lee entero un fichero grande recibe la nota de localizar antes |
-| `apply_patch` (`Update/Add/Delete File`, `Move to`) o escritura por shell (`sed -i`, `>`, `cp`, `Set-Content`) sobre un fichero guardado | se rechaza hasta que leas literal un tramo de ese fichero |
-| Comando compuesto (`;`, `&&`, `$(…)`) que lee prosa grande | pasa (denegarlo quitaría también el resto) con la nota de usar `local_summarize` |
-| Lectura por una tool MCP ajena (`read_text_file`, `read_note`…) de un fichero grande | pasa con esa misma nota; nunca se deniega |
+| `apply_patch` (`Update/Add/Delete File`, `Move to`) o escritura por shell (`sed -i`, `>`, `cp`, `mv`, `Set-Content`, `Out-File`) sobre un fichero guardado | se rechaza hasta que leas literal un tramo de ese fichero (con el interruptor de lectura apagado o el backend caído, también) |
+| Comando compuesto (`;`, `&&`, `$(…)`) con otras órdenes, varios ficheros (`cat a.md b.md`) o una tubería que no elige líneas (`\| cat`, `\| grep`) | pasa (denegarlo quitaría también el resto) con la nota de usar `local_summarize`; lo que lee cuenta como lectura literal |
+| Lectura por una tool MCP ajena (`read_text_file`, `read_note`…) de un fichero grande | pasa con esa misma nota; nunca se deniega, y tampoco levanta el guard ni suma tramos (el hook no ve qué parte del fichero devuelve) |
 
-**Fallo en abierto.** Si el daemon no contesta en 150 s, el backend está marcado caído, el resumen
+**Fallo en abierto.** Si el daemon no termina en 150 s (en total, no por petición), el backend
+está marcado caído, el resumen
 viene vacío, con `[local-delegate error]`, con el aviso de llamada movida a segundo plano o con un
 aviso de salida cortada o de presupuesto de tiempo, la lectura pasa tal cual y el fichero no queda
 guardado. El `timeout` del hook es 180 s: si Codex lo corta, también deja pasar la lectura. El guard
@@ -581,8 +582,10 @@ si resume, igual que en Claude Code.
 **Alcance y estado.** El guard y la cuenta de líneas son de cada agente: el hilo principal por un
 lado y cada subagente (`agent_id`) por otro, así que el resumen de un subagente no impide editar al
 principal ni al revés. Se guardan en `<datos>/codex-read/<session_id>.jsonl` (solo rutas, tramos y
-marcas, nunca contenido), así que sobreviven a reanudar la sesión. Una lectura literal levanta el
-guard en el momento de permitirla. El resumen sale en el log de uso con el cliente
+marcas, nunca contenido), así que sobreviven a reanudar la sesión; el de una sesión sin uso en 30
+días se borra al empezar otra. Una lectura literal por shell levanta el guard en el momento de
+permitirla, también con el interruptor apagado: entera o un tramo cuentan, una parcial (`tail`,
+`| grep`) solo levanta, y una búsqueda (`grep x f`) no. El resumen sale en el log de uso con el cliente
 `local-delegate-codex-read`, fuera del coste equivalente.
 
 **Coste.** El hook arranca un proceso de Python en cada llamada a Bash (unos 0,12 s medidos en
