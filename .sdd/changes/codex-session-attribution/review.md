@@ -18,7 +18,7 @@
 | REQ-005 | yes | yes | casos «nota de otro id» y «`codex-<id>.json` sin `client: codex`» añadidos (A-H2, B3) |
 | REQ-006 | yes | yes | control `claude-code` en cada caso |
 | REQ-007 | yes | yes | `excluded_by_reason == {"not_claude": 1}` |
-| REQ-008 | yes | partial | código y `/api/stats` probados; la tarjeta solo por su fuente; capturas claro/oscuro pendientes (A-H4, B4): las lanza la sesión principal |
+| REQ-008 | yes | yes | código y `/api/stats` probados; capturas claro/oscuro del 2026-11-23 (`docs/assets/dashboard.png` y `dashboard-light.png`, 0.53.0, contra el árbol con `scripts/dev/capture_dashboard.py`): la tarjeta «Quién delegó» enseña la columna «Codex» con 31 en la fila `Codex` y 0 en las demás |
 | REQ-009 | yes | yes | `?session=` de Codex |
 | REQ-010 | yes | yes | `codex` en `delegations_by_caller` |
 | REQ-011 | yes | yes | `doctor` distingue el hook que falta (B1) y lo prueba el paso de dos a tres (B2); docstrings y lista de `caller_src` al día (B5, B6) |
@@ -31,7 +31,7 @@
 | F1 | Falta el caso Codex con `claudecode/toolUseId` y sin `callId` | H1 | — | suspected | test añadido |
 | F2 | Falta el caso «nota de otro id» | H2 | B3 (variante: `client`) | confirmed | dos casos añadidos |
 | F3 | Fila de Codex sin nota recibe el respaldo de modelo de Claude en la fusión | H3 | — | suspected | aceptado: solo sirve a la densidad de filas ya excluidas del coste; el recibo en curso queda como antes a propósito (un fix no cambia otra cosa); si molesta en el panel, siguiente PR |
-| F4 | Capturas claro/oscuro de REQ-008 pendientes | H4 | B4 | confirmed | pendientes para la sesión principal; `conformance` no se aprueba hasta tenerlas |
+| F4 | Capturas claro/oscuro de REQ-008 pendientes | H4 | B4 | confirmed | hechas el 2026-11-23 (`docs/assets/dashboard.png`, `dashboard-light.png`; manifiestos con versión 0.53.0); la columna «Codex» se ve en los dos temas |
 | F5 | `hook_key` del test no salía de un fichero fusionado | H5 | — | suspected | test reescrito con `merge` + `inspect` + `config.toml` |
 | F6 | `agent_id`/`agent_type` sin forma ni tope | H6 | — | confirmed | `_shaped` con patrones acotados; test con control |
 | F7 | `doctor` decía «no son de esta versión… aprobar otra vez» para el hook que falta | — | B1 | suspected | texto propio `doctor.probe.codex_hooks.missing` (es/en) |
@@ -43,5 +43,7 @@
 
 ## Required follow-up
 
-- Capturas del panel en claro y oscuro (F4) antes de aprobar `conformance`.
-- Prueba con Codex real (REQ-012), pasos en `handoff.md`.
+- Capturas del panel en claro y oscuro (F4): hechas el 2026-11-23.
+- Prueba con Codex real (REQ-012), pasos en `handoff.md` y en `.sdd/changes/codex-pasos-para-yohan.md`;
+  hasta entonces `conformance` no se aprueba. Los hooks ya están instalados en la PC (doctor:
+  configurados 4 de 4, aprobados 0 de 4).
