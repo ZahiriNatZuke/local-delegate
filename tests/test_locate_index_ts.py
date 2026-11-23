@@ -7,9 +7,8 @@ lines are recorded while each fixture is written, never read from the index unde
 
 from __future__ import annotations
 
-import time
-
 import pytest
+from linear_cost import MAX_GROWTH, SIZE_RATIO, cpu_growth
 
 from local_delegate import locate
 
@@ -289,7 +288,7 @@ def test_pieces_cut_at_top_level_blocks():
     assert all(len(piece) <= 3000 for piece, _ in pieces)
 
 
-def test_one_megabyte_of_typescript_under_a_second():
+def _classes_of_ts(units: int) -> str:
     unit = (
         "/** Doc { */\n"
         "export class C{k} {{\n"
@@ -298,16 +297,21 @@ def test_one_megabyte_of_typescript_under_a_second():
         "  handle = () => {{ /}}/.test('x'); }};\n"
         "}}\n"
     )
-    text = "".join(
-        unit.replace("{k}", str(k)).replace("{{", "{").replace("}}", "}") for k in range(6800)
+    return "".join(
+        unit.replace("{k}", str(k)).replace("{{", "{").replace("}}", "}") for k in range(units)
     )
-    assert len(text) > 1_000_000
-    # the best of three CPU times: another process on the same core inflates one run, never all
-    timings = []
-    for _ in range(3):
-        started = time.process_time()
-        index = locate.build_index(text, "huge.ts")
-        timings.append(time.process_time() - started)
+
+
+def test_typescript_index_cost_grows_linearly():
+    """REQ-022: indexing 1 MB costs about ten times 100 KB, never the hundred of a quadratic
+    cost."""
+    small_text, big_text = _classes_of_ts(680), _classes_of_ts(680 * SIZE_RATIO)
+    assert len(small_text) > 100_000 and len(big_text) > 1_000_000
+    index = locate.build_index(big_text, "huge.ts")
     assert index.unavailable_reason is None
     assert len(index.blocks) == 6800 * 4
-    assert min(timings) < 1.0, timings
+    small, big, growth = cpu_growth(
+        lambda: locate.build_index(small_text, "huge.ts"),
+        lambda: locate.build_index(big_text, "huge.ts"),
+    )
+    assert growth < MAX_GROWTH, (small, big, growth)

@@ -17,6 +17,7 @@ import ast
 import io
 import re
 import tokenize
+from bisect import bisect_right
 from dataclasses import dataclass
 from itertools import pairwise
 from pathlib import PurePath
@@ -805,24 +806,57 @@ class _Lines:
 
     def __init__(self, content: str) -> None:
         self.lines = _lines(content)
-        self.normalized = [" ".join(line.split()) for line in self.lines]
+        normalized = [" ".join(line.split()) for line in self.lines]
+        # one string with the normalized lines and the offset where each starts: `str.find` over
+        # it costs one pass in C per anchor, where a per-line `in` costs one Python step per line
+        self.joined = "\n".join(normalized)
+        self.starts = [0] * len(normalized)
+        offset = 0
+        for n, line in enumerate(normalized):
+            self.starts[n] = offset
+            offset += len(line) + 1
 
     def hits(self, text: str, first: int, last: int) -> list[int]:
-        normalized = self.normalized
-        return [n for n in range(first, last + 1) if text in normalized[n - 1]]
+        """The lines from `first` to `last` (1-based) whose normalized text holds `text`."""
+        if "\n" in text or first > last or not self.starts:
+            return []  # no line holds a line break: a match across two lines is no hit
+        joined, starts = self.joined, self.starts
+        stop = starts[last] - 1 if last < len(starts) else len(joined)
+        out: list[int] = []
+        at = joined.find(text, starts[first - 1], stop)
+        while at != -1:
+            line = bisect_right(starts, at)  # 1-based number of the line that holds `at`
+            out.append(line)
+            # the next hit can only count on a later line
+            at = joined.find(text, starts[line], stop) if line < len(starts) else -1
+        return out
 
 
-def _anchor_block(index: FileIndex, line: int) -> tuple[int, int]:
+class _BlockSpans:
+    """The blocks of an index sorted for `_anchor_block`, built once per call to `resolve`: the
+    containers apart, and the widest other block that starts at each line (the first on a tie)."""
+
+    def __init__(self, index: FileIndex) -> None:
+        self.containers = [b for b in index.blocks if b.kind in _CONTAINER_KINDS]
+        self.widest: dict[int, Block] = {}
+        for b in index.blocks:
+            if b.kind in _CONTAINER_KINDS:
+                continue
+            current = self.widest.get(b.start)
+            if current is None or b.end > current.end:
+                self.widest[b.start] = b
+
+
+def _anchor_block(spans: _BlockSpans, line: int) -> tuple[int, int]:
     """REQ-011 without `anchor_end`: the table, list item or fenced block that holds `line` (the
     innermost), else the declaration or section that starts at it (the widest), else the line."""
-    holding = [b for b in index.blocks if b.kind in _CONTAINER_KINDS and b.start <= line <= b.end]
+    holding = [b for b in spans.containers if b.start <= line <= b.end]
     if holding:
         block = min(holding, key=lambda b: (b.end - b.start, -b.start))
         return block.start, block.end
-    starting = [b for b in index.blocks if b.start == line and b.kind not in _CONTAINER_KINDS]
-    if starting:
-        block = max(starting, key=lambda b: b.end)
-        return block.start, block.end
+    widest = spans.widest.get(line)
+    if widest is not None:
+        return widest.start, widest.end
     return line, line
 
 
@@ -832,6 +866,7 @@ def _resolve_anchor(
     lines: _Lines,
     index: FileIndex,
     piece_range: tuple[int, int] | None,
+    spans: _BlockSpans,
 ) -> _Anchored:
     text = _normalize(anchor)
     if len(text.replace(" ", "")) < ANCHOR_MIN_CHARS:
@@ -856,7 +891,7 @@ def _resolve_anchor(
         if closing:
             return _Anchored(line, closing[0])
         ignored = True
-    start, end = _anchor_block(index, line)
+    start, end = _anchor_block(spans, line)
     return _Anchored(start, end, end_ignored=ignored)
 
 
@@ -884,6 +919,7 @@ def resolve(
     reaches an item: only the index and the anchor give lines.
     """
     lines = _Lines(content)
+    spans = _BlockSpans(index)
     out: list[Item] = []
     language = index.language
     for raw in entries:
@@ -897,7 +933,9 @@ def resolve(
             continue
         block, candidates = _match_name(name, index) if name else (None, [])
         anchored = (
-            _resolve_anchor(anchor, anchor_end, lines, index, piece_range) if anchor else None
+            _resolve_anchor(anchor, anchor_end, lines, index, piece_range, spans)
+            if anchor
+            else None
         )
         if block is not None:
             conflict = (

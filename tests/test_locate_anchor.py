@@ -7,9 +7,8 @@ the text by a unique marker, never written by hand.
 
 from __future__ import annotations
 
-import time
-
 import pytest
+from linear_cost import MAX_GROWTH, SIZE_RATIO, cpu_growth
 
 from local_delegate import locate
 
@@ -383,7 +382,7 @@ def test_a_lone_cr_keeps_read_lines():
     assert inside.start == 3
 
 
-def test_one_megabyte_under_a_second():
+def _blocks_of_ts(units: int) -> tuple[str, list[dict]]:
     unit = (
         "/** Doc of block {k}. */\n"
         "export class Block{k} {\n"
@@ -392,18 +391,26 @@ def test_one_megabyte_under_a_second():
         "  handle{k} = () => { /}/.test('x'); };\n"
         "}\n"
     )
-    text = "".join(unit.replace("{k}", str(k)) for k in range(6500))
-    assert len(text) > 1_000_000
-    entries = [{"name": "", "anchor": f"handle{k} = () =>"} for k in range(0, 6500, 160)]
-    assert len(entries) >= 40
-    # the best of three CPU times: another process on the same core inflates one run, never all
-    timings = []
-    for _ in range(3):
-        started = time.process_time()
-        index = locate.build_index(text, "huge.ts")
-        items = locate.resolve(
-            locate.classify_field("manejadores_con_lineas"), entries, index, text
-        )
-        timings.append(time.process_time() - started)
+    text = "".join(unit.replace("{k}", str(k)) for k in range(units))
+    # one anchor every 16 units: the anchors grow with the file, as a long answer does
+    entries = [{"name": "", "anchor": f"handle{k} = () =>"} for k in range(0, units, 16)]
+    return text, entries
+
+
+def test_index_and_anchors_cost_grows_linearly():
+    """REQ-022: 1 MB costs about ten times 100 KB, never the hundred of a quadratic cost."""
+    req = locate.classify_field("manejadores_con_lineas")
+    small_text, small_entries = _blocks_of_ts(650)
+    big_text, big_entries = _blocks_of_ts(650 * SIZE_RATIO)
+    assert len(small_text) > 100_000 and len(big_text) > 1_000_000
+    assert len(big_entries) >= 400
+
+    def run(text: str, entries: list[dict]) -> list:
+        return locate.resolve(req, entries, locate.build_index(text, "huge.ts"), text)
+
+    items = run(big_text, big_entries)
     assert all(it.start is not None for it in items)
-    assert min(timings) < 1.0, timings
+    small, big, growth = cpu_growth(
+        lambda: run(small_text, small_entries), lambda: run(big_text, big_entries)
+    )
+    assert growth < MAX_GROWTH, (small, big, growth)
