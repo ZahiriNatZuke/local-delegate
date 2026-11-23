@@ -238,6 +238,7 @@
   "mcp.warning.extract_cross_filled_keys": "el valor de estos campos solo aparece en la fila de otro campo pedido; el modelo pudo repartir las filas por posición, revísalos (detalle en `cross_filled_keys`): {pairs}",
   "mcp.warning.extract_polarity_flipped_keys": "estos campos dicen lo contrario que el contenido: una frase lleva una negación que la fuente no tiene, o perdió la que tiene; revísalos (detalle en `polarity_flipped_keys`): {fields}",
   "mcp.warning.extract_section_only": "estos campos piden elementos, pero el modelo solo dio el rango del apartado que los contiene, sin los elementos (lista en `section_only_keys`); lee ese rango: {fields}",
+  "mcp.warning.extract_type_mismatch": "estos campos no tenían el tipo que pide su nombre ni tras un reintento y quedan a null (detalle en `type_mismatch_keys`): {fields}",
   "mcp.warning.extract_outline_kept": "sin un título único, se deja como vino",
   "mcp.warning.extract_role_reason_table": "la entrada trae una tabla y por eso fue al modelo de contexto largo, que separa mejor las filas pero tarda más y puede tener que cargarse; `LOCAL_DELEGATE_EXTRACT_TABLE_LONG=0` lo apaga",
   "mcp.warning.summarize_role_reason_table": "la entrada trae una tabla ({format}) y por eso fue al modelo de contexto largo, que separa mejor las filas pero tarda más y puede tener que cargarse; `LOCAL_DELEGATE_SUMMARIZE_TABLE_LONG=0` lo apaga",

@@ -1299,6 +1299,18 @@
       "text": "Bash",
       "kind": "machine_name",
       "reason": "nombre de la tool de shell en los hooks de Codex (hook_names.rs, #670)"
+    },
+    {
+      "file": "src/local_delegate/extract_schema.py",
+      "text": "\"{}\": se esperaba {} y llegó {}",
+      "kind": "verbatim",
+      "reason": "prompt del modelo local (reintento de tipos de `local_extract`, #692): lo lee el modelo, no una persona"
+    },
+    {
+      "file": "src/local_delegate/extract_schema.py",
+      "text": "\n\nTu respuesta anterior no cumplía el tipo de estas claves: {}. Devuelve otra vez el objeto JSON completo con esos tipos.",
+      "kind": "verbatim",
+      "reason": "prompt del modelo local (reintento de tipos de `local_extract`, #692): lo lee el modelo, no una persona"
     }
   ]
 }

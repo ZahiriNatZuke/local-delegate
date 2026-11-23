@@ -27,7 +27,7 @@ import subprocess
 import sys
 import threading
 import time
-from collections.abc import Callable, Collection, Generator, Iterable, Sequence
+from collections.abc import Callable, Collection, Generator, Iterable, Mapping, Sequence
 from contextlib import contextmanager, suppress
 from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime
@@ -52,6 +52,7 @@ from . import (
     cooldown,
     cost,
     cross_fill,
+    extract_schema,
     failures,
     git_history,
     grounding,
@@ -6593,23 +6594,28 @@ def _strip_fences(s: str) -> str:
     return s
 
 
-def _json_schema_payload(fields: list[str]) -> dict:
+def _extract_kinds(fields: list[str], by_path: bool) -> dict[str, extract_schema.Kind]:
+    """#692: the kind of each requested field (`extract_schema.field_kind`), in request order."""
+    return {
+        name: extract_schema.field_kind(name, by_path)
+        for name in dict.fromkeys(fields)
+        if isinstance(name, str) and name != _EXTRACT_META_KEY
+    }
+
+
+def _json_schema_payload(
+    fields: list[str],
+    by_path: bool = False,
+    singular: Iterable[str] = (),
+    names: Mapping[str, list[str]] | None = None,
+) -> dict:
     """response_format json_object+schema para local_extract (ver doc de llama-server).
 
-    Cada propiedad se restringe a tipos primitivos (string/number/boolean/null): un
-    sub-schema vacío ({}) permite objetos/arrays anidados y algunos modelos (p. ej.
-    gemma3-4b) anidan el valor en vez de devolverlo plano — {"campo": {"valor": "x"}}
-    en lugar de {"campo": "x"}.
+    #692: each property has the type of its field's kind (`extract_schema`): a list never admits
+    a boolean, and no kind admits a free nested object (gemma3-4b nested the value,
+    `{"campo": {"valor": "x"}}` instead of `{"campo": "x"}`).
     """
-    primitive = {"type": ["string", "number", "boolean", "null"]}
-    return {
-        "type": "json_object",
-        "schema": {
-            "type": "object",
-            "properties": {f: primitive for f in fields},
-            "required": list(fields),
-        },
-    }
+    return extract_schema.payload(_extract_kinds(fields, by_path), singular=singular, names=names)
 
 
 # Códigos de idioma que se traducen a un nombre legible en la orden de `local_commit_msg`. Un mapa
@@ -8820,6 +8826,48 @@ def _partial_objects(partials: list[str], strict: bool) -> list[dict] | None:
     return objects
 
 
+def _extract_object(raw: str) -> dict | None:
+    """The answer `raw` as a JSON object, or None if it is not one."""
+    try:
+        parsed = json.loads(_strip_fences(raw))
+    except json.JSONDecodeError:
+        return None
+    return parsed if isinstance(parsed, dict) else None
+
+
+def _extract_mismatches(
+    raw: str, fields: list[str], kinds: Mapping[str, extract_schema.Kind]
+) -> dict[str, dict[str, str]]:
+    """#692: the fields of the answer `raw` whose value breaks their kind, keys normalized first."""
+    data = _extract_object(raw)
+    if data is None:
+        return {}
+    _normalize_extract_keys(data, fields)
+    return extract_schema.validate(data, kinds)
+
+
+def _typed_partials(
+    partials: list[str], kinds: Mapping[str, extract_schema.Kind], found: dict[str, dict]
+) -> list[str]:
+    """#692: the map partials with each value that breaks its kind set to null, before joining.
+
+    No retry in the chunked path: the value is dropped and reported (`found`, first per field).
+    A partial that is not a JSON object is left as it is.
+    """
+    out: list[str] = []
+    for partial in partials:
+        data = _extract_object(partial)
+        bad = extract_schema.validate(data, kinds) if data is not None else {}
+        if not bad:
+            out.append(partial)
+            continue
+        for name, info in bad.items():
+            data[name] = None
+            found.setdefault(name, info)
+        out.append(json.dumps(data, ensure_ascii=False))
+    return out
+
+
 def _merge_location_values(values: list[Any]) -> Any:
     """#568: the values one location field took in several chunks, joined in chunk order.
 
@@ -8997,7 +9045,10 @@ def local_extract(
     if diff_ranges:
         system += _DIFF_LINES_CLAUSE
     use_schema = config.JSON_SCHEMA_MODE != "off"
-    response_format = _json_schema_payload(fields) if use_schema else None
+    # #692: each field typed by its name; #698: the output cap sized to what was asked.
+    kinds = _extract_kinds(fields, by_path=False)
+    out_tokens = extract_schema.output_budget(kinds)
+    response_format = extract_schema.payload(kinds) if use_schema else None
     json_schema_fallback = config.JSON_SCHEMA_MODE == "auto"
     fallback_info: dict = {}
     report: dict = {}
@@ -9018,6 +9069,12 @@ def local_extract(
             " Deja a null las claves de ubicación: el programa une las de todos los objetos."
         )
 
+    base_shortcut = (
+        _extract_location_shortcut(fields, location_fields) if numbered else _extract_shortcut
+    )
+    #: #692: {field: {"expected", "got"}} of the values dropped for breaking their type.
+    type_mismatch: dict[str, dict[str, str]] = {}
+
     def _map_reduce(budget: int, into: dict) -> str:
         # SIN nada pegado al texto (`into`): esta tool parsea el resultado. El aviso de truncado,
         # el respaldo y el ahorro bajan a `_local_delegate`.
@@ -9032,16 +9089,17 @@ def local_extract(
             source=source,
             max_words=_EXTRACT_WORDS,
             partial_max_words=_EXTRACT_WORDS,
+            # #698: every step (map, regroup, reduce) gets the cap sized to the fields.
+            max_tokens_for=lambda _words: out_tokens,
             temperature=0.0,
             reduce_system=reduce_system,
             build_reduce=lambda joined: (
                 "Estos son objetos JSON parciales y EN ORDEN extraídos de los fragmentos de un "
                 f"mismo documento. Devuelve un único objeto con las claves pedidas:\n\n{joined}"
             ),
-            reduce_shortcut=(
-                _extract_location_shortcut(fields, location_fields)
-                if numbered
-                else _extract_shortcut
+            # #692: a partial's value that breaks its field's type is dropped before joining.
+            reduce_shortcut=lambda partials: base_shortcut(
+                _typed_partials(partials, kinds, type_mismatch)
             ),
             raw_len=raw_len,
             path=path,
@@ -9053,6 +9111,8 @@ def local_extract(
             json_schema_fallback=json_schema_fallback,
             report=into,
         )
+        if into.get("partials"):
+            into["partials"] = _typed_partials(into["partials"], kinds, type_mismatch)
         return joined
 
     # #687: every field asked is answered by program from the diff, so the model's reply would be
@@ -9077,27 +9137,32 @@ def local_extract(
         if report.get("fallback"):
             fallback_info.update(report["fallback"])
     else:
-        raw = _chat(
-            model,
-            system,
-            _build(_number_lines(content) if numbered else content),
-            max_tokens=512,
-            temperature=0.0,
-            tool="local_extract",
-            role=role,
-            fallback=fallback_info,
-            chars_in=len(content),
-            source=source,
-            raw_len=raw_len,
-            path=path,
-            response_format=response_format,
-            json_schema_fallback=json_schema_fallback,
-            # SIN la línea de ahorro pegada al texto: esta tool parsea el resultado, y ese sufijo
-            # convertía un JSON perfecto en uno imparseable. El dato no se pierde, baja unas
-            # líneas más abajo a `_local_delegate`, que es donde va lo que no son datos.
-            feedback=False,
-            report=report,
-        )
+        single_user = _build(_number_lines(content) if numbered else content)
+
+        def _single(user: str, into: dict) -> str:
+            return _chat(
+                model,
+                system,
+                user,
+                max_tokens=out_tokens,
+                temperature=0.0,
+                tool="local_extract",
+                role=role,
+                fallback=fallback_info,
+                chars_in=len(content),
+                source=source,
+                raw_len=raw_len,
+                path=path,
+                response_format=response_format,
+                json_schema_fallback=json_schema_fallback,
+                # SIN la línea de ahorro pegada al texto: esta tool parsea el resultado, y ese
+                # sufijo convertía un JSON perfecto en uno imparseable. El dato no se pierde, baja
+                # unas líneas más abajo a `_local_delegate`, que es donde va lo que no son datos.
+                feedback=False,
+                report=into,
+            )
+
+        raw = _single(single_user, report)
         truncated_calls = 1 if report.get("truncated_out") else 0
         retried_calls = 0
         calls = 1
@@ -9128,6 +9193,19 @@ def local_extract(
             unreduced = bool(report.get("unreduced"))
             if report.get("fallback"):
                 fallback_info.update(report["fallback"])
+        elif not truncated_calls and (mismatches := _extract_mismatches(raw, fields, kinds)):
+            # #692: a value that breaks its field's type (`true` in a list field): ONE retry that
+            # says which field and what type, folded into the same usage row. A cut answer is
+            # never retried here: the redo in halves of #666 is the only retry it gets.
+            pending_rows = _DEFERRED_EVENTS.get()
+            first_row = len(pending_rows) - 1 if pending_rows else None
+            retry_report: dict = {}
+            again = _single(single_user + extract_schema.retry_message(mismatches), retry_report)
+            _fold_retried_row(first_row)
+            calls = 2
+            if _extract_object(again) is not None:
+                raw, report = again, retry_report
+                truncated_calls = 1 if report.get("truncated_out") else 0
     result = _strip_fences(raw)
 
     # `truncated`/`warning` significan desde B2c «salida truncada en un trozo» (REQ-010): la
@@ -9231,6 +9309,10 @@ def local_extract(
     # or `auto` after the backend refused the schema) nothing forces the model to it. Normalize
     # always, here, before `_local_delegate` is added (so it is never counted as an extra key).
     missing_keys, renamed_keys, dropped = _normalize_extract_keys(data, fields)
+    # #692: what still breaks its type after the one retry (or a reduce that wrote it) is null.
+    for name, info in extract_schema.validate(data, kinds).items():
+        data[name] = None
+        type_mismatch.setdefault(name, info)
     for name in diff_file_fields:
         # #665: one entry per file of the diff, `path: first-last` in lines of the patch; what the
         # model listed is replaced, never merged (it may name a file twice or at a hunk's lines).
@@ -9394,6 +9476,12 @@ def local_extract(
         meta["polarity_flipped_keys"] = flipped
         late_notices.append(
             i18n.t("mcp.warning.extract_polarity_flipped_keys", fields=", ".join(flipped))
+        )
+    if type_mismatch:
+        # #692: last of the late notices; an earlier warning keeps its exact text (#455).
+        meta["type_mismatch_keys"] = type_mismatch
+        late_notices.append(
+            i18n.t("mcp.warning.extract_type_mismatch", fields=", ".join(type_mismatch))
         )
     if late_notices:
         previous = meta.get("warning")
