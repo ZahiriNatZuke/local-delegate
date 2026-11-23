@@ -4,9 +4,9 @@
   "title": "local_summarize troceado: reintentar una vez las secciones que faltan y nombrarlas en el aviso (#691)",
   "mode": "lite",
   "traceability": "strict",
-  "status": "verifying",
+  "status": "result-review",
   "createdAt": "2026-11-23T12:34:17.274Z",
-  "updatedAt": "2026-11-23T12:52:35.475Z",
+  "updatedAt": "2026-11-23T17:32:45.621Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -98,6 +98,13 @@
       "at": "2026-11-23T12:52:35.475Z",
       "evidence": "suite 8379 pasados con pesado.sh -n 2; ruff limpio; tests nuevos rojos antes/verdes después",
       "actor": "implementer"
+    },
+    {
+      "type": "transition",
+      "from": "verifying",
+      "to": "result-review",
+      "at": "2026-11-23T17:32:45.621Z",
+      "reason": "quality aprobada; revisión de dos jueces en review.md"
     }
   ]
 }

@@ -4,9 +4,9 @@
   "title": "Resumen de salidas de tests: totales y versión por programa, y aviso de negación sin falsos positivos",
   "mode": "lite",
   "traceability": "strict",
-  "status": "result-review",
+  "status": "closed",
   "createdAt": "2026-11-23T15:59:42.285Z",
-  "updatedAt": "2026-11-23T16:49:31.151Z",
+  "updatedAt": "2026-11-23T17:32:50.564Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -27,16 +27,16 @@
       "actor": "user"
     },
     "conformance": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-11-23T17:32:47.241Z",
+      "evidence": "review.md con dos jueces (standard): conforms-with-notes, sin bloqueantes; PR #715 mezclado y main 0696df14 con 20/20 checks en verde",
+      "actor": "user"
     },
     "memory": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-11-23T17:32:49.879Z",
+      "evidence": "nota del vault projects/local-delegate/jornada-2026-11-23-causa-comun-y-0-54-0.md, sección «Jornada 2026-11-23»",
+      "actor": "user"
     }
   },
   "history": [
@@ -105,6 +105,36 @@
       "to": "result-review",
       "at": "2026-11-23T16:49:31.151Z",
       "reason": "dos jueces, hallazgos arreglados o aceptados"
+    },
+    {
+      "type": "gate",
+      "gate": "conformance",
+      "status": "approved",
+      "at": "2026-11-23T17:32:47.241Z",
+      "evidence": "review.md con dos jueces (standard): conforms-with-notes, sin bloqueantes; PR #715 mezclado y main 0696df14 con 20/20 checks en verde",
+      "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "memory",
+      "status": "approved",
+      "at": "2026-11-23T17:32:49.879Z",
+      "evidence": "nota del vault projects/local-delegate/jornada-2026-11-23-causa-comun-y-0-54-0.md, sección «Jornada 2026-11-23»",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "result-review",
+      "to": "closing",
+      "at": "2026-11-23T17:32:50.207Z",
+      "reason": "quality, conformance y memory aprobadas"
+    },
+    {
+      "type": "transition",
+      "from": "closing",
+      "to": "closed",
+      "at": "2026-11-23T17:32:50.564Z",
+      "reason": "mezclado en main y publicado en la 0.54.0"
     }
   ]
 }

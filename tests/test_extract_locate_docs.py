@@ -19,9 +19,10 @@ ROOT = Path(__file__).resolve().parents[1]
 RESOURCES = ROOT / "src" / "local_delegate" / "resources"
 
 
-def _unreleased() -> str:
+def _release_notes() -> str:
+    """The CHANGELOG section of the release that shipped the change (0.54.0)."""
     text = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
-    start = text.index("## [Unreleased]")
+    start = text.index("## [0.54.0]")
     return text[start : text.index("\n## [", start + 1)]
 
 
@@ -38,7 +39,7 @@ def _wiki_extract() -> str:
 
 SURFACES = {
     "docstring": lambda: inspect.getdoc(server.local_extract),
-    "changelog": _unreleased,
+    "changelog": _release_notes,
     "readme": _readme_extract_row,
     "wiki": _wiki_extract,
 }
@@ -60,9 +61,9 @@ def test_no_surface_offers_the_retired_keys(surface):
 
 
 def test_the_changelog_marks_the_change_as_breaking():
-    text = _unreleased()
+    text = _release_notes()
     section = text[text.index("### Cambiado (incompatible)") :]
-    assert "0.54.0" in section
+    assert "Cómo migrar" in section, "the breaking change says how to migrate"
     assert '"funciones_con_lineas": [{"name"' in section, "the example after the change"
 
 

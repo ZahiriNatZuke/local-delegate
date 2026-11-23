@@ -6,9 +6,20 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+## [0.54.0] - 2026-11-23
+
 ### Cambiado (incompatible)
 
-Va en la 0.54.0 (versión menor: cambia la forma de un valor de `local_extract`).
+Versión menor con un cambio incompatible: cambia la forma de un valor de `local_extract`.
+
+**Cómo migrar.** Si tu código lee un campo de líneas de `local_extract` (un nombre como
+`funciones_con_lineas`, `secciones_con_lineas`, `heading_line` o `ficheros_y_hunks_con_lineas`),
+deja de parsear la cadena «X: líneas a-b» y recorre la lista: cada elemento trae `name`, `start` y
+`end` (y `hunks` en un diff), y el valor puede ser `null`. Lo que no se pudo ubicar ya no llega como
+línea dudosa: está en `_local_delegate.unlocated` con su motivo. Si mirabas
+`_local_delegate.lines_unverified`, `outline_copies` o `diff_files`, usa `located` y `unlocated`,
+que los sustituyen. Los demás campos no cambian de forma, salvo que ahora respetan su tipo (ver
+#692 más abajo).
 
 - **`local_extract`: las líneas de un campo de ubicación las calcula siempre el programa, con
   una forma nueva** (#694, #696, #697, #698). Con `path`, un campo que pide líneas
@@ -5388,7 +5399,8 @@ los ficheros de datos. Lo que lee el usuario sigue en español.
 - Empaquetado para PyPI (`local-delegate-mcp`) ejecutable con `uvx`; `server.json` para el
   registro oficial de MCP.
 
-[Unreleased]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.53.0...HEAD
+[Unreleased]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.54.0...HEAD
+[0.54.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.53.0...v0.54.0
 [0.53.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.52.0...v0.53.0
 [0.52.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.51.0...v0.52.0
 [0.51.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.50.0...v0.51.0

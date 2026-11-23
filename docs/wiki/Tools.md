@@ -103,7 +103,7 @@ tokens para 23 400 caracteres con el `max_words` por defecto), sin pasar de
 resumen por secciones (#580); y un título del resumen con el término del enfoque y contenido propio
 debajo cuenta como mención, así que ya no dispara el aviso (#593).
 
-Desde la próxima versión (#630) el servidor compara el resumen con la entrada entera, por programa
+Desde la 0.51.0 (#630) el servidor compara el resumen con la entrada entera, por programa
 y en todos los caminos (llamada única, map-reduce y por secciones), y avisa con
 `[local-delegate warning: …]` cuando el resumen trae algo que la entrada no tiene tal cual:
 
@@ -163,7 +163,7 @@ secciones, y si un título del resumen copia una línea de un literal de cadena 
 dato (un fixture Markdown dentro de un test, por ejemplo), la respuesta lo avisa con
 `[local-delegate warning: …]`.
 
-Desde la versión siguiente a la 0.53.0 (issue #691), en un documento troceado las secciones que el
+Desde la 0.54.0 (issue #691), en un documento troceado las secciones que el
 modelo se saltó o dejó sin contenido se piden otra vez, **una sola vez**, en una llamada más de la
 misma operación (paso `sections_retry` en el log), y entran en su sitio. Lo que siga faltando no se
 rellena con «(sin resumir)» en el cuerpo: el aviso dice cuántas son y nombra cada título una vez.
