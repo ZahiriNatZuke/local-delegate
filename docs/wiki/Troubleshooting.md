@@ -108,7 +108,7 @@ Los ids de modelo configurados no existen en tu backend. Ajusta
 `llama31-8b`, `qwen25-coder-14b` o `qwen3-vl-8b`, renómbralos allí o fija las variables a los ids
 que tengas.
 
-**Si `local_describe_image` empezó a fallar al actualizar a la 0.54.1:** el modelo de visión por
+**Si `local_describe_image` empezó a fallar al actualizar a la 0.55.0:** el modelo de visión por
 defecto pasó de `gemma4-12b` a `qwen36-35b-a3b-vision` (Qwen3.6 35B-A3B con `--mmproj`). Si tu
 catálogo no tiene esa entrada, pon `LOCAL_DELEGATE_MODEL_VISION=gemma4-12b` o añádela (ver la receta
 `docs/recipes/llama-swap-vision.md`). `doctor` lo avisa en «modelo de cada rol».

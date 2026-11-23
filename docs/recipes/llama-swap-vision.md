@@ -11,7 +11,7 @@ servido por el mismo `llama-swap` en `127.0.0.1:9292`, con hot-swap igual que lo
 > `local_describe_image` + revisar `usage.jsonl`) antes de confiar en él en producción — no
 > asumas que sigue funcionando igual solo porque el flag no cambió de nombre.
 
-## Modelo por defecto (desde la 0.54.1)
+## Modelo por defecto (desde la 0.55.0)
 
 El rol de visión usa por defecto `qwen36-35b-a3b-vision`: el mismo GGUF de Qwen3.6 35B-A3B del rol
 `code` con su proyector `--mmproj`. En la medición de #699 (2026-11-23, capturas de UI con una

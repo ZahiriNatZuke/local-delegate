@@ -4,9 +4,9 @@
   "title": "Modelo de visión por defecto: qwen36-35b-a3b-vision",
   "mode": "lite",
   "traceability": "strict",
-  "status": "result-review",
+  "status": "closed",
   "createdAt": "2026-11-23T18:29:59.280Z",
-  "updatedAt": "2026-11-23T19:27:03.368Z",
+  "updatedAt": "2026-11-23T20:16:29.276Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -27,16 +27,16 @@
       "actor": "agente-vision"
     },
     "conformance": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-11-23T20:16:22.822Z",
+      "evidence": "review.md con dos jueces (standard): REQ-001..005 implementados y verificados; conforms-with-notes, H1-H7 resueltos o aceptados; PR #721 mezclado (main 2053cbd5) con 22/22 checks en verde; prueba en vivo con el backend real en la instalación de la 0.55.0",
+      "actor": "user"
     },
     "memory": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-11-23T20:16:23.035Z",
+      "evidence": "nota del vault projects/local-delegate/jornada-2026-11-23-causa-comun-y-0-54-0.md, sección «Jornada 2026-11-23»",
+      "actor": "user"
     }
   },
   "history": [
@@ -105,6 +105,36 @@
       "to": "result-review",
       "at": "2026-11-23T19:27:03.368Z",
       "reason": "revisión independiente hecha"
+    },
+    {
+      "type": "gate",
+      "gate": "conformance",
+      "status": "approved",
+      "at": "2026-11-23T20:16:22.822Z",
+      "evidence": "review.md con dos jueces (standard): REQ-001..005 implementados y verificados; conforms-with-notes, H1-H7 resueltos o aceptados; PR #721 mezclado (main 2053cbd5) con 22/22 checks en verde; prueba en vivo con el backend real en la instalación de la 0.55.0",
+      "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "memory",
+      "status": "approved",
+      "at": "2026-11-23T20:16:23.035Z",
+      "evidence": "nota del vault projects/local-delegate/jornada-2026-11-23-causa-comun-y-0-54-0.md, sección «Jornada 2026-11-23»",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "result-review",
+      "to": "closing",
+      "at": "2026-11-23T20:16:29.056Z",
+      "reason": "quality, conformance y memory aprobadas"
+    },
+    {
+      "type": "transition",
+      "from": "closing",
+      "to": "closed",
+      "at": "2026-11-23T20:16:29.276Z",
+      "reason": "publicado en la 0.55.0; nota del vault al día"
     }
   ]
 }

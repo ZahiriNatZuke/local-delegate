@@ -4,9 +4,9 @@
   "title": "Guard de Codex: escrituras de shell sobre ficheros resumidos",
   "mode": "lite",
   "traceability": "strict",
-  "status": "verifying",
+  "status": "closed",
   "createdAt": "2026-11-23T21:36:52.234Z",
-  "updatedAt": "2026-11-23T21:58:41.952Z",
+  "updatedAt": "2026-11-23T22:38:25.916Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -27,16 +27,16 @@
       "actor": "agente-guard-shell-writes"
     },
     "conformance": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-11-23T22:38:02.266Z",
+      "evidence": "prueba con Codex CLI 0.171 real en Windows el 2026-11-23 19:33-19:35 UY: cat resumido, WriteAllText con ruta en variable rechazado, control a otro fichero pasa, tras Get-Content -TotalCount 40 la escritura pasa (verification.md); review.md conforms",
+      "actor": "agente-cierre-0-55-0"
     },
     "memory": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-11-23T22:38:25.655Z",
+      "evidence": "línea en vault projects/local-delegate/jornada-2026-11-23-causa-comun-y-0-54-0.md (sección Jornada 2026-11-23); sin memoria nueva de Claude Code",
+      "actor": "agente-cierre-0-55-0"
     }
   },
   "history": [
@@ -98,6 +98,43 @@
       "at": "2026-11-23T21:58:41.952Z",
       "evidence": "suite completa pytest -n 2: 8835 passed (1 fallo del léxico arreglado); afectados 284 passed; ruff check/format verdes; 50 rojos antes; 4 mutantes tumbados",
       "actor": "agente-guard-shell-writes"
+    },
+    {
+      "type": "transition",
+      "from": "verifying",
+      "to": "result-review",
+      "at": "2026-11-23T22:37:52.728Z",
+      "reason": "verificación y quality aprobadas; revisión de dos jueces en review.md; prueba con Codex real hecha"
+    },
+    {
+      "type": "gate",
+      "gate": "conformance",
+      "status": "approved",
+      "at": "2026-11-23T22:38:02.266Z",
+      "evidence": "prueba con Codex CLI 0.171 real en Windows el 2026-11-23 19:33-19:35 UY: cat resumido, WriteAllText con ruta en variable rechazado, control a otro fichero pasa, tras Get-Content -TotalCount 40 la escritura pasa (verification.md); review.md conforms",
+      "actor": "agente-cierre-0-55-0"
+    },
+    {
+      "type": "transition",
+      "from": "result-review",
+      "to": "closing",
+      "at": "2026-11-23T22:38:02.480Z",
+      "reason": "conformidad aprobada; se publica en la 0.55.0"
+    },
+    {
+      "type": "gate",
+      "gate": "memory",
+      "status": "approved",
+      "at": "2026-11-23T22:38:25.655Z",
+      "evidence": "línea en vault projects/local-delegate/jornada-2026-11-23-causa-comun-y-0-54-0.md (sección Jornada 2026-11-23); sin memoria nueva de Claude Code",
+      "actor": "agente-cierre-0-55-0"
+    },
+    {
+      "type": "transition",
+      "from": "closing",
+      "to": "closed",
+      "at": "2026-11-23T22:38:25.916Z",
+      "reason": "publicado en la 0.55.0 con la prueba real hecha"
     }
   ]
 }

@@ -27,7 +27,9 @@ HOSTILE_UNITS = [
     ("unit", "name"), [(u, n) for _, u, n in HOSTILE_UNITS], ids=[h[0] for h in HOSTILE_UNITS]
 )
 def test_a_hostile_line_costs_linearly(unit, name):
-    small_size = 5_000
+    # 20 000 and not 5 000: a 5 KB line fits the L1 cache of a CI runner and the 50 KB one does
+    # not, so there the ratio measured the cache (27-45 in #723) instead of the cost (10 here).
+    small_size = 20_000
     small_text = unit * (small_size // len(unit))
     big_text = unit * (small_size * SIZE_RATIO // len(unit))
     small, big, growth = cpu_growth(

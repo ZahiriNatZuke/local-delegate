@@ -54,3 +54,6 @@ modelo (`summarizable` + `protected` + `path_guard` del daemon), inyección por 
 - 2026-11-23: F1 a F7, F9 y F10 (#706 y #707) quedan arreglados con tests por el SDD
   `.sdd/changes/codex-guard-fixes/`, que también precisa REQ-002, REQ-005 y REQ-006 de esta spec.
   Este SDD sigue en `result-review`: su conformidad espera la prueba con Codex real.
+- 2026-11-23 19:35 (hora de Uruguay): prueba con Codex real hecha (`verification.md`, «Prueba con
+  Codex real»); el hueco de las escrituras de shell (#724) lo cierra el SDD
+  `.sdd/changes/codex-guard-shell-writes/`. Conformidad aprobada.

@@ -44,3 +44,20 @@ Without a declaration, list what was run. Never invent a command. -->
 - Límites conocidos (documentados en la wiki): rutas que no se saben sin ejecutar, `-EncodedCommand`, `StreamWriter`, `[IO.File]::Open` con modo, escrituras de .NET anidadas, `perl -i`, `python -c`, `dd`, `truncate`; los borrados no se tocan.
 - La revisión de dos jueces (review.md) llevó a 7 arreglos con sus tests; dos mutantes nuevos (lecturas envueltas canalizadas, comillas dobles) tumbados por sus tests.
 - El cambio de `herestring_spans` toca `read_classifier` (Claude Code) sin cambiar su resultado: test de equivalencia con 5 000 textos aleatorios.
+
+## Prueba con Codex real (2026-11-23, 19:33 a 19:35 hora de Uruguay)
+
+Codex CLI 0.171.0 en Windows sobre el `~/.codex` real, `main` en `92839abd` instalado con
+`uv tool install --force --no-cache ".[llamaswap]"`, `doctor` con los hooks de Codex aprobados 4 de 4,
+ventana `test-window` `codex-guard-shell`. Centinela `.md` de 201 líneas (~20 KB) en una carpeta
+temporal; `codex exec --json -c 'sandbox_mode="workspace-write"'` y `codex exec resume` en la misma
+sesión:
+
+| Paso | Esperado | Visto |
+| --- | --- | --- |
+| `cat centinela.md` | denegado con el resumen como motivo | `Command blocked by PreToolUse hook: Resumen de … hecho por el modelo local …` |
+| `[System.IO.File]::WriteAllText($p, …)` con `$p='centinela.md'` | rechazado | `… solo se ha leido resumido: antes de modificarlo, lee literal el tramo …`; fichero sin cambiar |
+| control: `WriteAllText('otro.md', …)` | pasa | exit 0, fichero escrito |
+| `Get-Content centinela.md -TotalCount 40` y luego el mismo `WriteAllText` | pasa | exit 0; primera línea cambiada |
+
+Ventana cerrada y centinela borrado tras la prueba.
