@@ -103,7 +103,7 @@ class Totals:
         return bool(self.lines)
 
 
-def _parts(body: str, separator: str) -> tuple[dict[str, int], list[str]] | None:
+def _parts(body: str, separator: str) -> tuple[dict[str, int], str] | None:
     """`body` as `N outcome` parts split on `separator`, or None if one part is not that.
 
     The kept counts per category (failures count the errors too), and the parts as written."""
@@ -125,10 +125,12 @@ def _parts(body: str, separator: str) -> tuple[dict[str, int], list[str]] | None
             found[FAILURES] = found.get(FAILURES, 0) + count
         if category is not None:
             found[category] = found.get(category, 0) + count
-    return found, written
+    # The runner's own separator (`, ` in pytest and jest, `; ` in cargo), so the parts read as
+    # it wrote them.
+    return found, f"{separator} ".join(written)
 
 
-def _totals_line(line: str) -> tuple[dict[str, int], list[str]] | None:
+def _totals_line(line: str) -> tuple[dict[str, int], str] | None:
     """The kept counts and the parts of `line` if it is a totals line of pytest, jest or cargo."""
     stripped = line.strip()
     if len(stripped) > _MAX_LINE or not stripped:
@@ -159,7 +161,7 @@ def totals(source: str) -> Totals:
         if parsed is not None:
             counts, written = parsed
             found.lines.append(line.strip())
-            found.parts.append(", ".join(written))
+            found.parts.append(written)
             for category, count in counts.items():
                 found.counts[category] = found.counts.get(category, 0) + count
                 if count > 0:
@@ -353,6 +355,18 @@ _REACH = 6
 _TOKEN = re.compile(r"[^\W\d_]+|\d+(?:[.,]\d+)?|[.,;:!?()\[\]\n]")
 
 
+def _is_a_list(tokens: list[tuple[str, int, int]], comma: int) -> bool:
+    """Whether the comma at `comma` separates two category words of one list («fallos, saltos»).
+
+    Then it does not end the reach of the negation before the list (#714, review H1)."""
+    if comma < 1 or comma + 1 >= len(tokens):
+        return False
+    return (
+        _fold(tokens[comma - 1][0]) in _CATEGORY_WORDS
+        and _fold(tokens[comma + 1][0]) in _CATEGORY_WORDS
+    )
+
+
 def _negated_categories(summary: str) -> list[tuple[str, str]]:
     """(category, clause) for each mention of a category that a negation of its clause denies."""
     tokens = [(m.group(0), m.start(), m.end()) for m in _TOKEN.finditer(summary)]
@@ -369,6 +383,8 @@ def _negated_categories(summary: str) -> list[tuple[str, str]]:
                 found.append((category, summary[start:end]))
                 seen.add(category)
                 break
+            if word == "," and _is_a_list(tokens, back):
+                continue  # «No hubo fallos, saltos ni errores»: one list, one negation
             if (
                 word[0].isdigit()
                 or not word[0].isalpha()
@@ -425,14 +441,15 @@ def python_versions(summary: str, source: str) -> list[str]:
     without a header: then there is nothing to compare with."""
     if not summary or len(summary) > _MAX_TEXT:
         return []
-    header = pytest_header(source)
-    if header is None:
+    if pytest_header(source) is None:
         return []
-    real = header[0]
+    # Every version the input names counts as real: the headers of each session (tox, nox) and
+    # the rest («removed in Python 3.14» of a DeprecationWarning) (#714, review H3).
+    real = {match.group(1) for match in _PYTHON_IN_TEXT.finditer(source)}
     other: list[str] = []
     for match in _PYTHON_IN_TEXT.finditer(summary):
         written = match.group(1)
-        if written == real or real.startswith(written + "."):
+        if any(version == written or version.startswith(written + ".") for version in real):
             continue
         if written not in other:
             other.append(written)

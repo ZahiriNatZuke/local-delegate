@@ -33,8 +33,9 @@ modelo). Dos cambios visibles:
 <!-- One block per requirement. Request quotes the literal fragment of the request, or says
 "derived: <reason>". Verify starts with one method: test, cmd, manual or review. -->
 
-- **REQ-001** — La coma corta el alcance de una negación: «Sin fallos, cuatro pruebas omitidas»
-  sobre `10 passed, 4 skipped` no avisa.
+- **REQ-001** — La coma corta el alcance de una negación: «Sin fallos, con pruebas omitidas»
+  sobre `10 passed, 4 skipped` no avisa; salvo la coma de una lista de categorías («No se
+  reportaron fallos, saltos ni errores» sigue avisando, como en `main`).
   - Request: "La coma no corta la negación"
   - Verify: test tests/test_test_summary_figures.py::test_a_comma_ends_the_negation
 - **REQ-002** — Una cifra escrita en letras entre la negación y la palabra (dos a veinte, treinta a
@@ -53,7 +54,8 @@ modelo). Dos cambios visibles:
   - Request: "derived: F3 del review.md del SDD summarize-test-totals-negation"
   - Verify: test tests/test_test_summary_figures.py::test_the_warning_cites_the_line_that_counts
 - **REQ-005** — Con la línea de totales de pytest, jest o cargo en la entrada (y si la respuesta no la cita ya literal), `local_summarize` y
-  `local_lint_summary` (llamada única y troceada) terminan con una línea del programa con esos
+  `local_lint_summary` (llamada única y troceada) añaden tras el resumen, entre sus avisos, una
+  línea del programa con esos
   totales (`216 passed, 3 skipped`) y, si hay cabecera de pytest, `Python 3.11.15, pytest 8.3.4`.
   Sin línea de totales, la respuesta no cambia. Textos en es y en.
   - Request: "Con salida de pytest, los totales y la versión salen de la línea de totales y de la cabecera, por programa."
@@ -100,6 +102,11 @@ modelo). Dos cambios visibles:
 ## Non-goals
 
 - Avisar de recuentos distintos en la prosa (ver «Decisión»); F4 a F7 del review del #684.
+- «Ninguna de las dos pruebas fue omitida»: «dos» corta la negación (falso negativo raro, aceptado).
+- Un log de pytest sin fallos en `local_lint_summary` sigue respondiéndose por programa
+  (`_lint_no_findings`), que ya cita la línea de totales del log.
+- Versiones que la entrada nombra en otro sitio (un aviso «removed in Python 3.14», otra sesión de
+  tox) cuentan como reales: no avisan.
 - `local_extract`, `locate*.py`, `line_check.py`.
 
 ## Traceability

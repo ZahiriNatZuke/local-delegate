@@ -68,9 +68,20 @@ def _short(totals: str) -> str:
 def test_a_comma_ends_the_negation():
     log = _short("10 passed, 4 skipped")
     assert runner_totals.denied("Sin fallos, cuatro pruebas omitidas.", log) == []
-    # Positive control: the same negation, with no comma, still reaches the skips.
-    found = runner_totals.denied("Sin fallos ni pruebas omitidas.", log)
+    # Only the comma cuts here (no figure, no conjunction); without it the negation reaches.
+    assert runner_totals.denied("Sin fallos, con pruebas omitidas.", log) == []
+    found = runner_totals.denied("Sin fallos con pruebas omitidas.", log)
     assert [(c, n) for c, _clause, n in found] == [(runner_totals.SKIPS, 4)]
+
+
+@pytest.mark.parametrize(
+    "summary",
+    ["No se reportaron fallos, saltos ni errores.", "No failures, skips or errors were reported."],
+)
+def test_a_comma_inside_a_list_of_categories_does_not_end_the_negation(summary):
+    """Review H1: the comma of a list keeps the negation of the list (it warned on main too)."""
+    found = runner_totals.denied(summary, _short("10 passed, 2 skipped"))
+    assert [(c, n) for c, _clause, n in found] == [(runner_totals.SKIPS, 2)]
 
 
 def test_a_figure_in_words_ends_the_negation():
@@ -78,7 +89,7 @@ def test_a_figure_in_words_ends_the_negation():
     assert runner_totals.denied("No hubo fallos salvo dos omitidas.", log) == []
     assert runner_totals.denied("No failures except two skipped tests.", log) == []
     # Positive controls: without the figure, and with an article that is not one, it is flagged.
-    for summary in ("No hubo fallos salvo las omitidas.", "No hubo ni un salto."):
+    for summary in ("No hubo fallos ni omitidas.", "No hubo ni un salto."):
         found = runner_totals.denied(summary, log)
         assert [c for c, _clause, _n in found] == [runner_totals.SKIPS], summary
 
@@ -99,7 +110,10 @@ def test_the_new_negation_cuts_stay_linear_on_hostile_input():
     hostile = "no " * 50_000 + "dos " * 50_000 + ", " * 50_000 + "errores"
     start = time.perf_counter()
     runner_totals.denied(hostile, _short("1 error"))
-    runner_totals.python_versions(hostile, "platform x -- Python " + "1." * 50_000 + "\n")
+    header = "platform x -- Python 3.11.15, pytest-8.3.4, " + "1." * 150 + "\n"
+    assert len(header) < 400  # reaches the header pattern, not the length guard
+    runner_totals.python_versions("Python 3." * 200_000, header + "Python 3." * 200_000)
+    runner_totals.pytest_header(("platform x -- Python " + "1." * 150 + "\n") * 5_000)
     assert time.perf_counter() - start < 5
 
 
@@ -189,7 +203,7 @@ def test_without_a_totals_line_the_summary_is_as_before(monkeypatch, tmp_path):
     assert server.WARNING_MARKER not in result
 
 
-def test_an_answer_quoting_the_totals_gets_no_line(monkeypatch, tmp_path):
+def test_an_answer_with_the_totals_gets_no_line(monkeypatch, tmp_path):
     answer = "Python 3.11.15: 216 passed, 3 skipped en 12,34 s."
     result = _result(_call(monkeypatch, tmp_path, server.local_summarize, answer, text=PYTEST_LOG))
     assert result.count("216 passed, 3 skipped") == 1
@@ -202,13 +216,18 @@ def test_an_answer_quoting_the_totals_gets_no_line(monkeypatch, tmp_path):
 
 
 def test_the_warning_cites_the_line_that_counts(monkeypatch, tmp_path):
-    log = "....\n=== 2 skipped, 5 passed in 1.00s ===\n....\n=== 3 passed in 2.00s ===\n"
+    # The line that counts the skips goes second: neither the first nor the last line would do.
+    log = (
+        "....\n=== 3 passed in 2.00s ===\n....\n=== 2 skipped, 5 passed in 1.00s ===\n"
+        "....\n=== 4 passed in 3.00s ===\n"
+    )
     result = _result(
         _call(monkeypatch, tmp_path, server.local_summarize, "Todo bien, sin saltos.", text=log)
     )
     warning = result[result.index(server.WARNING_MARKER) :]
     assert "2 skipped, 5 passed in 1.00s" in warning
     assert "3 passed in 2.00s" not in warning
+    assert "4 passed in 3.00s" not in warning
 
 
 @pytest.mark.parametrize("role", ["mechanical", "long"])
@@ -233,3 +252,34 @@ def test_lint_summary_chunked_adds_the_program_line(monkeypatch, tmp_path):
     )
     assert "1 failed, 215 passed, 3 skipped" in result
     assert "Python 3.12.7" in result
+
+
+def test_another_version_named_by_the_input_is_not_flagged():
+    """Review H3: a version the input names elsewhere (a warning, another tox session) is real."""
+    log = PYTEST_LOG + "  DeprecationWarning: removed in Python 3.14\n"
+    assert runner_totals.python_versions("Avisa de que se quita en Python 3.14.", log) == []
+    sessions = PYTEST_LOG + PYTEST_LOG.replace("3.11.15", "3.12.7")
+    assert runner_totals.python_versions("Corrió en Python 3.12.7 y 3.11.15.", sessions) == []
+    assert runner_totals.python_versions("Corrió en Python 3.13.1.", sessions) == ["3.13.1"]
+
+
+def test_cargo_parts_keep_their_separator():
+    """Review H4: the parts read as the runner wrote them."""
+    line = "test result: ok. 5 passed; 0 failed; 2 ignored; 0 measured; 0 filtered out; finished in 0.01s"
+    assert runner_totals.totals(line + "\n").parts == [
+        "5 passed; 0 failed; 2 ignored; 0 measured; 0 filtered out"
+    ]
+
+
+def test_more_than_three_totals_lines_are_capped(monkeypatch, tmp_path):
+    log = "".join(f"....\n=== {n} passed in 1.00s ===\n" for n in range(1, 6))
+    result = _result(_call(monkeypatch, tmp_path, server.local_summarize, "Resumen.", text=log))
+    assert "1 passed | 2 passed | 3 passed" in result
+    assert "4 passed" not in result
+    assert "(y 2 líneas de totales más)" in result
+
+
+def test_go_output_gets_no_program_line(monkeypatch, tmp_path):
+    log = "=== RUN   TestA\n--- FAIL: TestA (0.00s)\nFAIL\nok  \tpkg\t0.01s\n"
+    result = _result(_call(monkeypatch, tmp_path, server.local_summarize, "Resumen.", text=log))
+    assert "Totales de la salida de tests" not in result
