@@ -258,7 +258,7 @@ cámbialos por los de tu backend.
 | `LOCAL_DELEGATE_MODEL_MECHANICAL` | `gemma3-4b` | Modelo para clasificar/extraer/resumen corto |
 | `LOCAL_DELEGATE_MODEL_LONG` | `gemma4-26b-a4b` | Modelo para documentos largos |
 | `LOCAL_DELEGATE_MODEL_CODE` | `qwen36-35b-a3b` | Modelo para código |
-| `LOCAL_DELEGATE_MODEL_VISION` | `gemma4-12b` | Modelo de visión para `local_describe_image` |
+| `LOCAL_DELEGATE_MODEL_VISION` | `qwen36-35b-a3b-vision` | Modelo de visión para `local_describe_image`: Qwen3.6 35B-A3B con `--mmproj` (~14 GB de RAM, ~11 GB de VRAM). Con menos VRAM o sin esa entrada en tu catálogo, la alternativa ligera: `LOCAL_DELEGATE_MODEL_VISION=gemma4-12b` |
 | `LOCAL_DELEGATE_MAX_IMAGE_MB` | `8` | Tope de tamaño de imagen para `local_describe_image` |
 | `LOCAL_DELEGATE_DUMP_CHUNK_NOTES` | *(vacío: apagado)* | Carpeta local donde cada operación troceada deja la salida de cada paso; solo para medir, nunca sale de la máquina |
 | `LOCAL_DELEGATE_LONG_INPUT_CHARS` | `6000` | Umbral mecánico↔largo |

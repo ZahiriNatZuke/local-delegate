@@ -1192,3 +1192,70 @@ def test_in_progress_parts_are_escaped(tmp_path):
     )
     assert "<img" not in html, html
     assert "&lt;img src=x&gt;" in html and "3&quot;&gt;" in html, html
+
+
+# --- vision-default-qwen36 REQ-003: a model without a role says so ---------------------------
+
+
+def _role_labels_html(tmp_path, lang: str) -> dict:
+    body = f"""
+    const state = {{status: {{catalog: {json.dumps(CATALOG)}}}}};
+    const ids = ['gemma4-26b-a4b', 'qwen36-35b-a3b', 'gemma4-12b', 'qwen35-2b'];
+    emit(Object.fromEntries(ids.map(id => [id, roleLabelsHtml(id)])));
+    """
+    prelude = _globals()
+    return _run(tmp_path, ["function roleLabels(", "function roleLabelsHtml("], body, prelude, lang)
+
+
+def test_a_model_without_a_role_gets_the_none_label(tmp_path):
+    """Mutant: no chip for a model without a role (today's panel) -> `qwen35-2b` is empty."""
+    labels = _role_labels_html(tmp_path, "es")
+    none = labels["qwen35-2b"]
+    assert 'class="mrole none"' in none, none
+    assert ">sin rol<" in none, none
+    assert f'title="{i18n.t_lang("es", "panel.role.none_title")}"' in none, none
+    assert "llama-swap" in i18n.t_lang("es", "panel.role.none_title")
+    for model in ("gemma4-26b-a4b", "qwen36-35b-a3b", "gemma4-12b"):
+        assert "none" not in labels[model], labels[model]
+        assert 'class="mrole"' in labels[model], labels[model]
+    assert labels["gemma4-26b-a4b"].count('class="mrole"') == 2
+
+
+def test_the_none_label_in_english(tmp_path):
+    labels = _role_labels_html(tmp_path, "en")
+    assert ">no role<" in labels["qwen35-2b"], labels["qwen35-2b"]
+    assert i18n.t_lang("en", "panel.role.none_title") != "panel.role.none_title"
+
+
+def test_the_none_label_is_dimmed():
+    """The same `.mrole` shape, with the faint colour instead of the role violet."""
+    css = re.search(r"\.mrole\.none\{([^}]*)\}", metrics.HTML)
+    assert css, "no `.mrole.none` rule"
+    assert "var(--faint)" in css.group(1) or "var(--mut)" in css.group(1)
+    assert "violet" not in css.group(1)
+
+
+def test_a_latest_tag_keeps_its_role(tmp_path):
+    """`/models` of Ollama lists `gemma3-4b:latest` for the role id `gemma3-4b`."""
+    catalog = [{"role": "mechanical", "label": "mecánico", "model": "gemma3-4b"}]
+    body = f"""
+    const state = {{status: {{catalog: {json.dumps(catalog)}}}}};
+    emit([roleLabelsHtml('gemma3-4b:latest'), roleLabelsHtml('gemma3-4b:7b')]);
+    """
+    tagged, other = _run(
+        tmp_path, ["function roleLabels(", "function roleLabelsHtml("], body, _globals(), "es"
+    )
+    assert 'class="mrole"' in tagged and "none" not in tagged, tagged
+    assert 'class="mrole none"' in other, other
+
+
+def test_without_the_catalog_no_row_says_none(tmp_path):
+    """Before `/api/status` answers (or when it fails) the roles are unknown, not «none»."""
+    body = """
+    const state = {status: null};
+    emit([roleLabelsHtml('qwen35-2b'), (state.status = {catalog: []}, roleLabelsHtml('qwen35-2b'))]);
+    """
+    unknown, empty = _run(
+        tmp_path, ["function roleLabels(", "function roleLabelsHtml("], body, _globals(), "es"
+    )
+    assert unknown == "" and empty == "", (unknown, empty)

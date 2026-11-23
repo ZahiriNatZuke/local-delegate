@@ -1,0 +1,110 @@
+{
+  "schemaVersion": 1,
+  "slug": "vision-default-qwen36",
+  "title": "Modelo de visión por defecto: qwen36-35b-a3b-vision",
+  "mode": "lite",
+  "traceability": "strict",
+  "status": "result-review",
+  "createdAt": "2026-11-23T18:29:59.280Z",
+  "updatedAt": "2026-11-23T19:27:03.368Z",
+  "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-11-23T18:31:59.810Z",
+      "evidence": "spec con 5 REQ trazados a T1-T5; decisión de doctor (warn solo con la alternativa servida) justificada para no romper backends sin visión; init-llamaswap no genera catálogo (cli.py:874); revisión propia contra el encargo",
+      "actor": "agente-vision"
+    },
+    "plan": {
+      "status": "approved",
+      "updatedAt": "2026-11-23T18:31:59.811Z",
+      "evidence": "spec con 5 REQ trazados a T1-T5; decisión de doctor (warn solo con la alternativa servida) justificada para no romper backends sin visión; init-llamaswap no genera catálogo (cli.py:874); revisión propia contra el encargo",
+      "actor": "agente-vision"
+    },
+    "quality": {
+      "status": "approved",
+      "updatedAt": "2026-11-23T19:18:48.928Z",
+      "evidence": "pytest -n 2 completo tras rebase: 8681 passed, 31 skipped; ruff check/format verdes; 20 tests nuevos rojos antes; mutante de doctor detectado; capturas claro/oscuro revisadas",
+      "actor": "agente-vision"
+    },
+    "conformance": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "memory": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-11-23T18:29:59.280Z",
+      "reason": "SDD change created"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "specifying",
+      "at": "2026-11-23T18:31:36.167Z",
+      "reason": "sitios localizados"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-11-23T18:31:59.810Z",
+      "evidence": "spec con 5 REQ trazados a T1-T5; decisión de doctor (warn solo con la alternativa servida) justificada para no romper backends sin visión; init-llamaswap no genera catálogo (cli.py:874); revisión propia contra el encargo",
+      "actor": "agente-vision"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-11-23T18:31:59.811Z",
+      "evidence": "spec con 5 REQ trazados a T1-T5; decisión de doctor (warn solo con la alternativa servida) justificada para no romper backends sin visión; init-llamaswap no genera catálogo (cli.py:874); revisión propia contra el encargo",
+      "actor": "agente-vision"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-11-23T19:18:36.530Z",
+      "reason": "x"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "implementing",
+      "at": "2026-11-23T19:18:40.988Z",
+      "reason": "spec y plan aprobados"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-11-23T19:18:41.222Z",
+      "reason": "suite 8681 verde y capturas"
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-11-23T19:18:48.928Z",
+      "evidence": "pytest -n 2 completo tras rebase: 8681 passed, 31 skipped; ruff check/format verdes; 20 tests nuevos rojos antes; mutante de doctor detectado; capturas claro/oscuro revisadas",
+      "actor": "agente-vision"
+    },
+    {
+      "type": "transition",
+      "from": "verifying",
+      "to": "result-review",
+      "at": "2026-11-23T19:27:03.368Z",
+      "reason": "revisión independiente hecha"
+    }
+  ]
+}

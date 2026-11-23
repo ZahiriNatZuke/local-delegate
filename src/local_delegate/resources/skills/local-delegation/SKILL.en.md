@@ -47,7 +47,8 @@ delegated.
 
 The model ids in the catalog (mechanical/long/code/vision) are configurable through
 env and can change between machines: check `local_status` to see the active catalog
-instead of assuming fixed names. `local_describe_image` is **image→text only**
+instead of assuming fixed names. Vision defaults to `qwen36-35b-a3b-vision`; on a machine with
+less VRAM, `LOCAL_DELEGATE_MODEL_VISION=gemma4-12b`. `local_describe_image` is **image→text only**
 (describe, read visible text, answer a specific question) — it never generates or edits
 images. And it **does not measure**: use it for content and overall layout, not to verify
 alignment, sizes, distances or whether a text wraps; measure that instead (on a web page, in the

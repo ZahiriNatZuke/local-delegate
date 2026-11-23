@@ -29,7 +29,7 @@ URL = "http://test-backend/v1/chat/completions"
 MECHANICAL = "gemma3-4b"
 LONG = "gemma4-26b-a4b"
 CODE = "qwen36-35b-a3b"
-VISION = "gemma4-12b"
+VISION = "qwen36-35b-a3b-vision"
 CAPACITY_ERROR = '{"error":{"message":"unspecific error: upstream command exited prematurely"}}'
 
 

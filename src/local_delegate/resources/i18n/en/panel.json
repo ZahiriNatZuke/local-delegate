@@ -338,6 +338,8 @@
   "panel.role.code": "code",
   "panel.role.long": "long",
   "panel.role.mechanical": "mechanical",
+  "panel.role.none": "no role",
+  "panel.role.none_title": "the backend (llama-swap) has it, but no tool uses it",
   "panel.role.vision": "vision",
   "panel.stats.cache": "cache {n}",
   "panel.stats.gen": "Generation tok/s",

@@ -729,6 +729,39 @@ PROMPT_BOUNDARIES: dict[str, frozenset[str]] = {
     "0.54.0": frozenset({"local_extract"}),
 }
 _PROMPT_BOUNDARY_FIELDS = frozenset({"system", "max_tokens"})
+# Cambios DECLARADOS del modelo por defecto de un rol, por la version que los trae: rol -> (modelo
+# con el que se congelo el corpus, modelo de hoy). Igual que los de prompt: los corpus NO se
+# regeneran (sus respuestas se midieron con el modelo viejo) y la diferencia se dice como aviso.
+# vision-default-qwen36 (#699): el rol `vision` pasa a Qwen3.6 35B-A3B con `--mmproj`.
+MODEL_BOUNDARIES: dict[str, dict[str, tuple[str, str]]] = {
+    "0.54.1": {"vision": ("gemma4-12b", "qwen36-35b-a3b-vision")},
+}
+
+
+def _frozen_models(value: Any, version: str | None = None) -> Any:
+    """`value` con los modelos de los cambios declarados (de `version`, o de todas) puestos como
+    cuando se congelo el corpus."""
+    renames = {
+        new: old
+        for name, changes in MODEL_BOUNDARIES.items()
+        if version in (None, name)
+        for old, new in changes.values()
+    }
+    if isinstance(value, dict):
+        return {key: _frozen_models(item, version) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_frozen_models(item, version) for item in value]
+    return renames.get(value, value) if isinstance(value, str) else value
+
+
+def _declared_model_version(current: Any, versioned: Any) -> str | None:
+    """La version del cambio de modelo declarado que explica la diferencia, o `None`."""
+    for version in MODEL_BOUNDARIES:
+        if current != versioned and _frozen_models(current, version) == versioned:
+            return version
+    return None
+
+
 # Campos de mas que una tool cambio a proposito en esa version. B2f: la llamada unica del rol `long`
 # de `local_lint_summary` lleva el inventario de ficheros y codigos en el mensaje de usuario, delante
 # del log (en el corpus F2, `lint-9k`). Afinidad por idioma (2026-10-19, tras la 0.36.0): la llamada
@@ -757,6 +790,10 @@ def declared_prompt_change(tool: str, field_name: str) -> str | None:
 
 def _boundary_notice(case_id: str, field_name: str, version: str) -> str:
     return f"{case_id}: {field_name} cambio con los prompts de la {version} (frontera declarada)"
+
+
+def _model_boundary_notice(case_id: str, field_name: str, version: str | None) -> str:
+    return f"{case_id}: {field_name} cambio con el modelo por defecto de la {version} (frontera declarada)"
 
 
 @dataclass
@@ -1411,14 +1448,21 @@ def check_versioned(dest: Path, notices: list[str] | None = None) -> list[str]:
         for field_name in _WATCHED_FIELDS:
             if current.get(field_name) != versioned.raw.get(field_name):
                 version = declared_prompt_change(case.tool, field_name)
-                if version is not None:
+                model_version = _declared_model_version(
+                    current.get(field_name), versioned.raw.get(field_name)
+                )
+                if version is not None or model_version is not None:
                     if notices is not None:
-                        notices.append(_boundary_notice(versioned.id, field_name, version))
+                        notices.append(
+                            _boundary_notice(versioned.id, field_name, version)
+                            if version is not None
+                            else _model_boundary_notice(versioned.id, field_name, model_version)
+                        )
                     continue
                 # Tambien lo que no sale de produccion: el corpus no se edita a mano, y una
                 # referencia retocada en el JSON dejaria de ser la que el constructor comprobo.
                 errors.append(f"{versioned.id}: {field_name} ya no coincide con el constructor")
-    if corpus.production_config != production_config():
+    if corpus.production_config != _frozen_models(production_config()):
         errors.append("production_config ya no coincide con config.py")
     return errors
 
@@ -2825,6 +2869,11 @@ def check_versioned_affinity(
         built_normalized = _apart_declared_changes(
             legacy_names.normalize_affinity_corpus(built_corpus), versioned_corpus, notices
         )
+        # El modelo de un rol que cambio a proposito (MODEL_BOUNDARIES) no es una diferencia.
+        if "production_config" in built_normalized:
+            built_normalized["production_config"] = _frozen_models(
+                built_normalized["production_config"]
+            )
         if built_normalized != versioned_corpus:
             differences.append("cases.json ya no coincide con el constructor")
         traps_name = legacy_names.TRAPS_FILE_NAMES[1]

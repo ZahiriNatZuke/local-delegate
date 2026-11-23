@@ -6,6 +6,25 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Cambiado
+
+**Cómo migrar.** Si tu catálogo de llama-swap no tiene la entrada `qwen36-35b-a3b-vision`, pon
+`LOCAL_DELEGATE_MODEL_VISION=gemma4-12b` (o añade la entrada: ver `docs/recipes/llama-swap-vision.md`).
+`local-delegate doctor` lo avisa en «modelo de cada rol» cuando tu backend sirve `gemma4-12b` y no
+el modelo nuevo.
+
+- **El modelo de visión por defecto pasa a `qwen36-35b-a3b-vision`** (Qwen3.6 35B-A3B con
+  `--mmproj`). En la medición de #699, ante una pregunta sugerente sobre capturas de UI, inventó 0
+  de 9 defectos de layout; `gemma4-12b`, 5 de 9. Cuesta ~14 GB de RAM y ~11 GB de VRAM (frente a
+  ~10 y ~9) y unos 30 s de carga en frío. `gemma4-12b` queda como alternativa ligera documentada
+  para máquinas con menos VRAM. `local_describe_image` sigue sin medir: una captura no es una
+  medición.
+- **`doctor` propone la alternativa ligera** (`service.role_models`): si el modelo de visión no
+  está en `/models` y `gemma4-12b` sí, da un aviso con el remedio; sin ningún modelo de visión, el
+  rol sigue siendo opcional y la nota nombra el mismo remedio.
+- **Panel: un modelo sin rol lo dice.** En la tarjeta «Backend», un modelo del backend que no usa
+  ninguna tool lleva la etiqueta apagada «SIN ROL» («NO ROLE» en inglés) en vez de ir sin etiqueta.
+
 ### Corregido
 
 - **`local_lint_summary`: los recuentos por fichero y por código los da el programa** (#717). En la
