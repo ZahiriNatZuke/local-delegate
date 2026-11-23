@@ -263,6 +263,7 @@ def test_expire_cleans_queue_actives_pending_grant_and_flight():
     assert t.poll("d") is None
 
 
+@pytest.mark.real_io
 def test_wait_change_wakes_on_each_change_and_respects_its_deadline():
     t = Turn(clashes_today, tick=60.0)
     t0 = time.monotonic()
@@ -518,6 +519,7 @@ def _long_op_with_one_waiting(monkeypatch, tmp_path, yield_s: float) -> tuple[di
     return _of_tool(events, "op_x"), _of_tool(events, "op_y"), y_starts[0] < max(x_ends)
 
 
+@pytest.mark.real_io
 def test_long_local_operation_yields_to_a_waiting_one(with_topology, monkeypatch, tmp_path):
     x_line, y_line, y_first = _long_op_with_one_waiting(monkeypatch, tmp_path, 0.3)
     assert y_line.get("turn_wait_ms", 0) > 0  # guarda: Y esperó turno de verdad
@@ -526,6 +528,7 @@ def test_long_local_operation_yields_to_a_waiting_one(with_topology, monkeypatch
     assert y_first, "Y no llegó al backend antes del último trozo de X"
 
 
+@pytest.mark.real_io
 def test_without_yield_nobody_yields(with_topology, monkeypatch, tmp_path):
     x_line, y_line, y_first = _long_op_with_one_waiting(monkeypatch, tmp_path, 0.0)
     assert y_line.get("turn_wait_ms", 0) > 0  # guarda

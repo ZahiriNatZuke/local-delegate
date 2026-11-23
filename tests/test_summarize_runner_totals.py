@@ -10,11 +10,11 @@ is not changed. The input is synthetic, with the shape of the issue.
 from __future__ import annotations
 
 import json
-import time
 from pathlib import Path
 
 import backend_mock
 import httpx2
+import perf
 import pytest
 
 from local_delegate import config, i18n, runner_totals, server
@@ -129,11 +129,15 @@ def test_a_failure_denied_while_the_runner_failed_is_flagged():
     assert [(c, n) for c, _clause, n in found] == [(runner_totals.FAILURES, 1)]
 
 
+@pytest.mark.perf
 def test_the_check_is_linear_on_hostile_input():
-    hostile = ("1 passed, " * 20_000) + "\n" + ("--- " * 50_000) + "\n" + "no " * 50_000
-    start = time.perf_counter()
-    runner_totals.denied("no " * 50_000 + "saltos", hostile)
-    assert time.perf_counter() - start < 5
+    def check(k: int) -> None:
+        hostile = (
+            ("1 passed, " * 2_000 * k) + "\n" + ("--- " * 5_000 * k) + "\n" + "no " * 5_000 * k
+        )
+        runner_totals.denied("no " * 5_000 * k + "saltos", hostile)
+
+    perf.assert_linear(lambda: check(1), lambda: check(10), size_ratio=10)
 
 
 # --- The tool, with a fake backend -----------------------------------------------------------------

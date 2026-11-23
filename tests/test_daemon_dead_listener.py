@@ -23,6 +23,9 @@ from filelock import FileLock
 
 from local_delegate import checks, config, daemon, server
 
+#: real daemons and sockets: `WinError 10061` under `-n auto` (SDD ci-root-cause): in the serial step, with one retry.
+pytestmark = pytest.mark.real_io
+
 _SRC = str(Path(daemon.__file__).resolve().parents[1])
 #: Bound on how long a child may take to do what the test expects. Without the fix, the daemon of
 #: the first tests never exits: the bound is what turns that hang into a failure.

@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import functools
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -85,10 +86,81 @@ def _bash3() -> str | None:
     return "/bin/bash" if major == "3" else None
 
 
+#: The prefix of the skip of a shell that crashes at startup; `tests/conftest.py` reads it back from
+#: the report to turn its guard into a warning (SDD ci-root-cause, REQ-007).
+STARTUP_CRASH = "crashes at startup"
+_STARTUP_CRASH_RE = re.compile(rf"shell '(\w+)' {STARTUP_CRASH}")
+_PROBE = "$PSVersionTable.PSVersion.ToString()"
+
+
+def _run_probe(cmd: list[str], env: Mapping[str, str]) -> subprocess.CompletedProcess:
+    return subprocess.run(
+        cmd,
+        env=dict(env),
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        timeout=SHELL_TIMEOUT,
+        stdin=subprocess.DEVNULL,
+        check=False,
+    )
+
+
+@functools.cache
+def startup_failure(name: str, executable: str) -> str | None:
+    """`None` when a PowerShell starts; otherwise why not, with the version it claims.
+
+    On 2026-11-03 the `pwsh` of the Ubuntu image aborted before running any script (`exit=-6`,
+    `System.IO.FileLoadException` loading `System.Collections.Specialized`): 28 red tests in two
+    runs with nothing of the repo involved. A shell that starts and then fails is NOT this: the
+    probe only asks for its version.
+    """
+    if name not in ("pwsh", "powershell"):
+        return None
+    env = powershell_env(name)
+    try:
+        probe = _run_probe([executable, "-NoProfile", "-NonInteractive", "-Command", _PROBE], env)
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        return f"{type(exc).__name__}: {exc}"
+    if probe.returncode == 0 and probe.stdout.strip():
+        return None
+    version = "5.1" if name == "powershell" else "unknown"
+    if name == "pwsh":  # `pwsh -Version` prints it from the native host; 5.1 reads it as an option
+        try:
+            version = _run_probe([executable, "-Version"], env).stdout.strip() or version
+        except (OSError, subprocess.TimeoutExpired):
+            pass
+    first = next((line for line in probe.stderr.splitlines() if line.strip()), "")
+    return f"version {version}, exit {probe.returncode}: {first[:200]}"
+
+
+def broken_shell_of(skip_reason: str) -> str | None:
+    """The shell whose skip says it crashed at startup, or `None`."""
+    match = _STARTUP_CRASH_RE.search(skip_reason)
+    return match.group(1) if match else None
+
+
+def required_without_pass(
+    required: frozenset[str], passes: Mapping[str, int], broken: set[str]
+) -> tuple[list[str], list[str]]:
+    """(shells that fail the guard, shells that only warn because they crash at startup)."""
+    missing = sorted(name for name in required if not passes.get(name))
+    return [n for n in missing if n not in broken], [n for n in missing if n in broken]
+
+
 def require_or_skip(name: str) -> str:
-    """The executable of `name`; skip if missing, or fail if the shell is required."""
+    """The executable of `name`; skip if missing, or fail if the shell is required.
+
+    A PowerShell that crashes at startup is skipped even when required, with a reason that names its
+    version: that is the runner image, not the repo. The guard of `tests/conftest.py` reports it as
+    a warning.
+    """
     executable = find_shell(name)
     if executable is not None:
+        reason = startup_failure(name, executable)
+        if reason is not None:
+            raise pytest.skip.Exception(f"shell {name!r} {STARTUP_CRASH} ({reason})")
         return executable
     if name in required_shells():
         raise pytest.fail.Exception(

@@ -6,6 +6,31 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Cambiado
+
+- **El CI deja de dar rojos sin fallo de código** (SDD `ci-root-cause`). Sale del análisis de 400
+  corridas del 2026-11-03 al 2026-11-23; una regla por causa, no un parche por test:
+  - `ci-gate` da por bueno, con aviso, un job `cancelled` **sin runner asignado y sin pasos**
+    (macOS sin máquina: 31 de los 90 rojos del gate). Un cancelado que llegó a correr, o un
+    `timed_out`, sigue fallando.
+  - Los tests de coste miden **crecimiento** entre dos tamaños con `tests/perf.py`
+    (`perf_counter_ns`, 50 ms por lado, techo `size_ratio ** 1.5`), llevan `@pytest.mark.perf` y
+    corren en un job `perf` propio, en Ubuntu, sin `-n` y con un reintento. Se acabaron los topes en
+    segundos y `process_time`.
+  - Los tests que esperan a daemons, sockets o plazos reales llevan `@pytest.mark.real_io` y corren
+    en un paso propio de los tres sistemas, en serie y con un reintento. El job `test` sube a 20 min
+    (firma de un cuelgue fantasma: 25:00).
+  - `tests/test_timing_marker_guard.py` falla si un test compara un reloj con un tope sin `perf`
+    o `real_io`, o si aparece `process_time` en `tests/`.
+  - Un pwsh que aborta al arrancar (imagen del runner) salta sus tests con su versión y la guarda
+    de shells exigidas avisa en vez de fallar.
+  - `scripts/check_local.py` en pre-commit: huellas de los hooks, versión de la captura, nombres en
+    español y catálogo de textos fallan en local. `bump_version.py X` regenera siempre huellas y
+    capturas (`--no-capture` para saltarlo) y `release.py` no publica con ellas viejas.
+  - La descarga del navegador de Playwright se reintenta (`scripts/ci_retry.sh`).
+  - `scripts/check_main.py`, tras mezclar: checks del último commit de `main` y alertas abiertas de
+    CodeQL en `main`.
+
 ## [0.55.0] - 2026-11-23
 
 ### Cambiado

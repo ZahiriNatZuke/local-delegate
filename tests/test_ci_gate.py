@@ -42,8 +42,23 @@ def _step(name: str, conclusion: str | None = "success") -> dict:
     return {"name": name, "conclusion": conclusion}
 
 
-def _job(name: str, *, status: str = "completed", conclusion: str | None = None, steps=()) -> dict:
-    return {"name": name, "status": status, "conclusion": conclusion, "steps": list(steps)}
+def _job(
+    name: str,
+    *,
+    status: str = "completed",
+    conclusion: str | None = None,
+    steps=(),
+    runner: str | None = "GitHub Actions 1000027327",
+) -> dict:
+    """Un job como lo devuelve la API. Por defecto con runner asignado, como casi todos."""
+    return {
+        "name": name,
+        "status": status,
+        "conclusion": conclusion,
+        "steps": list(steps),
+        "runner_id": 1000027327 if runner else None,
+        "runner_name": runner,
+    }
 
 
 COMPLETE_STEPS = [
@@ -73,6 +88,56 @@ def test_any_conclusion_that_is_not_good_fails(conclusion):
     v = ci_gate.job_verdict(_job("lint", conclusion=conclusion))
     assert v.state == ci_gate.BAD
     assert conclusion in v.reason
+
+
+# --- REQ-001 (SDD ci-root-cause): el job al que GitHub no le dio máquina -------------------
+#
+# Del 2026-11-03 al 2026-11-23, 71 jobs de macOS salieron `cancelled` sin runner y sin pasos: 31 de
+# los 90 rojos del gate. Cada caso que da OK tiene al lado su control casi idéntico que da FALLO.
+
+
+def test_a_cancelled_job_that_never_got_a_runner_is_good_with_a_warning():
+    v = ci_gate.job_verdict(_job("test (macos-latest)", conclusion="cancelled", runner=None))
+    assert v.state == ci_gate.GOOD
+    assert v.no_runner
+    assert "sin runner" in v.reason
+
+
+def test_the_api_empty_string_and_zero_also_mean_no_runner():
+    """La API devuelve a veces `runner_name: ""` y `runner_id: 0` en vez de `null`."""
+    job = _job("plugin (macos-latest)", conclusion="cancelled", runner=None)
+    job.update(runner_id=0, runner_name="")
+    assert ci_gate.job_verdict(job).state == ci_gate.GOOD
+
+
+def test_control_a_cancelled_job_with_a_runner_still_fails():
+    """Hubo máquina, aunque no llegara a dar pasos: ya no es la infraestructura."""
+    v = ci_gate.job_verdict(_job("test (macos-latest)", conclusion="cancelled"))
+    assert v.state == ci_gate.BAD
+    assert not v.no_runner
+
+
+def test_control_a_cancelled_job_with_an_executed_step_still_fails():
+    """Sin runner en la respuesta pero con un paso ejecutado: algo corrió, y se canceló."""
+    steps = [_step("Set up job"), _step("Tests (pytest)", "cancelled")]
+    v = ci_gate.job_verdict(
+        _job("test (macos-latest)", conclusion="cancelled", steps=steps, runner=None)
+    )
+    assert v.state == ci_gate.BAD
+
+
+def test_skipped_or_pending_steps_are_not_executed_steps():
+    steps = [_step("Set up job", None), _step("Tests (pytest)", "skipped")]
+    v = ci_gate.job_verdict(
+        _job("test (macos-latest)", conclusion="cancelled", steps=steps, runner=None)
+    )
+    assert v.state == ci_gate.GOOD
+
+
+@pytest.mark.parametrize("conclusion", ["timed_out", "failure"])
+def test_control_without_a_runner_only_cancelled_is_forgiven(conclusion):
+    v = ci_gate.job_verdict(_job("test (macos-latest)", conclusion=conclusion, runner=None))
+    assert v.state == ci_gate.BAD
 
 
 def test_the_phantom_job_passes_by_its_steps():
@@ -197,6 +262,31 @@ def test_the_phantom_comes_out_green_and_is_named():
     assert code == ci_gate.OK
     assert "job fantasma" in output
     assert "test (windows-latest)" in output
+
+
+def test_a_run_with_macos_never_started_is_green_and_names_it(tmp_path, monkeypatch):
+    summary = tmp_path / "summary.md"
+    monkeypatch.setenv("GITHUB_STEP_SUMMARY", str(summary))
+    jobs = [_job(n, conclusion="success") for n in ci_gate.EXPECTED_JOBS if "macos" not in n]
+    jobs += [
+        _job(n, conclusion="cancelled", runner=None) for n in ci_gate.EXPECTED_JOBS if "macos" in n
+    ]
+    code, output = _run(lambda *a: jobs)
+    assert code == ci_gate.OK
+    assert "::warning::test (macos-latest): cancelado sin runner" in output
+    assert "plugin (macos-latest)" in output.split("Jobs cancelados sin runner")[1]
+    assert "Cancelado sin runner" in summary.read_text(encoding="utf-8")
+
+
+def test_control_the_same_run_with_macos_cancelled_after_starting_fails():
+    jobs = [_job(n, conclusion="success") for n in ci_gate.EXPECTED_JOBS if "macos" not in n]
+    jobs += [
+        _job(n, conclusion="cancelled", steps=[_step("Set up job")])
+        for n in ci_gate.EXPECTED_JOBS
+        if "macos" in n
+    ]
+    code, _ = _run(lambda *a: jobs)
+    assert code == ci_gate.JOB_FAILURE
 
 
 def test_a_failure_cuts_without_waiting_for_the_rest():
@@ -335,9 +425,10 @@ def test_the_gate_is_declared_in_ci_yml():
 # eso es lo que se impide aquí.
 #
 # El 2026-10-13 el límite subió a 15 (la suite tardaba ~5 min en Windows y el paso de 5 cortaba
-# corridas sin ningún test fallido): la firma pasa a 20:00.
+# corridas sin ningún test fallido): la firma pasa a 20:00. El 2026-11-23 (SDD ci-root-cause) el
+# paso en serie de `real_io` lo sube a 20: la firma pasa a 25:00.
 
-TIMEOUT_JOB_TEST = 15
+TIMEOUT_JOB_TEST = 20
 GITHUB_GRACE = 5
 
 
@@ -346,7 +437,7 @@ def _job_test() -> dict:
 
 
 def test_the_tests_job_limit_is_the_one_explaining_the_hang_signature():
-    """El `20:00` que se lee en un `cancelled` no es magia: es este número más la gracia.
+    """El `25:00` que se lee en un `cancelled` no es magia: es este número más la gracia.
 
     Se ata porque la conclusión operativa depende de él — «un cancelled de 13:00 en main es el
     cuelgue conocido y no una avería»— y esa frase deja de ser cierta si el límite cambia.
@@ -443,7 +534,9 @@ def test_the_browser_is_cached_and_system_packages_are_retried(job):
         "las dependencias del sistema no van en la caché: se instalan siempre"
     )
     assert browser["if"] == "steps.browser-cache.outputs.cache-hit != 'true'"
-    assert browser["run"].strip() == "uv run playwright install chromium"
+    assert (
+        browser["run"].strip() == "bash scripts/ci_retry.sh 3 60 uv run playwright install chromium"
+    )
     assert packages.get("timeout-minutes") and browser.get("timeout-minutes")
     # Orden: versión, caché, navegador y al final las librerías del sistema, porque el script
     # arranca Chromium para saber si hace falta apt.
@@ -500,3 +593,92 @@ def test_the_classifiers_are_the_blocking_cells_of_the_matrix():
         if c.startswith(prefix)
     }
     assert declared == set(versions)
+
+
+# --- SDD ci-root-cause: el reparto de la suite y los reintentos -----------------------------
+
+
+def _jobs() -> dict:
+    return yaml.safe_load(CI_YML.read_text(encoding="utf-8"))["jobs"]
+
+
+@pytest.mark.parametrize(
+    ("job", "step"),
+    [("test", "Tests (pytest)"), ("test-lang-es", "Tests (pytest, LANG=es_ES.UTF-8)")],
+)
+def test_the_parallel_step_leaves_out_perf_and_real_io(job, step):
+    """REQ-002: nada que compare un reloj con un tope corre bajo `-n auto`."""
+    run = next(s for s in _jobs()[job]["steps"] if s.get("name") == step)["run"]
+    assert "-n auto" in run
+    assert '-m "not perf and not real_io"' in run
+
+
+@pytest.mark.parametrize("job", ["test", "test-lang-es"])
+def test_real_io_runs_after_the_parallel_step_in_series_with_a_retry(job):
+    """REQ-002 y REQ-006: en los tres sistemas (y en español), en serie y con un reintento. Sin
+    `COMPLETION_TEST_REQUIRE_SHELLS`: esa sesión no tiene tests de shell, y la guarda de
+    `tests/conftest.py` la daría por fallida."""
+    steps = _jobs()[job]["steps"]
+    names = [s.get("name", "") for s in steps]
+    real_io = [i for i, n in enumerate(names) if n.startswith("Tests with real I/O")]
+    parallel = [i for i, n in enumerate(names) if n.startswith("Tests (pytest")]
+    assert len(real_io) == 1 and len(parallel) == 1
+    step = steps[real_io[0]]
+    assert real_io[0] > parallel[0]
+    assert step["run"].strip() == "bash scripts/ci_pytest_retry.sh -m real_io"
+    if job == "test":  # the matrix includes Windows: Git Bash, not whatever `pwsh` finds
+        assert step["shell"] == "bash"
+    assert "env" not in step
+    assert step.get("timeout-minutes")
+
+
+def test_the_perf_job_runs_alone_on_ubuntu_and_blocks():
+    """REQ-002: un job propio, sin `-n`, con un reintento, y exigido por el gate."""
+    job = _jobs()["perf"]
+    assert job["runs-on"].startswith("ubuntu-")
+    assert "strategy" not in job
+    runs = [s.get("run", "") for s in job["steps"]]
+    assert "bash scripts/ci_pytest_retry.sh -m perf" in runs
+    assert not any(" -n " in r for r in runs)
+    assert "perf" in ci_gate.EXPECTED_JOBS
+    limited = sum(s.get("timeout-minutes", 0) for s in job["steps"])
+    assert job["timeout-minutes"] >= limited + 2
+
+
+def test_the_pytest_retry_reruns_only_the_failures_and_only_once():
+    text = (SCRIPTS / "ci_pytest_retry.sh").read_text(encoding="utf-8")
+    assert text.count("uv run pytest") == 2
+    assert "--last-failed --last-failed-no-failures none" in text
+    # 5 (nothing selected) and the other non-test exits are final: no retry hides them
+    assert "if ((status != 1)); then" in text
+    assert " -n " not in text
+
+
+def test_the_shell_scripts_of_the_ci_are_checked_out_with_lf():
+    """Windows checks out with `core.autocrlf=true`: a CRLF `.sh` breaks bash on its first line."""
+    attributes = (ROOT / ".gitattributes").read_text(encoding="utf-8").splitlines()
+    assert "*.sh text eol=lf" in attributes
+
+
+def test_the_browser_download_retry_is_bounded_and_fits_its_step():
+    """REQ-009: 3 intentos de 60 s, pausas de 10 y 20 s, y el peor caso cabe en el paso."""
+    text = (SCRIPTS / "ci_retry.sh").read_text(encoding="utf-8")
+    assert 'timeout --kill-after=10 "${per_attempt}" "$@"' in text
+    assert "sleep $((10 * i))" in text
+    attempts, per_attempt, kill_after = 3, 60, 10
+    worst_s = attempts * (per_attempt + kill_after) + sum(10 * i for i in range(1, attempts))
+    for job in BROWSER_JOBS:
+        step = next(
+            s for s in _steps(job) if s.get("name") == "Install browser for the dashboard UI tests"
+        )
+        assert step["run"].split()[2:4] == [str(attempts), str(per_attempt)]
+        assert step["timeout-minutes"] * 60 > worst_s, (job, step["timeout-minutes"], worst_s)
+
+
+def test_every_job_fits_the_gate_wait():
+    """El gate espera cola + ejecución: ningún job puede durar más que su plazo."""
+    for name, job in _jobs().items():
+        if name == ci_gate.GATE_NAME:
+            continue
+        assert job["timeout-minutes"] * 60 < ci_gate.MAX_WAIT_S, name
+    assert _jobs()[ci_gate.GATE_NAME]["timeout-minutes"] * 60 > ci_gate.MAX_WAIT_S

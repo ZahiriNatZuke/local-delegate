@@ -349,6 +349,7 @@ def test_free_turn_is_granted_and_visible_as_running(client):
     assert server._turn.snapshot().actives == ()
 
 
+@pytest.mark.real_io
 def test_queued_behind_a_clashing_local_then_granted_during_the_long_wait(client, monkeypatch):
     monkeypatch.setattr(turn_leases, "MAX_HEARTBEAT_S", 5.0)
     assert isinstance(_local("111:1", CODE), turn.Grant)
@@ -374,6 +375,7 @@ def test_queued_behind_a_clashing_local_then_granted_during_the_long_wait(client
     assert _entry("remote:mac/op1") is None
 
 
+@pytest.mark.real_io
 def test_a_queued_answer_comes_back_by_heartbeat_s(client):
     assert isinstance(_local("111:1", CODE), turn.Grant)
     t0 = time.monotonic()
@@ -630,6 +632,7 @@ def test_no_usage_event_and_no_credential_in_answers_or_logs(port_client, env, m
 # --- load ------------------------------------------------------------------------------------
 
 
+@pytest.mark.real_io
 def test_sixteen_long_waits_do_not_block_inflight(client, monkeypatch):
     monkeypatch.setattr(turn_leases, "MAX_HEARTBEAT_S", 5.0)
     assert isinstance(_local("111:1", CODE), turn.Grant)
@@ -660,6 +663,7 @@ def _pending_after(threads: list[_Thread], seconds: float) -> int:
     return sum(1 for t in threads if t.is_alive())
 
 
+@pytest.mark.real_io
 def test_many_heartbeats_on_one_queued_lease_open_one_long_wait(client, monkeypatch):
     """More than the threadpool's 40 workers on ONE lease: one waits, the rest answer at once."""
     monkeypatch.setattr(turn_leases, "MAX_HEARTBEAT_S", 5.0)
@@ -718,6 +722,7 @@ def test_the_remote_entry_has_the_daemons_pid(client):
     assert data["remote:mac/op1"]["pid"] == os.getpid()
 
 
+@pytest.mark.real_io
 def test_a_local_tick_does_not_wait_for_a_busy_table(client):
     assert _acquire(client).json()["status"] == "granted"  # registers the tick hook
     assert turn_leases._tick in server.TURN_TICK_HOOKS  # guard: the tick does reach the table

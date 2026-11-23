@@ -17,6 +17,15 @@ Uso:
     python scripts/bump_version.py --check           # ¿coinciden todos? (sale 1 si no)
     python scripts/bump_version.py --boundaries      # une las huellas de hoy de los hooks
     python scripts/bump_version.py 0.12.0 --boundaries  # las dos cosas, en el PR de release
+    python scripts/bump_version.py 0.12.0 --no-capture  # sin regenerar la captura (sin navegador)
+
+Desde el SDD ci-root-cause (REQ-008), subir de versión regenera **siempre** lo que depende de ella:
+las huellas de los hooks (como `--boundaries`) y las dos capturas del README con su manifiesto,
+contra la app de métricas del árbol en un puerto libre. En los PR de release 0.49.0 y 0.52.0 la
+captura se quedó con la versión anterior y el CI salió rojo en los tres sistemas. Sin Playwright
+el bump falla con el remedio; `--no-capture` lo salta a sabiendas (y `tests/test_capture.py`
+seguirá en rojo hasta que alguien la regenere). `scripts/release.py` se niega a publicar con
+huellas o capturas viejas.
 
 `--check` es lo mismo que comprueba el CI, disponible en local antes del push.
 
@@ -38,8 +47,10 @@ import importlib.util
 import json
 import re
 import shutil
+import socket
 import subprocess
 import sys
+import time
 import tomllib
 from pathlib import Path
 
@@ -126,6 +137,78 @@ def update_boundaries(root: Path = ROOT) -> dict[str, list[str]]:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_bytes((json.dumps(dict(sorted(data.items())), indent=2) + "\n").encode("utf-8"))
     return data
+
+
+#: La captura del README: el script que la hace y los temas que publica.
+CAPTURE_SCRIPT = Path("scripts") / "dev" / "capture_dashboard.py"
+CAPTURE_THEMES = ("dark", "light")
+CAPTURE_STARTUP_S = 60
+CAPTURE_TIMEOUT_S = 300
+
+
+def _free_port() -> int:
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        sock.bind(("127.0.0.1", 0))
+        return sock.getsockname()[1]
+
+
+def _wait_listening(port: int, server: subprocess.Popen, timeout_s: float) -> None:
+    deadline = time.monotonic() + timeout_s
+    while time.monotonic() < deadline:
+        if server.poll() is not None:
+            raise BumpError(f"la app de métricas terminó al arrancar (código {server.returncode})")
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+            sock.settimeout(0.5)
+            if sock.connect_ex(("127.0.0.1", port)) == 0:
+                return
+        time.sleep(0.2)
+    raise BumpError(f"la app de métricas no escuchó en {timeout_s:.0f} s")
+
+
+def regenerate_captures(root: Path = ROOT, *, run=subprocess.run, popen=subprocess.Popen) -> None:
+    """Las dos capturas del README contra la app de métricas del árbol, no contra el daemon.
+
+    El daemon instalado sirve SU versión, que tras un bump ya no es la del árbol; por eso se monta
+    solo `metrics.app` en un puerto libre, como documenta `scripts/dev/capture_dashboard.py`.
+    """
+    try:
+        import playwright  # noqa: F401
+    except ImportError as exc:
+        raise BumpError(
+            "falta Playwright para regenerar la captura del README: `uv sync --group dev --group ui`"
+            " y `uv run playwright install chromium`, o pasa --no-capture a sabiendas"
+        ) from exc
+    port = _free_port()
+    app = (
+        "import uvicorn; from local_delegate.web import metrics; "
+        f"uvicorn.run(metrics.app, host='127.0.0.1', port={port}, log_level='warning')"
+    )
+    server = popen([sys.executable, "-c", app], cwd=root)
+    try:
+        _wait_listening(port, server, CAPTURE_STARTUP_S)
+        for theme in CAPTURE_THEMES:
+            done = run(
+                [
+                    sys.executable,
+                    str(root / CAPTURE_SCRIPT),
+                    "--url",
+                    f"http://127.0.0.1:{port}/",
+                    "--theme",
+                    theme,
+                ],
+                cwd=root,
+                timeout=CAPTURE_TIMEOUT_S,
+                check=False,
+            )
+            if done.returncode != 0:
+                raise BumpError(f"la captura en tema {theme} falló (código {done.returncode})")
+    finally:
+        server.terminate()
+        try:
+            server.wait(timeout=10)
+        except subprocess.TimeoutExpired:
+            server.kill()
+            server.wait(timeout=10)
 
 
 def _read(path: Path) -> tuple[str, str]:
@@ -395,6 +478,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--dry-run", action="store_true", help="enseña el plan sin escribir")
     parser.add_argument("--no-lock", action="store_true", help="no regenerar uv.lock")
     parser.add_argument(
+        "--no-capture",
+        action="store_true",
+        help="no regenerar la captura del README (tests/test_capture.py fallará hasta hacerlo)",
+    )
+    parser.add_argument(
         "--boundaries",
         action="store_true",
         help=f"une la huella de hoy de cada hook a {HOOK_HASHES_FILE.as_posix()} (nunca quita)",
@@ -445,6 +533,15 @@ def main(argv: list[str] | None = None) -> int:
 
         if not args.no_lock:
             relock()
+
+        # Lo que depende de la versión, siempre (SDD ci-root-cause, REQ-008).
+        update_boundaries(ROOT)
+        print(f"OK: huellas de los hooks unidas en {HOOK_HASHES_FILE.as_posix()}")
+        if args.no_capture:
+            print("aviso: captura del README sin regenerar (--no-capture)", file=sys.stderr)
+        else:
+            regenerate_captures(ROOT)
+            print("OK: capturas del README regeneradas con la versión nueva")
 
         warn_if_changelog_missing(args.version)
         print(f"OK: versión {check()} en todos los archivos")

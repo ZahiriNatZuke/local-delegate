@@ -355,6 +355,7 @@ def _mac_args(machines: dict, port: int, mode: str) -> tuple[list[str], dict, Pa
     return args, env, out, stop
 
 
+@pytest.mark.real_io
 def test_one_queue_for_two_machines(machines):
     deadline = Deadline(TEST_CAP_S)
     tmp = machines["tmp"]

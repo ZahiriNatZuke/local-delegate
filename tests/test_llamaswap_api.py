@@ -253,6 +253,7 @@ def test_watcher_with_rotated_history_never_concludes_from_counts():
 # --- Contra el llama-swap de prueba -----------------------------------------------------------
 
 
+@pytest.mark.real_io
 @needs_llamaswap
 @pytest.mark.llamaswap_real
 def test_in_flight_reads_past_100_kb_of_log_in_under_a_second(tmp_path: Path):
@@ -273,6 +274,7 @@ def test_in_flight_reads_past_100_kb_of_log_in_under_a_second(tmp_path: Path):
     assert elapsed < 1.0
 
 
+@pytest.mark.real_io
 @needs_llamaswap
 @pytest.mark.llamaswap_real
 def test_watcher_reloaded_and_then_down(tmp_path: Path):

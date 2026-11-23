@@ -6,7 +6,8 @@ index (one more, one less) fails.
 
 from __future__ import annotations
 
-import time
+import perf
+import pytest
 
 from local_delegate import locate
 
@@ -126,10 +127,16 @@ def test_syntax_error_gives_no_index():
     assert index.unavailable_reason == "syntax_error"
 
 
-def test_a_large_module_is_fast():
-    body = "".join(f"def f{k}(a):\n    return a + {k}\n\n\n" for k in range(12000))
-    assert len(body) > 300_000
-    started = time.process_time()
-    index = locate.build_index(body, "big.py")
-    assert time.process_time() - started < 2.0
-    assert len(index.blocks) == 12000
+@pytest.mark.perf
+def test_a_large_module_costs_linearly():
+    def module(count: int) -> str:
+        return "".join(f"def f{k}(a):\n    return a + {k}\n\n\n" for k in range(count))
+
+    small, big = module(1200), module(12000)
+    assert len(big) > 300_000
+    assert len(locate.build_index(big, "big.py").blocks) == 12000
+    perf.assert_linear(
+        lambda: locate.build_index(small, "big.py"),
+        lambda: locate.build_index(big, "big.py"),
+        size_ratio=10,
+    )

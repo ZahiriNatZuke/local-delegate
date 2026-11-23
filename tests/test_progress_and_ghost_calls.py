@@ -212,6 +212,7 @@ def test_old_orphan_of_this_process_is_still_dropped(monkeypatch, tmp_path):
     assert key not in json.loads((tmp_path / "inflight.json").read_text(encoding="utf-8"))
 
 
+@pytest.mark.real_io
 def test_cancelled_waiter_leaves_the_queue_and_the_next_moves_up(monkeypatch, slow_backend):
     """A holds the turn, B and C wait; the client cancels B.
 

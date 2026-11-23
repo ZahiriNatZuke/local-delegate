@@ -14,9 +14,9 @@ import importlib.util
 import random
 import re
 import sys
-import time
 from pathlib import Path
 
+import perf
 import pytest
 
 from local_delegate import lint_patterns
@@ -41,25 +41,28 @@ def _load():
 counter = _load()
 
 LONG_RUNS = {
-    "dots": "." * N,
-    "word_dot": "a." * (N // 2),
-    "dirs_no_extension": "dir.v1/" * (N // 7) + "x.pyz",
-    "dirs_then_separator": "d/" * (N // 2) + "::",
-    "word_then_colon": "a.py:" * (N // 5),
+    "dots": lambda n: "." * n,
+    "word_dot": lambda n: "a." * (n // 2),
+    "dirs_no_extension": lambda n: "dir.v1/" * (n // 7) + "x.pyz",
+    "dirs_then_separator": lambda n: "d/" * (n // 2) + "::",
+    "word_then_colon": lambda n: "a.py:" * (n // 5),
 }
 
 
+def _score(run: str) -> tuple[dict, dict]:
+    log = f"Ran 3 tests\n{run}\nFAILED tests/test_x.py::test_a - E501 line\n"
+    facts = counter.log_facts(log)
+    return facts, counter.count_inventions("tests/test_x.py fails 1 test " + run, log)
+
+
+@pytest.mark.perf
 @pytest.mark.parametrize("name", sorted(LONG_RUNS))
 def test_a_long_run_is_scored_in_linear_time(name):
-    run = LONG_RUNS[name]
-    log = f"Ran 3 tests\n{run}\nFAILED tests/test_x.py::test_a - E501 line\n"
-    start = time.perf_counter()
-    facts = counter.log_facts(log)
-    result = counter.count_inventions("tests/test_x.py fails 1 test " + run, log)
-    elapsed = time.perf_counter() - start
-    assert elapsed < CAP_SECONDS, f"scoring took {elapsed:.2f} s on {name}"
+    small, big = LONG_RUNS[name](N // 10), LONG_RUNS[name](N)
+    facts, result = _score(big)
     assert "tests/test_x.py" in facts["files"]
     assert result["invented_files"] == []
+    perf.assert_linear(lambda: _score(small), lambda: _score(big), size_ratio=10)
 
 
 _PIECES = list("ab_9é.-~/\\: \n") + [

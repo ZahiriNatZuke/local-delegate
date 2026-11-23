@@ -21,6 +21,7 @@ from pathlib import Path
 
 import backend_mock
 import httpx2
+import pytest
 
 from local_delegate import chains, config, cooldown, questions, server
 from local_delegate.failures import FailureClass
@@ -193,6 +194,7 @@ def test_three_failures_from_two_processes_cool_down_and_the_fourth_goes_direct(
 # --- Escenario: en enfriamiento y sin alternativa, falla al momento ---------------------------
 
 
+@pytest.mark.real_io
 @backend_mock.mock
 def test_cooled_down_without_alternative_fails_at_once(reload_config, tmp_path):
     reload_config(LOCAL_DELEGATE_FALLBACK_MECHANICAL="none")

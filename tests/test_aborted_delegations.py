@@ -98,6 +98,7 @@ class _DeadlineAfterCalls:
         await anyio.sleep(seconds)
 
 
+@pytest.mark.real_io
 def test_deadline_cancels_the_call_and_logs_it_once(monkeypatch, slow_backend, tmp_path):
     """Past `CALL_MAX_S` the call stops, the caller is told why, and ONE failed event is written.
 
@@ -175,6 +176,7 @@ def test_unexpected_exception_mid_delegation_is_logged(monkeypatch, slow_backend
     assert _panel_errors() == 1
 
 
+@pytest.mark.real_io
 def test_slot_wait_past_the_limit_fails_fast_and_is_logged(monkeypatch, slow_backend, tmp_path):
     """Every slot taken for longer than `QUEUE_MAX_WAIT_S`: a clear error now, not at 1800 s."""
     monkeypatch.setattr(config, "QUEUE_MAX_WAIT_S", 0.5)
@@ -287,6 +289,7 @@ def _behind_a_summary(url: str, backend, cap_s: float) -> tuple[dict | None, flo
     return anyio.run(scenario)
 
 
+@pytest.mark.real_io
 def test_a_queue_that_moves_never_saturates(monkeypatch, slow_backend, tmp_path):
     """Review of #482: the limit is time WITHOUT progress, not the length of the wait.
 
@@ -304,6 +307,7 @@ def test_a_queue_that_moves_never_saturates(monkeypatch, slow_backend, tmp_path)
     assert events and events[-1]["ok"] is True, events
 
 
+@pytest.mark.real_io
 def test_a_queue_that_does_not_move_saturates(monkeypatch, slow_backend, tmp_path):
     """The piece ahead never ends and nothing else moves: past 1 s the waiting call is told so.
 

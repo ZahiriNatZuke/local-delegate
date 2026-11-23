@@ -19,16 +19,18 @@ que el job *termine*, que es exactamente lo que aquí no pasa. El gate corre **e
 demás y pregunta por la API.
 
 **Por qué `timeout-minutes` no sustituye a este gate**, aunque `ci.yml` lo declare: sí actúa —eso
-se midió y se corrigió el 2026-07-31, ver el comentario de `ci.yml`—, pero tarda **20 minutos** en
-cerrar el job (15 del límite más los 5 de gracia que GitHub da al runner; 13 = 8 + 5 hasta el
-2026-10-13) y lo cierra como
+se midió y se corrigió el 2026-07-31, ver el comentario de `ci.yml`—, pero tarda **25 minutos** en
+cerrar el job (20 del límite más los 5 de gracia que GitHub da al runner; 20 = 15 + 5 hasta el
+2026-11-23 y 13 = 8 + 5 hasta el 2026-10-13) y lo cierra como
 `cancelled`, que para este gate es un **fallo**. O sea, sin el gate el merge quedaría bloqueado
-igual, solo que veinte minutos más tarde y sin log. El gate da el veredicto en segundos mirando los
+igual, solo que veinticinco minutos más tarde y sin log. El gate da el veredicto en segundos mirando los
 pasos.
 
 Regla de decisión por job, y el orden importa:
 
     conclusion success o skipped .................. OK
+    conclusion cancelled, sin runner asignado y
+        sin ningún paso ejecutado ................. OK con aviso  <- sin máquina
     conclusion cualquier otra cosa ................ FALLO, sin esperar al resto
     conclusion nula (el job sigue abierto):
         algún step concluido en algo que no sea
@@ -36,6 +38,14 @@ Regla de decisión por job, y el orden importa:
         el ÚLTIMO step listado es `Complete job`
         y concluyó en success ..................... OK  <- el job fantasma
         resto ..................................... ESPERAR
+
+**El job sin máquina** (SDD ci-root-cause, REQ-001): del 2026-11-03 al 2026-11-23, 71 jobs de
+macOS salieron `cancelled` sin que GitHub les asignara nunca un runner —`runner_id` y
+`runner_name` vacíos, `steps: []`— y fueron 31 de los 90 rojos de este gate. Ahí no corrió nada del
+repo, así que no hay nada que dar por malo: se da por bueno **con aviso** en el informe y en el
+resumen. Basta un indicio de que sí corrió algo —un runner asignado o un paso ejecutado— para que un
+`cancelled` vuelva a ser fallo, y `timed_out` lo es siempre. macOS se sigue exigiendo cada vez que
+corre.
 
 El criterio del fantasma es **el nombre del último step**, nunca contar: está comprobado contra la
 API que la numeración salta (un job de Windows lista los pasos 1-5 y luego 9-11).
@@ -107,13 +117,16 @@ EXPECTED_JOBS = (
     "plugin (ubuntu-latest)",
     "plugin (windows-latest)",
     "plugin (macos-latest)",
+    # Los tests de coste (`@pytest.mark.perf`), solos y sin `-n` (SDD ci-root-cause, REQ-002).
+    "perf",
 )
 
 # El plazo cubre COLA + EJECUCIÓN, que no es lo mismo que el `timeout-minutes` de un job: aquel
 # corre solo sobre la ejecución. Un `install-smoke` que espere runner 5 min y ejecute 10 suma 15, y
 # declararlo fallo sería cambiar un bloqueo ocasional por falsos rojos. En repo público los minutos
-# no se facturan y el caso normal se resuelve en segundos.
-MAX_WAIT_S = 25 * 60
+# no se facturan y el caso normal se resuelve en segundos. 40 desde el 2026-11-23: `test-lang-es`
+# admite hasta 33 con el paso en serie de `real_io` (SDD ci-root-cause).
+MAX_WAIT_S = 40 * 60
 INTERVAL_S = 10
 
 API_ATTEMPTS = 5
@@ -144,6 +157,21 @@ class Verdict(NamedTuple):
     state: str  # GOOD | BAD | WAIT
     reason: str
     phantom: bool = False
+    #: Cancelado sin runner y sin pasos: bueno, pero se avisa.
+    no_runner: bool = False
+
+
+def _never_ran(job: dict) -> bool:
+    """Cancelado por la infraestructura: GitHub no le dio máquina y no se ejecutó ningún paso.
+
+    Un paso «ejecutado» es uno con conclusión distinta de nula y de `skipped`. Cualquier runner
+    asignado basta para descartarlo, aunque no llegara a dar pasos: ahí sí hubo una máquina.
+    """
+    if job.get("runner_id") or job.get("runner_name"):
+        return False
+    return not any(
+        step.get("conclusion") not in (None, "skipped") for step in job.get("steps") or []
+    )
 
 
 def job_verdict(job: dict) -> Verdict:
@@ -152,6 +180,13 @@ def job_verdict(job: dict) -> Verdict:
 
     if conclusion in GOOD_CONCLUSIONS:
         return Verdict(GOOD, f"conclusion={conclusion}")
+    if conclusion == "cancelled" and _never_ran(job):
+        return Verdict(
+            GOOD,
+            "conclusion=cancelled sin runner asignado ni pasos ejecutados: cancelado por la "
+            "infraestructura de GitHub, no por el código",
+            no_runner=True,
+        )
     if conclusion is not None:
         # failure, cancelled, timed_out, action_required... nada de esto habilita un merge.
         return Verdict(BAD, f"conclusion={conclusion}")
@@ -240,6 +275,16 @@ def _report(title: str, results: dict[str, Verdict], write: Callable[[str], None
             + ", ".join(phantoms)
         )
 
+    no_runner = [n for n, v in results.items() if v.no_runner]
+    if no_runner:
+        write("")
+        write(
+            "Jobs cancelados sin runner asignado ni pasos (no corrieron; no cuentan como fallo): "
+            + ", ".join(no_runner)
+        )
+        for name in no_runner:
+            write(f"::warning::{name}: cancelado sin runner asignado; este run no lo probó")
+
     summary = os.environ.get("GITHUB_STEP_SUMMARY")
     if summary:
         with open(summary, "a", encoding="utf-8") as fh:
@@ -248,6 +293,11 @@ def _report(title: str, results: dict[str, Verdict], write: Callable[[str], None
                 fh.write(f"- `{name}`: **{_STATE_LABELS[v.state]}** — {v.reason}\n")
             if phantoms:
                 fh.write(f"\n> Job fantasma detectado: {', '.join(f'`{n}`' for n in phantoms)}\n")
+            if no_runner:
+                fh.write(
+                    "\n> Cancelado sin runner (no corrió en este run): "
+                    f"{', '.join(f'`{n}`' for n in no_runner)}\n"
+                )
             fh.write("\n")
 
 

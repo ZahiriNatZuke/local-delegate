@@ -20,6 +20,7 @@ from pathlib import Path
 from typing import ClassVar
 
 import jsonschema
+import perf
 import pytest
 
 from local_delegate import (
@@ -607,6 +608,7 @@ def test_a_refused_or_failed_call_gives_none(fake_mcp, mode):
     assert codex_reads.daemon_summarize("C:/work/notes.md", url=url, token="t") is None
 
 
+@pytest.mark.real_io
 def test_a_daemon_that_does_not_answer_in_time_gives_none(fake_mcp):
     _server, url = fake_mcp
     _FakeMcp.delay = 3.0
@@ -680,14 +682,21 @@ def test_the_experiment_switch_off_silences_the_guard_too(world, tmp_path):
 _PATCH_ON_NOTES = "*** Update File: notes.md\n@@\n-a\n+b"
 
 
+@pytest.mark.perf
 def test_the_patch_paths_come_out_in_linear_time():
     """REQ-001 (#706): `(.+?)\\s*$` backtracked over every blank, quadratic (40 000: about 5 s)."""
-    command = "*** Begin Patch\n*** Update File: a" + " " * 40_000 + "b\n*** End Patch\n"
-    start = time.process_time()
-    found = [m.group(1).strip() for m in codex_reads._PATCH_PATH.finditer(command)]
-    spent = time.process_time() - start
+
+    def header(blanks: int) -> str:
+        return "*** Begin Patch\n*** Update File: a" + " " * blanks + "b\n*** End Patch\n"
+
+    small, big = header(4_000), header(40_000)
+    found = [m.group(1).strip() for m in codex_reads._PATCH_PATH.finditer(big)]
     assert found == ["a" + " " * 40_000 + "b"]
-    assert spent < 1.0, f"{spent:.2f} s of CPU for one patch header"
+    perf.assert_linear(
+        lambda: list(codex_reads._PATCH_PATH.finditer(small)),
+        lambda: list(codex_reads._PATCH_PATH.finditer(big)),
+        size_ratio=10,
+    )
 
 
 def test_a_patch_path_loses_its_trailing_blanks_and_the_cr(world):
@@ -861,6 +870,7 @@ def test_old_session_logs_are_pruned_when_a_session_starts(world):
     assert recent.exists() and other.exists()
 
 
+@pytest.mark.real_io
 def test_the_summary_deadline_is_for_the_whole_call(fake_mcp):
     """REQ-006 (#707, F5): four requests of 0.4 s each are all in time for a socket, not in total."""
     _server, url = fake_mcp
@@ -920,9 +930,22 @@ def test_a_patch_header_with_blanks_before_it_is_still_guarded(world):
     _denied(_patch(world, "  *** Update File: notes.md\n@@\n-a\n+b"))
     _denied(_patch(world, "\t*** Delete File: notes.md"))
     command = "*** Begin Patch\n" + " " * 40_000 + "x\n*** End Patch\n"
-    start = time.process_time()
     assert list(codex_reads._PATCH_PATH.finditer(command)) == []
-    assert time.process_time() - start < 1.0
+
+
+@pytest.mark.perf
+def test_blanks_before_a_patch_header_cost_linearly():
+    """The cost half of the test above, measured as growth (SDD ci-root-cause)."""
+
+    def command(blanks: int) -> str:
+        return "*** Begin Patch\n" + " " * blanks + "x\n*** End Patch\n"
+
+    small, big = command(4_000), command(40_000)
+    perf.assert_linear(
+        lambda: list(codex_reads._PATCH_PATH.finditer(small)),
+        lambda: list(codex_reads._PATCH_PATH.finditer(big)),
+        size_ratio=10,
+    )
 
 
 @pytest.mark.parametrize(

@@ -339,6 +339,7 @@ def _hostile_pack(git_dir: Path, commits: int) -> None:
     (git_dir / "HEAD").write_text(names[0] + "\n", encoding="utf-8")
 
 
+@pytest.mark.real_io
 def test_a_hostile_delta_chain_is_cut_by_the_call_budget(tmp_path):
     """Review of #562: before the call budget, three such commits took 13.5 s and the 200 of
     `MAX_WALK` about 15 min. Now the call stops at `MAX_CALL_SECONDS` with what it read. Mutant

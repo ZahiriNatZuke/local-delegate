@@ -125,6 +125,7 @@ def _lines(path: Path) -> tuple[list[dict], int]:
 # --- REQ-001 / REQ-002: `record` --------------------------------------------------------------
 
 
+@pytest.mark.real_io
 def test_concurrent_records_keep_every_line(tmp_path):
     log = tmp_path / "telemetry.jsonl"
     _run_workers(tmp_path, "record", env={"LD_HOOK_TELEMETRY_LOG": str(log)})
@@ -159,6 +160,7 @@ def test_concurrent_threads_keep_every_line(tmp_path, monkeypatch):
 # --- REQ-003: notas de bloqueo -----------------------------------------------------------------
 
 
+@pytest.mark.real_io
 def test_concurrent_blocks_keep_every_note(tmp_path):
     notes = tmp_path / "blocks.jsonl"
     per = (hook_common.MAX_NOTES // 2 - 1) // 4  # que quepan todas sin recortar
@@ -172,6 +174,7 @@ def test_concurrent_blocks_keep_every_note(tmp_path):
 # --- REQ-004: el log de fallos ------------------------------------------------------------------
 
 
+@pytest.mark.real_io
 def test_concurrent_failures_keep_every_line(tmp_path):
     log_dir = tmp_path / "logs"
     count = 60  # 6 x 60 líneas de ~120 bytes: por debajo del tope de 256 KiB
@@ -184,6 +187,7 @@ def test_concurrent_failures_keep_every_line(tmp_path):
 # --- REQ-005: dos vías del mod con el mismo `id` ---------------------------------------------
 
 
+@pytest.mark.real_io
 def test_racing_mod_roads_write_one_line(tmp_path):
     """El daemon tardío y el proceso de respaldo escriben la misma decisión a la vez."""
     log = tmp_path / "telemetry.jsonl"
@@ -249,6 +253,7 @@ time.sleep(30)
 """
 
 
+@pytest.mark.real_io
 def test_a_held_lock_does_not_hang_the_hook(tmp_path, monkeypatch):
     log = tmp_path / "telemetry.jsonl"
     ready = tmp_path / "ready"

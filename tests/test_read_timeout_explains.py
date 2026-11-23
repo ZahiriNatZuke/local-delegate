@@ -25,6 +25,9 @@ import pytest
 
 from local_delegate import concurrency, config, i18n, server
 
+#: counts the probes a real watch thread makes before a deadline (SDD ci-root-cause): in the serial step, with one retry.
+pytestmark = pytest.mark.real_io
+
 CHAT = "http://test-backend/v1/chat/completions"
 RUNNING = "http://test-backend/running"
 ASKED = "qwen36-35b-a3b"

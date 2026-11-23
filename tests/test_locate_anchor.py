@@ -7,10 +7,13 @@ the text by a unique marker, never written by hand.
 
 from __future__ import annotations
 
+import perf
 import pytest
-from linear_cost import MAX_GROWTH, SIZE_RATIO, cpu_growth
 
 from local_delegate import locate
+
+#: Ten times the input: linear grows ~10x, quadratic ~100x (`tests/perf.py`).
+SIZE_RATIO = 10
 
 DOC_LINES = [
     "# Guide",
@@ -397,6 +400,7 @@ def _blocks_of_ts(units: int) -> tuple[str, list[dict]]:
     return text, entries
 
 
+@pytest.mark.perf
 def test_index_and_anchors_cost_grows_linearly():
     """REQ-022: 1 MB costs about ten times 100 KB, never the hundred of a quadratic cost."""
     req = locate.classify_field("manejadores_con_lineas")
@@ -410,7 +414,8 @@ def test_index_and_anchors_cost_grows_linearly():
 
     items = run(big_text, big_entries)
     assert all(it.start is not None for it in items)
-    small, big, growth = cpu_growth(
-        lambda: run(small_text, small_entries), lambda: run(big_text, big_entries)
+    perf.assert_linear(
+        lambda: run(small_text, small_entries),
+        lambda: run(big_text, big_entries),
+        size_ratio=SIZE_RATIO,
     )
-    assert growth < MAX_GROWTH, (small, big, growth)

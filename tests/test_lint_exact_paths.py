@@ -21,8 +21,7 @@ The inputs are synthetic, with the shape of the issues. The backend is faked (`_
 
 from __future__ import annotations
 
-import time
-
+import perf
 import pytest
 
 from local_delegate import config, i18n, lint_patterns, server
@@ -174,12 +173,18 @@ def test_an_absolute_path_goes_to_its_longest_relative_one():
     assert lint_patterns.files_by_frequency(log) == ["pkg/src/a.py", "src/a.py"]
 
 
+@pytest.mark.perf
 def test_a_long_url_is_searched_in_linear_time():
-    text = "see https://example.org/" + "a/" * 20_000 + "x.py and src/b.py\n"
-    start = time.perf_counter()
-    files = lint_patterns.files_by_frequency(text)
-    assert time.perf_counter() - start < 1.0
-    assert files == ["src/b.py"]
+    def text(n: int) -> str:
+        return "see https://example.org/" + "a/" * n + "x.py and src/b.py\n"
+
+    small, big = text(2_000), text(20_000)
+    assert lint_patterns.files_by_frequency(big) == ["src/b.py"]
+    perf.assert_linear(
+        lambda: lint_patterns.files_by_frequency(small),
+        lambda: lint_patterns.files_by_frequency(big),
+        size_ratio=10,
+    )
 
 
 # --- #690: folders the summary makes up -----------------------------------------------------------
@@ -345,26 +350,31 @@ def test_clean_files_only_on_a_pytest_log():
     assert lint_patterns.clean_files("src/a.py .\nsrc/a.py:1:1: E501\n") == []
 
 
-@pytest.mark.parametrize(
-    "line",
-    [
-        "tests/" + "a" * 100_000 + " " + "." * 100_000,
-        # Review of #709: the `.py` branch of the check, and the folder and URL patterns.
-        "tests/" + "a" * 100_000 + ".py " + "." * 100_000,
-        "x/" * 50_000 + " https://" + "y/" * 50_000,
-    ],
-    ids=["no_py", "py_branch", "folders_and_url"],
-)
-def test_the_clean_line_check_is_linear(line):
-    """CPU time, not the clock (as #710): a busy CI runner took 2.1 s of wall time on 400 KB.
-    Locally the four calls take about 0.25 s of CPU here; a quadratic pass would take minutes."""
+_CLEAN_LINES = {
+    "no_py": lambda n: "tests/" + "a" * n + " " + "." * n,
+    # Review of #709: the `.py` branch of the check, and the folder and URL patterns.
+    "py_branch": lambda n: "tests/" + "a" * n + ".py " + "." * n,
+    "folders_and_url": lambda n: "x/" * (n // 2) + " https://" + "y/" * (n // 2),
+}
+
+
+def _clean_line_checks(line: str) -> None:
     log = line + "\n1 passed in 0.1s\n"
-    start = time.process_time()
     lint_patterns.clean_files(log)
     lint_patterns.reported_files(log)
     lint_patterns.clean_file_entries("- tests/a.py: 0", log)
     lint_patterns.invented_files(line, "src/a.py:1:1: E501\n")
-    assert time.process_time() - start < 2.0
+
+
+@pytest.mark.perf
+@pytest.mark.parametrize("name", sorted(_CLEAN_LINES))
+def test_the_clean_line_check_is_linear(name):
+    """Growth, not a ceiling (a busy CI runner took 2.1 s of wall time on 400 KB, #710): ten
+    times the line costs about ten times; a quadratic pass would cost a hundred."""
+    small, big = _CLEAN_LINES[name](10_000), _CLEAN_LINES[name](100_000)
+    perf.assert_linear(
+        lambda: _clean_line_checks(small), lambda: _clean_line_checks(big), size_ratio=10
+    )
 
 
 # --- Review of PR #709 ---------------------------------------------------------------------------

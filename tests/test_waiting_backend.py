@@ -463,6 +463,7 @@ def test_the_snapshot_keeps_old_entries_as_they_were(tmp_path, monkeypatch):
 # --- one lock per watch: a slow write never holds up another send's stop ----------------------
 
 
+@pytest.mark.real_io
 def test_a_slow_write_of_one_send_does_not_hold_up_another_sends_stop():
     """`on_wait` writes `inflight.json` under a file lock (up to 2 s): one send's slow write must
     not delay the end of another send."""

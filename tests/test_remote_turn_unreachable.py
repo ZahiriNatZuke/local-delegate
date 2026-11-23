@@ -217,6 +217,7 @@ def test_a_cancelled_wait_for_the_blind_place_leaves_and_frees_nothing(mac, monk
 # --- REQ-002/003: the cut --------------------------------------------------------------------
 
 
+@pytest.mark.real_io
 def test_a_timeout_without_turn_cuts_the_calls_waiting_behind_it(mac, monkeypatch):
     """Four at once, the backend saturated: one goes, the other three fail at once."""
     _refusing(monkeypatch)
@@ -505,6 +506,7 @@ def test_a_chunked_operation_gives_the_blind_place_between_chunks(mac, monkeypat
     first.release_slot()
 
 
+@pytest.mark.real_io
 def test_a_wait_for_the_blind_place_that_does_not_move_is_saturated(mac, monkeypatch):
     monkeypatch.setattr(config, "QUEUE_MAX_WAIT_S", 0.3)
     _refusing(monkeypatch)

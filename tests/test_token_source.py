@@ -256,6 +256,7 @@ def test_the_lookup_runs_once_per_process_also_when_there_is_nothing(macos):
     assert services == ["local-delegate-remote", "local-delegate-web-token"]
 
 
+@pytest.mark.real_io
 def test_a_hanging_security_is_cut_by_the_time_limit(monkeypatch, tmp_path):
     """Un `security` que no termina (diálogo del Llavero bloqueado) no cuelga al que pregunta."""
     hang = tmp_path / "security.py"

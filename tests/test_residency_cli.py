@@ -93,6 +93,7 @@ def test_without_credential_it_does_not_write_blind(tmp_path, capsys):
     assert not list(tmp_path.glob("config.yaml.*.bak"))
 
 
+@pytest.mark.real_io
 def test_status_query_does_not_wait_for_a_daemon_that_never_answers(tmp_path, monkeypatch, capsys):
     """El limitador de hilos del daemon agotado: acepta la conexión y no contesta nunca.
 
@@ -212,6 +213,7 @@ def test_llamaswap_rejects_the_config_and_the_copy_is_restored(tmp_path, monkeyp
     assert serves == 200
 
 
+@pytest.mark.real_io
 @pytest.mark.llamaswap_real
 @needs_llamaswap
 def test_llamaswap_that_does_not_watch_the_file(tmp_path, monkeypatch, capsys):

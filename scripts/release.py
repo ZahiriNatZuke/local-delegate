@@ -19,6 +19,7 @@ nada remoto.
 """
 
 import argparse
+import importlib.util
 import json
 import re
 import subprocess
@@ -100,6 +101,26 @@ def _warn_open_sdd_changes(root: Path | None = None) -> None:
     )
 
 
+def _stale_generated(version: str, root: Path = ROOT) -> list[str]:
+    """Huellas de los hooks y capturas del README que no son de `version` (SDD ci-root-cause).
+
+    Aquí no se regeneran: `release.py` corre sobre `main` ya mezclado y exige que local y remoto
+    coincidan, así que lo regenerado quedaría fuera de lo publicado. Las regenera
+    `bump_version.py <versión>`, en el PR de release; esto solo se niega a publicar sin ellas.
+    """
+    spec = importlib.util.spec_from_file_location(
+        "_release_check_local", root / "scripts" / "check_local.py"
+    )
+    check_local = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(check_local)
+    stale = [f"huella vieja del hook {name}" for name in sorted(check_local.stale_boundaries(root))]
+    stale += [
+        f"{name} es de la {found}"
+        for name, found in sorted(check_local.stale_captures(root, version).items())
+    ]
+    return stale
+
+
 def _checks(version: str) -> None:
     if not re.fullmatch(r"\d+\.\d+\.\d+", version):
         _failure(f"la versión '{version}' no tiene forma X.Y.Z")
@@ -111,6 +132,15 @@ def _checks(version: str) -> None:
         _failure(
             f"hay archivos que no declaran {version}: {detail}\n"
             f"       Ejecuta antes:  uv run python scripts/bump_version.py {version}"
+        )
+
+    stale = _stale_generated(version)
+    if stale:
+        _failure(
+            "lo generado no es de esta versión:\n       "
+            + "\n       ".join(stale)
+            + "\n       Ejecuta antes, en el PR de release:  uv run python scripts/bump_version.py "
+            f"{version}  (regenera huellas y capturas)"
         )
 
     branch = _run(["git", "rev-parse", "--abbrev-ref", "HEAD"]).stdout.strip()
