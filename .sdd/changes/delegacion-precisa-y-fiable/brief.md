@@ -116,3 +116,14 @@ Cuatro fases, en este orden (decision del usuario, 2026-09-11):
   puede esperar sin romper la sesion; que pasa si el backend no esta; y como se mide contra la quinta
   medicion con un criterio escrito de antemano. **Se decide al cerrar la ventana de F1 y antes de
   la release.**
+  **Superado (2026-11-23).** No se construyó aquí: el mod de lectura del SDD `claude-plugin-and-mods`
+  (0.41.0) hace justo esto, resume él mismo la lectura grande y entrega el resumen como resultado, con
+  la guarda que no deja escribir sobre un resumen (REQ-021 y REQ-022 de aquel SDD). P-17 queda cerrada
+  sin trabajo pendiente en este SDD.
+
+## Log
+
+- L1 2026-09-11 Original request: no se guardó literal (SDD anterior a la sección Log); el objetivo está al principio de este brief.
+- L2 2026-09-15 Tareas 1 a 31 mezcladas y 0.28.0 publicada; ventana de P-4 abierta desde 2026-09-15T19:26:41Z.
+- L3 2026-10-27 Cortes de P-4 a 14 y 30 días: no concluyentes.
+- L4 2026-11-23 P-17 superada por el mod de lectura de la 0.41.0; tabla por requisito en `verification.md`. Único pendiente: el corte de P-4 del 2026-12-14, que cierra el SDD con lo que dé.

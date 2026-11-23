@@ -3,9 +3,9 @@
   "slug": "claude-plugin-and-mods",
   "title": "local-delegate como plugin de Claude Code y Claude Desktop, con mods",
   "mode": "standard",
-  "status": "implementing",
+  "status": "closed",
   "createdAt": "2026-10-21T20:04:48.989Z",
-  "updatedAt": "2026-10-21T22:21:39.514Z",
+  "updatedAt": "2026-11-23T21:33:01.194Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -20,22 +20,22 @@
       "actor": "user"
     },
     "quality": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-11-23T21:32:59.906Z",
+      "evidence": "verification.md: 1172 passed, 1 skipped en los tests Python de la trazabilidad (0253b630); CI de 0253b630 en verde (plugin, test, lint, secrets); REQ-024 en skip: no concluyente, menos de 30 sesiones",
+      "actor": "coordinador"
     },
     "conformance": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-11-23T21:33:00.426Z",
+      "evidence": "review.md: conforms-with-notes; REQ-001 a REQ-023 cumplidos y publicados; REQ-024 medido y no concluyente (no cuenta como éxito); pinned_tools queda como decisión de producto en el Project 3",
+      "actor": "coordinador"
     },
     "memory": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-11-23T21:33:00.956Z",
+      "evidence": "handoff.md rellenado; tarjetas del Project 3 actualizadas; memoria mods-y-sdd-claude-plugin-and-mods.md sigue vigente (no la toca este cierre)",
+      "actor": "coordinador"
     }
   },
   "history": [
@@ -101,6 +101,58 @@
       "type": "note",
       "at": "2026-11-02T14:22:03.000Z",
       "reason": "Revision del 2026-11-02 de SDD sin cerrar: NO se cierra. Las olas 0-6 estan mezcladas y publicadas (0.40.0, 0.41.0 y 0.41.1), pero falta la lectura de la medicion de adopcion de REQ-024 (14 dias tras instalar la 0.40.0, prevista hacia el 2026-11-05, con scripts/measure_plugin_adoption.py) y las puertas quality, conformance y memory."
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-11-23T21:32:59.640Z",
+      "reason": "Olas 0-6 mezcladas y publicadas (0.40.0, 0.41.0, 0.41.1); medición de REQ-024 hecha el 2026-11-23"
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-11-23T21:32:59.906Z",
+      "evidence": "verification.md: 1172 passed, 1 skipped en los tests Python de la trazabilidad (0253b630); CI de 0253b630 en verde (plugin, test, lint, secrets); REQ-024 en skip: no concluyente, menos de 30 sesiones",
+      "actor": "coordinador"
+    },
+    {
+      "type": "transition",
+      "from": "verifying",
+      "to": "result-review",
+      "at": "2026-11-23T21:33:00.150Z",
+      "reason": "puerta quality aprobada"
+    },
+    {
+      "type": "gate",
+      "gate": "conformance",
+      "status": "approved",
+      "at": "2026-11-23T21:33:00.426Z",
+      "evidence": "review.md: conforms-with-notes; REQ-001 a REQ-023 cumplidos y publicados; REQ-024 medido y no concluyente (no cuenta como éxito); pinned_tools queda como decisión de producto en el Project 3",
+      "actor": "coordinador"
+    },
+    {
+      "type": "transition",
+      "from": "result-review",
+      "to": "closing",
+      "at": "2026-11-23T21:33:00.697Z",
+      "reason": "puerta conformance aprobada"
+    },
+    {
+      "type": "gate",
+      "gate": "memory",
+      "status": "approved",
+      "at": "2026-11-23T21:33:00.956Z",
+      "evidence": "handoff.md rellenado; tarjetas del Project 3 actualizadas; memoria mods-y-sdd-claude-plugin-and-mods.md sigue vigente (no la toca este cierre)",
+      "actor": "coordinador"
+    },
+    {
+      "type": "transition",
+      "from": "closing",
+      "to": "closed",
+      "at": "2026-11-23T21:33:01.194Z",
+      "reason": "SDD cerrado con la medición de adopción no concluyente (2026-11-23)"
     }
   ]
 }

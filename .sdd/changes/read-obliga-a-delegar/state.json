@@ -3,39 +3,39 @@
   "slug": "read-obliga-a-delegar",
   "title": "El hook de Read deja de sugerir y pasa a decidir: aviso en el momento, bloqueo con flag, y umbral del entorno",
   "mode": "standard",
-  "status": "researching",
+  "status": "closed",
   "createdAt": "2026-09-09T01:45:09.302Z",
-  "updatedAt": "2026-09-09T01:56:35.688Z",
+  "updatedAt": "2026-11-23T21:30:14.983Z",
   "gates": {
     "spec": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-11-23T21:30:11.820Z",
+      "evidence": "Spec cerrada como superado por el bloqueo de lectura de la 0.28.0 y el mod de lectura de la 0.41.0; la aprobó el usuario dentro de delegacion-precisa-y-fiable. Cierre aprobado por el coordinador el 2026-11-23.",
+      "actor": "coordinador"
     },
     "plan": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-11-23T21:30:12.575Z",
+      "evidence": "Plan ejecutado dentro de delegacion-precisa-y-fiable (superado por el bloqueo de lectura de la 0.28.0 y el mod de lectura de la 0.41.0); plan.md lo enlaza. Cierre aprobado el 2026-11-23.",
+      "actor": "coordinador"
     },
     "quality": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-11-23T21:30:13.324Z",
+      "evidence": "Tests citados en verification.md repetidos en 0253b630 (996 passed, 2026-11-23); sdd check sin avisos.",
+      "actor": "coordinador"
     },
     "conformance": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-11-23T21:30:13.861Z",
+      "evidence": "review.md: conforms-with-notes; lo pedido existe en el producto (superado por el bloqueo de lectura de la 0.28.0 y el mod de lectura de la 0.41.0).",
+      "actor": "coordinador"
     },
     "memory": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-11-23T21:30:14.683Z",
+      "evidence": "Sin memoria nueva: el estado vive en sdd-delegacion-precisa-y-fiable.md y en la tarjeta del Project 3 'Ordenar el estado de los SDD'.",
+      "actor": "coordinador"
     }
   },
   "history": [
@@ -57,6 +57,102 @@
       "type": "note",
       "at": "2026-11-02T14:22:03.000Z",
       "reason": "Revision del 2026-11-02 de SDD sin cerrar: NO se cierra como hecho aqui: absorbido por delegacion-precisa-y-fiable (fase F1, implementada el 2026-09-12), como dice handoff.md. Queda en researching porque el harness no tiene estado 'absorbido'; su cierre sigue al de delegacion-precisa-y-fiable."
+    },
+    {
+      "type": "transition",
+      "from": "researching",
+      "to": "specifying",
+      "at": "2026-11-23T21:30:11.577Z",
+      "reason": "Cierre de SDD superado por el bloqueo de lectura de la 0.28.0 y el mod de lectura de la 0.41.0 (2026-11-23)"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-11-23T21:30:11.820Z",
+      "evidence": "Spec cerrada como superado por el bloqueo de lectura de la 0.28.0 y el mod de lectura de la 0.41.0; la aprobó el usuario dentro de delegacion-precisa-y-fiable. Cierre aprobado por el coordinador el 2026-11-23.",
+      "actor": "coordinador"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-11-23T21:30:12.071Z",
+      "reason": "Cierre de SDD superado por el bloqueo de lectura de la 0.28.0 y el mod de lectura de la 0.41.0 (2026-11-23)"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "plan-review",
+      "at": "2026-11-23T21:30:12.346Z",
+      "reason": "Cierre de SDD superado por el bloqueo de lectura de la 0.28.0 y el mod de lectura de la 0.41.0 (2026-11-23)"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-11-23T21:30:12.575Z",
+      "evidence": "Plan ejecutado dentro de delegacion-precisa-y-fiable (superado por el bloqueo de lectura de la 0.28.0 y el mod de lectura de la 0.41.0); plan.md lo enlaza. Cierre aprobado el 2026-11-23.",
+      "actor": "coordinador"
+    },
+    {
+      "type": "transition",
+      "from": "plan-review",
+      "to": "implementing",
+      "at": "2026-11-23T21:30:12.829Z",
+      "reason": "Cierre de SDD superado por el bloqueo de lectura de la 0.28.0 y el mod de lectura de la 0.41.0 (2026-11-23)"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-11-23T21:30:13.057Z",
+      "reason": "Cierre de SDD superado por el bloqueo de lectura de la 0.28.0 y el mod de lectura de la 0.41.0 (2026-11-23)"
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-11-23T21:30:13.324Z",
+      "evidence": "Tests citados en verification.md repetidos en 0253b630 (996 passed, 2026-11-23); sdd check sin avisos.",
+      "actor": "coordinador"
+    },
+    {
+      "type": "transition",
+      "from": "verifying",
+      "to": "result-review",
+      "at": "2026-11-23T21:30:13.567Z",
+      "reason": "Cierre de SDD superado por el bloqueo de lectura de la 0.28.0 y el mod de lectura de la 0.41.0 (2026-11-23)"
+    },
+    {
+      "type": "gate",
+      "gate": "conformance",
+      "status": "approved",
+      "at": "2026-11-23T21:30:13.861Z",
+      "evidence": "review.md: conforms-with-notes; lo pedido existe en el producto (superado por el bloqueo de lectura de la 0.28.0 y el mod de lectura de la 0.41.0).",
+      "actor": "coordinador"
+    },
+    {
+      "type": "transition",
+      "from": "result-review",
+      "to": "closing",
+      "at": "2026-11-23T21:30:14.306Z",
+      "reason": "Cierre de SDD superado por el bloqueo de lectura de la 0.28.0 y el mod de lectura de la 0.41.0 (2026-11-23)"
+    },
+    {
+      "type": "gate",
+      "gate": "memory",
+      "status": "approved",
+      "at": "2026-11-23T21:30:14.683Z",
+      "evidence": "Sin memoria nueva: el estado vive en sdd-delegacion-precisa-y-fiable.md y en la tarjeta del Project 3 'Ordenar el estado de los SDD'.",
+      "actor": "coordinador"
+    },
+    {
+      "type": "transition",
+      "from": "closing",
+      "to": "closed",
+      "at": "2026-11-23T21:30:14.983Z",
+      "reason": "Cierre de SDD superado por el bloqueo de lectura de la 0.28.0 y el mod de lectura de la 0.41.0 (2026-11-23)"
     }
   ]
 }

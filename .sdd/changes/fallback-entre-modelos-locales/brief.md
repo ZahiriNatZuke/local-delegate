@@ -64,3 +64,9 @@ de `spec.md`):
 - ¿Los timeouts cuentan para el enfriamiento?
 - ¿Solo se salta al residente por defecto?
 - ¿El rol de código también tiene respaldo por defecto?
+
+## Log
+
+- L1 2026-09-11 Original request: no se guardó literal (SDD anterior a la sección Log); el problema que lo motivó está en «Problem».
+- L2 2026-09-12 Absorbido por `delegacion-precisa-y-fiable`: sus 20 requisitos pasan a ser la fase F3.
+- L3 2026-11-23 Cerrado como absorbido por delegacion-precisa-y-fiable (0.28.0). Tests de los 20 requisitos repetidos en `0253b630`.

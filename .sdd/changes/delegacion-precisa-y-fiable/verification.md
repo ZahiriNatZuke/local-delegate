@@ -1440,3 +1440,32 @@ y `--exclude`. El comando de este documento (`scripts/medir_enfriamiento.py --de
 `--hasta` y `--excluir`) sigue funcionando sin cambios: `scripts/medir_enfriamiento.py` queda como
 envoltorio que traduce las opciones viejas y llama a `measure_cooldown.main()`. El envoltorio se
 retira tras la medición de P-4 de los 90 días (~2026-12-14). Lo escrito arriba no se reescribe.
+
+## Tabla por requisito (REQ-001 a REQ-020), 2026-11-23
+
+Resumen para `personal-harness sdd check`; la evidencia de fondo son las secciones F3 de arriba. Los
+valores por defecto del enfriamiento siguen sin medir: el criterio P-4 se cierra con el corte de 90
+dias del 2026-12-14, unico pendiente de este SDD.
+
+| Requirement | Check performed | Result | Evidence |
+| --- | --- | --- | --- |
+| REQ-001 | `test_failures.py` | pass | pytest de los ficheros citados en `0253b630` (996 passed, 2026-11-23); detalle en las secciones F3 de arriba (tareas 22-31) |
+| REQ-002 | `test_fallback.py` | pass | pytest de los ficheros citados en `0253b630` (996 passed, 2026-11-23); detalle en las secciones F3 de arriba (tareas 22-31) |
+| REQ-003 | `test_chains.py, test_fallback.py` | pass | pytest de los ficheros citados en `0253b630` (996 passed, 2026-11-23); detalle en las secciones F3 de arriba (tareas 22-31) |
+| REQ-004 | `test_chains.py` | pass | pytest de los ficheros citados en `0253b630` (996 passed, 2026-11-23); detalle en las secciones F3 de arriba (tareas 22-31) |
+| REQ-005 | `test_fallback.py, test_cooldown.py` | pass | pytest de los ficheros citados en `0253b630` (996 passed, 2026-11-23); detalle en las secciones F3 de arriba (tareas 22-31) |
+| REQ-006 | `test_fallback.py, test_cooldown.py` | pass | pytest de los ficheros citados en `0253b630` (996 passed, 2026-11-23); detalle en las secciones F3 de arriba (tareas 22-31) |
+| REQ-007 | `test_fallback.py` | pass | pytest de los ficheros citados en `0253b630` (996 passed, 2026-11-23); detalle en las secciones F3 de arriba (tareas 22-31) |
+| REQ-008 | `test_fallback.py, test_chains.py` | pass | pytest de los ficheros citados en `0253b630` (996 passed, 2026-11-23); detalle en las secciones F3 de arriba (tareas 22-31) |
+| REQ-009 | `test_cooldown.py` | pass | pytest de los ficheros citados en `0253b630` (996 passed, 2026-11-23); detalle en las secciones F3 de arriba (tareas 22-31) |
+| REQ-010 | `test_cooldown.py` | pass | pytest de los ficheros citados en `0253b630` (996 passed, 2026-11-23); detalle en las secciones F3 de arriba (tareas 22-31) |
+| REQ-011 | `test_cooldown.py` | pass | pytest de los ficheros citados en `0253b630` (996 passed, 2026-11-23); detalle en las secciones F3 de arriba (tareas 22-31) |
+| REQ-012 | `test_cooldown.py` | pass | pytest de los ficheros citados en `0253b630` (996 passed, 2026-11-23); detalle en las secciones F3 de arriba (tareas 22-31) |
+| REQ-013 | `test_fallback_observability.py` | pass | pytest de los ficheros citados en `0253b630` (996 passed, 2026-11-23); detalle en las secciones F3 de arriba (tareas 22-31) |
+| REQ-014 | `test_chains.py, test_cooldown.py` | pass | pytest de los ficheros citados en `0253b630` (996 passed, 2026-11-23); detalle en las secciones F3 de arriba (tareas 22-31) |
+| REQ-015 | `test_failures_integration.py, test_fallback.py` | pass | pytest de los ficheros citados en `0253b630` (996 passed, 2026-11-23); detalle en las secciones F3 de arriba (tareas 22-31) |
+| REQ-016 | `test_failures.py, test_failures_integration.py` | pass | pytest de los ficheros citados en `0253b630` (996 passed, 2026-11-23); detalle en las secciones F3 de arriba (tareas 22-31) |
+| REQ-017 | `test_fallback.py` | pass | pytest de los ficheros citados en `0253b630` (996 passed, 2026-11-23); detalle en las secciones F3 de arriba (tareas 22-31) |
+| REQ-018 | `test_fallback.py, test_failures_integration.py, test_failure_captures.py` | pass | pytest de los ficheros citados en `0253b630` (996 passed, 2026-11-23); detalle en las secciones F3 de arriba (tareas 22-31) |
+| REQ-019 | `test_fallback.py, test_chains.py, test_fallback_observability.py` | pass | pytest de los ficheros citados en `0253b630` (996 passed, 2026-11-23); detalle en las secciones F3 de arriba (tareas 22-31) |
+| REQ-020 | `test_failure_captures.py, test_failures.py, test_chains.py` | pass | pytest de los ficheros citados en `0253b630` (996 passed, 2026-11-23); detalle en las secciones F3 de arriba (tareas 22-31) |
