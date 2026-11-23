@@ -4,9 +4,9 @@
   "title": "Modelo de visión por defecto: qwen36-35b-a3b-vision",
   "mode": "lite",
   "traceability": "strict",
-  "status": "verifying",
+  "status": "result-review",
   "createdAt": "2026-11-23T18:29:59.280Z",
-  "updatedAt": "2026-11-23T19:18:48.928Z",
+  "updatedAt": "2026-11-23T19:27:03.368Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -98,6 +98,13 @@
       "at": "2026-11-23T19:18:48.928Z",
       "evidence": "pytest -n 2 completo tras rebase: 8681 passed, 31 skipped; ruff check/format verdes; 20 tests nuevos rojos antes; mutante de doctor detectado; capturas claro/oscuro revisadas",
       "actor": "agente-vision"
+    },
+    {
+      "type": "transition",
+      "from": "verifying",
+      "to": "result-review",
+      "at": "2026-11-23T19:27:03.368Z",
+      "reason": "revisión independiente hecha"
     }
   ]
 }
