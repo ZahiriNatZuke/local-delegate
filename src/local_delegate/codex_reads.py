@@ -19,6 +19,13 @@ the one that takes the reads of a file to 80 % of its lines is summarized; code,
 small files and short files pass literally, and a literal read lifts the guard. Anything that fails
 (no backend, an empty, cut or backgrounded summary, a bug) lets the call through.
 
+A shell write is what the shared classifier sees (``>``, ``tee``, ``sed -i``, ``cp``, ``mv``,
+``Set-Content``…) plus what Codex on Windows uses (issue #724, `shell_writes`): the .NET API of
+``[IO.File]``, ``New-Item -Value``, ``Clear-Content``, ``Tee-Object``, a path in a variable set to
+one literal, commands in a ``{ … }`` block or wrapped in ``cmd /c``, ``bash -c`` or
+``powershell -Command``. A path that cannot be known without running the command names nothing
+and the write passes (the list is in ``docs/wiki/Integration-install.md``).
+
 The state is per session and per agent (the main thread, or each subagent's ``agent_id``), an
 append-only log of paths and line ranges in ``LOG_DIR/codex-read/<session_id>.jsonl``: no content.
 """
@@ -526,6 +533,466 @@ def only_read(command: str) -> bool:
     return read_parts(command) == 1
 
 
+# --- Shell writes the shared classifier does not see (#724) ----------------------------------------
+# Codex on Windows edits with PowerShell inside ``exec_command``: the .NET API, a path set in a
+# variable first, ``New-Item -Value``, or a command wrapped in ``cmd /c``/``bash -c``. All of it is
+# read here with the classifier's own tokens (``read_classifier`` is shared with Claude Code's
+# hooks and stays as it is) and loops over characters: no regex runs over the whole command. What
+# cannot be named for sure (an expression, ``Join-Path``, a variable with no literal) names
+# nothing, so it passes, as the rest of the hook does.
+
+#: ``[System.IO.File]``, ``[IO.File]`` or ``[File]`` (after ``using namespace System.IO``).
+_DOTNET_TYPES = ("[system.io.file]::", "[io.file]::", "[file]::")
+#: The .NET methods of ``File`` that write a file, with the argument that names it.
+_DOTNET_WRITES = {
+    "writealltext": 0,
+    "writealllines": 0,
+    "writeallbytes": 0,
+    "appendalltext": 0,
+    "appendalllines": 0,
+    "create": 0,
+    "createtext": 0,
+    "appendtext": 0,
+    "openwrite": 0,
+    "copy": 1,
+    "move": 1,
+    "replace": 1,
+}
+_RESOLVE_VERBS = frozenset({"resolve-path", "rvpa", "convert-path", "cvpa"})
+_PATH_PROPERTIES = (".path", ".providerpath", ".fullname")
+#: ``$name`` or ``${name}``, matched whole against one short token, never against the command.
+_VAR_REF = re.compile(r"\$(?:\{([A-Za-z_][A-Za-z0-9_]*)\}|([A-Za-z_][A-Za-z0-9_]*))")
+_PS_ASSIGN = re.compile(r"\$([A-Za-z_][A-Za-z0-9_]*)(?:(=)(.*))?", re.DOTALL)
+_SCOPED_VAR = re.compile(
+    r"\$(?:global|script|local|private):([A-Za-z_][A-Za-z0-9_]*)", re.IGNORECASE
+)
+_BASH_ASSIGN = re.compile(r"([A-Za-z_][A-Za-z0-9_]*)=(.*)", re.DOTALL)
+_ENDS = frozenset({"\n", ";", "&&", "||", "&", "|", "}", ")"})
+_BASH_DECLARE = frozenset({"export", "local", "declare", "typeset", "readonly"})
+_BASH_BINDERS = frozenset({"for", "select", "read", "mapfile", "readarray"})
+#: What binds a variable some other way: then no variable of the command is trusted.
+_VAR_BINDERS = frozenset(
+    {
+        "set-variable",
+        "sv",
+        "new-variable",
+        "nv",
+        "remove-variable",
+        "rv",
+        "clear-variable",
+        "clv",
+        "param",
+        "function",
+        "filter",
+    }
+)
+_VAR_FLAGS = (
+    "-outvariable",
+    "-ov",
+    "-pipelinevariable",
+    "-pv",
+    "-errorvariable",
+    "-ev",
+    "-warningvariable",
+    "-wv",
+    "-informationvariable",
+    "-iv",
+)
+
+
+def _literal_value(token: str | None) -> str | None:
+    """The path a token spells by itself: a quoted literal or a plain word, or ``None``."""
+    if not token:
+        return None
+    if len(token) >= 2 and token[0] == token[-1] == "'":
+        return token[1:-1] or None
+    if len(token) >= 2 and token[0] == token[-1] == '"':
+        inner = token[1:-1]
+        return inner if inner and not any(c in inner for c in "$`") else None
+    if token.startswith("-") or any(c in token for c in "$`@{}()[]'\",="):
+        return None
+    return token
+
+
+def literal_variables(command: str) -> dict[str, str]:
+    """The variables ``command`` sets to one literal and nothing else, by lowercased name.
+
+    ``$p = 'x.md'`` (PowerShell) or ``p=x.md`` (bash). A variable set twice to different values, to
+    an expression, bound by a loop or ``read``, or a command with ``param``, ``Set-Variable``,
+    ``-OutVariable`` or ``[ref]`` (which bind it out of sight) gives nothing."""
+    from .resources.hooks import read_classifier
+
+    if "=" not in command or "[ref]" in command.lower():
+        return {}  # no assignment at all, or one out of sight
+    tokens = read_classifier.tokenize(read_classifier.strip_heredocs(command)[0])
+    values: dict[str, str] = {}
+    ambiguous: set[str] = set()
+
+    def at(index: int) -> str | None:
+        return tokens[index] if 0 <= index < len(tokens) else None
+
+    def assign(name: str, value: str | None, after: str | None) -> None:
+        key = name.lower()
+        literal = _literal_value(value) if after is None or after in _ENDS else None
+        if literal is None or values.get(key, literal) != literal:
+            ambiguous.add(key)
+        else:
+            values[key] = literal
+
+    for i, tok in enumerate(tokens):
+        low = tok.lower()
+        if low in _VAR_BINDERS or (low.startswith("-") and low.split(":", 1)[0] in _VAR_FLAGS):
+            return {}
+        prev, nxt = at(i - 1), at(i + 1)
+        scoped = _SCOPED_VAR.match(tok)
+        if scoped:
+            ambiguous.add(scoped.group(1).lower())
+            continue
+        ps = _PS_ASSIGN.fullmatch(tok)
+        if ps:
+            name, eq, rest = ps.groups()
+            if eq and rest:
+                assign(name, rest, nxt)
+            elif eq:
+                assign(name, nxt, at(i + 2))
+            elif nxt == "=":
+                assign(name, at(i + 2), at(i + 3))
+            elif nxt is not None and (nxt.endswith("=") or nxt.lower() == "in"):
+                ambiguous.add(name.lower())  # `$p += …`, `foreach ($p in …)`
+            continue
+        if tok.startswith("$") and (nxt == "=" or tok.endswith("=")):
+            for ref in _VAR_REF.finditer(tok[:200]):  # `$a,$b = …`
+                ambiguous.add((ref.group(1) or ref.group(2)).lower())
+            continue
+        bash = _BASH_ASSIGN.fullmatch(tok)
+        if bash and (prev is None or prev in _ENDS or prev.lower() in _BASH_DECLARE):
+            name, rest = bash.groups()
+            if rest:
+                assign(name, rest, nxt)
+            else:
+                assign(name, nxt, at(i + 2))
+            continue
+        if low in _BASH_BINDERS or (low in _BASH_DECLARE and nxt and "=" not in nxt):
+            j = i + 1
+            while j < len(tokens) and tokens[j] not in _ENDS and j - i <= 16:
+                ambiguous.add(tokens[j].lower())
+                j += 1
+    return {k: v for k, v in values.items() if k not in ambiguous}
+
+
+def _substitute(path: str | None, variables: Mapping[str, str]) -> str | None:
+    """``path`` with its last part ``$p`` (or ``${p}``) put as the literal ``p`` holds; ``path``
+    as it is without ``$``; ``None`` when a ``$`` cannot be told."""
+    from .resources.hooks import read_classifier
+
+    if not path or "$" not in path:
+        return path
+    cut = max(path.rfind("/"), path.rfind("\\")) + 1
+    head, last = path[:cut], path[cut:]
+    ref = _VAR_REF.fullmatch(last)
+    if "$" in head or not ref:
+        return None
+    value = variables.get((ref.group(1) or ref.group(2)).lower())
+    if value is None:
+        return None
+    return value if not head or read_classifier._is_absolute(value) else head + value
+
+
+def _wrapped(verb: str, args: list[str]) -> str | None:
+    """The command that ``cmd /c``, ``bash -c`` or ``powershell -Command`` runs, or ``None``.
+    ``-EncodedCommand`` (base64) is not looked into."""
+    from .resources.hooks import read_classifier
+
+    lowered = [a.lower() for a in args]
+    rest: list[str] = []
+    if verb == "cmd":
+        index = next((i for i, a in enumerate(lowered) if a in {"/c", "/k"}), None)
+        rest = args[index + 1 :] if index is not None else []
+    elif verb in {"bash", "sh", "zsh", "dash"}:
+        index = next(
+            (
+                i
+                for i, a in enumerate(lowered)
+                if a.startswith("-") and not a.startswith("--") and "c" in a[1:]
+            ),
+            None,
+        )
+        rest = args[index + 1 : index + 2] if index is not None else []
+    elif verb in {"powershell", "pwsh"}:
+        index = next(
+            (i for i, a in enumerate(lowered) if len(a) >= 2 and "-command".startswith(a)),
+            None,
+        )
+        rest = args[index + 1 :] if index is not None else []
+    if not rest:
+        return None
+    if len(rest) == 1:
+        return read_classifier._unquote(rest[0])
+    return " ".join(rest)
+
+
+def _unbrace(text: str) -> str:
+    """``text`` with the braces of a script block or a group (``if (…) { Set-Content … }``,
+    ``{ cmd; }``) turned into line breaks, so each command inside is a command of its own for the
+    classifier. Braces inside quotes, of ``${p}`` or ``@{``, and ``{}`` stay. One pass."""
+    out = list(text)
+    quote = ""
+    i = 0
+    while i < len(text):
+        ch = text[i]
+        if quote:
+            if ch in "`\\" and quote == '"':
+                i += 2
+                continue
+            if ch == quote:
+                quote = ""
+        elif ch in "'\"":
+            quote = ch
+        else:
+            opens = ch == "{" and (i == 0 or text[i - 1] not in "$@")
+            closes = ch == "}" and i > 0
+            if (opens and text[i + 1 : i + 2].isspace()) or (
+                closes and (text[i - 1].isspace() or text[i - 1] == ";")
+            ):
+                out[i] = "\n"
+        i += 1
+    return "".join(out)
+
+
+def _inner_commands(command: str, depth: int = 0) -> list[str]:
+    """The commands ``command`` wraps (``cmd /c "…"``), two levels down at most."""
+    from .resources.hooks import read_classifier
+
+    if depth >= 2:
+        return []
+    stripped, _ = read_classifier.strip_heredocs(command)
+    found: list[str] = []
+    for part in read_classifier.segments(read_classifier.tokenize(_unbrace(stripped))):
+        for stage in part.stages:
+            verb, args, _ = read_classifier._verb(stage)
+            inner = _wrapped(verb, args)
+            if inner:
+                found.append(inner)
+                found += _inner_commands(inner, depth + 1)
+    return found
+
+
+def _shell_texts(command: str) -> list[str]:
+    """The command, then each command it wraps: each is analyzed with its own variables."""
+    return [command, *_inner_commands(command)]
+
+
+def _call_arguments(text: str, start: int) -> tuple[list[str], int] | None:
+    """The top-level arguments of the call whose ``(`` is at ``start`` and the index of its
+    ``)``, or ``None`` when it does not close. One pass over the characters, quotes respected."""
+    depth, begin, quote = 0, start + 1, ""
+    args: list[str] = []
+    i = start
+    while i < len(text):
+        ch = text[i]
+        if quote:
+            if ch == "`" and quote == '"':
+                i += 2
+                continue
+            if ch == quote:
+                quote = ""
+        elif ch in "'\"":
+            quote = ch
+        elif ch in "([{":
+            depth += 1
+        elif ch in ")]}":
+            depth -= 1
+            if depth == 0:
+                args.append(text[begin:i])
+                return args, i
+        elif ch == "," and depth == 1:
+            args.append(text[begin:i])
+            begin = i + 1
+        i += 1
+    return None
+
+
+def _dotnet_calls(text: str) -> list[tuple[str, list[str]]]:
+    """Each ``[IO.File]::Method(…)`` call of a write method, with its arguments, outside
+    single quotes. A call is skipped whole once read (a write nested in its arguments is not seen);
+    one that does not close ends the scan: the rest is its argument."""
+    found: list[tuple[str, list[str]]] = []
+    i = 0
+    while i < len(text):
+        ch = text[i]
+        if ch == "'":
+            end = text.find("'", i + 1)
+            if end < 0:
+                break
+            i = end + 1
+            continue
+        prefix = (
+            next((p for p in _DOTNET_TYPES if text[i : i + len(p)].lower() == p), None)
+            if ch == "["
+            else None
+        )
+        if prefix is None:
+            i += 1
+            continue
+        j = k = i + len(prefix)
+        while k < len(text) and (text[k].isalnum() or text[k] == "_"):
+            k += 1
+        m = k
+        while m < len(text) and text[m] in " \t":
+            m += 1
+        method = text[j:k].lower()
+        if method not in _DOTNET_WRITES or m >= len(text) or text[m] != "(":
+            i = k
+            continue
+        parsed = _call_arguments(text, m)
+        if parsed is None:
+            break
+        found.append((method, parsed[0]))
+        i = parsed[1] + 1
+    return found
+
+
+def _path_expression(text: str, variables: Mapping[str, str], bare: bool = False) -> str | None:
+    """The path a .NET argument names: ``'x.md'``, ``"x.md"``, ``$p``, ``"$p"`` or
+    ``(Resolve-Path [-LiteralPath] x)`` (also with ``.Path``), or ``None``."""
+    from .resources.hooks import read_classifier
+
+    for _ in range(4):
+        text = text.strip()
+        low = text.lower()
+        for prop in _PATH_PROPERTIES:
+            if low.endswith(prop) and text[: -len(prop)].rstrip().endswith(")"):
+                text = text[: -len(prop)].rstrip()
+                break
+        if not (text.startswith("(") and text.endswith(")")):
+            break
+        parsed = _call_arguments(text, 0)
+        if parsed is None or parsed[1] != len(text) - 1 or len(parsed[0]) != 1:
+            return None
+        text = parsed[0][0].strip()
+        tokens = read_classifier.tokenize(text)
+        if tokens and tokens[0].lower() in _RESOLVE_VERBS:
+            args = tokens[1:]
+            value = read_classifier._flag_value(args, "-literalpath", "-path")
+            if value is None:
+                operands = read_classifier._operands(args, {"-relativebasepath"})
+                if len(operands) != 1:
+                    return None
+                value = operands[0]
+            text, bare = value, True
+    else:
+        return None
+    if len(text) >= 2 and text[0] == text[-1] == "'":
+        inner = text[1:-1]
+        return inner if inner and "'" not in inner else None
+    if len(text) >= 2 and text[0] == text[-1] == '"':
+        text, bare = text[1:-1], True
+    ref = _VAR_REF.fullmatch(text)
+    if ref:
+        return variables.get((ref.group(1) or ref.group(2)).lower())
+    if bare and text and not any(c in text for c in "$`'\"(),;{}@|<>"):
+        return text
+    return None
+
+
+def _dotnet_writes(command: str, variables: Mapping[str, str]) -> list[str]:
+    """The files the ``[IO.File]`` calls of ``command`` write. A relative path after a ``cd``
+    is left out: .NET resolves it against the process folder, not PowerShell's location."""
+    from .resources.hooks import read_classifier
+
+    stripped, _ = read_classifier.strip_heredocs(command)
+    moved = any(
+        part.stages and read_classifier._verb(part.stages[0])[0] in _CD_VERBS
+        for part in read_classifier.segments(read_classifier.tokenize(_unbrace(stripped)))
+    )
+    found: list[str] = []
+    for method, args in _dotnet_calls(stripped):
+        index = _DOTNET_WRITES[method]
+        named = args[index : index + (2 if method == "replace" else 1)]  # `Replace`: its backup too
+        for arg in named:
+            path = _path_expression(arg, variables)
+            if path and (not moved or read_classifier._is_absolute(path)):
+                found.append(path)
+    return found
+
+
+def _powershell_writes(verb: str, args: list[str]) -> list[str]:
+    """The files ``New-Item`` (with ``-Value``, or ``-Force`` over a file), ``Clear-Content`` and
+    ``Tee-Object`` write: verbs the shared classifier does not count."""
+    from .resources.hooks import read_classifier
+
+    lowered = [a.lower() for a in args]
+    if verb in {"new-item", "ni"}:
+        kind = read_classifier._flag_value(args, "-itemtype", "-type")
+        if (kind and kind.lower() not in {"file", "f"}) or not {"-value", "-force"} & set(lowered):
+            return []
+        flags = {"-value", "-itemtype", "-type", "-name", "-target", "-path", "-literalpath"}
+        positional = read_classifier._operands(args, flags)
+        base = read_classifier._flag_value(args, "-path", "-literalpath") or (
+            positional[0] if positional else None
+        )
+        name = read_classifier._flag_value(args, "-name")
+        target = os.path.join(base, name) if base and name else (name or base)
+        return [target] if target and "," not in target else []
+    if verb in {"clear-content", "clc"}:
+        target = read_classifier._flag_value(args, "-path", "-literalpath")
+        positional = read_classifier._operands(args, {"-filter", "-include", "-exclude", "-stream"})
+        target = target or (positional[0] if positional else None)
+        return [target] if target and "," not in target else []
+    if verb == "tee-object":
+        target = read_classifier._flag_value(args, "-filepath", "-literalpath", "-path")
+        positional = read_classifier._operands(args, {"-variable", "-encoding", "-inputobject"})
+        target = target or (positional[0] if positional else None)
+        return [target] if target else []
+    return []
+
+
+def _more_writes(command: str) -> list[str]:
+    """`_powershell_writes` of every stage, a relative path joined to the command's last ``cd``."""
+    from .resources.hooks import read_classifier
+
+    stripped, _ = read_classifier.strip_heredocs(command)
+    cwd: str | None = None
+    found: list[str] = []
+    for part in read_classifier.segments(read_classifier.tokenize(stripped)):
+        if not part.stages:
+            continue
+        verb, args, _ = read_classifier._verb(part.stages[0])
+        if verb in _CD_VERBS and args:
+            target = read_classifier._unquote(args[0])
+            absolute = read_classifier._is_absolute(target)
+            cwd = target if cwd is None or absolute else os.path.join(cwd, target)
+            continue
+        for stage in part.stages:
+            stage_verb, stage_args, _ = read_classifier._verb(stage)
+            for target in _powershell_writes(stage_verb, stage_args):
+                if cwd and not read_classifier._is_absolute(target):
+                    target = os.path.join(cwd, target)
+                found.append(target)
+    return found
+
+
+def shell_writes(command: str) -> list[str]:
+    """The files a shell command writes, as written (relative or absolute), for the guard: the
+    classifier's writes plus .NET, ``New-Item``/``Clear-Content``/``Tee-Object``, variables set
+    to a literal and the commands wrapped in ``cmd /c``, ``bash -c`` or ``powershell -Command``."""
+    from .resources.hooks import read_classifier
+
+    found: list[str] = []
+    for text in _shell_texts(command):
+        flat = _unbrace(text)
+        variables = literal_variables(flat)
+        named = [
+            access.path
+            for access in read_classifier.accesses(_shell_tool(), {"command": flat})
+            if access.kind == "write" and access.path
+        ]
+        named += _more_writes(flat)
+        found += [p for p in (_substitute(p, variables) for p in named) if p]
+        found += _dotnet_writes(text, variables)
+    return found
+
+
 @dataclass(frozen=True)
 class LiteralRead:
     """A read the command runs literally: its file, ``whole``/``range``/``partial`` and its lines."""
@@ -540,17 +1007,23 @@ def literal_reads(tool_input: dict, cwd: str | None, environ: Mapping) -> list[L
     cannot place (``unclassifiable``) is not one: it shows no known part of the file."""
     from .resources.hooks import read_classifier
 
+    command = tool_input.get("command")
+    if not isinstance(command, str):
+        return []
     found: list[LiteralRead] = []
-    for access in read_classifier.accesses(_shell_tool(), tool_input):
-        if access.kind != "read" or access.scope not in {"whole", "range", "partial"}:
-            continue
-        if access.to_file:
-            continue  # its output went to a file: nothing of it entered the context
-        resolved = read_classifier.resolve(access.path, cwd, environ)
-        if not resolved:
-            continue
-        span = _span(access.lines) if access.scope == "range" else None
-        found.append(LiteralRead(file_key(resolved), access.scope, span))
+    for text in _shell_texts(command):
+        flat = _unbrace(text)
+        variables = literal_variables(flat)
+        for access in read_classifier.accesses(_shell_tool(), {"command": flat}):
+            if access.kind != "read" or access.scope not in {"whole", "range", "partial"}:
+                continue
+            if access.to_file:
+                continue  # its output went to a file: nothing of it entered the context
+            resolved = read_classifier.resolve(_substitute(access.path, variables), cwd, environ)
+            if not resolved:
+                continue
+            span = _span(access.lines) if access.scope == "range" else None
+            found.append(LiteralRead(file_key(resolved), access.scope, span))
     return found
 
 
@@ -565,11 +1038,7 @@ def write_targets(tool: str, tool_input: dict, cwd: str | None, environ: Mapping
     if tool == "apply_patch" or _PATCH_BEGIN in command:
         raw += [m.group(1).strip() for m in _PATCH_PATH.finditer(command) if m.group(1).strip()]
     if tool != "apply_patch":
-        raw += [
-            access.path
-            for access in read_classifier.accesses(_shell_tool(), tool_input)
-            if access.kind == "write" and access.path
-        ]
+        raw += shell_writes(command)
     found: list[str] = []
     for item in raw:
         resolved = read_classifier.resolve(item, cwd, environ)

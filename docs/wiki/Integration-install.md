@@ -574,9 +574,27 @@ Qué hace, en el orden del mod:
 | Lectura entera por shell (`cat`, `Get-Content`, `type`) de prosa por encima del umbral (`.md`, `.txt`, `.rst`, más de 8 KB) | se deniega con el resumen de `local_summarize` (pedido al daemon con `path`) como motivo, con una cabecera que dice que la lectura no se ejecutó, cuántas líneas puedes leer literales y con qué comando (`sed -n '1,120p'`, `Get-Content -TotalCount 120`); el fichero queda guardado |
 | Un tramo (`sed -n 'A,Bp'`, `head -n`, `Get-Content -TotalCount`, `\| Select-Object -Skip N -First M`), o varios del mismo fichero en un comando | pasa y suma cada tramo; el que llevaría lo leído en la sesión al 80 % de sus líneas se resume (como leerlo entero) |
 | Código, configuración, datos, prosa pequeña, un fichero corto (≤200 líneas y <32 KB) | pasa literal; un subagente que lee entero un fichero grande recibe la nota de localizar antes |
-| `apply_patch` (`Update/Add/Delete File`, `Move to`) o escritura por shell (`sed -i`, `>`, `cp`, `mv`, `Set-Content`, `Out-File`) sobre un fichero guardado | se rechaza hasta que leas literal un tramo de ese fichero (con el interruptor de lectura apagado o el backend caído, también) |
+| `apply_patch` (`Update/Add/Delete File`, `Move to`) o escritura por shell sobre un fichero guardado (lista abajo) | se rechaza hasta que leas literal un tramo de ese fichero (con el interruptor de lectura apagado o el backend caído, también) |
 | Comando compuesto (`;`, `&&`, `$(…)`) con otras órdenes, varios ficheros (`cat a.md b.md`) o una tubería que no elige líneas (`\| cat`, `\| grep`) | pasa (denegarlo quitaría también el resto) con la nota de usar `local_summarize`; lo que lee cuenta como lectura literal |
 | Lectura por una tool MCP ajena (`read_text_file`, `read_note`…) de un fichero grande | pasa con esa misma nota; nunca se deniega, y tampoco levanta el guard ni suma tramos (el hook no ve qué parte del fichero devuelve) |
+
+**Escrituras de shell que ve el guard** (#724). PowerShell: `Set-Content`, `Add-Content`,
+`Out-File`, `Tee-Object`, `Clear-Content`, `New-Item` con `-Value` (o `-Force` sobre un fichero),
+`Copy-Item`/`Move-Item` al fichero, y la API de .NET `[System.IO.File]`/`[IO.File]`/`[File]`
+(`WriteAllText`, `WriteAllLines`, `WriteAllBytes`, `AppendAllText`, `AppendAllLines`, `Create`,
+`CreateText`, `AppendText`, `OpenWrite`; `Copy`, `Move` y `Replace` sobre el destino), con la ruta
+literal, en una variable o dentro de `(Resolve-Path …)`. cmd: `>`, `>>`, `copy`, `move`. bash: `>`,
+`>>`, `tee`, `sed -i`, `cp`, `mv`. También dentro de un bloque `{ … }` y de `cmd /c`, `bash -c` o
+`powershell -Command`. Una variable cuenta si la misma orden le da un solo valor literal
+(`$p = 'x.md'`, `p=x.md`).
+
+**Lo que no ve, y pasa** (mismo criterio que el resto del hook: ante la duda, no bloquea): una ruta
+que no se puede saber sin ejecutar (`Join-Path`, `"$dir\x.md"`, una variable con dos valores o
+ligada por un bucle, `read`, `param`, `-OutVariable` o `[ref]`), una ruta relativa de .NET tras un
+`cd`/`Set-Location` (.NET la resuelve contra la carpeta del proceso), `-EncodedCommand`,
+`StreamWriter`/`New-Object`, `[IO.File]::Open(…)` con modo, una escritura de .NET anidada en los
+argumentos de otra, `perl -i`, `python -c "open(…, 'w')"`, `dd`, `truncate` y los borrados (`rm`,
+`Remove-Item`, que no editan a partir del resumen).
 
 **Fallo en abierto.** Si el daemon no termina en 150 s (en total, no por petición), el backend
 está marcado caído, el resumen
