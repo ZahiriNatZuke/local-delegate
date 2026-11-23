@@ -518,6 +518,14 @@ valer. `install` guarda `hooks.json.bak` la primera vez que toca un fichero que 
 su final de línea y no escribe (y lo dice) si Codex lo rechazaría entero: una clave que no conoce o
 una marca BOM al principio, que Codex no se salta. Quitar los hooks no toca `config.toml` ni tus aprobaciones de `[hooks.state]`.
 
+**La línea en Windows.** Codex lanza cada hook con la shell de la sesión, que en Windows es
+PowerShell (`pwsh -NoProfile -Command <línea>`), o cmd o bash si es la que usa. Por eso la ruta del
+intérprete va sin comillas, con `/`, que vale en las tres; si lleva espacios u otros caracteres
+especiales, se escribe su nombre corto 8.3, y si la unidad no los tiene, `& '<ruta>'`, que solo
+entiende PowerShell. Hasta la 0.54.0 la ruta iba entre comillas y PowerShell no la arrancaba
+(#718): `doctor` lo avisa, y tras `local-delegate update` hay que aprobar otra vez los hooks en
+`/hooks`.
+
 **El intérprete.** El comando lleva la ruta del Python de la instalación por `uv tool`, que no
 cambia al actualizar con `uv tool upgrade`, y no lleva la versión: así una actualización no obliga
 a aprobar otra vez. Con `uvx`, una instalación editable o un `.venv`, `install` no los escribe y

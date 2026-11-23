@@ -1,0 +1,118 @@
+{
+  "schemaVersion": 1,
+  "slug": "codex-hooks-powershell",
+  "title": "Codex en Windows: hooks que arrancan en PowerShell, cmd y bash (#718)",
+  "mode": "lite",
+  "traceability": "strict",
+  "status": "result-review",
+  "createdAt": "2026-11-23T18:52:12.138Z",
+  "updatedAt": "2026-11-23T19:47:22.722Z",
+  "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-11-23T18:55:21.863Z",
+      "evidence": "spec con REQ-001..005 trazados a T1..T4; plazo de Codex comprobado en el código de rust-v0.169.1 y rust-v0.171.0 (300 s); sdd check ok",
+      "actor": "agente-codex-hooks-pwsh"
+    },
+    "plan": {
+      "status": "approved",
+      "updatedAt": "2026-11-23T18:55:21.864Z",
+      "evidence": "spec con REQ-001..005 trazados a T1..T4; plazo de Codex comprobado en el código de rust-v0.169.1 y rust-v0.171.0 (300 s); sdd check ok",
+      "actor": "agente-codex-hooks-pwsh"
+    },
+    "quality": {
+      "status": "approved",
+      "updatedAt": "2026-11-23T19:14:50.448Z",
+      "evidence": "suite local 8669 passed (1 fallo del detector de nombres arreglado y repasado: 146 passed); ruff check y format limpios; tests de shells rojos en main",
+      "actor": "agente-codex-hooks-pwsh"
+    },
+    "conformance": {
+      "status": "approved",
+      "updatedAt": "2026-11-23T19:47:22.722Z",
+      "evidence": "dos jueces conforms-with-notes; F1-F5 arreglados; PR #720 con 22 checks en verde y CLEAN; prueba real parcial con Codex",
+      "actor": "agente-codex-hooks-pwsh"
+    },
+    "memory": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-11-23T18:52:12.138Z",
+      "reason": "SDD change created"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "specifying",
+      "at": "2026-11-23T18:55:21.582Z",
+      "reason": "causa probada en #718; spec escrito"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-11-23T18:55:21.863Z",
+      "evidence": "spec con REQ-001..005 trazados a T1..T4; plazo de Codex comprobado en el código de rust-v0.169.1 y rust-v0.171.0 (300 s); sdd check ok",
+      "actor": "agente-codex-hooks-pwsh"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-11-23T18:55:21.864Z",
+      "evidence": "spec con REQ-001..005 trazados a T1..T4; plazo de Codex comprobado en el código de rust-v0.169.1 y rust-v0.171.0 (300 s); sdd check ok",
+      "actor": "agente-codex-hooks-pwsh"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-11-23T19:14:42.287Z",
+      "reason": "#718: planning"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "implementing",
+      "at": "2026-11-23T19:14:42.587Z",
+      "reason": "#718: implementing"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-11-23T19:14:42.846Z",
+      "reason": "#718: verifying"
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-11-23T19:14:50.448Z",
+      "evidence": "suite local 8669 passed (1 fallo del detector de nombres arreglado y repasado: 146 passed); ruff check y format limpios; tests de shells rojos en main",
+      "actor": "agente-codex-hooks-pwsh"
+    },
+    {
+      "type": "transition",
+      "from": "verifying",
+      "to": "result-review",
+      "at": "2026-11-23T19:28:37.220Z",
+      "reason": "dos jueces: conforms-with-notes; hallazgos F1-F5 arreglados"
+    },
+    {
+      "type": "gate",
+      "gate": "conformance",
+      "status": "approved",
+      "at": "2026-11-23T19:47:22.722Z",
+      "evidence": "dos jueces conforms-with-notes; F1-F5 arreglados; PR #720 con 22 checks en verde y CLEAN; prueba real parcial con Codex",
+      "actor": "agente-codex-hooks-pwsh"
+    }
+  ]
+}

@@ -21,10 +21,13 @@ of event, matcher and handler. Hence three rules:
 - a group of ours that goes away becomes ``{"hooks": []}`` while other groups follow it: Codex
   still counts it in the index (``append_hook_events`` enumerates the groups) and loads nothing,
   so a user's group behind it keeps its key; at the end of the list it is dropped;
-- the command carries no version: the ``uv tool`` interpreter keeps its path on upgrade.
+- the command carries no version: the ``uv tool`` interpreter keeps its path on upgrade (on
+  Windows a path with spaces goes as its 8.3 name, which can change if the folder is recreated;
+  `doctor` then sees the line as stale).
 
-Codex runs the command through ``cmd.exe /C "<command>"`` on Windows and ``$SHELL -lc`` elsewhere
-(``engine/command_runner.rs``); exit code 2 blocks, any other non-zero code is a failure that does
+Codex runs the command with the shell of the session (``Shell::derive_exec_args``): on Windows
+``pwsh -NoProfile -Command`` by default, or ``cmd /c`` or ``bash -c`` (#718, see `command`);
+elsewhere ``$SHELL -c``. Exit code 2 blocks, any other non-zero code is a failure that does
 not (``events/pre_tool_use.rs``). ``local_delegate.hook`` never exits with 2.
 
 Codex reads the file with ``fs::read_to_string`` + ``serde_json::from_str``: a UTF-8 BOM makes it
@@ -107,8 +110,9 @@ def matcher_matches(matcher: str | None, names: list[str] | tuple[str, ...]) -> 
 #: The tail of every command of ours, whatever the interpreter in front of it.
 #: Anchored at the start: one interpreter (quoted or bare) and nothing else in front, so a wrapper
 #: of the user's that ends the same way is not taken for ours.
+#: `& '…'` is the call operator of PowerShell (#718), only in front of a quoted interpreter.
 _OURS = re.compile(
-    r"\s*(?P<python>\"[^\"]*\"|'[^']*'|[^\s\"']+)"
+    r"\s*(?:&\s+(?=[\"']))?(?P<python>\"[^\"]*\"|'(?:[^']|'')*'|[^\s\"'&]+)"
     r"\s+-I\s+-m\s+local_delegate\.hook\s+(?P<name>codex-[a-z][a-z-]{0,40})\s*"
 )
 
@@ -120,13 +124,73 @@ EMPTY_GROUP: dict = {"hooks": []}
 
 
 # --- The entries --------------------------------------------------------------------------------
+#: A Windows path that PowerShell, cmd and bash all take as one bare word naming a program: a
+#: drive, then letters (any script), digits and `_ . - ~ /`. `~` only expands at the start of a
+#: word in bash, and an 8.3 name has it in the middle.
+_BARE_WINDOWS_PATH = re.compile(r"[A-Za-z]:/[\w.~/-]*")
+
+
+def short_path(path: str) -> str | None:
+    """The 8.3 name of ``path`` (`GetShortPathNameW`), or ``None`` off Windows or on failure.
+
+    A volume without 8.3 names gives the long path back; the caller checks the result.
+    """
+    if sys.platform != "win32":
+        return None
+    import ctypes
+    import ctypes.wintypes
+
+    try:
+        # A private handle: `argtypes` set on `ctypes.windll.kernel32` would be shared by the
+        # whole process (the convention of `server.py`).
+        kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+        get = kernel32.GetShortPathNameW
+        get.argtypes = [ctypes.wintypes.LPCWSTR, ctypes.wintypes.LPWSTR, ctypes.wintypes.DWORD]
+        get.restype = ctypes.wintypes.DWORD
+        size = get(path, None, 0)
+        if not size:
+            return None
+        buffer = ctypes.create_unicode_buffer(size)
+        written = get(path, buffer, size)
+        return buffer.value if 0 < written < size else None
+    except (AttributeError, ImportError, OSError, TypeError, ValueError, ctypes.ArgumentError):
+        return None
+
+
+def _windows_interpreter(python: str) -> str:
+    """The interpreter as the first word of a line that Codex runs with the session's shell.
+
+    Codex launches a hook with `pwsh -NoProfile -Command`, `cmd /c` or `bash -c`
+    (`Shell::derive_exec_args`), PowerShell by default on Windows. A line that opens with a quoted
+    path is a `ParserError` in PowerShell and nothing starts (#718), so the path goes bare when the
+    three shells read it as one word; else its 8.3 name, if that one is; else the call operator of
+    PowerShell, which only PowerShell understands: `& '…'`, literal (a `$` is not expanded), with
+    a `'` of the path doubled as PowerShell escapes it.
+    """
+    path = python.replace('"', "")
+    forward = path.replace("\\", "/")
+    if _BARE_WINDOWS_PATH.fullmatch(forward):
+        return forward
+    short = short_path(path)
+    if short:
+        short = short.replace("\\", "/")
+        if _BARE_WINDOWS_PATH.fullmatch(short):
+            return short
+    return "& '" + forward.replace("'", "''") + "'"
+
+
 def command(python: str, name: str, platform: str | None = None) -> str:
-    """The command line of hook ``name``: the interpreter quoted for the shell Codex uses."""
+    """The command line of hook ``name``: the interpreter written for the shell Codex uses."""
     if (platform or sys.platform) == "win32":
-        exe = '"' + python.replace("\\", "/").replace('"', "") + '"'
+        exe = _windows_interpreter(python)
     else:
         exe = shlex.quote(python)
     return f"{exe} -I -m {HOOK_MODULE} {name}"
+
+
+def starts_quoted(line: str) -> bool:
+    """Whether ``line`` opens with a quoted interpreter: what PowerShell does not start (#718)."""
+    return line.lstrip()[:1] in ('"', "'")
 
 
 def handler(python: str, name: str, platform: str | None = None, timeout: int = TIMEOUT_S) -> dict:
@@ -175,7 +239,9 @@ def python_of(candidate: dict) -> str:
     text = candidate["hooks"][0]["command"]
     head = _OURS.fullmatch(text).group("python")
     if len(head) >= 2 and head[0] == head[-1] and head[0] in "\"'":
-        head = head[1:-1]
+        quote, head = head[0], head[1:-1]
+        if quote == "'":
+            head = head.replace("''", "'")  # PowerShell's escape of `'` (`& '…'`, #718)
     return head
 
 
@@ -211,8 +277,9 @@ def _trim(groups: list, vacated: set[int]) -> None:
 def merge(data: dict, python: str, platform: str | None = None) -> tuple[dict, list[str]]:
     """Our groups in ``data`` (``hooks.json`` parsed): ``(data, names written or rewritten)``.
 
-    Raises `RejectedFile` when Codex would reject the file. Pure: depends only on its arguments,
-    as `install.update_config_json` requires.
+    Raises `RejectedFile` when Codex would reject the file. Depends only on its arguments and, on
+    Windows, on the 8.3 name of ``python`` (`short_path`), which does not change between the two
+    passes of `install.update_config_json`.
     """
     hooks = _hooks_table(data)
     wanted = {spec.name: spec for spec in SPECS}

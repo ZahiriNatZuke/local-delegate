@@ -118,6 +118,7 @@
   "doctor.probe.codex_hooks.no_python": "el intérprete de los hooks de Codex no existe ({python})",
   "doctor.probe.codex_hooks.none": "no instalados en {path} (opcionales: `local-delegate install --clients codex` los añade)",
   "doctor.probe.codex_hooks.ok": "configurados en {path} ({count} de {total}); aprobados en /hooks: {approved} de {total} (lo dice config.toml, no si la aprobación sigue valiendo); vistos despachar: {seen}",
+  "doctor.probe.codex_hooks.quoted": "Codex lanza los hooks con la shell de la sesión (PowerShell en Windows), y PowerShell no arranca una línea que empieza por la ruta entre comillas: ninguno de esos hooks llega a ejecutarse; `local-delegate update` los reescribe y luego hay que aprobarlos otra vez en /hooks",
   "doctor.probe.codex_hooks.rejected": "Codex rechaza entero {path} tal como está ({where}): no carga ningún hook de ese fichero, tampoco los tuyos",
   "doctor.probe.codex_hooks.stale": "hooks nuestros de Codex que no son los de esta versión ({names}) en {path}; tras repararlos hay que aprobarlos otra vez en /hooks",
   "doctor.probe.codex_hooks.toml_too": "; config.toml también tiene grupos en [hooks]: Codex avisa al arrancar de que carga los dos",

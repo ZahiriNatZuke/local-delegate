@@ -118,6 +118,7 @@
   "doctor.probe.codex_hooks.no_python": "the interpreter of the Codex hooks does not exist ({python})",
   "doctor.probe.codex_hooks.none": "not installed in {path} (optional: `local-delegate install --clients codex` adds them)",
   "doctor.probe.codex_hooks.ok": "configured in {path} ({count} of {total}); approved in /hooks: {approved} of {total} (config.toml says so, not whether the approval still holds); seen dispatching: {seen}",
+  "doctor.probe.codex_hooks.quoted": "Codex runs hooks with the session shell (PowerShell on Windows), and PowerShell does not start a line that opens with the quoted path: none of those hooks ever runs; `local-delegate update` rewrites them, and then they must be approved again in /hooks",
   "doctor.probe.codex_hooks.rejected": "Codex rejects the whole {path} as it is ({where}): it loads no hook of that file, yours included",
   "doctor.probe.codex_hooks.stale": "Codex hooks of ours that are not this version's ({names}) in {path}; once repaired they have to be approved again in /hooks",
   "doctor.probe.codex_hooks.toml_too": "; config.toml also has groups in [hooks]: Codex warns at startup that it loads both",
