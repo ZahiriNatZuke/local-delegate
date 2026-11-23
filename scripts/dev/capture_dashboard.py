@@ -143,7 +143,7 @@ SEED_AND_MOCK = """({DENSITY, PRICES_CHECKED}) => {
   const MODELS = {local_summarize:'gemma4-26b-a4b',local_translate:'gemma4-26b-a4b',
     local_extract:'gemma3-4b',local_classify:'qwen35-2b',local_lint_summary:'gemma3-4b',
     local_boilerplate:'qwen36-35b-a3b',local_commit_msg:'qwen36-35b-a3b',
-    local_explain_code:'qwen36-35b-a3b',local_describe_image:'gemma4-12b',
+    local_explain_code:'qwen36-35b-a3b',local_describe_image:'qwen36-35b-a3b-vision',
     local_delegate:'gemma3-4b'};
   let seed = 20260728;
   const rnd = () => (seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648;
@@ -302,7 +302,7 @@ SEED_AND_MOCK = """({DENSITY, PRICES_CHECKED}) => {
       origin: 'local', host: '127.0.0.1:9292',
       models: [{id:'gemma3-4b',status:'unloaded'},{id:'gemma4-26b-a4b',status:'loaded'},
         {id:'qwen36-35b-a3b',status:'loaded'},{id:'qwen35-2b',status:'unloaded'},
-        {id:'gemma4-12b',status:'unloaded'}]},
+        {id:'qwen36-35b-a3b-vision',status:'unloaded'},{id:'gemma4-12b',status:'unloaded'}]},
     // Una traducción por chunks a media faena: es lo que enseña el progreso `trozo 9/14`.
     '/api/inflight': {inflight: [{id: '4242:7', tool: 'local_translate', model: 'gemma4-26b-a4b',
       source: 'path', chars_in: 39110, backend: 'local', elapsed_s: 13.4, chunks: 14, chunk: 9}],

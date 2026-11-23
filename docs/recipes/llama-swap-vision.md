@@ -11,6 +11,31 @@ servido por el mismo `llama-swap` en `127.0.0.1:9292`, con hot-swap igual que lo
 > `local_describe_image` + revisar `usage.jsonl`) antes de confiar en él en producción — no
 > asumas que sigue funcionando igual solo porque el flag no cambió de nombre.
 
+## Modelo por defecto (desde la 0.54.1)
+
+El rol de visión usa por defecto `qwen36-35b-a3b-vision`: el mismo GGUF de Qwen3.6 35B-A3B del rol
+`code` con su proyector `--mmproj`. En la medición de #699 (2026-11-23, capturas de UI con una
+pregunta sugerente) inventó 0 de 9 defectos de layout; `gemma4-12b`, 5 de 9. Cuesta ~14 GB de RAM
+privada y ~11 GB de VRAM, y unos 30 s de carga en frío.
+
+```yaml
+models:
+  qwen36-35b-a3b-vision:
+    cmd: >
+      D:\Projects\llms\llamacpp\llama-server.exe --port ${PORT} --host 127.0.0.1
+      --model D:\Projects\llms\models\qwen36-35b-a3b\Qwen3.6-35B-A3B-UD-IQ4_XS.gguf
+      --mmproj D:\Projects\llms\models\qwen36-35b-a3b\mmproj-F16.gguf
+      -ngl 99 -ncmoe 20 --ctx-size 8192 --jinja --reasoning off
+    ttl: 30
+```
+
+**Alternativa ligera:** `gemma4-12b` (Gemma 4 12B con su `--mmproj`, ~10 GB de RAM y ~9 GB de VRAM)
+para máquinas con menos VRAM, o si tu catálogo no tiene la entrada de arriba: pon
+`LOCAL_DELEGATE_MODEL_VISION=gemma4-12b`. `local-delegate doctor` lo propone si tu backend sirve `gemma4-12b` y
+no `qwen36-35b-a3b-vision`. `init-llamaswap` no crea estas entradas: agrupa las que ya tienes.
+
+El resto de esta receta es la de la primera versión del rol (Qwen3-VL-8B) y vale como esquema.
+
 ## Versión de llama-server probada
 
 - `version: 9743 (c57607016)`, build CUDA (Clang 20.1.8 para Windows x86_64).
@@ -73,8 +98,8 @@ models:
 }
 ```
 
-Ambos son ya los defaults del paquete — solo hace falta esto si usas otro id o quieres otro
-tope de tamaño.
+El tope de 8 MB es el default del paquete; el id de visión por defecto es `qwen36-35b-a3b-vision`
+(ver arriba): solo hace falta esto si usas otro id o quieres otro tope de tamaño.
 
 ## Formato de la petición (para referencia, ya lo arma `local_describe_image`)
 

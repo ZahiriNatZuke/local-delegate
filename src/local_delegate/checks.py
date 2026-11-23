@@ -2092,28 +2092,41 @@ def _probe_role_models(ctx: Context) -> Result:
             missing.append((role, model, ROLE_MODEL_VARS[role][1]))
     required = [m for m in missing if m[0] not in OPTIONAL_ROLES]
     optional = [m for m in missing if m[0] in OPTIONAL_ROLES]
+    # vision-default-qwen36 (REQ-002): the vision default moved to `qwen36-35b-a3b-vision`. A
+    # backend that still serves the light alternative is a catalog from before the update, and
+    # there the remedy is known to work: that is a warn. Without it the role stays optional.
+    light = (config.MODEL_VISION_LIGHT or "").strip()
+    vision_remedy = i18n.t("doctor.probe.role_models.vision_light", model=light)
+    vision_fixable = bool(light) and any(
+        role == "vision" and model != light for role, model, _variable in optional
+    )
+    light_served = vision_fixable and _is_served(light, served)
     parts = [
         i18n.t("doctor.probe.role_models.missing", role=role, model=model)
         for role, model, _variable in required
     ]
     if not required:
         parts.append(i18n.t("doctor.probe.role_models.all_served", roles=", ".join(checked) or "-"))
-    parts.extend(
-        i18n.t("doctor.probe.role_models.missing", role=role, model=model)
-        + " "
-        + i18n.t("doctor.probe.role_models.optional")
-        for role, model, _variable in optional
-    )
+    for role, model, _variable in optional:
+        part = i18n.t("doctor.probe.role_models.missing", role=role, model=model)
+        if not light_served:
+            part += " " + i18n.t("doctor.probe.role_models.optional")
+            if role == "vision" and vision_fixable:
+                part += " " + vision_remedy
+        parts.append(part)
     detail = "; ".join(parts)
     if whose:
         detail = f"{detail} {i18n.t(whose)}"
+    fixes = []
     if required:
         variables = ", ".join(variable for _role, _model, variable in required)
-        return Result(
-            WARN,
-            detail,
-            i18n.t("doctor.probe.role_models.fix", variables=variables, url=config.BASE_URL),
+        fixes.append(
+            i18n.t("doctor.probe.role_models.fix", variables=variables, url=config.BASE_URL)
         )
+    if light_served:
+        fixes.append(vision_remedy)
+    if fixes:
+        return Result(WARN, detail, "; ".join(fixes))
     return Result(OK, detail)
 
 

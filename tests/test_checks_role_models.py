@@ -75,6 +75,42 @@ def test_only_vision_missing_is_ok_with_a_note(tmp_path):
     assert "LOCAL_DELEGATE_MODEL_VISION" in r.detail
 
 
+def test_vision_missing_with_the_light_one_served_warns_with_the_remedy(tmp_path, monkeypatch):
+    """vision-default-qwen36 REQ-002: an old catalog after the update (it serves `gemma4-12b`).
+
+    Mutant: vision missing always `ok` (the code before this change) -> no warn, no remedy.
+    """
+    monkeypatch.setattr(config, "MODEL_VISION_LIGHT", "light-e")
+    r = result_for("service.role_models", _ctx(tmp_path, ("mech-a", "long-b", "code-c", "light-e")))
+    assert r.status == checks.WARN
+    assert "vision: vision-d" in r.detail
+    assert "LOCAL_DELEGATE_MODEL_VISION=light-e" in r.fix_hint
+
+
+def test_vision_missing_without_the_light_one_stays_ok_and_names_the_remedy(tmp_path, monkeypatch):
+    monkeypatch.setattr(config, "MODEL_VISION_LIGHT", "light-e")
+    r = result_for("service.role_models", _ctx(tmp_path, ("mech-a", "long-b", "code-c")))
+    assert r.status == checks.OK
+    assert "LOCAL_DELEGATE_MODEL_VISION=light-e" in r.detail
+
+
+def test_the_light_one_with_the_latest_tag_counts(tmp_path, monkeypatch):
+    monkeypatch.setattr(config, "MODEL_VISION_LIGHT", "light-e")
+    served = ("mech-a", "long-b", "code-c", "light-e:latest")
+    r = result_for("service.role_models", _ctx(tmp_path, served))
+    assert r.status == checks.WARN
+    assert "LOCAL_DELEGATE_MODEL_VISION=light-e" in r.fix_hint
+
+
+def test_a_text_role_missing_keeps_its_fix_with_the_light_one_served(tmp_path, monkeypatch):
+    """The text role's remedy is not replaced by the vision one: both are named."""
+    monkeypatch.setattr(config, "MODEL_VISION_LIGHT", "light-e")
+    r = result_for("service.role_models", _ctx(tmp_path, ("long-b", "code-c", "light-e")))
+    assert r.status == checks.WARN
+    assert "LOCAL_DELEGATE_MODEL_MECHANICAL" in r.fix_hint
+    assert "LOCAL_DELEGATE_MODEL_VISION=light-e" in r.fix_hint
+
+
 def test_a_role_without_a_model_is_skipped(tmp_path, monkeypatch):
     monkeypatch.setattr(config, "MODEL_CODE", "")
     r = result_for("service.role_models", _ctx(tmp_path, ("mech-a", "long-b", "vision-d")))

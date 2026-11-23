@@ -1954,6 +1954,7 @@ td.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
 .mname{font-family:var(--mono);font-size:12.5px;font-weight:600;color:var(--tx)}
 .mrole{font-size:9.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:2px 7px;border-radius:6px;
   background:color-mix(in srgb,var(--violet) 13%,transparent);color:var(--violet)}
+.mrole.none{background:color-mix(in srgb,var(--faint) 14%,transparent);color:var(--faint);cursor:help}
 .mstate{margin-left:auto;min-width:58px;text-align:right;font-size:11px;color:var(--mut);font-family:var(--mono)}
 .mrow.busy .mstate{color:var(--amber);font-weight:600}
 .subh{font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);margin:14px 0 6px}
@@ -3043,6 +3044,14 @@ function roleLabels(model){
   return ((state.status||{}).catalog||[]).filter(c=>c.model===model).map(c=>c.label);
 }
 
+// Las etiquetas de rol de una fila de «Backend». Un modelo que no sirve a ningún rol lleva una
+// apagada («sin rol»), para que no parezca un fallo del panel (vision-default-qwen36 REQ-003).
+function roleLabelsHtml(model){
+  const labels = roleLabels(model);
+  if(!labels.length) return `<span class="mrole none" title="${escHooks(T('role.none_title'))}">${escHooks(T('role.none'))}</span>`;
+  return labels.map(l=>`<span class="mrole">${escHooks(l)}</span>`).join('');
+}
+
 // Causas en las que ALGUIEN CONTESTA (REQ-014): el badge dice su etiqueta en ámbar, sin «caído».
 // Las etiquetas y los detalles no se escriben aquí: llegan del daemon, redactados por failures.py.
 const CAUSES_ANSWERING = {credential:1, http_error:1, invalid_response:1, no_response:1};
@@ -3179,7 +3188,7 @@ function renderBackend(){
     const e = modelState({model:m, view, inflight:state.inflight});
     const busy = !e.dimmed && (e.state==='processing' || e.state==='running');
     const cls = (DOT[e.state]||'') + (busy && DOT[e.state]!=='busy' ? ' busy' : '');
-    const roles = roleLabels(m).map(l=>`<span class="mrole">${escHooks(l)}</span>`).join('');
+    const roles = roleLabelsHtml(m);
     const chip = statusChip(statusById[m]);
     const badge = chip ? `<span class="mstatus ${chip}" title="${escHooks(statusById[m])}">${escHooks(labelFor('modelStatus', statusById[m]))}</span>` : '';
     const rowCls = (busy?' busy':'') + (e.dimmed?' dimmed':'');

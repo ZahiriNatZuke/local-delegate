@@ -300,7 +300,12 @@ MODEL_LONG = _env("LOCAL_DELEGATE_MODEL_LONG", "gemma4-26b-a4b")  # documentos l
 MODEL_CODE = _env("LOCAL_DELEGATE_MODEL_CODE", "qwen36-35b-a3b")  # código / boilerplate
 # Rol de visión (imagen->texto). Fuera de ALLOWED_MODELS a propósito: ese set es para el
 # escape genérico local_delegate (texto->texto puro), que no arma payload multimodal.
-MODEL_VISION = _env("LOCAL_DELEGATE_MODEL_VISION", "gemma4-12b")
+# Por defecto Qwen3.6 35B-A3B con `--mmproj` (#699, 2026-11-23: inventó 0 de 9 defectos de layout
+# ante una pregunta sugerente, gemma4-12b 5 de 9; cuesta ~14 GB de RAM y ~11 GB de VRAM).
+MODEL_VISION = _env("LOCAL_DELEGATE_MODEL_VISION", "qwen36-35b-a3b-vision")
+#: La alternativa ligera documentada (~10 GB de RAM y ~9 GB de VRAM) para máquinas con menos VRAM
+#: o catálogos sin la entrada nueva: `doctor` la propone si el backend la sirve y no el defecto.
+MODEL_VISION_LIGHT = "gemma4-12b"
 ALLOWED_MODELS: set[str] = {MODEL_MECHANICAL, MODEL_LONG, MODEL_CODE}
 
 # --- Variables con nombre obsoleto ------------------------------------------

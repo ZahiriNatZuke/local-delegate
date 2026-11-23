@@ -39,7 +39,7 @@ RAM van más rápidos, pero Windows desaloja al modelo pequeño de la VRAM para 
 | `LOCAL_DELEGATE_MODEL_MECHANICAL` | `gemma3-4b` | clasificar, extraer, resumen corto |
 | `LOCAL_DELEGATE_MODEL_LONG` | `gemma4-26b-a4b` | documentos largos |
 | `LOCAL_DELEGATE_MODEL_CODE` | `qwen36-35b-a3b` | código |
-| `LOCAL_DELEGATE_MODEL_VISION` | `gemma4-12b` | visión (imagen→texto, `local_describe_image`) |
+| `LOCAL_DELEGATE_MODEL_VISION` | `qwen36-35b-a3b-vision` | visión (imagen→texto, `local_describe_image`): Qwen3.6 35B-A3B con `--mmproj`, ~14 GB de RAM y ~11 GB de VRAM. Alternativa ligera (~10 GB de RAM, ~9 GB de VRAM) para máquinas con menos VRAM: `LOCAL_DELEGATE_MODEL_VISION=gemma4-12b`; `doctor` la propone si tu backend la sirve y no la otra |
 | `LOCAL_DELEGATE_LONG_INPUT_CHARS` | `6000` | umbral mecánico↔largo |
 | `LOCAL_DELEGATE_EXTRACT_TABLE_LONG` | `1` | `local_extract` manda al rol `long` una entrada por debajo del umbral que trae una tabla (HTML, ARIA, Markdown/GFM, CSV o TSV), también con un solo campo, y lo dice en `role_reason` (respuesta, con el `format` visto, y log). Tarda más, puede cargar el modelo largo y su respaldo es el de `code`; `0` lo apaga. Lo lee el servidor al arrancar; ver [Tools](Tools#local_extract) |
 | `LOCAL_DELEGATE_SUMMARIZE_TABLE_LONG` | `1` | La misma regla para `local_summarize` (#650): una entrada pequeña con tabla va al rol `long`, el resumen acaba con un aviso que nombra el formato y la fila del log lleva `role_reason`. `0` lo apaga. Lo lee el servidor al arrancar; ver [Tools](Tools#local_summarize) |

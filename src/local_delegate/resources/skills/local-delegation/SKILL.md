@@ -47,7 +47,8 @@ de delegarlo.
 
 Los ids de modelos del catálogo (mecánico/largo/código/visión) son configurables por
 env y pueden cambiar entre máquinas: consulta `local_status` para ver el catálogo
-activo en vez de asumir nombres fijos. `local_describe_image` es **solo imagen→texto**
+activo en vez de asumir nombres fijos. Visión usa por defecto `qwen36-35b-a3b-vision`; en una
+máquina con menos VRAM, `LOCAL_DELEGATE_MODEL_VISION=gemma4-12b`. `local_describe_image` es **solo imagen→texto**
 (describir, leer texto visible, responder una pregunta puntual) — nunca genera ni edita
 imágenes. Y **no mide**: sirve para el contenido y la composición general, no para verificar
 alineación, tamaños, distancias ni si un texto salta de línea; eso se mide (en una página web,

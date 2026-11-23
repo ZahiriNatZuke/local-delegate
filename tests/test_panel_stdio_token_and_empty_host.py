@@ -185,7 +185,7 @@ def _reload_config(monkeypatch):
         ("LOCAL_DELEGATE_MODEL_MECHANICAL", "MODEL_MECHANICAL", "gemma3-4b"),
         ("LOCAL_DELEGATE_MODEL_LONG", "MODEL_LONG", "gemma4-26b-a4b"),
         ("LOCAL_DELEGATE_MODEL_CODE", "MODEL_CODE", "qwen36-35b-a3b"),
-        ("LOCAL_DELEGATE_MODEL_VISION", "MODEL_VISION", "gemma4-12b"),
+        ("LOCAL_DELEGATE_MODEL_VISION", "MODEL_VISION", "qwen36-35b-a3b-vision"),
         ("LOCAL_DELEGATE_BACKEND_ORIGIN", "BACKEND_ORIGIN_OVERRIDE", "auto"),
     ],
 )

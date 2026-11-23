@@ -67,6 +67,8 @@ def test_versioned_corpus_still_mirrors_production():
     assert all(
         "system" in n or "max_tokens" in n or "user_template" in n or "response_format" in n
         for n in notices
+        # vision-default-qwen36: the model of a role, declared apart (`MODEL_BOUNDARIES`).
+        if "modelo por defecto" not in n
     ), "una frontera declarada fuera de los campos del prompt"
     tool_of = {
         c["id"]: c["tool"]
@@ -362,6 +364,18 @@ def test_nfkd_alone_does_not_remove_the_accent_and_normalisation_does():
 
     assert "computo" not in unicodedata.normalize("NFKD", "cómputo").casefold()
     assert build.flat("CÓMPUTO") == "computo"
+
+
+def test_an_undeclared_model_change_is_still_an_error(monkeypatch):
+    """vision-default-qwen36: the vision model changed on purpose (`MODEL_BOUNDARIES`, a notice).
+    Control: without the declaration the same difference is an error again."""
+    notices: list[str] = []
+    assert build.check_versioned(DESTINATION, notices=notices) == []
+    assert any("modelo por defecto de la 0.54.1" in n for n in notices), notices
+    monkeypatch.setattr(build, "MODEL_BOUNDARIES", {})
+    errors = build.check_versioned(DESTINATION)
+    assert "production_config ya no coincide con config.py" in errors
+    assert "describir-dashboard: production ya no coincide con el constructor" in errors
 
 
 def test_retouched_reference_that_is_still_valid_is_caught_by_the_watch(tmp_path):
