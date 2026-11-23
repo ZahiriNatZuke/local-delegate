@@ -11,7 +11,7 @@
 | --- | --- | --- | --- |
 | REQ-001 | test_left_out_the_first_time_and_summarized_the_second y test_left_out_twice_is_named_once_in_the_notice: un solo reintento con solo las secciones que faltan | pass | rojo antes (`assert 0 == 1`), verde después |
 | REQ-002 | test_left_out_the_first_time…, test_an_empty_heading_is_retried_and_filled_in_place, test_merge_retry_puts_the_sections_in_their_slot | pass | secciones en su sitio y en orden; rojo antes |
-| REQ-003 | test_left_out_twice_is_named_once_in_the_notice, test_complete_naming_the_missing_inserts_nothing | pass | 0 «(sin resumir)», cada título una vez en el aviso |
+| REQ-003 | test_left_out_twice_is_named_once_in_the_notice, test_complete_naming_the_missing_inserts_nothing, test_empty_in_the_chunk_and_again_in_the_retry_is_named_once_and_leaves_the_body, test_complete_naming_the_missing_drops_an_empty_heading (0.54.1, rojos antes) | pass | 0 «(sin resumir)», cada título una vez en el aviso |
 | REQ-004 | test_an_obedient_model_gets_no_retry, test_a_failed_retry_keeps_the_summary_and_names_them | pass | sin reintento si no falta nada; un 500 en el reintento devuelve el resumen |
 | REQ-005 | test_left_out_the_first_time… (`chunks == len(seen) == len(steps)`, un paso `sections_retry`) | pass | un único evento de log |
 
@@ -22,6 +22,7 @@
 | `pytest -q -n 2 --dist loadgroup` (con `pesado.sh`) | 2026-11-23 | pass | 8379 pasados, 31 saltados; el único fallo (`test_detect_spanish_names`, 6 palabras inglesas nuevas sin clasificar) se arregló en el léxico y su test pasa |
 | `ruff check .` y `ruff format --check` | 2026-11-23 | pass | sin hallazgos |
 | prueba en vivo (`test-window` `w-20261123T124639Z`) | 2026-11-23 | skip | ver «Deviations» |
+| `pytest -q -n 2` (0.54.1, con `pesado.sh`) | 2026-11-23 | pass | 8659 pasados, 31 saltados, con el arreglo de J1 |
 
 ## Quality checks
 

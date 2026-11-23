@@ -201,3 +201,51 @@ def test_a_heading_cut_midway_is_dropped_before_the_retry():
     assert sections.retry_targets(sections.without_cut_heading(cut, expected), expected) == [2]
     whole = "## Uno\nuno uno uno."
     assert sections.without_cut_heading(whole, expected) == whole
+
+
+def test_empty_in_the_chunk_and_again_in_the_retry_is_named_once_and_leaves_the_body(
+    monkeypatch, tmp_path
+):
+    """J1 of the #691 review: a heading empty twice stays out of the body, named once."""
+    output, seen = _summarize(monkeypatch, tmp_path, _model(retry="again", empty=True))
+    assert len([p for p in seen if _is_retry(p)]) == 1
+    body, _, notice = output.partition("[local-delegate warning: 2 secciones sin resumir")
+    assert notice, output
+    # Control: the neighbours are still there, summarized.
+    assert "## Sección 4\nResumen de Sección 4." in body
+    assert "## Sección 6\nResumen de Sección 6." in body
+    for title in LEFT_OUT:
+        assert f"## {title}\n" not in body and not body.rstrip().endswith(f"## {title}")
+        assert output.count(f"«{title}»") == 1
+        assert f"«{title}»" in notice
+
+
+def test_complete_naming_the_missing_drops_an_empty_heading():
+    expected = ["Uno", "Dos", "Tres"]
+    output = "## Uno\nuno uno uno.\n\n## Dos\n\n## Tres\ntres tres tres."
+    done = sections.complete(output, expected, name_missing=True)
+    assert done.empty == 1
+    assert done.text == (
+        "## Uno\nuno uno uno.\n\n## Tres\ntres tres tres.\n\n"
+        "[local-delegate warning: 1 sección sin resumir por el límite de "
+        "palabras o del modelo: «Dos»]"
+    )
+    # Without `name_missing` (the single call) the empty heading stays, as before.
+    assert "## Dos" in sections.complete(output, expected).text
+    # An empty last section goes too.
+    last = sections.complete(
+        "## Uno\nuno uno uno.\n\n## Dos\ndos dos dos.\n\n## Tres\n", expected, name_missing=True
+    )
+    assert last.text.startswith("## Uno\nuno uno uno.\n\n## Dos\ndos dos dos.\n\n[local-delegate")
+    # A section empty in the document itself keeps its heading.
+    kept = sections.complete(output, expected, name_missing=True, empty_in_document=frozenset({1}))
+    assert "## Dos" in kept.text and "warning" not in kept.text
+
+
+def test_an_empty_parent_keeps_its_heading_over_its_subsections():
+    """Second judge, S2: an empty parent whose subsections follow keeps its heading."""
+    expected = ["Uno", "Dos", "Dos A", "Tres"]
+    output = "## Uno\nuno uno uno.\n\n## Dos\n\n### Dos A\ndos a dos a.\n\n## Tres\ntres tres tres."
+    done = sections.complete(output, expected, name_missing=True)
+    assert "## Dos\n" in done.text and "### Dos A\ndos a dos a." in done.text
+    assert "«Dos»" in done.text

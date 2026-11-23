@@ -167,6 +167,8 @@ Desde la 0.54.0 (issue #691), en un documento troceado las secciones que el
 modelo se saltó o dejó sin contenido se piden otra vez, **una sola vez**, en una llamada más de la
 misma operación (paso `sections_retry` en el log), y entran en su sitio. Lo que siga faltando no se
 rellena con «(sin resumir)» en el cuerpo: el aviso dice cuántas son y nombra cada título una vez.
+Tampoco queda su título vacío en el cuerpo cuando la sección salió vacía en su trozo y otra vez en
+el reintento.
 Con una sola llamada (sin trocear) el resumen sigue igual que antes.
 
 ## `local_classify`
@@ -410,6 +412,17 @@ fichero (pytest, eslint), el resumen no da ninguna. Así un log de 150–210 k c
 resumen final cortado ni inventa recuentos de tests por fichero. Algún paso intermedio aún puede
 acabar cortado, y entonces la respuesta lo avisa; lo que se pierde ahí lo cubre la lista del
 programa.
+
+**Recuentos por fichero y por código por programa (#717).** Con un log que dice el fichero de cada
+código (ruff/flake8 conciso, ruff completo, tsc), la respuesta termina, en cualquier tamaño, con una
+línea que escribe el programa: «Recuentos del log (leídos por programa, mandan sobre el texto):
+pkg/core.py 3 (E501 2, E741 1) | pkg/util.py 1 (F401 1) · por código: E501 2, E741 1, F401 1.»
+(hasta diez ficheros y diez códigos, y cuántos más hay). Si el resumen da otro total para un
+fichero, otra cifra para un código (dentro de la entrada de un fichero o fuera de las entradas), o le
+pone a un fichero un código que el log no le da, sale además `[local-delegate warning: el resumen da
+otras cifras que el log: «pkg/core.py»: F401 (el log no lo tiene en ese fichero); …]`. Los números
+de línea y columna no cuentan como cifras. Con otros formatos (eslint stylish, pytest, CI) no se
+añade nada.
 
 **Log de pytest con fallos.** Si el log trae el resumen de pytest (`FAILED …`/`ERROR …`) y sus
 líneas cuadran con la de totales («1 failed, 660 passed in …»), el programa lee de ahí los fallos

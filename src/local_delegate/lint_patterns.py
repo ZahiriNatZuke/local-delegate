@@ -391,6 +391,151 @@ def per_file_code_counts(log: str) -> dict[str, Counter[str]] | None:
     return {f: Counter(dict(per[f].most_common())) for f in ranked}
 
 
+class CountMismatch(NamedTuple):
+    """A figure of a summary that is not the log's (`count_mismatches`, #717).
+
+    `file` is `None` for a figure of a code given outside the entries of the files; `code` is
+    `None` for the total of a file. `written` is `None` for a code the summary puts in a file the
+    log does not give it (`real` is then 0).
+    """
+
+    file: str | None
+    code: str | None
+    written: int | None
+    real: int
+
+
+#: The total of an entry: `3 errores`, `1 aviso`, `2 warnings`. Its first figure counts (#641).
+_TOTAL_FIGURE = re.compile(
+    r"\b(\d{1,6})\s{1,3}(?:errore?s?|avisos?|errors?|warnings?|problemas?|problems?"
+    r"|diagn.sticos?|hallazgos?|issues?|violaci.n(?:es)?|infracci.n(?:es)?)\b",
+    re.IGNORECASE,
+)
+#: The figure right after a code: `E501: 2`, `E501 (2)`, `E501 ×2`, `E501 x2`, `E501 - 2`. Not a
+#: location (`10:89`), a decimal, a comparison (`(101 > 88)`) or lines (`(10, 22)`, `(10 y 22)`,
+#: `(10-22)`).
+_AFTER_CODE = re.compile(
+    r"\s{0,3}(?:[:(×x—–-]\s{0,3}|\s)(\d{1,6})"
+    r"(?!\d|[.,:\-–]\d|\s{0,3}[<>/]|,\s{0,2}\d|\s{1,3}(?:y|and|a|to)\s{1,3}\d)"
+)
+#: The figure right before a code: `2× E501`, `2 x E501`, `2 errores de E501`, `2 avisos (E501)`.
+_BEFORE_CODE = re.compile(
+    r"(?<!\d)(\d{1,6})\s{0,3}(?:[×x]|(?:errore?s?|avisos?|errors?|warnings?)(?:\s{1,3}de)?)"
+    r"\s{0,3}\(?\s{0,2}$"
+)
+#: What may sit between a total word and the code it counts: `2 errores de E501`, `2 avisos (E501)`.
+_TOTAL_TO_CODE = re.compile(r"[\s`*:(]{0,6}(?:de[\s`*(]{1,4})?")
+_NUMBERED = re.compile(r"\d{1,3}[.)]\s")
+
+
+def _is_bullet(line: str) -> bool:
+    text = line.lstrip()
+    # `**Por código:**` is bold, not a bullet: under heading entries it closes the last one.
+    return text.startswith(("- ", "* ", "+ ", "• ")) or _NUMBERED.match(text) is not None
+
+
+def _code_figures(line: str) -> list[tuple[str, int | None]]:
+    """(code, figure or `None`) of each rule code the line names, outside its file tokens."""
+    pieces, last = [], 0
+    for begin, end in file_spans(line):
+        pieces += [line[last:begin], " " * (end - begin)]
+        last = end
+    pieces.append(line[last:])
+    text = "".join(pieces).replace("`", " ").replace("*", " ")
+    found: list[tuple[str, int | None]] = []
+    for match in RULE.finditer(text):
+        after = _AFTER_CODE.match(text[match.end() : match.end() + 16])
+        before = _BEFORE_CODE.search(text[max(0, match.start() - 24) : match.start()])
+        figure = after.group(1) if after else before.group(1) if before else None
+        found.append((match.group(0), int(figure) if figure is not None else None))
+    return found
+
+
+def _names_other(line: str, entry: str, per_file: dict[str, Counter[str]]) -> bool:
+    """Whether `line` names a file of the log other than `entry`: by its basename, or by its whole
+    path when it shares the basename with `entry` (`b/core.py` in the entry of `a/core.py`)."""
+    base = norm_path(entry).rsplit("/", 1)[-1]
+    norm = norm_path(MARKDOWN_ESCAPE.sub(r"\1", line))
+    for f in per_file:
+        if _same_file(f, entry):
+            continue
+        if norm_path(f).rsplit("/", 1)[-1] == base:
+            if norm_path(f).removeprefix("./") in norm:
+                return True
+        elif mentions(f, line):
+            return True
+    return False
+
+
+def count_mismatches(answer: str, per_file: dict[str, Counter[str]]) -> list[CountMismatch]:
+    """The figures of `answer` that are not those of `per_file` (`per_file_code_counts`), #717.
+
+    In the smoke test of 0.54.0 the model gave `core.py` the F401 of `util.py`, and per-file
+    counts that added up to 5 over 4 warnings. The summary is read by entries, as for the failures
+    of pytest (#641): a line that starts with a file opens one (`_entry_file`); an indented line
+    goes on it, and so does a bullet under an entry that is a heading. In an entry, its first total
+    (`3 errores`) is compared with the file's, each code with a figure next to it (`E501 ×2`) with
+    the file's count, and a code of the log the file does not have is named (a line that also names
+    another file of the log is context, not part of the entry). Outside the entries only a figure
+    next to a code counts, against the whole log. A line without figures says nothing: the line of
+    the program sits next to it.
+    """
+    answer = MARKDOWN_ESCAPE.sub(r"\1", answer)
+    totals: Counter[str] = Counter()
+    for counts in per_file.values():
+        totals.update(counts)
+    found: list[CountMismatch] = []
+
+    def _add(item: CountMismatch) -> None:
+        if item not in found:
+            found.append(item)
+
+    # The file of the current entry; "" for the entry of a file the log does not count.
+    entry: str | None = None
+    heading_entry = False
+    for line in answer.splitlines():
+        if not line.strip():
+            continue
+        named = _entry_file(line)
+        if named is not None:
+            # A basename two files of the log share (`a/core.py`, `b/core.py`) is not an entry
+            # the program can tell: it says nothing about it.
+            owners = [f for f in per_file if _same_file(named, f)]
+            entry = owners[0] if len(owners) == 1 else ""
+            heading_entry = line.lstrip().startswith(("#", "**"))
+            first = _TOTAL_FIGURE.search(line) if entry else None
+            if (
+                entry
+                and first is not None
+                # `2 errores de E501` is the figure of a code (checked below), not the total.
+                and RULE.match(line, _TOTAL_TO_CODE.match(line, first.end()).end()) is None
+                # `core.py y util.py: 4 avisos` is a total of both, not of this file.
+                and not _names_other(line, entry, per_file)
+                and int(first.group(1)) != sum(per_file[entry].values())
+            ):
+                _add(CountMismatch(entry, None, int(first.group(1)), sum(per_file[entry].values())))
+        elif not (line[0] in " \t" or (heading_entry and _is_bullet(line))):
+            entry = None
+        if entry == "":
+            continue
+        if entry is None:
+            for code, figure in _code_figures(line):
+                if code in totals and figure is not None and figure != totals[code]:
+                    _add(CountMismatch(None, code, figure, totals[code]))
+            continue
+        if _names_other(line, entry, per_file):
+            continue
+        for code, figure in _code_figures(line):
+            if code not in totals:
+                continue
+            real = per_file[entry].get(code, 0)
+            if real == 0:
+                _add(CountMismatch(entry, code, None, 0))
+            elif figure is not None and figure != real:
+                _add(CountMismatch(entry, code, figure, real))
+    return found
+
+
 #: A Markdown escape (`build\_corpus.py`): the model writes it, the reader sees `_`.
 MARKDOWN_ESCAPE = re.compile(r"\\([_*`-])")
 
