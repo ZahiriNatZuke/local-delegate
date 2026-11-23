@@ -634,6 +634,7 @@ def complete(
     *,
     truncated: bool = False,
     empty_in_document: frozenset[int] = frozenset(),
+    name_missing: bool = False,
 ) -> Completion:
     """Inserta en su sitio los títulos que el modelo no puso, y avisa de cuántos quedaron sin resumir.
 
@@ -645,6 +646,10 @@ def complete(
     document itself (B2d-2, httpx2: `## Release Information` followed directly by `## 2.13.1`).
     The model does well leaving them empty, so they are not reported as not summarized; if the
     model left one out, its heading goes back without the "not summarized" placeholder.
+
+    #691: with `name_missing` (the chunked summary, after its retry) a missing section is not put
+    back in the body: no heading, no placeholder. The notice counts them and names each heading
+    once, so a heading the model wrote another way no longer comes out twice.
     """
     lines = output.rstrip("\n").split("\n")
     if truncated and lines and _is_cut_heading(lines[-1], expected):
@@ -659,6 +664,8 @@ def complete(
     insertions: dict[int, list[str]] = {}
     placeholder = not_summarized()
     for k in emp.missing:
+        if name_missing and k not in empty_in_document:
+            continue
         next_line = min((line for e, line in emp.pairs.items() if e > k), default=len(lines))
         body = "" if k in empty_in_document else f"\n{placeholder}"
         insertions.setdefault(next_line, []).append(f"## {expected[k]}{body}\n")
@@ -684,9 +691,93 @@ def complete(
             if left_out == 1
             else "mcp.warning.sections_not_summarized"
         )
-        notice = i18n.t(key, n=left_out)
+        if name_missing:
+            titles = dict.fromkeys(expected[k] for k in sorted(missing + empty))
+            notice = i18n.t(
+                (
+                    "mcp.warning.sections_not_summarized_named_one"
+                    if left_out == 1
+                    else "mcp.warning.sections_not_summarized_named"
+                ),
+                n=left_out,
+                titles=", ".join(f"«{t}»" for t in titles),
+            )
+        else:
+            notice = i18n.t(key, n=left_out)
         text += f"\n\n{WARNING_MARKER}{notice}]"
     return Completion(text, len(missing), len(empty), len(emp.out_of_order))
+
+
+def without_cut_heading(output: str, expected: list[str]) -> str:
+    """#691: a truncated output without its last line when that is a heading cut midway."""
+    lines = output.rstrip("\n").split("\n")
+    if lines and _is_cut_heading(lines[-1], expected):
+        return "\n".join(lines[:-1]).rstrip("\n")
+    return output
+
+
+def retry_targets(
+    output: str, expected: list[str], *, empty_in_document: frozenset[int] = frozenset()
+) -> list[int]:
+    """#691: the expected sections the output left out or left empty, worth asking again.
+
+    The sections empty in the document itself are not: the model does well leaving them empty.
+    """
+    emp = match_headings(output, expected, positional=True)
+    return sorted(k for k in {*emp.missing, *emp.empty} if k not in empty_in_document)
+
+
+def _bodies(output: str, expected: list[str], *, min_content: int = 3) -> dict[int, list[str]]:
+    """The body lines the output gives each expected heading it pairs with some content."""
+    emp = match_headings(output, expected)
+    lines = output.rstrip("\n").split("\n")
+    order = sorted(emp.pairs.items(), key=lambda pair: pair[1])
+    bodies: dict[int, list[str]] = {}
+    for pos, (k, line) in enumerate(order):
+        if k in emp.empty:
+            continue
+        end = order[pos + 1][1] if pos + 1 < len(order) else len(lines)
+        body = lines[line + 1 : end]
+        while body and not body[-1].strip():
+            body.pop()
+        while body and not body[0].strip():
+            body.pop(0)
+        if _words("\n".join(body)) >= min_content:
+            bodies[k] = body
+    return bodies
+
+
+def merge_retry(output: str, expected: list[str], retry_output: str) -> str:
+    """#691: put what the retry summarized into `output`, each section in its slot.
+
+    A section the output left out goes in before the next one it has; a heading it left empty
+    gets the retry's body under it. What the retry did not summarize stays as it was, for
+    `complete` to count and name.
+    """
+    lines = output.rstrip("\n").split("\n")
+    emp = match_headings("\n".join(lines), expected, positional=True)
+    targets = sorted({*emp.missing, *emp.empty})
+    if not targets:
+        return output
+    got = _bodies(retry_output, [expected[k] for k in targets])
+    bodies = {targets[i]: body for i, body in got.items()}
+    paired = sorted(emp.pairs.values())
+    # (start, end, k, new lines), applied from the bottom up so the indices stay valid.
+    edits: list[tuple[int, int, int, list[str]]] = []
+    for k, body in bodies.items():
+        if k in emp.pairs:
+            start = emp.pairs[k] + 1
+            end = next((line for line in paired if line >= start), len(lines))
+            edits.append((start, end, k, [*body, ""] if end < len(lines) else body))
+        else:
+            pos = min((line for e, line in emp.pairs.items() if e > k), default=len(lines))
+            block = [f"## {expected[k]}", *body, ""]
+            if pos > 0 and lines[pos - 1].strip():
+                block.insert(0, "")
+            edits.append((pos, pos, k, block))
+    for start, end, _k, new in sorted(edits, key=lambda edit: (edit[0], edit[2]), reverse=True):
+        lines[start:end] = new
+    return "\n".join(lines).rstrip("\n")
 
 
 # --- Secciones del resumen (v3: subsecciones, introducción y tamaño) -----------------------------

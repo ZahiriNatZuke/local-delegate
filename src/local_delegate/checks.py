@@ -539,6 +539,9 @@ class Context:
     # probe of the backend per run: a second one doubled the wait on a slow or down backend. Out of
     # `__init__`: a `dataclasses.replace` starts with an empty one, as a new context should.
     _memo: dict = field(default_factory=dict, init=False, repr=False, compare=False)
+    # #705: the directory whose Claude Code project `scaffold.mcp_claude` looks up in
+    # `~/.claude.json`; `None` is the current one, read when the probe runs.
+    cwd: Path | None = None
 
     def backend_view(self) -> failures.BackendView:
         """`backend_models()`, asked once per context."""
@@ -1237,7 +1240,56 @@ def _probe_mcp_claude(ctx: Context) -> Result:
     where = entry.get("url") or entry.get("command") or ""
     timeouts = _timeouts_text(_entry_timeouts(entry, "claude"))
     details = f"{kind}{' ' + str(where) if where else ''}{timeouts}"
+    project = _claude_project_disabling(data, ctx.cwd or Path.cwd())
+    if project is not None:
+        return Result(
+            WARN,
+            i18n.t(
+                "doctor.probe.mcp.disabled_for_project",
+                server=install.SERVER_NAME,
+                project=project,
+                details=details,
+            ),
+            i18n.t("doctor.hint.mcp_enable_in_project", server=install.SERVER_NAME),
+        )
     return Result(OK, i18n.t("doctor.probe.mcp.registered", path=path, details=details))
+
+
+#: #705: where `/mcp` → disable leaves a server, per project of `~/.claude.json`: the user and
+#: local servers, and those of a `.mcp.json`.
+_CLAUDE_DISABLED_KEYS = ("disabledMcpServers", "disabledMcpjsonServers")
+
+
+def _normalized_path(path: str) -> str:
+    """A path as a comparable key: absolute, one kind of slash and, on Windows, one case."""
+    return os.path.normcase(os.path.normpath(os.path.abspath(path)))
+
+
+def _claude_project_disabling(data: dict, cwd: Path) -> str | None:
+    """#705: the Claude Code project of `cwd` that disables our server, as `~/.claude.json` writes it.
+
+    The project is the entry of `cwd` itself or, without one, of its nearest ancestor that has
+    one. Only the server names of its two lists are looked at, nothing else of the file.
+    """
+    projects = data.get("projects")
+    if not isinstance(projects, dict):
+        return None
+    by_path = {
+        _normalized_path(key): (key, value)
+        for key, value in projects.items()
+        if isinstance(key, str) and isinstance(value, dict)
+    }
+    for candidate in (cwd, *cwd.parents):
+        found = by_path.get(_normalized_path(str(candidate)))
+        if found is None:
+            continue
+        key, entry = found
+        for name in _CLAUDE_DISABLED_KEYS:
+            listed = entry.get(name)
+            if isinstance(listed, list) and install.SERVER_NAME in listed:
+                return key
+        return None
+    return None
 
 
 def _probe_mcp_codex(ctx: Context) -> Result:

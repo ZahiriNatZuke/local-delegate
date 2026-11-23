@@ -250,6 +250,8 @@
   "mcp.warning.lint_invented_files": "el resumen nombra ficheros que no aparecen en la entrada y pueden ser inventados: {files}",
   "mcp.warning.sections_not_summarized": "{n} secciones sin resumir por el límite de palabras o del modelo",
   "mcp.warning.sections_not_summarized_one": "1 sección sin resumir por el límite de palabras o del modelo",
+  "mcp.warning.sections_not_summarized_named": "{n} secciones sin resumir por el límite de palabras o del modelo: {titles}",
+  "mcp.warning.sections_not_summarized_named_one": "1 sección sin resumir por el límite de palabras o del modelo: {titles}",
   "mcp.warning.headings_from_string_literals": "títulos del resumen que copian una línea de una cadena de texto del código (son datos, no la estructura del fichero): {headings}",
   "mcp.warning.summary_ungrounded": "el resumen trae datos que la entrada no contiene tal cual y pueden ser inventados: {details}; compruébalos contra la fuente antes de usarlos",
   "mcp.warning.ungrounded_acronyms": "siglas expandidas de una forma que la entrada no trae ({items})",
