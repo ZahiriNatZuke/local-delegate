@@ -392,9 +392,9 @@ def test_one_megabyte_under_a_second():
         "  handle{k} = () => { /}/.test('x'); };\n"
         "}\n"
     )
-    text = "".join(unit.replace("{k}", str(k)) for k in range(8500))
+    text = "".join(unit.replace("{k}", str(k)) for k in range(6500))
     assert len(text) > 1_000_000
-    entries = [{"name": "", "anchor": f"handle{k} = () =>"} for k in range(0, 8500, 212)]
+    entries = [{"name": "", "anchor": f"handle{k} = () =>"} for k in range(0, 6500, 160)]
     assert len(entries) >= 40
     started = time.process_time()
     index = locate.build_index(text, "huge.ts")

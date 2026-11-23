@@ -21,9 +21,6 @@ from dataclasses import dataclass
 #: One entry: (name, kind, first line, last line, top_level). `locate` turns it into a `Block`.
 Entry = tuple[str, str, int, int, bool]
 
-_SPACE = re.compile(r"\s+")
-_IDENT = re.compile(r"[A-Za-z_$ -￿][\w$ -￿]*")
-_NUMBER = re.compile(r"\.?\d[\w.]*")
 _STRING = {
     "'": re.compile(r"'(?:[^'\\\n]|\\[\s\S])*'"),
     '"': re.compile(r'"(?:[^"\\\n]|\\[\s\S])*"'),
@@ -31,7 +28,6 @@ _STRING = {
 #: The body of a template literal up to its closing backtick or its next `${`.
 _TEMPLATE_BODY = re.compile(r"(?:[^`\\$]|\\[\s\S]|\$(?!\{))*")
 _REGEX = re.compile(r"/(?![*/])(?:[^\\/\[\n]|\\.|\[(?:[^\]\\\n]|\\.)*\])+/[A-Za-z]*")
-_PUNCTUATORS = ("===", "!==", "...", "=>", "==", "!=", "<=", ">=", "?.", "??", "&&", "||")
 #: After one of these words an expression starts, so a `/` opens a regex.
 _EXPRESSION_KEYWORDS = frozenset(
     {
@@ -41,7 +37,21 @@ _EXPRESSION_KEYWORDS = frozenset(
 )  # fmt: skip
 
 
-@dataclass
+#: One match for the common tokens with the blanks before them (1): (2) a word, (3) a number or
+#: (4) a punctuator other than the ones the lexer reads by hand (`/`, quotes, backtick, braces);
+#: or (5) only blanks, before one of those. The token alternatives start with different
+#: characters and none with a blank, so it stays linear.
+_SIMPLE = re.compile(
+    r"(\s*)(?:"
+    r"([A-Za-z_$\u00a0-\uffff][\w$\u00a0-\uffff]*)"
+    r"|(\.?\d[\w.]*)"
+    r"|(===|!==|\.\.\.|=>|==|!=|<=|>=|\?\.|\?\?|&&|\|\||[^\s/'\"`{}])"
+    r")|(\s+)"
+)
+_SIMPLE_KINDS = {2: "id", 3: "num", 4: "p"}
+
+
+@dataclass(slots=True)
 class _Token:
     kind: str  # "id" | "num" | "str" | "tpl" | "re" | "p"
     text: str
@@ -95,12 +105,23 @@ def _tokenize(src: str) -> tuple[list[_Token], list[tuple[int, int]]]:
         braces.append("${")
         return j + 2
 
+    simple = _SIMPLE.match
+    append = tokens.append
     while i < n:
-        m = _SPACE.match(src, i)
-        if m:
-            if "\n" in m.group():
-                newline = True
-            i = m.end()
+        m = simple(src, i)
+        if m:  # the common tokens in one match, with the blanks before them
+            group = m.lastindex
+            j = m.end()
+            if group == 5:
+                if "\n" in m.group(5):
+                    newline = True
+            else:
+                blanks = m.group(1)
+                if blanks and "\n" in blanks:
+                    newline = True
+                append(_Token(_SIMPLE_KINDS[group], m.group(group), m.start(group), j, newline))
+                newline = False
+            i = j
             continue
         c = src[i]
         if c == "/":
@@ -155,24 +176,8 @@ def _tokenize(src: str) -> tuple[list[_Token], list[tuple[int, int]]]:
             add("p", i, i + 1)
             i += 1
             continue
-        m = _IDENT.match(src, i)
-        if m:
-            add("id", i, m.end())
-            i = m.end()
-            continue
-        m = _NUMBER.match(src, i)
-        if m:
-            add("num", i, m.end())
-            i = m.end()
-            continue
-        for punct in _PUNCTUATORS:
-            if src.startswith(punct, i):
-                add("p", i, i + len(punct))
-                i += len(punct)
-                break
-        else:
-            add("p", i, i + 1)
-            i += 1
+        add("p", i, i + 1)  # not reached: `_SIMPLE` takes any other character
+        i += 1
     if braces:
         raise _Unbalanced
     return tokens, comments
@@ -223,6 +228,8 @@ _FUNCTION_CALLS = frozenset({"computed", "signal", "effect"})
 class _Parser:
     def __init__(self, src: str, tokens: list[_Token]) -> None:
         self.tokens = tokens
+        self.texts = [tok.text for tok in tokens]
+        self.count = len(tokens)
         self.line_starts = [0] + [m.end() for m in re.finditer("\n", src)]
         self.match = self._match_brackets()
         self.entries: list[Entry] = []
@@ -256,10 +263,10 @@ class _Parser:
         return self.line_of(max(tok.end - 1, tok.start))
 
     def text(self, k: int) -> str:
-        return self.tokens[k].text if 0 <= k < len(self.tokens) else ""
+        return self.texts[k] if 0 <= k < self.count else ""
 
     def kind(self, k: int) -> str:
-        return self.tokens[k].kind if 0 <= k < len(self.tokens) else ""
+        return self.tokens[k].kind if 0 <= k < self.count else ""
 
     def is_open(self, k: int) -> bool:
         tok = self.tokens[k]
@@ -492,13 +499,29 @@ def index_typescript(content: str) -> tuple[list[Entry], frozenset[int], str | N
         parser.parse_module()
     except (_Unbalanced, IndexError, KeyError):
         return [], frozenset(), "unbalanced"
-    code_lines: set[int] = set()
-    for tok in tokens:
-        first = parser.line_of(tok.start)
-        code_lines.add(first)
-        if "\n" in tok.text:
-            code_lines.update(range(first, parser.line_of(tok.end - 1) + 1))
-    comment_lines: set[int] = set()
+    return parser.entries, _comment_lines(content, comments, parser), None
+
+
+def _comment_lines(
+    content: str, comments: list[tuple[int, int]], parser: _Parser
+) -> frozenset[int]:
+    """The lines a comment covers that hold nothing else but blanks (only those lines are read,
+    so the cost follows the comments, not the file)."""
+    covered: dict[int, list[tuple[int, int]]] = {}
     for start, end in comments:
-        comment_lines.update(range(parser.line_of(start), parser.line_of(max(end - 1, start)) + 1))
-    return parser.entries, frozenset(comment_lines - code_lines), None
+        for line in range(parser.line_of(start), parser.line_of(max(end - 1, start)) + 1):
+            covered.setdefault(line, []).append((start, end))
+    starts = parser.line_starts
+    out: set[int] = set()
+    for line, spans in covered.items():
+        begin = starts[line - 1]
+        finish = starts[line] - 1 if line < len(starts) else len(content)
+        at = begin
+        rest = []
+        for start, end in sorted(spans):
+            rest.append(content[at : max(at, start)])
+            at = max(at, end)
+        rest.append(content[at:finish] if at < finish else "")
+        if not "".join(rest).strip():
+            out.add(line)
+    return frozenset(out)
