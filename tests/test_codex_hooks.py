@@ -127,13 +127,39 @@ def test_the_hooks_file_passes_the_codex_parser_rules():
     assert codex_plugin.check_hooks_file({"hooks": codex_hooks.entries(PYTHON, "win32")}) == []
 
 
+@pytest.fixture
+def no_short_path(monkeypatch):
+    """Windows without 8.3 names on the volume (or not Windows): `short_path` finds nothing."""
+    monkeypatch.setattr(codex_hooks, "short_path", lambda path: None)
+
+
 @pytest.mark.parametrize(
     ("platform", "python", "expected"),
     [
+        # #718: Codex runs the line with the session's shell, PowerShell by default on Windows. A
+        # bare path starts in PowerShell, cmd and bash; a quoted one is a ParserError in PowerShell.
+        (
+            "win32",
+            "C:\\Users\\someone\\AppData\\Roaming\\uv\\tools\\local-delegate-mcp\\Scripts\\python.exe",
+            f"{PYTHON} -I -m local_delegate.hook codex-prompt",
+        ),
+        # With spaces and no short name: the call operator of PowerShell.
         (
             "win32",
             "C:\\Program Files\\uv tools\\python.exe",
-            '"C:/Program Files/uv tools/python.exe" -I -m local_delegate.hook codex-prompt',
+            "& 'C:/Program Files/uv tools/python.exe' -I -m local_delegate.hook codex-prompt",
+        ),
+        # A metacharacter of some shell (`(`, `$`, `&`, `'`) is not left bare either; a `'` in the
+        # path takes the double quotes.
+        (
+            "win32",
+            "C:\\Users\\a(b)\\python.exe",
+            "& 'C:/Users/a(b)/python.exe' -I -m local_delegate.hook codex-prompt",
+        ),
+        (
+            "win32",
+            "C:\\Users\\o'neil\\python.exe",
+            '& "C:/Users/o\'neil/python.exe" -I -m local_delegate.hook codex-prompt',
         ),
         (
             "linux",
@@ -147,8 +173,77 @@ def test_the_hooks_file_passes_the_codex_parser_rules():
         ),
     ],
 )
-def test_the_command_quotes_the_interpreter_for_the_shell_codex_uses(platform, python, expected):
+def test_the_command_quotes_the_interpreter_for_the_shell_codex_uses(
+    no_short_path, platform, python, expected
+):
     assert codex_hooks.command(python, "codex-prompt", platform) == expected
+
+
+def test_a_path_with_spaces_uses_its_short_name_bare(monkeypatch):
+    """#718: the 8.3 name has no spaces, so the line starts in the three shells."""
+    seen = []
+
+    def fake(path):
+        seen.append(path)
+        return "C:\\PROGRA~1\\UVTOOL~1\\python.exe"
+
+    monkeypatch.setattr(codex_hooks, "short_path", fake)
+    line = codex_hooks.command("C:\\Program Files\\uv tools\\python.exe", "codex-prompt", "win32")
+    assert line == "C:/PROGRA~1/UVTOOL~1/python.exe -I -m local_delegate.hook codex-prompt"
+    assert seen == ["C:\\Program Files\\uv tools\\python.exe"]
+
+
+def test_a_short_name_that_is_not_safe_either_falls_back_to_the_call_operator(monkeypatch):
+    """`GetShortPathNameW` gives the long path back when the volume has no 8.3 names."""
+    monkeypatch.setattr(codex_hooks, "short_path", lambda path: path)
+    line = codex_hooks.command("D:\\uv tools\\python.exe", "codex-prompt", "win32")
+    assert line == "& 'D:/uv tools/python.exe' -I -m local_delegate.hook codex-prompt"
+
+
+def test_a_safe_path_never_asks_for_a_short_name(monkeypatch):
+    def boom(path):
+        raise AssertionError("short_path called for a safe path")
+
+    monkeypatch.setattr(codex_hooks, "short_path", boom)
+    assert codex_hooks.command(PYTHON, "codex-prompt", "win32").startswith(PYTHON + " ")
+
+
+@pytest.mark.parametrize("platform", ["linux", "darwin"])
+def test_outside_windows_no_short_name_is_asked(monkeypatch, platform):
+    """REQ-005: `shlex.quote` as before, whatever the path."""
+    monkeypatch.setattr(codex_hooks, "short_path", lambda path: "/X~1/python")
+    line = codex_hooks.command("/a b/python", "codex-prompt", platform)
+    assert line == "'/a b/python' -I -m local_delegate.hook codex-prompt"
+
+
+def test_short_path_outside_windows_is_none():
+    if sys.platform == "win32":
+        pytest.skip("only meaningful where GetShortPathNameW does not exist")
+    assert codex_hooks.short_path("/tmp") is None
+
+
+@pytest.mark.parametrize(
+    ("line", "python"),
+    [
+        # The form of 0.54.0 and before: still ours, so `install` rewrites it in place.
+        (f'"{PYTHON}" -I -m local_delegate.hook codex-prompt', PYTHON),
+        (f"{PYTHON} -I -m local_delegate.hook codex-prompt", PYTHON),
+        ("& 'C:/a b/python.exe' -I -m local_delegate.hook codex-prompt", "C:/a b/python.exe"),
+        ('& "C:/o\'n/python.exe" -I -m local_delegate.hook codex-prompt', "C:/o'n/python.exe"),
+        ("C:/PROGRA~1/python.exe -I -m local_delegate.hook codex-prompt", "C:/PROGRA~1/python.exe"),
+    ],
+)
+def test_every_form_of_ours_is_recognized(line, python):
+    group = {"hooks": [{"type": "command", "command": line, "timeout": 30}]}
+    assert codex_hooks.our_name(group) == "codex-prompt"
+    assert codex_hooks.python_of(group) == python
+
+
+def test_the_old_quoted_form_is_flagged():
+    """REQ-004: what `doctor` warns about, told apart from the forms that start in PowerShell."""
+    assert codex_hooks.starts_quoted(f'"{PYTHON}" -I -m local_delegate.hook codex-prompt')
+    assert not codex_hooks.starts_quoted(f"{PYTHON} -I -m local_delegate.hook codex-prompt")
+    assert not codex_hooks.starts_quoted("& 'C:/a b/p.exe' -I -m local_delegate.hook codex-prompt")
 
 
 @pytest.mark.parametrize(
@@ -212,7 +307,7 @@ def test_groups_that_are_not_ours(group):
         ("darwin", "/Users/a b/python"),
     ],
 )
-def test_every_command_we_write_is_recognized_with_its_interpreter(platform, python):
+def test_every_command_we_write_is_recognized_with_its_interpreter(no_short_path, platform, python):
     """Control for the list above: the same recognizer does accept what `command` writes."""
     for spec in codex_hooks.SPECS:
         written = codex_hooks.group(spec, python, platform)

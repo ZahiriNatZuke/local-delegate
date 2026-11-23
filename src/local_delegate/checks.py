@@ -1467,8 +1467,15 @@ def _probe_codex_hooks(ctx: Context) -> Result:
     if not seen.found:
         return Result(OK, i18n.t("doctor.probe.codex_hooks.none", path=seen.path))
     stale, missing, missing_python = _codex_hooks_stale(ctx, seen.found)
-    if stale or missing or missing_python:
+    # #718: Codex runs a hook with the session's shell, PowerShell by default on Windows, which
+    # does not start a line that opens with a quoted interpreter (the form of 0.54.0 and before).
+    quoted = sys.platform == "win32" and any(
+        codex_hooks.starts_quoted(item.group["hooks"][0]["command"]) for item in seen.found
+    )
+    if stale or missing or missing_python or quoted:
         parts = []
+        if quoted:
+            parts.append(i18n.t("doctor.probe.codex_hooks.quoted"))
         if stale or not missing:
             # Without stale nor missing ones (only the interpreter) the text is the one it was.
             parts.append(

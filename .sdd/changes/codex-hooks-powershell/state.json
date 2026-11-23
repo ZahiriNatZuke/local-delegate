@@ -1,0 +1,74 @@
+{
+  "schemaVersion": 1,
+  "slug": "codex-hooks-powershell",
+  "title": "Codex en Windows: hooks que arrancan en PowerShell, cmd y bash (#718)",
+  "mode": "lite",
+  "traceability": "strict",
+  "status": "specifying",
+  "createdAt": "2026-11-23T18:52:12.138Z",
+  "updatedAt": "2026-11-23T18:55:21.864Z",
+  "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-11-23T18:55:21.863Z",
+      "evidence": "spec con REQ-001..005 trazados a T1..T4; plazo de Codex comprobado en el código de rust-v0.169.1 y rust-v0.171.0 (300 s); sdd check ok",
+      "actor": "agente-codex-hooks-pwsh"
+    },
+    "plan": {
+      "status": "approved",
+      "updatedAt": "2026-11-23T18:55:21.864Z",
+      "evidence": "spec con REQ-001..005 trazados a T1..T4; plazo de Codex comprobado en el código de rust-v0.169.1 y rust-v0.171.0 (300 s); sdd check ok",
+      "actor": "agente-codex-hooks-pwsh"
+    },
+    "quality": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "conformance": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "memory": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-11-23T18:52:12.138Z",
+      "reason": "SDD change created"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "specifying",
+      "at": "2026-11-23T18:55:21.582Z",
+      "reason": "causa probada en #718; spec escrito"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-11-23T18:55:21.863Z",
+      "evidence": "spec con REQ-001..005 trazados a T1..T4; plazo de Codex comprobado en el código de rust-v0.169.1 y rust-v0.171.0 (300 s); sdd check ok",
+      "actor": "agente-codex-hooks-pwsh"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-11-23T18:55:21.864Z",
+      "evidence": "spec con REQ-001..005 trazados a T1..T4; plazo de Codex comprobado en el código de rust-v0.169.1 y rust-v0.171.0 (300 s); sdd check ok",
+      "actor": "agente-codex-hooks-pwsh"
+    }
+  ]
+}

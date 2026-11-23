@@ -107,8 +107,9 @@ def matcher_matches(matcher: str | None, names: list[str] | tuple[str, ...]) -> 
 #: The tail of every command of ours, whatever the interpreter in front of it.
 #: Anchored at the start: one interpreter (quoted or bare) and nothing else in front, so a wrapper
 #: of the user's that ends the same way is not taken for ours.
+#: `& '…'` is the call operator of PowerShell (#718), only in front of a quoted interpreter.
 _OURS = re.compile(
-    r"\s*(?P<python>\"[^\"]*\"|'[^']*'|[^\s\"']+)"
+    r"\s*(?:&\s+(?=[\"']))?(?P<python>\"[^\"]*\"|'[^']*'|[^\s\"'&]+)"
     r"\s+-I\s+-m\s+local_delegate\.hook\s+(?P<name>codex-[a-z][a-z-]{0,40})\s*"
 )
 
@@ -120,13 +121,70 @@ EMPTY_GROUP: dict = {"hooks": []}
 
 
 # --- The entries --------------------------------------------------------------------------------
+#: A Windows path that PowerShell, cmd and bash all take as one bare word naming a program: a
+#: drive, then letters (any script), digits and `_ . - ~ /`. `~` only expands at the start of a
+#: word in bash, and an 8.3 name has it in the middle.
+_BARE_WINDOWS_PATH = re.compile(r"[A-Za-z]:/[\w.~/-]*")
+
+
+def short_path(path: str) -> str | None:
+    """The 8.3 name of ``path`` (`GetShortPathNameW`), or ``None`` off Windows or on failure.
+
+    A volume without 8.3 names gives the long path back; the caller checks the result.
+    """
+    if sys.platform != "win32":
+        return None
+    try:
+        import ctypes
+        from ctypes import wintypes
+
+        get = ctypes.windll.kernel32.GetShortPathNameW
+        get.argtypes = [wintypes.LPCWSTR, wintypes.LPWSTR, wintypes.DWORD]
+        get.restype = wintypes.DWORD
+        size = get(path, None, 0)
+        if not size:
+            return None
+        buffer = ctypes.create_unicode_buffer(size)
+        written = get(path, buffer, size)
+        return buffer.value if 0 < written < size else None
+    except (AttributeError, OSError, ValueError):
+        return None
+
+
+def _windows_interpreter(python: str) -> str:
+    """The interpreter as the first word of a line that Codex runs with the session's shell.
+
+    Codex launches a hook with `pwsh -NoProfile -Command`, `cmd /c` or `bash -c`
+    (`Shell::derive_exec_args`), PowerShell by default on Windows. A line that opens with a quoted
+    path is a `ParserError` in PowerShell and nothing starts (#718), so the path goes bare when the
+    three shells read it as one word; else its 8.3 name, if that one is; else the call operator of
+    PowerShell, which only PowerShell understands: `& '…'`, literal (a `$` is not expanded), or
+    `& "…"` when the path has a `'` itself.
+    """
+    path = python.replace('"', "")
+    forward = path.replace("\\", "/")
+    if _BARE_WINDOWS_PATH.fullmatch(forward):
+        return forward
+    short = short_path(path)
+    if short:
+        short = short.replace("\\", "/")
+        if _BARE_WINDOWS_PATH.fullmatch(short):
+            return short
+    return f"& '{forward}'" if "'" not in forward else f'& "{forward}"'
+
+
 def command(python: str, name: str, platform: str | None = None) -> str:
-    """The command line of hook ``name``: the interpreter quoted for the shell Codex uses."""
+    """The command line of hook ``name``: the interpreter written for the shell Codex uses."""
     if (platform or sys.platform) == "win32":
-        exe = '"' + python.replace("\\", "/").replace('"', "") + '"'
+        exe = _windows_interpreter(python)
     else:
         exe = shlex.quote(python)
     return f"{exe} -I -m {HOOK_MODULE} {name}"
+
+
+def starts_quoted(line: str) -> bool:
+    """Whether ``line`` opens with a quoted interpreter: what PowerShell does not start (#718)."""
+    return line.lstrip()[:1] in ('"', "'")
 
 
 def handler(python: str, name: str, platform: str | None = None, timeout: int = TIMEOUT_S) -> dict:

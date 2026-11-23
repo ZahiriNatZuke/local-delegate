@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import codecs
 import json
+import sys
 from pathlib import Path
 
 import pytest
@@ -142,6 +143,35 @@ def test_an_old_interpreter_is_a_warn_that_update_repairs(home, python, tmp_path
     assert result.status == checks.WARN
     assert result.fix_hint == "local-delegate update"
     assert "/hooks" in result.detail
+
+
+def _quoted(group: dict) -> dict:
+    """The group as 0.54.0 wrote it: the interpreter between double quotes (#718)."""
+    line = group["hooks"][0]["command"]
+    python, rest = line.split(" -I -m ", 1)
+    return {**group, "hooks": [{**group["hooks"][0], "command": f'"{python}" -I -m {rest}'}]}
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="the quoted form is a Windows problem")
+def test_a_quoted_line_is_a_warn_that_names_powershell(home, python, tmp_path):
+    """#718: PowerShell, Codex's shell on Windows, does not start a line that opens with a quote."""
+    data, _ = codex_hooks.merge({}, python)
+    for event, groups in data["hooks"].items():
+        data["hooks"][event] = [_quoted(g) for g in groups]
+    assert all(codex_hooks.our_name(g) for gs in data["hooks"].values() for g in gs)
+    _write(home, data)
+    result = _result(home, python, tmp_path)
+    assert result.status == checks.WARN
+    assert result.fix_hint == "local-delegate update"
+    assert i18n.t("doctor.probe.codex_hooks.quoted") in result.detail
+    assert "PowerShell" in result.detail and "/hooks" in result.detail
+
+
+def test_control_the_current_line_has_no_quote_warning(home, python, tmp_path):
+    _installed(home, python)
+    result = _result(home, python, tmp_path)
+    assert result.status == checks.OK
+    assert i18n.t("doctor.probe.codex_hooks.quoted") not in result.detail
 
 
 def test_one_missing_is_a_warn(home, python, tmp_path):

@@ -38,6 +38,14 @@ el modelo nuevo.
 - **`local_summarize` troceado: una sección vacía dos veces ya no deja su título en el cuerpo**
   (#691). Si una sección salía vacía en su trozo y otra vez en el reintento, su título se quedaba
   vacío en el cuerpo y además se nombraba en el aviso. Ahora sale una sola vez, en el aviso.
+- **Codex en Windows: los hooks de local-delegate por fin arrancan** (#718). Codex lanza cada hook
+  con la shell de la sesión (PowerShell en Windows) y nuestra línea empezaba por la ruta del
+  intérprete entre comillas, que PowerShell rechaza con `ParserError`: ninguno de los cuatro hooks
+  se ejecutaba. Ahora la ruta va sin comillas (sirve en PowerShell, cmd y bash); si lleva espacios,
+  su nombre corto 8.3, y si la unidad no los tiene, `& '…'` para PowerShell. `doctor` avisa de una
+  línea con la forma vieja. Tras `local-delegate update` hay que aprobar los hooks otra vez en
+  `/hooks`, porque la línea cambió. El plazo de las tools MCP de Codex ya es de 300 s por defecto,
+  así que `install` sigue sin escribir `tool_timeout_sec`.
 
 ## [0.54.0] - 2026-11-23
 
