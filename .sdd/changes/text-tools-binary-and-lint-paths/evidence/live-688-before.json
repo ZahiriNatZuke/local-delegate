@@ -1,0 +1,26 @@
+{
+ "label": "antes",
+ "runs": [
+  {
+   "run": 0,
+   "clean_named_in_body": 2,
+   "warning": false,
+   "clean_entries_by_program": null,
+   "answer": "**.venv/Lib/site-packages/starlette/testclient.py:** 1 DeprecationWarning (relacionado con el uso obsoleto de la forma abreviada 'app').\n**tests/test_mod_00.py - tests/test_mod_13.py:** 283 tests pasados.\nResumen: El archivo .venv/Lib/site-packages/starlette/testclient.py presenta un solo aviso de tipo DeprecationWarning, relacionado con la forma de definir la aplicación. Se completaron 283 pruebas.\n\n(leído server-side: 1751 chars ≈ 911 tokens de Claude que no entraron a tu contexto)"
+  },
+  {
+   "run": 1,
+   "clean_named_in_body": 2,
+   "warning": false,
+   "clean_entries_by_program": null,
+   "answer": "**.venv/Lib/site-packages/starlette/testclient.py:** 1 DeprecationWarning (app shortcut).\n**tests/test_mod_00.py - tests/test_mod_13.py:** 283 tests pasados.\nResumen de problemas agrupados por archivo:\n\nEl archivo `.venv/Lib/site-packages/starlette/testclient.py` presenta 1 **DeprecationWarning** relacionado con el uso obsoleto del atajo 'app'. Se realizaron 283 **tests** en los archivos `tests/test_mod_00.py` a `tests/test_mod_13.py`, todos pasados.\n\n(leído server-side: 1751 chars ≈ 911 tokens de Claude que no entraron a tu contexto)"
+  },
+  {
+   "run": 2,
+   "clean_named_in_body": 14,
+   "warning": false,
+   "clean_entries_by_program": null,
+   "answer": "**.venv/Lib/site-packages/starlette/testclient.py:** 1 DeprecationWarning (WSGITransport).\n**tests/test_mod_00.py**, **tests/test_mod_01.py**, **tests/test_mod_02.py**, **tests/test_mod_03.py**, **tests/test_mod_04.py**, **tests/test_mod_05.py**, **tests/test_mod_06.py**, **tests/test_mod_07.py**, **tests/test_mod_08.py**, **tests/test_mod_09.py**, **tests/test_mod_10.py**, **tests/test_mod_11.py**, **tests/test_mod_12.py**, **tests/test_mod_13.py**: 0 errores.\nTotal de tests: 283.\n\n(leído server-side: 1751 chars ≈ 911 tokens de Claude que no entraron a tu contexto)"
+  }
+ ]
+}

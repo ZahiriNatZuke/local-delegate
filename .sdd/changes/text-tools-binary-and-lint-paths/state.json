@@ -4,9 +4,9 @@
   "title": "Tools de texto: rechazo de binarios y rutas exactas en lint_summary",
   "mode": "lite",
   "traceability": "strict",
-  "status": "verifying",
+  "status": "result-review",
   "createdAt": "2026-11-23T10:56:47.749Z",
-  "updatedAt": "2026-11-23T11:19:08.837Z",
+  "updatedAt": "2026-11-23T12:04:16.419Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -21,10 +21,10 @@
       "actor": "binarios-y-rutas-lint"
     },
     "quality": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-11-23T12:04:16.187Z",
+      "evidence": "Suite completa pytest -n 2 con pesado.sh tras rebase: 8360 passed, 31 skipped; 2 rojos de datos (catálogo i18n y léxico) arreglados y repasados; ruff check/format en verde; commits firmados; sdd check ok",
+      "actor": "cerrar-688-y-revisar-709"
     },
     "conformance": {
       "status": "pending",
@@ -90,6 +90,21 @@
       "to": "verifying",
       "at": "2026-11-23T11:19:08.837Z",
       "reason": "T1-T4 hechos; suite verde y prueba en vivo en verification.md"
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-11-23T12:04:16.187Z",
+      "evidence": "Suite completa pytest -n 2 con pesado.sh tras rebase: 8360 passed, 31 skipped; 2 rojos de datos (catálogo i18n y léxico) arreglados y repasados; ruff check/format en verde; commits firmados; sdd check ok",
+      "actor": "cerrar-688-y-revisar-709"
+    },
+    {
+      "type": "transition",
+      "from": "verifying",
+      "to": "result-review",
+      "at": "2026-11-23T12:04:16.419Z",
+      "reason": "quality aprobada; revisión de dos jueces en review.md"
     }
   ]
 }
