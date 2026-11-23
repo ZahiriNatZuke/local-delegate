@@ -903,6 +903,11 @@ FILE_QUESTION_WORDS = frozenset(
 _QUESTION_WORD = re.compile(r"[a-z]+")
 
 
+def is_location_name_word(word: str) -> bool:
+    """Whether `word` (folded) says how to locate rather than what (`_LOCATION_NAME_WORDS`)."""
+    return word in _LOCATION_NAME_WORDS
+
+
 def asks_for_files(question: str | None) -> bool:
     """#582: whether `question` asks for the files of a diff or their lines (`FILE_QUESTION_WORDS`)."""
     if not question:
