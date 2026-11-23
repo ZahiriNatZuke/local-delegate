@@ -14,7 +14,7 @@
   "install.codex_hooks.deleted": "{count} hooks of ours removed and the file deleted: it held only ours",
   "install.codex_hooks.no_python": "the Codex hooks are not written: they need the install made with `uv tool install local-delegate-mcp`, so that their interpreter does not move (reason: {reason})",
   "install.codex_hooks.none": "there were no hooks of ours in Codex",
-  "install.codex_hooks.plan": "consultative Codex hooks ({names}); Codex runs them only once you approve them in /hooks",
+  "install.codex_hooks.plan": "Codex hooks ({names}); Codex runs them only once you approve them in /hooks",
   "install.codex_hooks.rejected": "{path} is left untouched: Codex rejects the whole file as it is ({where}), so none of its hooks would load; fix it and run `local-delegate install --clients codex` again",
   "install.codex_hooks.remove_plan": "removes our Codex hooks without moving yours",
   "install.codex_hooks.removed": "{count} hooks of ours removed; yours stay where they were, with their approval",
@@ -181,5 +181,6 @@
   "install.update.uv_tool.pinned": "  It is pinned to {version} (installed with `==`): `uv tool upgrade` will not move it.",
   "install.update.version_latest": "Latest published version: {version} ({source})",
   "install.update.version_requested": "Version requested with --version: {version}",
-  "install.update.version_unknown": "Warning: {reason}. Continuing without touching the pins."
+  "install.update.version_unknown": "Warning: {reason}. Continuing without touching the pins.",
+  "install.mcp.codex_direct_tools": " — direct tools, without tool_search (omit_tools_from)"
 }

@@ -262,6 +262,8 @@ _CALLER_FIELDS = {
     "subagent": "subagent_calls",
     "mod": "mod_calls",
     "unknown": "unknown_caller_calls",
+    # #669: every row of Codex, in its own column; it never mixes with the Claude threads.
+    "codex": "codex_calls",
 }
 
 
@@ -2604,12 +2606,15 @@ function renderClients(s){
   // the rows without real thread data, only shows when some row has any. The mod cell keeps its
   // «N del mod» as a tooltip.
   const showUnknown = rows.some(c => (c.unknown_caller_calls||0) > 0);
+  // #669: the Codex column, like «Sin dato», only when some row has it.
+  const showCodex = rows.some(c => (c.codex_calls||0) > 0);
   const callerCell = (n, title) => n
     ? '<td class="num"' + (title ? ' title="' + escHooks(title) + '"' : '') + '>' + F.format(n) + '</td>'
     : '<td class="num" style="color:var(--mut)">0</td>';
   const callerCells = c =>
     callerCell(c.main_calls||0) + callerCell(c.subagent_calls||0)
     + callerCell(c.mod_calls||0, T('clients.mod_calls', {n: F.format(c.mod_calls||0)}))
+    + (showCodex ? callerCell(c.codex_calls||0) : '')
     + (showUnknown ? callerCell(c.unknown_caller_calls||0) : '');
 
   const body = rows.map(c=>{
@@ -2629,6 +2634,7 @@ function renderClients(s){
     + '<th>' + T('clients.col.share') + '</th>'
     + '<th>' + T('clients.col.main') + '</th><th>' + T('clients.col.subagent') + '</th>'
     + '<th>' + T('clients.col.mod') + '</th>'
+    + (showCodex ? '<th>' + T('clients.col.codex') + '</th>' : '')
     + (showUnknown ? '<th>' + T('clients.col.unknown') + '</th>' : '')
     + '</tr></thead>'
     + '<tbody>' + body + '</tbody></table></div>';
@@ -3583,7 +3589,8 @@ function acct(e){
   // `chunks` son LLAMADAS al backend; se omite cuando es 1. Un fallo de conexión no llegó al
   // backend (issue #436): solo cuentan las que `chunks` diga que se hicieron antes, si las hubo.
   const connectionFailed = failed && !!e.connection_failure;
-  const calls = connectionFailed ? (e.chunks || 0) : (e.chunks || 1);
+  // #687: a row the program answered alone (`program_only`) made no backend call.
+  const calls = e.program_only ? 0 : (connectionFailed ? (e.chunks || 0) : (e.chunks || 1));
   const tIn = e.tokens_in, tOut = e.tokens_out;
   const tInRep = tIn!==undefined&&tIn!==null, tOutRep = tOut!==undefined&&tOut!==null;
   // chars_in no siempre son caracteres: en local_describe_image son BYTES de la imagen

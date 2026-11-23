@@ -1241,6 +1241,15 @@ def test_acct_parity_between_python_and_the_dashboard_js(tmp_path):
         # perdió la conexión tras dos trozos conserva esas dos.
         _ev(ok=False, error="connect_error", error_class="endpoint", connection_failure="dns"),
         _ev(ok=False, error="connect_error", connection_failure="refused", chunks=2),
+        # #687: `local_extract` answered by the program alone: 0 backend calls, 0 local tokens.
+        _ev(
+            tool="local_extract",
+            model="program",
+            program_only=True,
+            path="C:/src/pr.patch",
+            tokens_in=0,
+            tokens_out=0,
+        ),
     ]
     # Como en producción: las filas pasan antes por la fusión de Python (REQ-006, REQ-037). Sin
     # relleno en `tmp_path`, las que no traen `caller_model` toman el respaldo declarado.
@@ -1271,6 +1280,11 @@ def test_acct_parity_between_python_and_the_dashboard_js(tmp_path):
     # Issue #436: un fallo de conexión sin llamadas, y uno con las que sí se hicieron.
     assert any(py["connection_failed"] and py["backend_calls"] == 0 for py in from_py)
     assert any(py["connection_failed"] and py["backend_calls"] == 2 for py in from_py)
+    # #687: a row the program answered alone spends no backend call, in both copies.
+    assert any(
+        c.get("program_only") and py["backend_calls"] == 0 and not py["failed"]
+        for c, py in zip(cases, from_py, strict=True)
+    ), "falta la fila resuelta por programa"
     # Guarda de REQ-037: un evento de cada origen de celda, de cada familia, y una imagen con
     # devuelto que da 0 en las dos copias.
     origins = {c["density"]["text"][1] for c in cases if c["density"]["text"]}

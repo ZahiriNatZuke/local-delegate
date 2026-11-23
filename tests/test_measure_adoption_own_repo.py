@@ -199,12 +199,14 @@ def test_delegations_by_caller_counts_the_mod_first(world):
     world.delegation("other", "subagent")
     world.delegation("other", "main", tool_use_id="toolu_plugin_01Mod")
     world.delegation("other", None)
+    # #669: a Codex row has its own column, whatever its thread.
+    world.delegation("other", "main", client="codex-mcp-client")
 
     result = world.measure()
 
     by_caller = result["delegations_by_caller"]
     assert by_caller["mod"] == 1, "the mod row sums in mod"
-    assert by_caller == {"main": 1, "subagent": 1, "mod": 1, "unknown": 1}
+    assert by_caller == {"main": 1, "subagent": 1, "mod": 1, "codex": 1, "unknown": 1}
     assert sum(by_caller.values()) == result["total_delegations"]
 
 

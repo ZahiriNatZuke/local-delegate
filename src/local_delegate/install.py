@@ -34,6 +34,7 @@ import subprocess
 import sys
 import tempfile
 import time
+import tomllib
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime
@@ -1610,6 +1611,105 @@ def _describe_timeouts(timeouts: dict) -> str:
     return ", ".join(f"{k} = {v}" for k, v in timeouts.items())
 
 
+# --- Tools directas en Codex (#671) -------------------------------------------
+# Codex 0.169 deja toda tool MCP detrás de `tool_search` cuando el modelo sabe buscar
+# (`codex-rs/core/src/tools/spec_plan.rs`, `apply_mcp_tool_exposure_policy`), salvo que la tabla
+# del servidor declare `omit_tools_from` con `deferred` (`codex-rs/config/src/mcp_types.rs`). Es
+# la alternativa de Codex a las tools fijadas del mod de Claude Code, pero por servidor: entran
+# todas. Cuesta unos 15,8 KB por turno, así que solo se escribe con `--codex-direct-tools`; sin
+# flag se conserva tal cual lo que hubiera, igual que los plazos.
+CODEX_EXPOSURE_KEY = "omit_tools_from"
+CODEX_DEFERRED = "deferred"
+# La lista entera, como texto: en una línea o repartida en varias (`[^\]]` cruza saltos de línea),
+# con espacios o comentarios dentro. Cortarla en el primer espacio dejaría TOML inválido, y un
+# `config.toml` inválido deja a Codex sin NINGÚN MCP.
+_CODEX_EXPOSURE_RE = re.compile(r"(?m)^[ \t]*" + CODEX_EXPOSURE_KEY + r"[ \t]*=[ \t]*(\[[^\]]*\])")
+
+
+def codex_exposure_in(section: str) -> str | None:
+    """El texto de la lista `omit_tools_from` de la tabla ``section``, o ``None``."""
+    match = _CODEX_EXPOSURE_RE.search(section)
+    return match.group(1) if match else None
+
+
+def _exposure_items(value: str) -> list[str] | None:
+    """Los valores de la lista, o ``None`` si no es una lista TOML de textos."""
+    try:
+        items = tomllib.loads(f"v = {value}")["v"]
+    except (tomllib.TOMLDecodeError, KeyError):
+        return None
+    if not isinstance(items, list) or not all(isinstance(i, str) for i in items):
+        return None
+    return items
+
+
+def _dump_exposure(items: list[str]) -> str:
+    return "[" + ", ".join(json.dumps(i) for i in items) + "]"
+
+
+def _section_exposure(section: str) -> tuple[str | None, list[str] | None]:
+    """``(texto, valores)`` de `omit_tools_from` en la tabla ``section``, o ``(None, None)``.
+
+    Los valores salen de leer la tabla con `tomllib`, que sabe dónde acaba la lista aunque un
+    comentario o un texto lleven `]`. El texto capturado por la regex solo se reemite si dice
+    exactamente eso; si no (la regex se cortó en un `]` de un comentario), se rehace la lista
+    desde los valores, sin perder ninguno. Una tabla que `tomllib` no lee cae a la captura, y solo
+    si esta es por sí sola una lista de textos.
+    """
+    raw = codex_exposure_in(section)
+    try:
+        table = tomllib.loads(section).get("mcp_servers", {}).get(SERVER_NAME, {})
+        items = table.get(CODEX_EXPOSURE_KEY) if isinstance(table, dict) else None
+        parsed = True
+    except tomllib.TOMLDecodeError:
+        items, parsed = None, False
+    if not parsed:
+        items = _exposure_items(raw) if raw is not None else None
+        return (raw, items) if items is not None else (None, None)
+    if not isinstance(items, list) or not all(isinstance(i, str) for i in items):
+        return None, None
+    if raw is not None and _exposure_items(raw) == items:
+        return raw, items
+    return _dump_exposure(items), items
+
+
+def codex_tools_direct(section: str) -> bool:
+    """True si la tabla ``section`` saca las tools de `tool_search` (lista con `deferred`)."""
+    _raw, items = _section_exposure(section)
+    return bool(items) and CODEX_DEFERRED in items
+
+
+def codex_exposure(home: Path, direct: bool | None) -> dict:
+    """``{"omit_tools_from": texto TOML}`` para la tabla nueva, o ``{}``.
+
+    - ``None`` conserva el texto de la lista de la entrada instalada tal cual (sin el comentario
+      de fin de línea, como los plazos), si es una lista TOML de textos.
+    - ``True`` añade `deferred` a esa lista (o la crea); si ya lo tenía, la deja tal cual.
+    - ``False`` quita solo `deferred`: lo demás que hubiera puesto el usuario se queda, y una
+      lista que queda vacía desaparece.
+
+    Una sola clave sale siempre: la tabla entera se reescribe y la vieja se descarta.
+    """
+    section = _CODEX_SECTION_RE.search(_read_text(home / ".codex" / "config.toml"))
+    # Solo se reemite una lista TOML de textos (`_section_exposure`): lo que capturase la regex de
+    # una lista sin cerrar (otras claves, una tabla) no entra nunca en el bloque gestionado.
+    current, found = _section_exposure(section.group(0)) if section else (None, None)
+    items = found or []
+    if direct is None:
+        return {CODEX_EXPOSURE_KEY: current} if current is not None else {}
+    if direct and CODEX_DEFERRED in items:
+        return {CODEX_EXPOSURE_KEY: current}
+    if direct:
+        items = [*items, CODEX_DEFERRED]
+    else:
+        items = [i for i in items if i != CODEX_DEFERRED]
+        if current is not None and items == found:
+            return {CODEX_EXPOSURE_KEY: current}
+    if not items:
+        return {}
+    return {CODEX_EXPOSURE_KEY: _dump_exposure(items)}
+
+
 def _without_secrets(entry: dict) -> dict:
     """Copia para ENSEÑAR (el `literal` del `--dry-run`): un token escrito a pelo no se imprime.
 
@@ -1906,6 +2006,9 @@ class Options:
     # filtrar la lista de acciones por su `kind`: un filtro por string desde fuera sería frágil
     # y, sobre todo, mudo — nadie sabría por qué falta esa acción.
     skip_codex_mcp: bool = False
+    # #671: `omit_tools_from` con `deferred` en la tabla de Codex. Tres estados, y None (lo que
+    # usa `update` al reparar) conserva lo que ya tuviera la tabla.
+    codex_direct_tools: bool | None = None
     # REQ-047: `install` guarda en `language.json` el idioma de la sesión en la que corre. `update`
     # lo pone a False en las llamadas por reparación y escribe la preferencia una sola vez.
     write_language: bool = True
@@ -2803,7 +2906,8 @@ def _codex_hooks_bytes(path: Path, *, refuse_bom: bool = True) -> bytes | None:
 
 
 def _codex_hooks_action(opts: Options, codex: Path) -> Action:
-    """Issue #669: our two consultative hooks in `~/.codex/hooks.json`, next to the user's."""
+    """Issue #669: our Codex hooks (two consultative, one that notes each call) in
+    `~/.codex/hooks.json`, next to the user's."""
     codex_hooks = _sibling("codex_hooks")
     claude_plugin = _sibling("claude_plugin")
 
@@ -3124,7 +3228,11 @@ def plan_install(opts: Options) -> list[Action]:
             config_path = codex / "config.toml"
             kept = _kept("codex")
             timeouts = existing_timeouts(opts.home, "codex")
-            codex_block = codex_mcp_block(_with_header(entry, kept), timeouts)
+            exposure = codex_exposure(opts.home, opts.codex_direct_tools)
+            codex_block = codex_mcp_block(_with_header(entry, kept), {**timeouts, **exposure})
+            codex_detail = _detail(kept, timeouts)
+            if exposure and codex_tools_direct(codex_block):
+                codex_detail += t("install.mcp.codex_direct_tools")
 
             def _run_codex(path=config_path, block=codex_block) -> str:
                 _write_text(path, upsert_codex_mcp(_read_text_for_rewrite(path), block))
@@ -3134,7 +3242,7 @@ def plan_install(opts: Options) -> list[Action]:
                 Action(
                     "toml",
                     config_path,
-                    _detail(kept, timeouts),
+                    codex_detail,
                     _run_codex,
                     literal=codex_block,
                 )

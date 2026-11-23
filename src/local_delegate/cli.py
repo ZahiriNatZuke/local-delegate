@@ -106,6 +106,7 @@ def _install_options(args: argparse.Namespace, targets: set[str], skip_codex_mcp
         # ignorando `--home`. Instalando duplicaba configuración; desinstalando la borraba.
         use_cli=not getattr(args, "no_client_cli", False) and not inst.is_simulated_home(home),
         skip_codex_mcp=skip_codex_mcp,
+        codex_direct_tools=getattr(args, "codex_direct_tools", None),
         claude_delivery=getattr(args, "claude_delivery", None),
         disable_read_hook=getattr(args, "disable_read_hook", False),
         desktop=getattr(args, "desktop", False),
@@ -299,6 +300,11 @@ def _run_install(args: argparse.Namespace, uninstall: bool) -> int:
             skip_codex_mcp = _decide_on_foreign_codex(detail, args)
 
     opts = _install_options(args, targets, skip_codex_mcp=skip_codex_mcp)
+    if opts.codex_direct_tools is not None and (
+        "codex" not in targets or skip_codex_mcp or "mcp" not in opts.components
+    ):
+        # #671: el flag solo cambia la entrada MCP de Codex; si no se escribe, que se sepa.
+        print(t("cli.install.codex_direct_tools_ignored"))
     if not opts.components:
         if shells:
             # Completion already counts as something to do: it is not «no components» (REQ-030).
@@ -1746,6 +1752,23 @@ def _add_install_parsers(sub) -> None:
         "--force-mcp-codex",
         action="store_true",
         help=t("cli.help.install.force_mcp_codex"),
+    )
+    # #671: tres estados; sin ninguno se conserva lo que tuviera la tabla de Codex.
+    direct = install.add_mutually_exclusive_group()
+    direct.add_argument(
+        "--codex-direct-tools",
+        dest="codex_direct_tools",
+        action="store_const",
+        const=True,
+        default=None,
+        help=t("cli.help.install.codex_direct_tools"),
+    )
+    direct.add_argument(
+        "--no-codex-direct-tools",
+        dest="codex_direct_tools",
+        action="store_const",
+        const=False,
+        help=t("cli.help.install.no_codex_direct_tools"),
     )
     _add_shell_completion_arg(install, t("cli.help.install.shell_completion"))
     install.set_defaults(func=cmd_install)
