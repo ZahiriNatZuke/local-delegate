@@ -79,7 +79,7 @@ def _diff(files: int, lines_per_file: int) -> tuple[str, list[dict]]:
             f"@@ -240,{lines_per_file} +242,{lines_per_file} @@",
         ]
         out += [
-            f"+const valor_{f}_{i} = calculaAlgoLargo({i}, 'texto de relleno');"
+            f"+const value_{f}_{i} = calculaAlgoLargo({i}, 'texto de relleno');"
             for i in range(lines_per_file)
         ]
         expected.append({"name": name, "start": first, "end": len(out)})
@@ -206,15 +206,15 @@ def test_a_cut_call_with_only_diff_files_is_not_retried(backend, tmp_path):
 def test_another_location_field_over_a_diff_gets_the_programs_lines(backend, tmp_path):
     _calls, state = backend
     text, _expected = _diff(3, 4)
-    anchor = "+const valor_1_2 = calculaAlgoLargo(2"
+    anchor = "+const value_1_2 = calculaAlgoLargo(2"
     state["answer"] = lambda call: _ok(
-        json.dumps({EXEC_FIELD: [{"name": "valor_1_2", "anchor": anchor, "start": 1}]})
+        json.dumps({EXEC_FIELD: [{"name": "value_1_2", "anchor": anchor, "start": 1}]})
     )
     data = server.local_extract(fields=[EXEC_FIELD], path=_write(tmp_path, text, "small.patch"))
     line = text.split("\n").index(
-        "+const valor_1_2 = calculaAlgoLargo(2, 'texto de relleno');"
+        "+const value_1_2 = calculaAlgoLargo(2, 'texto de relleno');"
     ) + 1  # fmt: skip
-    assert data[EXEC_FIELD] == [{"name": "valor_1_2", "start": line, "end": line}]
+    assert data[EXEC_FIELD] == [{"name": "value_1_2", "start": line, "end": line}]
     assert data["_local_delegate"]["located"][EXEC_FIELD]["by"] == "anchor"
 
 

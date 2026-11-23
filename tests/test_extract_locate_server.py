@@ -170,7 +170,7 @@ ANCHOR_FIELD = "orden_local_y_barra_con_lineas"
 def test_model_numbers_never_reach_the_value(backend, tmp_path, item):
     text = "\n".join(f"Línea de relleno número {k}." for k in range(30))
     text += "\nAquí la barra lateral se pliega al abrir el panel.\n"
-    path = _write(tmp_path, text, "notas.txt")
+    path = _write(tmp_path, text, "notes.txt")
     backend["answer"] = lambda call: json.dumps({ANCHOR_FIELD: [item]})
     data = server.local_extract(fields=[ANCHOR_FIELD], path=path)
     line = _line_of(text, "la barra lateral se pliega")
@@ -180,7 +180,7 @@ def test_model_numbers_never_reach_the_value(backend, tmp_path, item):
 
 def test_a_model_number_without_an_anchor_is_null(backend, tmp_path):
     text = "\n".join(f"Línea de relleno número {k}." for k in range(30)) + "\n"
-    path = _write(tmp_path, text, "notas.txt")
+    path = _write(tmp_path, text, "notes.txt")
     backend["answer"] = lambda call: json.dumps({ANCHOR_FIELD: [{"name": "barra", "start": 5}]})
     data = server.local_extract(fields=[ANCHOR_FIELD], path=path)
     assert data[ANCHOR_FIELD] == [{"name": "barra", "start": None, "end": None}]
@@ -189,7 +189,7 @@ def test_a_model_number_without_an_anchor_is_null(backend, tmp_path):
 
 def test_a_line_string_from_the_model_is_a_type_mismatch(backend, tmp_path):
     text = "\n".join(f"Línea de relleno número {k}." for k in range(30)) + "\n"
-    path = _write(tmp_path, text, "notas.txt")
+    path = _write(tmp_path, text, "notes.txt")
     backend["answer"] = lambda call: json.dumps({ANCHOR_FIELD: "barra: líneas 5-9"})
     data = server.local_extract(fields=[ANCHOR_FIELD], path=path)
     assert len(backend["calls"]) == 2, "one retry"
@@ -228,10 +228,10 @@ def _anchor_answer(field, anchor):
     [
         ("mod.py", _python(), "funciones_con_lineas", None, False),
         ("mod.py", _python(), "funciones_que_validan_con_lineas", "selection", False),
-        ("notas.txt", "uno\ndos\nla barra lateral\ntres\n", ANCHOR_FIELD, "anchor", False),
+        ("notes.txt", "uno\ndos\nla barra lateral\ntres\n", ANCHOR_FIELD, "anchor", False),
         ("pr.patch", _diff(5)[0], "ficheros_y_hunks_con_lineas", None, False),
         ("doc.md", _markdown(40), "secciones_con_lineas", None, True),
-        ("notas.txt", "relleno\n" * 600 + "la barra lateral\n", ANCHOR_FIELD, "anchor", True),
+        ("notes.txt", "relleno\n" * 600 + "la barra lateral\n", ANCHOR_FIELD, "anchor", True),
     ],
     ids=["index", "selection", "anchor", "diff", "index-chunked", "anchor-chunked"],
 )
@@ -347,9 +347,9 @@ def test_selected_names_get_the_index_lines(backend, tmp_path):
 def test_a_name_outside_the_index_is_unlocated(backend, tmp_path, monkeypatch):
     monkeypatch.setattr(config, "JSON_SCHEMA_MODE", "off")  # free mode: no enum holds it
     field = "funciones_que_validan_con_lineas"
-    backend["answer"] = lambda call: json.dumps({field: [{"name": "no_existe"}]})
+    backend["answer"] = lambda call: json.dumps({field: [{"name": "missing_one"}]})
     data = server.local_extract(fields=[field], path=_write(tmp_path, _python(), "m.py"))
-    assert data[field] == [{"name": "no_existe", "start": None, "end": None}]
+    assert data[field] == [{"name": "missing_one", "start": None, "end": None}]
     [miss] = data["_local_delegate"]["unlocated"][field]
     assert miss["reason"] == "not_in_index"
 
@@ -484,7 +484,7 @@ def test_inline_text_keeps_todays_location_value(backend):
 def test_an_index_that_cannot_be_built_is_said(backend, tmp_path):
     text = "def roto(:\n    pass\n\nla barra lateral = 1\n"
     backend["answer"] = _anchor_answer(ANCHOR_FIELD, "la barra lateral")
-    data = server.local_extract(fields=[ANCHOR_FIELD], path=_write(tmp_path, text, "roto.py"))
+    data = server.local_extract(fields=[ANCHOR_FIELD], path=_write(tmp_path, text, "broken.py"))
     assert data[ANCHOR_FIELD] == [{"name": "x", "start": 4, "end": 4}]
     meta = data["_local_delegate"]
     assert meta["located"][ANCHOR_FIELD]["index"] is None

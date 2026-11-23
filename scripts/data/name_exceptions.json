@@ -1793,13 +1793,483 @@
           "name": "ficheros",
           "file": "tests/test_structured_summary.py",
           "reason": "dato congelado de corpus o caso: directorio del corpus congelado `benchmarks/resumen-estructurado/` y clave de su `MANIFEST.json`, que no se reescriben (cierre del frente A, lote 4)"
+        },
+        {
+          "name": "secciones_con_lineas",
+          "file": "tests/test_core.py",
+          "reason": "dato congelado de corpus o caso: nombre de campo en español a propósito, con la forma de los de los issues #692-#698, para comprobar que `classify_field`, el tipo por campo o el índice reconocen también los nombres en español (SDD extract-locate-by-program)"
+        },
+        {
+          "name": "tiene_tests",
+          "file": "tests/test_core.py",
+          "reason": "dato congelado de corpus o caso: nombre de campo en español a propósito, con la forma de los de los issues #692-#698, para comprobar que `classify_field`, el tipo por campo o el índice reconocen también los nombres en español (SDD extract-locate-by-program)"
+        },
+        {
+          "name": "tres_reglas",
+          "file": "tests/test_core.py",
+          "reason": "dato congelado de corpus o caso: nombre de campo en español a propósito, con la forma de los de los issues #692-#698, para comprobar que `classify_field`, el tipo por campo o el índice reconocen también los nombres en español (SDD extract-locate-by-program)"
+        },
+        {
+          "name": "lista_de_ficheros_con_sus_lineas",
+          "file": "tests/test_extract_diff_files_and_cut.py",
+          "reason": "dato congelado de corpus o caso: nombre de campo en español a propósito, con la forma de los de los issues #692-#698, para comprobar que `classify_field`, el tipo por campo o el índice reconocen también los nombres en español (SDD extract-locate-by-program)"
+        },
+        {
+          "name": "ficheros_que_cambian_con_sus_lineas",
+          "file": "tests/test_extract_diff_files_names.py",
+          "reason": "dato congelado de corpus o caso: nombre de campo en español a propósito, con la forma de los de los issues #692-#698, para comprobar que `classify_field`, el tipo por campo o el índice reconocen también los nombres en español (SDD extract-locate-by-program)"
+        },
+        {
+          "name": "lista_de_ficheros_con_sus_lineas",
+          "file": "tests/test_extract_diff_files_names.py",
+          "reason": "dato congelado de corpus o caso: nombre de campo en español a propósito, con la forma de los de los issues #692-#698, para comprobar que `classify_field`, el tipo por campo o el índice reconocen también los nombres en español (SDD extract-locate-by-program)"
+        },
+        {
+          "name": "ficheros_con_lineas",
+          "file": "tests/test_extract_locate_server.py",
+          "reason": "dato congelado de corpus o caso: nombre de campo en español a propósito, con la forma de los de los issues #692-#698, para comprobar que `classify_field`, el tipo por campo o el índice reconocen también los nombres en español (SDD extract-locate-by-program)"
+        },
+        {
+          "name": "ficheros_y_hunks_con_lineas",
+          "file": "tests/test_extract_locate_server.py",
+          "reason": "dato congelado de corpus o caso: nombre de campo en español a propósito, con la forma de los de los issues #692-#698, para comprobar que `classify_field`, el tipo por campo o el índice reconocen también los nombres en español (SDD extract-locate-by-program)"
+        },
+        {
+          "name": "funciones_con_lineas",
+          "file": "tests/test_extract_locate_server.py",
+          "reason": "dato congelado de corpus o caso: nombre de campo en español a propósito, con la forma de los de los issues #692-#698, para comprobar que `classify_field`, el tipo por campo o el índice reconocen también los nombres en español (SDD extract-locate-by-program)"
+        },
+        {
+          "name": "funciones_que_validan_con_lineas",
+          "file": "tests/test_extract_locate_server.py",
+          "reason": "dato congelado de corpus o caso: nombre de campo en español a propósito, con la forma de los de los issues #692-#698, para comprobar que `classify_field`, el tipo por campo o el índice reconocen también los nombres en español (SDD extract-locate-by-program)"
+        },
+        {
+          "name": "lista_de_ficheros_con_sus_lineas",
+          "file": "tests/test_extract_locate_server.py",
+          "reason": "dato congelado de corpus o caso: nombre de campo en español a propósito, con la forma de los de los issues #692-#698, para comprobar que `classify_field`, el tipo por campo o el índice reconocen también los nombres en español (SDD extract-locate-by-program)"
+        },
+        {
+          "name": "orden_local_y_barra_con_lineas",
+          "file": "tests/test_extract_locate_server.py",
+          "reason": "dato congelado de corpus o caso: nombre de campo en español a propósito, con la forma de los de los issues #692-#698, para comprobar que `classify_field`, el tipo por campo o el índice reconocen también los nombres en español (SDD extract-locate-by-program)"
+        },
+        {
+          "name": "requisitos_con_lineas",
+          "file": "tests/test_extract_locate_server.py",
+          "reason": "dato congelado de corpus o caso: nombre de campo en español a propósito, con la forma de los de los issues #692-#698, para comprobar que `classify_field`, el tipo por campo o el índice reconocen también los nombres en español (SDD extract-locate-by-program)"
+        },
+        {
+          "name": "secciones_con_lineas",
+          "file": "tests/test_extract_locate_server.py",
+          "reason": "dato congelado de corpus o caso: nombre de campo en español a propósito, con la forma de los de los issues #692-#698, para comprobar que `classify_field`, el tipo por campo o el índice reconocen también los nombres en español (SDD extract-locate-by-program)"
+        },
+        {
+          "name": "tres_reglas",
+          "file": "tests/test_extract_locate_server.py",
+          "reason": "dato congelado de corpus o caso: nombre de campo en español a propósito, con la forma de los de los issues #692-#698, para comprobar que `classify_field`, el tipo por campo o el índice reconocen también los nombres en español (SDD extract-locate-by-program)"
+        },
+        {
+          "name": "funciones_con_lineas",
+          "file": "tests/test_extract_schema.py",
+          "reason": "dato congelado de corpus o caso: nombre de campo en español a propósito, con la forma de los de los issues #692-#698, para comprobar que `classify_field`, el tipo por campo o el índice reconocen también los nombres en español (SDD extract-locate-by-program)"
+        },
+        {
+          "name": "hay_errores",
+          "file": "tests/test_extract_schema.py",
+          "reason": "dato congelado de corpus o caso: nombre de campo en español a propósito, con la forma de los de los issues #692-#698, para comprobar que `classify_field`, el tipo por campo o el índice reconocen también los nombres en español (SDD extract-locate-by-program)"
+        },
+        {
+          "name": "soporta_windows",
+          "file": "tests/test_extract_schema.py",
+          "reason": "dato congelado de corpus o caso: nombre de campo en español a propósito, con la forma de los de los issues #692-#698, para comprobar que `classify_field`, el tipo por campo o el índice reconocen también los nombres en español (SDD extract-locate-by-program)"
+        },
+        {
+          "name": "tiene_dos_tests",
+          "file": "tests/test_extract_schema.py",
+          "reason": "dato congelado de corpus o caso: nombre de campo en español a propósito, con la forma de los de los issues #692-#698, para comprobar que `classify_field`, el tipo por campo o el índice reconocen también los nombres en español (SDD extract-locate-by-program)"
+        },
+        {
+          "name": "tiene_tests",
+          "file": "tests/test_extract_schema.py",
+          "reason": "dato congelado de corpus o caso: nombre de campo en español a propósito, con la forma de los de los issues #692-#698, para comprobar que `classify_field`, el tipo por campo o el índice reconocen también los nombres en español (SDD extract-locate-by-program)"
+        },
+        {
+          "name": "todos_los_autores",
+          "file": "tests/test_extract_schema.py",
+          "reason": "dato congelado de corpus o caso: nombre de campo en español a propósito, con la forma de los de los issues #692-#698, para comprobar que `classify_field`, el tipo por campo o el índice reconocen también los nombres en español (SDD extract-locate-by-program)"
+        },
+        {
+          "name": "tres_reglas",
+          "file": "tests/test_extract_schema.py",
+          "reason": "dato congelado de corpus o caso: nombre de campo en español a propósito, con la forma de los de los issues #692-#698, para comprobar que `classify_field`, el tipo por campo o el índice reconocen también los nombres en español (SDD extract-locate-by-program)"
+        },
+        {
+          "name": "tres_reglas_desactivadas",
+          "file": "tests/test_extract_schema.py",
+          "reason": "dato congelado de corpus o caso: nombre de campo en español a propósito, con la forma de los de los issues #692-#698, para comprobar que `classify_field`, el tipo por campo o el índice reconocen también los nombres en español (SDD extract-locate-by-program)"
+        },
+        {
+          "name": "clases_con_lineas",
+          "file": "tests/test_locate_anchor.py",
+          "reason": "dato congelado de corpus o caso: nombre de campo en español a propósito, con la forma de los de los issues #692-#698, para comprobar que `classify_field`, el tipo por campo o el índice reconocen también los nombres en español (SDD extract-locate-by-program)"
+        },
+        {
+          "name": "declaraciones_con_lineas",
+          "file": "tests/test_locate_anchor.py",
+          "reason": "dato congelado de corpus o caso: nombre de campo en español a propósito, con la forma de los de los issues #692-#698, para comprobar que `classify_field`, el tipo por campo o el índice reconocen también los nombres en español (SDD extract-locate-by-program)"
+        },
+        {
+          "name": "funcion_con_lineas",
+          "file": "tests/test_locate_anchor.py",
+          "reason": "dato congelado de corpus o caso: nombre de campo en español a propósito, con la forma de los de los issues #692-#698, para comprobar que `classify_field`, el tipo por campo o el índice reconocen también los nombres en español (SDD extract-locate-by-program)"
+        },
+        {
+          "name": "funciones_con_lineas",
+          "file": "tests/test_locate_anchor.py",
+          "reason": "dato congelado de corpus o caso: nombre de campo en español a propósito, con la forma de los de los issues #692-#698, para comprobar que `classify_field`, el tipo por campo o el índice reconocen también los nombres en español (SDD extract-locate-by-program)"
+        },
+        {
+          "name": "funciones_que_guardan_con_lineas",
+          "file": "tests/test_locate_anchor.py",
+          "reason": "dato congelado de corpus o caso: nombre de campo en español a propósito, con la forma de los de los issues #692-#698, para comprobar que `classify_field`, el tipo por campo o el índice reconocen también los nombres en español (SDD extract-locate-by-program)"
+        },
+        {
+          "name": "manejadores_con_lineas",
+          "file": "tests/test_locate_anchor.py",
+          "reason": "dato congelado de corpus o caso: nombre de campo en español a propósito, con la forma de los de los issues #692-#698, para comprobar que `classify_field`, el tipo por campo o el índice reconocen también los nombres en español (SDD extract-locate-by-program)"
+        },
+        {
+          "name": "metodos_que_guardan_con_lineas",
+          "file": "tests/test_locate_anchor.py",
+          "reason": "dato congelado de corpus o caso: nombre de campo en español a propósito, con la forma de los de los issues #692-#698, para comprobar que `classify_field`, el tipo por campo o el índice reconocen también los nombres en español (SDD extract-locate-by-program)"
+        },
+        {
+          "name": "pasos_con_lineas",
+          "file": "tests/test_locate_anchor.py",
+          "reason": "dato congelado de corpus o caso: nombre de campo en español a propósito, con la forma de los de los issues #692-#698, para comprobar que `classify_field`, el tipo por campo o el índice reconocen también los nombres en español (SDD extract-locate-by-program)"
+        },
+        {
+          "name": "pasos_de_instalacion_con_lineas",
+          "file": "tests/test_locate_anchor.py",
+          "reason": "dato congelado de corpus o caso: nombre de campo en español a propósito, con la forma de los de los issues #692-#698, para comprobar que `classify_field`, el tipo por campo o el índice reconocen también los nombres en español (SDD extract-locate-by-program)"
+        },
+        {
+          "name": "seccion_con_lineas",
+          "file": "tests/test_locate_anchor.py",
+          "reason": "dato congelado de corpus o caso: nombre de campo en español a propósito, con la forma de los de los issues #692-#698, para comprobar que `classify_field`, el tipo por campo o el índice reconocen también los nombres en español (SDD extract-locate-by-program)"
+        },
+        {
+          "name": "secciones_con_lineas",
+          "file": "tests/test_locate_anchor.py",
+          "reason": "dato congelado de corpus o caso: nombre de campo en español a propósito, con la forma de los de los issues #692-#698, para comprobar que `classify_field`, el tipo por campo o el índice reconocen también los nombres en español (SDD extract-locate-by-program)"
+        },
+        {
+          "name": "tabla_de_pasos_con_lineas",
+          "file": "tests/test_locate_anchor.py",
+          "reason": "dato congelado de corpus o caso: nombre de campo en español a propósito, con la forma de los de los issues #692-#698, para comprobar que `classify_field`, el tipo por campo o el índice reconocen también los nombres en español (SDD extract-locate-by-program)"
+        },
+        {
+          "name": "tareas_con_lineas",
+          "file": "tests/test_locate_anchor.py",
+          "reason": "dato congelado de corpus o caso: nombre de campo en español a propósito, con la forma de los de los issues #692-#698, para comprobar que `classify_field`, el tipo por campo o el índice reconocen también los nombres en español (SDD extract-locate-by-program)"
+        },
+        {
+          "name": "D7_linea",
+          "file": "tests/test_locate_fields.py",
+          "reason": "dato congelado de corpus o caso: nombre de campo en español a propósito, con la forma de los de los issues #692-#698, para comprobar que `classify_field`, el tipo por campo o el índice reconocen también los nombres en español (SDD extract-locate-by-program)"
+        },
+        {
+          "name": "REQ_012_linea",
+          "file": "tests/test_locate_fields.py",
+          "reason": "dato congelado de corpus o caso: nombre de campo en español a propósito, con la forma de los de los issues #692-#698, para comprobar que `classify_field`, el tipo por campo o el índice reconocen también los nombres en español (SDD extract-locate-by-program)"
+        },
+        {
+          "name": "clases_con_lineas",
+          "file": "tests/test_locate_fields.py",
+          "reason": "dato congelado de corpus o caso: nombre de campo en español a propósito, con la forma de los de los issues #692-#698, para comprobar que `classify_field`, el tipo por campo o el índice reconocen también los nombres en español (SDD extract-locate-by-program)"
+        },
+        {
+          "name": "constantes_con_lineas",
+          "file": "tests/test_locate_fields.py",
+          "reason": "dato congelado de corpus o caso: nombre de campo en español a propósito, con la forma de los de los issues #692-#698, para comprobar que `classify_field`, el tipo por campo o el índice reconocen también los nombres en español (SDD extract-locate-by-program)"
+        },
+        {
+          "name": "declaraciones_con_lineas",
+          "file": "tests/test_locate_fields.py",
+          "reason": "dato congelado de corpus o caso: nombre de campo en español a propósito, con la forma de los de los issues #692-#698, para comprobar que `classify_field`, el tipo por campo o el índice reconocen también los nombres en español (SDD extract-locate-by-program)"
+        },
+        {
+          "name": "fichero_con_lineas",
+          "file": "tests/test_locate_fields.py",
+          "reason": "dato congelado de corpus o caso: nombre de campo en español a propósito, con la forma de los de los issues #692-#698, para comprobar que `classify_field`, el tipo por campo o el índice reconocen también los nombres en español (SDD extract-locate-by-program)"
+        },
+        {
+          "name": "ficheros_con_lineas",
+          "file": "tests/test_locate_fields.py",
+          "reason": "dato congelado de corpus o caso: nombre de campo en español a propósito, con la forma de los de los issues #692-#698, para comprobar que `classify_field`, el tipo por campo o el índice reconocen también los nombres en español (SDD extract-locate-by-program)"
+        },
+        {
+          "name": "ficheros_que_cambian_con_sus_lineas",
+          "file": "tests/test_locate_fields.py",
+          "reason": "dato congelado de corpus o caso: nombre de campo en español a propósito, con la forma de los de los issues #692-#698, para comprobar que `classify_field`, el tipo por campo o el índice reconocen también los nombres en español (SDD extract-locate-by-program)"
+        },
+        {
+          "name": "ficheros_raros_con_lineas",
+          "file": "tests/test_locate_fields.py",
+          "reason": "dato congelado de corpus o caso: nombre de campo en español a propósito, con la forma de los de los issues #692-#698, para comprobar que `classify_field`, el tipo por campo o el índice reconocen también los nombres en español (SDD extract-locate-by-program)"
+        },
+        {
+          "name": "ficheros_y_hunks_con_lineas",
+          "file": "tests/test_locate_fields.py",
+          "reason": "dato congelado de corpus o caso: nombre de campo en español a propósito, con la forma de los de los issues #692-#698, para comprobar que `classify_field`, el tipo por campo o el índice reconocen también los nombres en español (SDD extract-locate-by-program)"
+        },
+        {
+          "name": "funcion_con_lineas",
+          "file": "tests/test_locate_fields.py",
+          "reason": "dato congelado de corpus o caso: nombre de campo en español a propósito, con la forma de los de los issues #692-#698, para comprobar que `classify_field`, el tipo por campo o el índice reconocen también los nombres en español (SDD extract-locate-by-program)"
+        },
+        {
+          "name": "funciones_con_lineas",
+          "file": "tests/test_locate_fields.py",
+          "reason": "dato congelado de corpus o caso: nombre de campo en español a propósito, con la forma de los de los issues #692-#698, para comprobar que `classify_field`, el tipo por campo o el índice reconocen también los nombres en español (SDD extract-locate-by-program)"
+        },
+        {
+          "name": "funciones_que_validan_entrada_con_lineas",
+          "file": "tests/test_locate_fields.py",
+          "reason": "dato congelado de corpus o caso: nombre de campo en español a propósito, con la forma de los de los issues #692-#698, para comprobar que `classify_field`, el tipo por campo o el índice reconocen también los nombres en español (SDD extract-locate-by-program)"
+        },
+        {
+          "name": "ids_con_lineas",
+          "file": "tests/test_locate_fields.py",
+          "reason": "dato congelado de corpus o caso: nombre de campo en español a propósito, con la forma de los de los issues #692-#698, para comprobar que `classify_field`, el tipo por campo o el índice reconocen también los nombres en español (SDD extract-locate-by-program)"
+        },
+        {
+          "name": "lista_de_ficheros_con_sus_lineas",
+          "file": "tests/test_locate_fields.py",
+          "reason": "dato congelado de corpus o caso: nombre de campo en español a propósito, con la forma de los de los issues #692-#698, para comprobar que `classify_field`, el tipo por campo o el índice reconocen también los nombres en español (SDD extract-locate-by-program)"
+        },
+        {
+          "name": "metodos_y_computed_con_lineas",
+          "file": "tests/test_locate_fields.py",
+          "reason": "dato congelado de corpus o caso: nombre de campo en español a propósito, con la forma de los de los issues #692-#698, para comprobar que `classify_field`, el tipo por campo o el índice reconocen también los nombres en español (SDD extract-locate-by-program)"
+        },
+        {
+          "name": "orden_local_y_barra_con_lineas",
+          "file": "tests/test_locate_fields.py",
+          "reason": "dato congelado de corpus o caso: nombre de campo en español a propósito, con la forma de los de los issues #692-#698, para comprobar que `classify_field`, el tipo por campo o el índice reconocen también los nombres en español (SDD extract-locate-by-program)"
+        },
+        {
+          "name": "req_012_linea",
+          "file": "tests/test_locate_fields.py",
+          "reason": "dato congelado de corpus o caso: nombre de campo en español a propósito, con la forma de los de los issues #692-#698, para comprobar que `classify_field`, el tipo por campo o el índice reconocen también los nombres en español (SDD extract-locate-by-program)"
+        },
+        {
+          "name": "requisitos_con_lineas",
+          "file": "tests/test_locate_fields.py",
+          "reason": "dato congelado de corpus o caso: nombre de campo en español a propósito, con la forma de los de los issues #692-#698, para comprobar que `classify_field`, el tipo por campo o el índice reconocen también los nombres en español (SDD extract-locate-by-program)"
+        },
+        {
+          "name": "secciones_con_lineas",
+          "file": "tests/test_locate_fields.py",
+          "reason": "dato congelado de corpus o caso: nombre de campo en español a propósito, con la forma de los de los issues #692-#698, para comprobar que `classify_field`, el tipo por campo o el índice reconocen también los nombres en español (SDD extract-locate-by-program)"
+        },
+        {
+          "name": "tipos_con_lineas",
+          "file": "tests/test_locate_fields.py",
+          "reason": "dato congelado de corpus o caso: nombre de campo en español a propósito, con la forma de los de los issues #692-#698, para comprobar que `classify_field`, el tipo por campo o el índice reconocen también los nombres en español (SDD extract-locate-by-program)"
+        },
+        {
+          "name": "funciones_con_lineas",
+          "file": "tests/test_locate_index_ts.py",
+          "reason": "dato congelado de corpus o caso: nombre de campo en español a propósito, con la forma de los de los issues #692-#698, para comprobar que `classify_field`, el tipo por campo o el índice reconocen también los nombres en español (SDD extract-locate-by-program)"
+        },
+        {
+          "name": "ADR_007_linea",
+          "file": "tests/test_locate_markdown_ids.py",
+          "reason": "dato congelado de corpus o caso: nombre de campo en español a propósito, con la forma de los de los issues #692-#698, para comprobar que `classify_field`, el tipo por campo o el índice reconocen también los nombres en español (SDD extract-locate-by-program)"
+        },
+        {
+          "name": "ADR_008_linea",
+          "file": "tests/test_locate_markdown_ids.py",
+          "reason": "dato congelado de corpus o caso: nombre de campo en español a propósito, con la forma de los de los issues #692-#698, para comprobar que `classify_field`, el tipo por campo o el índice reconocen también los nombres en español (SDD extract-locate-by-program)"
+        },
+        {
+          "name": "D_01_linea",
+          "file": "tests/test_locate_markdown_ids.py",
+          "reason": "dato congelado de corpus o caso: nombre de campo en español a propósito, con la forma de los de los issues #692-#698, para comprobar que `classify_field`, el tipo por campo o el índice reconocen también los nombres en español (SDD extract-locate-by-program)"
+        },
+        {
+          "name": "D_02_linea",
+          "file": "tests/test_locate_markdown_ids.py",
+          "reason": "dato congelado de corpus o caso: nombre de campo en español a propósito, con la forma de los de los issues #692-#698, para comprobar que `classify_field`, el tipo por campo o el índice reconocen también los nombres en español (SDD extract-locate-by-program)"
+        },
+        {
+          "name": "REQ_012_linea",
+          "file": "tests/test_locate_markdown_ids.py",
+          "reason": "dato congelado de corpus o caso: nombre de campo en español a propósito, con la forma de los de los issues #692-#698, para comprobar que `classify_field`, el tipo por campo o el índice reconocen también los nombres en español (SDD extract-locate-by-program)"
+        },
+        {
+          "name": "REQ_099_linea",
+          "file": "tests/test_locate_markdown_ids.py",
+          "reason": "dato congelado de corpus o caso: nombre de campo en español a propósito, con la forma de los de los issues #692-#698, para comprobar que `classify_field`, el tipo por campo o el índice reconocen también los nombres en español (SDD extract-locate-by-program)"
+        },
+        {
+          "name": "ficheros_con_lineas",
+          "file": "tests/test_locate_markdown_ids.py",
+          "reason": "dato congelado de corpus o caso: nombre de campo en español a propósito, con la forma de los de los issues #692-#698, para comprobar que `classify_field`, el tipo por campo o el índice reconocen también los nombres en español (SDD extract-locate-by-program)"
+        },
+        {
+          "name": "ficheros_y_hunks_con_lineas",
+          "file": "tests/test_locate_markdown_ids.py",
+          "reason": "dato congelado de corpus o caso: nombre de campo en español a propósito, con la forma de los de los issues #692-#698, para comprobar que `classify_field`, el tipo por campo o el índice reconocen también los nombres en español (SDD extract-locate-by-program)"
+        },
+        {
+          "name": "ids_con_lineas",
+          "file": "tests/test_locate_markdown_ids.py",
+          "reason": "dato congelado de corpus o caso: nombre de campo en español a propósito, con la forma de los de los issues #692-#698, para comprobar que `classify_field`, el tipo por campo o el índice reconocen también los nombres en español (SDD extract-locate-by-program)"
+        },
+        {
+          "name": "lista_de_ficheros_con_sus_lineas",
+          "file": "tests/test_locate_markdown_ids.py",
+          "reason": "dato congelado de corpus o caso: nombre de campo en español a propósito, con la forma de los de los issues #692-#698, para comprobar que `classify_field`, el tipo por campo o el índice reconocen también los nombres en español (SDD extract-locate-by-program)"
+        },
+        {
+          "name": "requisitos_con_lineas",
+          "file": "tests/test_locate_markdown_ids.py",
+          "reason": "dato congelado de corpus o caso: nombre de campo en español a propósito, con la forma de los de los issues #692-#698, para comprobar que `classify_field`, el tipo por campo o el índice reconocen también los nombres en español (SDD extract-locate-by-program)"
+        },
+        {
+          "name": "secciones_con_lineas",
+          "file": "tests/test_locate_markdown_ids.py",
+          "reason": "dato congelado de corpus o caso: nombre de campo en español a propósito, con la forma de los de los issues #692-#698, para comprobar que `classify_field`, el tipo por campo o el índice reconocen también los nombres en español (SDD extract-locate-by-program)"
         }
       ]
     },
     {
       "title": "Entrada de interfaz escrita por una persona",
-      "note": "Vacía desde la ola B1d: `pair_sheet` escribe la hoja en el idioma del proceso y lee las dos formas, así que sus filas pasaron a «Lectura de formato viejo».",
-      "entries": []
+      "entries": [
+        {
+          "name": "apartado",
+          "file": "src/local_delegate/locate.py",
+          "reason": "entrada de interfaz escrita por una persona: palabra española del vocabulario cerrado de `locate.classify_field` (#697), con la que se reconoce lo que pide un nombre de campo que quien llama a `local_extract` escribe en español (`ficheros_con_lineas`); es dato de entrada, no un nombre del código (SDD extract-locate-by-program)"
+        },
+        {
+          "name": "apartados",
+          "file": "src/local_delegate/locate.py",
+          "reason": "entrada de interfaz escrita por una persona: palabra española del vocabulario cerrado de `locate.classify_field` (#697), con la que se reconoce lo que pide un nombre de campo que quien llama a `local_extract` escribe en español (`ficheros_con_lineas`); es dato de entrada, no un nombre del código (SDD extract-locate-by-program)"
+        },
+        {
+          "name": "archivo",
+          "file": "src/local_delegate/locate.py",
+          "reason": "entrada de interfaz escrita por una persona: palabra española del vocabulario cerrado de `locate.classify_field` (#697), con la que se reconoce lo que pide un nombre de campo que quien llama a `local_extract` escribe en español (`ficheros_con_lineas`); es dato de entrada, no un nombre del código (SDD extract-locate-by-program)"
+        },
+        {
+          "name": "archivos",
+          "file": "src/local_delegate/locate.py",
+          "reason": "entrada de interfaz escrita por una persona: palabra española del vocabulario cerrado de `locate.classify_field` (#697), con la que se reconoce lo que pide un nombre de campo que quien llama a `local_extract` escribe en español (`ficheros_con_lineas`); es dato de entrada, no un nombre del código (SDD extract-locate-by-program)"
+        },
+        {
+          "name": "cabecera",
+          "file": "src/local_delegate/locate.py",
+          "reason": "entrada de interfaz escrita por una persona: palabra española del vocabulario cerrado de `locate.classify_field` (#697), con la que se reconoce lo que pide un nombre de campo que quien llama a `local_extract` escribe en español (`ficheros_con_lineas`); es dato de entrada, no un nombre del código (SDD extract-locate-by-program)"
+        },
+        {
+          "name": "cabeceras",
+          "file": "src/local_delegate/locate.py",
+          "reason": "entrada de interfaz escrita por una persona: palabra española del vocabulario cerrado de `locate.classify_field` (#697), con la que se reconoce lo que pide un nombre de campo que quien llama a `local_extract` escribe en español (`ficheros_con_lineas`); es dato de entrada, no un nombre del código (SDD extract-locate-by-program)"
+        },
+        {
+          "name": "capitulo",
+          "file": "src/local_delegate/locate.py",
+          "reason": "entrada de interfaz escrita por una persona: palabra española del vocabulario cerrado de `locate.classify_field` (#697), con la que se reconoce lo que pide un nombre de campo que quien llama a `local_extract` escribe en español (`ficheros_con_lineas`); es dato de entrada, no un nombre del código (SDD extract-locate-by-program)"
+        },
+        {
+          "name": "capitulos",
+          "file": "src/local_delegate/locate.py",
+          "reason": "entrada de interfaz escrita por una persona: palabra española del vocabulario cerrado de `locate.classify_field` (#697), con la que se reconoce lo que pide un nombre de campo que quien llama a `local_extract` escribe en español (`ficheros_con_lineas`); es dato de entrada, no un nombre del código (SDD extract-locate-by-program)"
+        },
+        {
+          "name": "clase",
+          "file": "src/local_delegate/locate.py",
+          "reason": "entrada de interfaz escrita por una persona: palabra española del vocabulario cerrado de `locate.classify_field` (#697), con la que se reconoce lo que pide un nombre de campo que quien llama a `local_extract` escribe en español (`ficheros_con_lineas`); es dato de entrada, no un nombre del código (SDD extract-locate-by-program)"
+        },
+        {
+          "name": "clases",
+          "file": "src/local_delegate/locate.py",
+          "reason": "entrada de interfaz escrita por una persona: palabra española del vocabulario cerrado de `locate.classify_field` (#697), con la que se reconoce lo que pide un nombre de campo que quien llama a `local_extract` escribe en español (`ficheros_con_lineas`); es dato de entrada, no un nombre del código (SDD extract-locate-by-program)"
+        },
+        {
+          "name": "encabezado",
+          "file": "src/local_delegate/locate.py",
+          "reason": "entrada de interfaz escrita por una persona: palabra española del vocabulario cerrado de `locate.classify_field` (#697), con la que se reconoce lo que pide un nombre de campo que quien llama a `local_extract` escribe en español (`ficheros_con_lineas`); es dato de entrada, no un nombre del código (SDD extract-locate-by-program)"
+        },
+        {
+          "name": "encabezados",
+          "file": "src/local_delegate/locate.py",
+          "reason": "entrada de interfaz escrita por una persona: palabra española del vocabulario cerrado de `locate.classify_field` (#697), con la que se reconoce lo que pide un nombre de campo que quien llama a `local_extract` escribe en español (`ficheros_con_lineas`); es dato de entrada, no un nombre del código (SDD extract-locate-by-program)"
+        },
+        {
+          "name": "fichero",
+          "file": "src/local_delegate/locate.py",
+          "reason": "entrada de interfaz escrita por una persona: palabra española del vocabulario cerrado de `locate.classify_field` (#697), con la que se reconoce lo que pide un nombre de campo que quien llama a `local_extract` escribe en español (`ficheros_con_lineas`); es dato de entrada, no un nombre del código (SDD extract-locate-by-program)"
+        },
+        {
+          "name": "ficheros",
+          "file": "src/local_delegate/locate.py",
+          "reason": "entrada de interfaz escrita por una persona: palabra española del vocabulario cerrado de `locate.classify_field` (#697), con la que se reconoce lo que pide un nombre de campo que quien llama a `local_extract` escribe en español (`ficheros_con_lineas`); es dato de entrada, no un nombre del código (SDD extract-locate-by-program)"
+        },
+        {
+          "name": "identificador",
+          "file": "src/local_delegate/locate.py",
+          "reason": "entrada de interfaz escrita por una persona: palabra española del vocabulario cerrado de `locate.classify_field` (#697), con la que se reconoce lo que pide un nombre de campo que quien llama a `local_extract` escribe en español (`ficheros_con_lineas`); es dato de entrada, no un nombre del código (SDD extract-locate-by-program)"
+        },
+        {
+          "name": "identificadores",
+          "file": "src/local_delegate/locate.py",
+          "reason": "entrada de interfaz escrita por una persona: palabra española del vocabulario cerrado de `locate.classify_field` (#697), con la que se reconoce lo que pide un nombre de campo que quien llama a `local_extract` escribe en español (`ficheros_con_lineas`); es dato de entrada, no un nombre del código (SDD extract-locate-by-program)"
+        },
+        {
+          "name": "requisito",
+          "file": "src/local_delegate/locate.py",
+          "reason": "entrada de interfaz escrita por una persona: palabra española del vocabulario cerrado de `locate.classify_field` (#697), con la que se reconoce lo que pide un nombre de campo que quien llama a `local_extract` escribe en español (`ficheros_con_lineas`); es dato de entrada, no un nombre del código (SDD extract-locate-by-program)"
+        },
+        {
+          "name": "requisitos",
+          "file": "src/local_delegate/locate.py",
+          "reason": "entrada de interfaz escrita por una persona: palabra española del vocabulario cerrado de `locate.classify_field` (#697), con la que se reconoce lo que pide un nombre de campo que quien llama a `local_extract` escribe en español (`ficheros_con_lineas`); es dato de entrada, no un nombre del código (SDD extract-locate-by-program)"
+        },
+        {
+          "name": "ruta",
+          "file": "src/local_delegate/locate.py",
+          "reason": "entrada de interfaz escrita por una persona: palabra española del vocabulario cerrado de `locate.classify_field` (#697), con la que se reconoce lo que pide un nombre de campo que quien llama a `local_extract` escribe en español (`ficheros_con_lineas`); es dato de entrada, no un nombre del código (SDD extract-locate-by-program)"
+        },
+        {
+          "name": "rutas",
+          "file": "src/local_delegate/locate.py",
+          "reason": "entrada de interfaz escrita por una persona: palabra española del vocabulario cerrado de `locate.classify_field` (#697), con la que se reconoce lo que pide un nombre de campo que quien llama a `local_extract` escribe en español (`ficheros_con_lineas`); es dato de entrada, no un nombre del código (SDD extract-locate-by-program)"
+        },
+        {
+          "name": "seccion",
+          "file": "src/local_delegate/locate.py",
+          "reason": "entrada de interfaz escrita por una persona: palabra española del vocabulario cerrado de `locate.classify_field` (#697), con la que se reconoce lo que pide un nombre de campo que quien llama a `local_extract` escribe en español (`ficheros_con_lineas`); es dato de entrada, no un nombre del código (SDD extract-locate-by-program)"
+        },
+        {
+          "name": "secciones",
+          "file": "src/local_delegate/locate.py",
+          "reason": "entrada de interfaz escrita por una persona: palabra española del vocabulario cerrado de `locate.classify_field` (#697), con la que se reconoce lo que pide un nombre de campo que quien llama a `local_extract` escribe en español (`ficheros_con_lineas`); es dato de entrada, no un nombre del código (SDD extract-locate-by-program)"
+        },
+        {
+          "name": "titulo",
+          "file": "src/local_delegate/locate.py",
+          "reason": "entrada de interfaz escrita por una persona: palabra española del vocabulario cerrado de `locate.classify_field` (#697), con la que se reconoce lo que pide un nombre de campo que quien llama a `local_extract` escribe en español (`ficheros_con_lineas`); es dato de entrada, no un nombre del código (SDD extract-locate-by-program)"
+        },
+        {
+          "name": "titulos",
+          "file": "src/local_delegate/locate.py",
+          "reason": "entrada de interfaz escrita por una persona: palabra española del vocabulario cerrado de `locate.classify_field` (#697), con la que se reconoce lo que pide un nombre de campo que quien llama a `local_extract` escribe en español (`ficheros_con_lineas`); es dato de entrada, no un nombre del código (SDD extract-locate-by-program)"
+        }
+      ]
     },
     {
       "title": "Texto de salida que traduce el frente B",

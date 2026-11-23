@@ -50,7 +50,7 @@ def test_a_number_fits_a_list_and_a_boolean_does_not():
     assert extract_schema.mismatch("list", {"a": 1})
     assert extract_schema.mismatch("count", False)
     assert not extract_schema.mismatch("scalar", True)
-    assert extract_schema.mismatch("scalar", {"valor": "x"})
+    assert extract_schema.mismatch("scalar", {"value": "x"})
     assert not extract_schema.mismatch("boolean", None)
     assert not extract_schema.mismatch("location", [{"name": "a", "anchor": "x"}])
     assert extract_schema.mismatch("location", "a: líneas 3-4")
