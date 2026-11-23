@@ -2143,6 +2143,16 @@
           "name": "secciones_con_lineas",
           "file": "tests/test_locate_markdown_ids.py",
           "reason": "dato congelado de corpus o caso: nombre de campo en español a propósito, con la forma de los de los issues #692-#698, para comprobar que `classify_field`, el tipo por campo o el índice reconocen también los nombres en español (SDD extract-locate-by-program)"
+        },
+        {
+          "name": "base_analisis_con_lineas",
+          "file": "tests/test_extract_locate_server.py",
+          "reason": "dato congelado de corpus o caso: nombre de campo del issue #696, en español a propósito, para comprobar en el servidor que un ancla a mitad de tabla da la tabla y una en el título da la sección (SDD extract-locate-by-program)"
+        },
+        {
+          "name": "tabla_parametros_con_lineas",
+          "file": "tests/test_extract_locate_server.py",
+          "reason": "dato congelado de corpus o caso: nombre de campo del issue #696, en español a propósito, para comprobar en el servidor que un ancla a mitad de tabla da la tabla y una en el título da la sección (SDD extract-locate-by-program)"
         }
       ]
     },
