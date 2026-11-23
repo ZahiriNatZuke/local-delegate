@@ -23,8 +23,9 @@ of event, matcher and handler. Hence three rules:
   so a user's group behind it keeps its key; at the end of the list it is dropped;
 - the command carries no version: the ``uv tool`` interpreter keeps its path on upgrade.
 
-Codex runs the command through ``cmd.exe /C "<command>"`` on Windows and ``$SHELL -lc`` elsewhere
-(``engine/command_runner.rs``); exit code 2 blocks, any other non-zero code is a failure that does
+Codex runs the command with the shell of the session (``Shell::derive_exec_args``): on Windows
+``pwsh -NoProfile -Command`` by default, or ``cmd /c`` or ``bash -c`` (#718, see `command`);
+elsewhere ``$SHELL -c``. Exit code 2 blocks, any other non-zero code is a failure that does
 not (``events/pre_tool_use.rs``). ``local_delegate.hook`` never exits with 2.
 
 Codex reads the file with ``fs::read_to_string`` + ``serde_json::from_str``: a UTF-8 BOM makes it
@@ -269,8 +270,9 @@ def _trim(groups: list, vacated: set[int]) -> None:
 def merge(data: dict, python: str, platform: str | None = None) -> tuple[dict, list[str]]:
     """Our groups in ``data`` (``hooks.json`` parsed): ``(data, names written or rewritten)``.
 
-    Raises `RejectedFile` when Codex would reject the file. Pure: depends only on its arguments,
-    as `install.update_config_json` requires.
+    Raises `RejectedFile` when Codex would reject the file. Depends only on its arguments and, on
+    Windows, on the 8.3 name of ``python`` (`short_path`), which does not change between the two
+    passes of `install.update_config_json`.
     """
     hooks = _hooks_table(data)
     wanted = {spec.name: spec for spec in SPECS}

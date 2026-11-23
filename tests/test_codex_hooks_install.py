@@ -81,6 +81,17 @@ def test_an_old_group_of_ours_is_rewritten_in_its_index():
     assert merged["hooks"]["UserPromptSubmit"] == [_ours("codex-prompt"), FOREIGN_PROMPT]
 
 
+def test_the_quoted_line_of_0_54_is_rewritten_bare_in_its_index():
+    """#718: the same interpreter between quotes is ours and goes bare, at the same index."""
+    old = _ours("codex-prompt")
+    old["hooks"][0]["command"] = f'"{PYTHON}" -I -m local_delegate.hook codex-prompt'
+    data = {"hooks": {"UserPromptSubmit": [old, FOREIGN_PROMPT]}}
+    merged, changed = _merge(data)
+    assert "codex-prompt" in changed
+    assert merged["hooks"]["UserPromptSubmit"] == [_ours("codex-prompt"), FOREIGN_PROMPT]
+    assert merged["hooks"]["UserPromptSubmit"][0]["hooks"][0]["command"].startswith(PYTHON + " ")
+
+
 def test_a_duplicate_with_groups_behind_becomes_a_hole_and_at_the_end_is_dropped():
     data = {
         "hooks": {

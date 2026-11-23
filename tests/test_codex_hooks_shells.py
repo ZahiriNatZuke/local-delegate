@@ -149,3 +149,11 @@ def test_bash_is_found_where_the_guard_requires_it():
     if exe is None:
         pytest.skip("no bash")
     assert "system32" not in exe.lower(), exe
+
+
+def test_short_path_answers_for_an_existing_path(spaced_python):
+    """Control of REQ-002: on Windows `GetShortPathNameW` gives a path (the long one without 8.3),
+    so a `short_path` broken into `None` does not hide behind the fallback above."""
+    short = codex_hooks.short_path(spaced_python)
+    assert short is not None
+    assert os.path.samefile(short, spaced_python)
