@@ -9,6 +9,7 @@ and the hook process are those of ``test_codex_reads``.
 
 from __future__ import annotations
 
+import gc
 import json
 import random
 import re
@@ -316,10 +317,19 @@ HOSTILE = [
 
 
 def _cpu(command: str, cwd: str) -> float:
-    start = time.process_time()
-    codex_reads.write_targets("Bash", {"command": command}, cwd, {})
-    codex_reads.literal_reads({"command": command}, cwd, {})
-    return time.process_time() - start
+    """The best of two runs, with the garbage collector off: its pauses grow with the objects
+    alive and made a linear run look quadratic on the Ubuntu runner."""
+    spent = []
+    gc.disable()
+    try:
+        for _ in range(2):
+            start = time.process_time()
+            codex_reads.write_targets("Bash", {"command": command}, cwd, {})
+            codex_reads.literal_reads({"command": command}, cwd, {})
+            spent.append(time.process_time() - start)
+    finally:
+        gc.enable()
+    return min(spent)
 
 
 @pytest.mark.parametrize("build", HOSTILE)
