@@ -1233,3 +1233,29 @@ def test_the_none_label_is_dimmed():
     assert css, "no `.mrole.none` rule"
     assert "var(--faint)" in css.group(1) or "var(--mut)" in css.group(1)
     assert "violet" not in css.group(1)
+
+
+def test_a_latest_tag_keeps_its_role(tmp_path):
+    """`/models` of Ollama lists `gemma3-4b:latest` for the role id `gemma3-4b`."""
+    catalog = [{"role": "mechanical", "label": "mecánico", "model": "gemma3-4b"}]
+    body = f"""
+    const state = {{status: {{catalog: {json.dumps(catalog)}}}}};
+    emit([roleLabelsHtml('gemma3-4b:latest'), roleLabelsHtml('gemma3-4b:7b')]);
+    """
+    tagged, other = _run(
+        tmp_path, ["function roleLabels(", "function roleLabelsHtml("], body, _globals(), "es"
+    )
+    assert 'class="mrole"' in tagged and "none" not in tagged, tagged
+    assert 'class="mrole none"' in other, other
+
+
+def test_without_the_catalog_no_row_says_none(tmp_path):
+    """Before `/api/status` answers (or when it fails) the roles are unknown, not «none»."""
+    body = """
+    const state = {status: null};
+    emit([roleLabelsHtml('qwen35-2b'), (state.status = {catalog: []}, roleLabelsHtml('qwen35-2b'))]);
+    """
+    unknown, empty = _run(
+        tmp_path, ["function roleLabels(", "function roleLabelsHtml("], body, _globals(), "es"
+    )
+    assert unknown == "" and empty == "", (unknown, empty)

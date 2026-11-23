@@ -111,6 +111,15 @@ def test_a_text_role_missing_keeps_its_fix_with_the_light_one_served(tmp_path, m
     assert "LOCAL_DELEGATE_MODEL_VISION=light-e" in r.fix_hint
 
 
+def test_vision_already_on_the_light_one_and_missing_is_the_old_note(tmp_path, monkeypatch):
+    """Whoever already chose the light one: nothing to propose, the optional note as before."""
+    monkeypatch.setattr(config, "MODEL_VISION_LIGHT", "vision-d")
+    r = result_for("service.role_models", _ctx(tmp_path, ("mech-a", "long-b", "code-c")))
+    assert r.status == checks.OK
+    assert "vision: vision-d" in r.detail
+    assert "LOCAL_DELEGATE_MODEL_VISION=" not in r.detail
+
+
 def test_a_role_without_a_model_is_skipped(tmp_path, monkeypatch):
     monkeypatch.setattr(config, "MODEL_CODE", "")
     r = result_for("service.role_models", _ctx(tmp_path, ("mech-a", "long-b", "vision-d")))

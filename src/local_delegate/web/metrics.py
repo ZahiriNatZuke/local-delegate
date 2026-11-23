@@ -3040,14 +3040,18 @@ async function fetchStatus(){
   renderBackendStats(state.backendStats);
 }
 
+// Ollama lista `gemma3-4b:latest` para el id `gemma3-4b`: cuenta como el mismo (como `_is_served`).
 function roleLabels(model){
-  return ((state.status||{}).catalog||[]).filter(c=>c.model===model).map(c=>c.label);
+  return ((state.status||{}).catalog||[]).filter(c=>c.model===model
+    || (c.model && !c.model.includes(':') && model===c.model+':latest')).map(c=>c.label);
 }
 
 // Las etiquetas de rol de una fila de «Backend». Un modelo que no sirve a ningún rol lleva una
 // apagada («sin rol»), para que no parezca un fallo del panel (vision-default-qwen36 REQ-003).
 function roleLabelsHtml(model){
   const labels = roleLabels(model);
+  // Sin catálogo (aún no llegó `/api/status`, o falló) no se sabe qué rol tiene: nada que decir.
+  if(!((state.status||{}).catalog||[]).length) return '';
   if(!labels.length) return `<span class="mrole none" title="${escHooks(T('role.none_title'))}">${escHooks(T('role.none'))}</span>`;
   return labels.map(l=>`<span class="mrole">${escHooks(l)}</span>`).join('');
 }

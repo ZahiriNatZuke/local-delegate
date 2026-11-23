@@ -287,7 +287,7 @@
   "doctor.probe.role_models.no_list": "no model list: the answer of /models has no data list",
   "doctor.probe.role_models.no_list_daemon": "no model list: the daemon does not send it (from an earlier version? restart it)",
   "doctor.probe.role_models.optional": "(optional: only local_describe_image uses it; change it with LOCAL_DELEGATE_MODEL_VISION)",
-  "doctor.probe.role_models.vision_light": "if your catalog does not have that model, set LOCAL_DELEGATE_MODEL_VISION={model} (the light alternative)",
+  "doctor.probe.role_models.vision_light": "if your catalog does not have the vision model, set LOCAL_DELEGATE_MODEL_VISION={model} (the light alternative)",
   "doctor.probe.shell_completion.content_differs": "{path} differs from what this version generates",
   "doctor.probe.shell_completion.current": "{shell}: up to date in language {lang}, loaded from {profiles}",
   "doctor.probe.shell_completion.current_no_profiles": "{shell}: up to date in language {lang}, with no profile loading it",
