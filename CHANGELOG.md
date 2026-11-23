@@ -13,6 +13,29 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   tokens de entrada, 40 de salida, 10 y 16 de escritura de caché a 5 min y 1 h, y 0,20 de lectura),
   con la familia de tokenizador nueva y soporte de `effort`, comprobados en la ficha del modelo.
 
+### Corregido
+
+- **Las tools de texto rechazan un fichero binario antes de llamar al modelo** (#693). Con `path` a
+  una imagen, `local_extract` avisaba de que no era UTF-8, la leía como Latin-1, la partía en 6
+  trozos y devolvía todos los campos a `null`. Ahora el lector común de `path` (summarize, extract,
+  lint_summary, commit_msg, translate y explain_code) mira los bytes primero: una firma conocida
+  (PNG, JPEG, GIF, WebP, PDF, ZIP, gzip, 7z), más de un 1 % de bytes nulos o más de un 10 % de bytes de control dan
+  un error claro sin ninguna llamada al modelo; para una imagen, el error remite a
+  `local_describe_image`. Los textos UTF-8, UTF-16 con BOM, Latin-1 y los logs con colores se
+  siguen leyendo igual, también un log largo con un byte nulo suelto. Un UTF-16 **sin** BOM, que antes salía como basura, ahora da error y pide
+  guardarlo como UTF-8.
+- **`local_lint_summary` ya no cuenta dos veces el mismo fichero ni toma una URL por fichero**
+  (#688). En la salida de pytest, la ruta relativa de la cabecera de `warnings summary` y la
+  absoluta del mensaje cuentan como un fichero (con la ruta relativa); lo que está dentro de una
+  URL (el enlace a la documentación del pie) no es un fichero, y los ficheros que pytest solo nombra
+  en líneas de progreso sin fallos (también con colores, con `-v` y con `-v -n N`) ya no se le dan
+  al modelo ni salen como «sin mencionar». Y si el modelo, que los lee en el propio log, aun así les
+  da una entrada, el programa lo avisa debajo del resumen y dice qué ficheros sí reporta el log.
+- **`local_lint_summary` avisa cuando el resumen inventa carpetas** (#690). El aviso de ficheros
+  inventados aceptaba cualquier fichero cuyo nombre base estuviera en el log, así que agrupar
+  `knowledge/glossary.md` bajo `projects/knowledge/` pasaba sin aviso. Ahora una ruta con carpetas
+  tiene que estar en el log tal cual, y también una carpeta que el resumen nombre sola.
+
 ## [0.53.0] - 2026-11-16
 
 Codex recibe la delegación casi como Claude Code y `local_extract` desconfía mejor de sus propias

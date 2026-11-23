@@ -1087,8 +1087,76 @@ _INPUT_ENCODING: contextvars.ContextVar[str | None] = contextvars.ContextVar(
 _UTF16_BOMS = (b"\xff\xfe", b"\xfe\xff")
 
 
-def _decode_input_file(p: Path) -> tuple[str, str | None]:
-    """The text of `p` and the encoding it was read with when it was not UTF-8 (#672).
+#: #693: signatures of binary formats a text tool cannot read, and whether each is an image (the
+#: error then points to `local_describe_image`). Checked on the first bytes, whatever the extension.
+_BINARY_SIGNATURES: tuple[tuple[bytes, str, bool], ...] = (
+    (b"\x89PNG\r\n\x1a\n", "PNG", True),
+    (b"\xff\xd8\xff", "JPEG", True),
+    (b"GIF87a", "GIF", True),
+    (b"GIF89a", "GIF", True),
+    (b"%PDF-", "PDF", False),
+    (b"PK\x03\x04", "ZIP", False),
+    (b"PK\x05\x06", "ZIP", False),
+    (b"\x1f\x8b", "gzip", False),
+    (b"7z\xbc\xaf\x27\x1c", "7z", False),
+)
+#: #693: how many leading bytes the share of control bytes is measured on, and the share above
+#: which a file is binary. By share, not by one byte: a log may carry a stray BEL or form feed.
+_BINARY_SAMPLE = 64 * 1024
+_BINARY_CONTROL_SHARE = 0.10
+#: Review of #709: the share of NUL bytes in the sample above which a file is binary (UTF-16 text
+#: without BOM is ~50 %, an executable far above 1 %), and the fewest control bytes that make a
+#: file binary. Before, one NUL anywhere in a 50 MB log, or one BEL in a 4-byte file, refused it.
+_BINARY_NUL_SHARE = 0.01
+_BINARY_MIN_CONTROLS = 8
+#: C0 control bytes that no text carries: all but backspace (the overstrike of `man` and `less`
+#: output, `N\x08NA\x08A`, review of #709), tab, line feed, vertical tab, form feed, carriage
+#: return and ESC (the colours of a CLI log, `\x1b[31m`).
+_BINARY_CONTROLS = frozenset(range(0x20)) - {0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x1B} | {0x7F}
+
+
+def _binary_kind(raw: bytes) -> tuple[str, bool] | None:
+    """#693: why `raw` is not text, as `(reason, is_image)`, or `None` for text.
+
+    A known signature first (an image goes to `local_describe_image`), then, in the first 64 KiB,
+    more than 1 % of NUL bytes (no text carries them, but UTF-16 does, so a file with its BOM is
+    text) or more than 10 % of control bytes (and at least `_BINARY_MIN_CONTROLS`). By share: a
+    log may carry a stray NUL or BEL. Before, any byte decoded as Latin-1 (#672), and
+    `local_extract` on a JPEG went to the model in 6 chunks to answer every field `null`.
+    """
+    for signature, kind, image in _BINARY_SIGNATURES:
+        if raw.startswith(signature):
+            return kind, image
+    if raw[:4] == b"RIFF" and raw[8:12] == b"WEBP":
+        return "WebP", True
+    if raw.startswith(_UTF16_BOMS):
+        return None
+    sample = raw[:_BINARY_SAMPLE]
+    if not sample:
+        return None
+    if sample.count(0) / len(sample) > _BINARY_NUL_SHARE:
+        return "nul", False
+    controls = sum(1 for byte in sample if byte in _BINARY_CONTROLS)
+    if controls >= _BINARY_MIN_CONTROLS and controls / len(sample) > _BINARY_CONTROL_SHARE:
+        return "control", False
+    return None
+
+
+def _reject_binary(raw: bytes, path: str) -> None:
+    """#693: raise `InputError` when the bytes read from `path` are not text (`_binary_kind`)."""
+    found = _binary_kind(raw)
+    if found is None:
+        return
+    kind, image = found
+    if image:
+        raise InputError(i18n.t("mcp.input.binary_image", path=path, kind=kind))
+    if kind in {"nul", "control"}:
+        raise InputError(i18n.t(f"mcp.input.binary_{kind}", path=path))
+    raise InputError(i18n.t("mcp.input.binary_format", path=path, kind=kind))
+
+
+def _decode_input_bytes(raw: bytes) -> tuple[str, str | None]:
+    """The text of `raw` and the encoding it was read with when it was not UTF-8 (#672).
 
     Before, every file was decoded as UTF-8 with `errors="replace"`: a Latin-1 file lost its `²`,
     `³` and accents to U+FFFD with no notice, and the check of the summary against that text took
@@ -1097,7 +1165,6 @@ def _decode_input_file(p: Path) -> tuple[str, str | None]:
     of 0x80-0x9F, what Windows tools write), and to Latin-1, which decodes any byte, for the five
     bytes Windows-1252 leaves undefined. Line ends are normalized as `read_text` did.
     """
-    raw = p.read_bytes()
     candidates: tuple[tuple[str, str | None], ...]
     if raw.startswith(_UTF16_BOMS):
         candidates = (("utf-16", "utf-16"),)
@@ -1150,6 +1217,8 @@ def _read_input(text: str | None, path: str | None, max_chars: int) -> tuple[str
     """Devuelve (contenido, truncado, raw_len). Si viene 'path', lo lee server-side.
 
     #672: la codificación con que se leyó (si no era UTF-8) queda en `_INPUT_ENCODING`.
+    #693: un fichero binario da `InputError` aquí, antes de cualquier llamada al modelo; es el
+    único lector de `path` de las tools de texto, así que el control vale para todas.
     """
     _INPUT_ENCODING.set(None)
     if path:
@@ -1157,7 +1226,9 @@ def _read_input(text: str | None, path: str | None, max_chars: int) -> tuple[str
         p = Path(path)
         if not p.is_file():
             raise InputError(i18n.t("mcp.input.missing_file", path=path))
-        content, encoding = _decode_input_file(p)
+        raw = p.read_bytes()
+        _reject_binary(raw, path)
+        content, encoding = _decode_input_bytes(raw)
         _INPUT_ENCODING.set(encoding)
     elif text is not None:
         content = text
@@ -7210,7 +7281,7 @@ def _lint_inventory(
     files = (
         _lint_inventory_line(
             "Ficheros que nombra el log (los más nombrados primero):",
-            lint_patterns.files_by_frequency(log),
+            lint_patterns.reported_files(log),
             half,
         )
         if with_files
@@ -7257,6 +7328,29 @@ def _lint_invented(answer: str, log: str) -> str:
     if not invented:
         return answer
     warning = i18n.t("mcp.warning.lint_invented_files", files=", ".join(invented))
+    return f"{answer.rstrip()}\n\n{WARNING_MARKER}{warning}]"
+
+
+def _lint_check_clean(
+    answer: str, log: str, failures: list[lint_patterns.PytestFailure] | None = None
+) -> str:
+    """Issue #688: a visible warning when the summary gives an entry to a clean pytest file.
+
+    The program knows which files pytest names only in progress lines without failures
+    (`lint_patterns.clean_files`); the inventory left them out and the small model, live, still
+    gave each one an entry it read from the log. With `failures` the check of #641 already flags
+    an entry for a file without failures, so this one stays quiet. A matching answer, and any log
+    that is not pytest, come back as they were.
+    """
+    if failures:
+        return answer
+    clean = lint_patterns.clean_file_entries(answer, log)
+    if not clean:
+        return answer
+    reported = lint_patterns.reported_files(log)
+    warning = i18n.t("mcp.warning.lint_clean_entries", files=_lint_capped(clean))
+    if reported:
+        warning += i18n.t("mcp.warning.lint_clean_entries_reported", files=_lint_capped(reported))
     return f"{answer.rstrip()}\n\n{WARNING_MARKER}{warning}]"
 
 
@@ -7413,7 +7507,7 @@ def _lint_map_user(piece: str) -> str:
     iteration 1 the map wrote one sentence per rule and an entry for every file of the chunk, and
     38 of the 66 map steps ended in `length` (`evidence/lint-large-logs/plan.md`).
     """
-    files = lint_patterns.files_by_frequency(piece)
+    files = lint_patterns.reported_files(piece)
     head = (
         "Esto es un trozo de un log mayor. Responde en formato escueto: una línea por fichero, "
         "«fichero: códigos o tipos de problema separados por comas», sin explicarlos y sin "
@@ -7451,7 +7545,7 @@ def _lint_final_inventory(
             max_chars - len(facts) - 1,
         )
         return "\n".join(line for line in (facts, codes) if line), 0
-    files = lint_patterns.files_by_frequency(log)
+    files = lint_patterns.reported_files(log)
     top = files[:LINT_TOP_FILES]
     per_file = lint_patterns.per_file_code_counts(log)
     totals = {f.lower(): sum(c.values()) for f, c in (per_file or {}).items()}
@@ -9431,7 +9525,8 @@ def local_lint_summary(
             # Issue #525: and the reverse, the files the summary names that the log does not.
             checked = _lint_invented(answer, log)
             checked = _lint_not_mentioned(_lint_other_files(checked, left_out), log, failures)
-            return _lint_check_failures(checked, failures)
+            # Issue #688: and an entry for a file pytest names only in clean progress lines.
+            return _lint_check_clean(_lint_check_failures(checked, failures), log, failures)
 
         lint_mapped = _chat_map_reduce(
             model,
@@ -9470,13 +9565,22 @@ def local_lint_summary(
         path=path,
         # Issue #525: both roles flag the files the summary names that the log does not.
         # Issue #641: and an answer that does not match the failures of a pytest log.
+        # Issue #688: and an entry for a file pytest names only in clean progress lines.
         postprocess=(
-            lambda answer, _t: _lint_check_failures(
-                _lint_not_mentioned(_lint_invented(answer, log), log, failures), failures
+            lambda answer, _t: _lint_check_clean(
+                _lint_check_failures(
+                    _lint_not_mentioned(_lint_invented(answer, log), log, failures), failures
+                ),
+                log,
+                failures,
             )
         )
         if role == "long"
-        else (lambda answer, _t: _lint_check_failures(_lint_invented(answer, log), failures)),
+        else (
+            lambda answer, _t: _lint_check_clean(
+                _lint_check_failures(_lint_invented(answer, log), failures), log, failures
+            )
+        ),
     )
     return _with_input_encoding_notice(_truncation_prefix(content, truncated_in, raw_len) + result)
 

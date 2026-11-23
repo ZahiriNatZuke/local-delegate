@@ -1,0 +1,32 @@
+{
+ "label": "despues",
+ "runs": [
+  {
+   "run": 0,
+   "clean_named_in_body": 2,
+   "warning": true,
+   "clean_entries_by_program": [
+    "tests/test_mod_00.py"
+   ],
+   "answer": "**.venv/Lib/site-packages/starlette/testclient.py:** 1 DeprecationWarning (WSGITransport).\n**tests/test_mod_00.py - tests/test_mod_13.py:** 283 tests pasados.\nResumen de problemas agrupados por archivo: El archivo `.venv/Lib/site-packages/starlette/testclient.py` presenta una advertencia de depreciación relacionada con el uso del atajo 'app'. Se realizaron 283 pruebas.\n\n[local-delegate warning: el resumen da entrada a ficheros en los que el log no da ningún problema (pytest solo los nombra en líneas de progreso sin fallos): tests/test_mod_00.py. Lo que el log sí reporta está en: .venv/Lib/site-packages/starlette/testclient.py.]\n\n(leído server-side: 1751 chars ≈ 911 tokens de Claude que no entraron a tu contexto)"
+  },
+  {
+   "run": 1,
+   "clean_named_in_body": 2,
+   "warning": true,
+   "clean_entries_by_program": [
+    "tests/test_mod_00.py"
+   ],
+   "answer": "**.venv/Lib/site-packages/starlette/testclient.py:** 1 DeprecationWarning (WSGITransport).\n**tests/test_mod_00.py - tests/test_mod_13.py:** 283 tests pasados.\nResumen de problemas agrupados por archivo:\nEl archivo .venv/Lib/site-packages/starlette/testclient.py presenta un aviso de depreciación relacionado con el uso del atajo 'app'. Se han ejecutado un total de 283 pruebas.\n\n[local-delegate warning: el resumen da entrada a ficheros en los que el log no da ningún problema (pytest solo los nombra en líneas de progreso sin fallos): tests/test_mod_00.py. Lo que el log sí reporta está en: .venv/Lib/site-packages/starlette/testclient.py.]\n\n(leído server-side: 1751 chars ≈ 911 tokens de Claude que no entraron a tu contexto)"
+  },
+  {
+   "run": 2,
+   "clean_named_in_body": 2,
+   "warning": true,
+   "clean_entries_by_program": [
+    "tests/test_mod_00.py"
+   ],
+   "answer": "**.venv/Lib/site-packages/starlette/testclient.py:** 1 DeprecationWarning (WSGITransport).\n**tests/test_mod_00.py - tests/test_mod_13.py:** 283 tests pasados.\nResumen de problemas agrupados por archivo:\nEl archivo `.venv/Lib/site-packages/starlette/testclient.py` presenta una advertencia de depreciación relacionada con el uso del atajo `app`. Se han ejecutado un total de 283 pruebas.\n\n[local-delegate warning: el resumen da entrada a ficheros en los que el log no da ningún problema (pytest solo los nombra en líneas de progreso sin fallos): tests/test_mod_00.py. Lo que el log sí reporta está en: .venv/Lib/site-packages/starlette/testclient.py.]\n\n(leído server-side: 1751 chars ≈ 911 tokens de Claude que no entraron a tu contexto)"
+  }
+ ]
+}

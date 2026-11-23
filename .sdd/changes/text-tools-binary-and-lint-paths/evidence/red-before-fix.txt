@@ -1,0 +1,36 @@
+captured = [{'system': 'Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: un resumen ...able/how
+captured = [{'system': 'Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: un resumen ...able/how
+            "1 passed, 1 warning in 0.1s\n"
+FAILED tests/test_binary_input.py::test_a_jpeg_is_refused_by_every_text_tool_before_the_model[commit_msg]
+FAILED tests/test_binary_input.py::test_a_jpeg_is_refused_by_every_text_tool_before_the_model[explain_code]
+FAILED tests/test_binary_input.py::test_a_jpeg_is_refused_by_every_text_tool_before_the_model[extract]
+FAILED tests/test_binary_input.py::test_a_jpeg_is_refused_by_every_text_tool_before_the_model[lint_summary]
+FAILED tests/test_binary_input.py::test_a_jpeg_is_refused_by_every_text_tool_before_the_model[summarize]
+FAILED tests/test_binary_input.py::test_a_jpeg_is_refused_by_every_text_tool_before_the_model[translate]
+FAILED tests/test_binary_input.py::test_other_images_are_refused_with_their_format[a.png-\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01
+FAILED tests/test_binary_input.py::test_other_images_are_refused_with_their_format[a.gif-GIF89a\x01\x00\x01\x00\x80\x00\x00\xff\xff\xff\x00\
+FAILED tests/test_binary_input.py::test_other_images_are_refused_with_their_format[a.webp-RIFF\x1a\x00\x00\x00WEBPVP8L\r\x00\x00\x00/\x00\x0
+FAILED tests/test_binary_input.py::test_the_signature_counts_not_the_extension
+FAILED tests/test_binary_input.py::test_the_message_is_in_english_too
+FAILED tests/test_binary_input.py::test_documents_and_archives_are_refused_by_signature[pdf]
+FAILED tests/test_binary_input.py::test_documents_and_archives_are_refused_by_signature[zip]
+FAILED tests/test_binary_input.py::test_documents_and_archives_are_refused_by_signature[gzip]
+FAILED tests/test_binary_input.py::test_documents_and_archives_are_refused_by_signature[7z]
+FAILED tests/test_binary_input.py::test_a_nul_byte_makes_a_file_binary
+FAILED tests/test_binary_input.py::test_utf16_without_bom_is_refused_with_a_hint
+FAILED tests/test_binary_input.py::test_many_control_bytes_make_a_file_binary
+FAILED tests/test_lint_exact_paths.py::test_the_absolute_and_the_relative_path_are_one_file
+FAILED tests/test_lint_exact_paths.py::test_a_url_is_not_a_file
+FAILED tests/test_lint_exact_paths.py::test_the_clean_files_of_pytest_progress_are_not_reported
+FAILED tests/test_lint_exact_paths.py::test_the_inventory_of_the_issue_names_one_file
+FAILED tests/test_lint_exact_paths.py::test_the_long_call_does_not_list_clean_files_as_not_mentioned
+FAILED tests/test_lint_exact_paths.py::test_a_file_with_a_failure_in_its_progress_line_is_kept
+FAILED tests/test_lint_exact_paths.py::test_a_clean_file_named_elsewhere_is_kept
+FAILED tests/test_lint_exact_paths.py::test_an_absolute_path_goes_to_its_longest_relative_one
+FAILED tests/test_lint_exact_paths.py::test_a_long_url_is_searched_in_linear_time
+FAILED tests/test_lint_exact_paths.py::test_a_full_path_with_a_made_up_folder_is_invented
+FAILED tests/test_lint_exact_paths.py::test_a_folder_named_alone_is_checked_too
+FAILED tests/test_lint_exact_paths.py::test_the_tool_warns_of_the_made_up_folder
+FAILED tests/test_lint_exact_paths.py::test_what_the_log_carries_is_not_flagged[urls]
+FAILED tests/test_lint_exact_paths.py::test_a_folder_must_match_at_a_boundary
+32 failed, 22 passed in 1.88s

@@ -1248,6 +1248,12 @@
     },
     {
       "file": "src/local_delegate/lint_patterns.py",
+      "text": "test session starts",
+      "kind": "verbatim",
+      "reason": "cabecera de sesión que escribe pytest y que el programa busca tal cual en el log para saber que es de pytest (issue #688); no es salida"
+    },
+    {
+      "file": "src/local_delegate/lint_patterns.py",
       "text": "ERROR at setup of {}",
       "kind": "verbatim",
       "reason": "título de sección que escribe pytest en su salida y que el programa busca tal cual en el log (issue #641); no es salida"
