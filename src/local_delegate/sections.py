@@ -669,7 +669,27 @@ def complete(
         next_line = min((line for e, line in emp.pairs.items() if e > k), default=len(lines))
         body = "" if k in empty_in_document else f"\n{placeholder}"
         insertions.setdefault(next_line, []).append(f"## {expected[k]}{body}\n")
-    if insertions:
+    # #691 (J1 of its review): with `name_missing`, a section the model left empty, in its chunk
+    # and again in the retry, leaves the body too: its heading and the few words under it, up to
+    # the next paired heading. The notice names it, once. A parent whose next paired heading is
+    # one of its subsections keeps its heading, or those would be left without it.
+    dropped: set[int] = set()
+    if name_missing:
+        paired = sorted(emp.pairs.values())
+
+        def _level(index: int) -> int:
+            found = _ATX_LEVEL.match(lines[index])
+            return len(found.group(1)) if found else 7
+
+        for k in emp.empty:
+            if k in empty_in_document:
+                continue
+            start = emp.pairs[k]
+            end = next((line for line in paired if line > start), len(lines))
+            if end < len(lines) and _level(end) > _level(start):
+                continue
+            dropped.update(range(start, end))
+    if insertions or dropped:
         new_lines: list[str] = []
         for index in range(len(lines) + 1):
             for block in insertions.get(index, []):
@@ -677,7 +697,7 @@ def complete(
                     new_lines.append("")
                 new_lines.extend(block.rstrip("\n").split("\n"))
                 new_lines.append("")
-            if index < len(lines):
+            if index < len(lines) and index not in dropped:
                 new_lines.append(lines[index])
         text = "\n".join(new_lines).rstrip("\n")
     elif emp.translated:

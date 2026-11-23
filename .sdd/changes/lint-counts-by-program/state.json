@@ -1,0 +1,110 @@
+{
+  "schemaVersion": 1,
+  "slug": "lint-counts-by-program",
+  "title": "local_lint_summary: recuentos por fichero y por código por programa, con aviso si el resumen da otra cifra (#717)",
+  "mode": "lite",
+  "traceability": "strict",
+  "status": "result-review",
+  "createdAt": "2026-11-23T18:05:36.916Z",
+  "updatedAt": "2026-11-23T18:50:28.236Z",
+  "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-11-23T18:06:12.671Z",
+      "evidence": "spec con 5 REQ sobre lint_patterns.per_file_code_counts y _test_figures (#715); plan con 3 tareas que cubren todos los REQ",
+      "actor": "implementer"
+    },
+    "plan": {
+      "status": "approved",
+      "updatedAt": "2026-11-23T18:06:12.671Z",
+      "evidence": "spec con 5 REQ sobre lint_patterns.per_file_code_counts y _test_figures (#715); plan con 3 tareas que cubren todos los REQ",
+      "actor": "implementer"
+    },
+    "quality": {
+      "status": "approved",
+      "updatedAt": "2026-11-23T18:50:27.973Z",
+      "evidence": "suite 8659 pasados con pesado.sh -n 2; ruff limpio; tests nuevos rojos antes y verdes después; prueba en vivo en test-window",
+      "actor": "implementer"
+    },
+    "conformance": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "memory": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-11-23T18:05:36.916Z",
+      "reason": "SDD change created"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "specifying",
+      "at": "2026-11-23T18:06:12.426Z",
+      "reason": "spec y plan escritos sobre el código localizado"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-11-23T18:06:12.671Z",
+      "evidence": "spec con 5 REQ sobre lint_patterns.per_file_code_counts y _test_figures (#715); plan con 3 tareas que cubren todos los REQ",
+      "actor": "implementer"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-11-23T18:06:12.671Z",
+      "evidence": "spec con 5 REQ sobre lint_patterns.per_file_code_counts y _test_figures (#715); plan con 3 tareas que cubren todos los REQ",
+      "actor": "implementer"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-11-23T18:50:27.203Z",
+      "reason": "avance: planning"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "implementing",
+      "at": "2026-11-23T18:50:27.449Z",
+      "reason": "avance: implementing"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-11-23T18:50:27.694Z",
+      "reason": "avance: verifying"
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-11-23T18:50:27.973Z",
+      "evidence": "suite 8659 pasados con pesado.sh -n 2; ruff limpio; tests nuevos rojos antes y verdes después; prueba en vivo en test-window",
+      "actor": "implementer"
+    },
+    {
+      "type": "transition",
+      "from": "verifying",
+      "to": "result-review",
+      "at": "2026-11-23T18:50:28.236Z",
+      "reason": "dos jueces: conforms-with-notes tras arreglar L1/L2"
+    }
+  ]
+}

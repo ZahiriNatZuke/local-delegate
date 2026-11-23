@@ -30,7 +30,7 @@ vez**, en el aviso, con sus títulos.
   - Request: derived: el reintento es opcional y no puede empeorar la respuesta
   - Verify: test tests/test_summarize_retry_missing_sections.py
 - **REQ-005** — El reintento va en la misma operación: un único evento de log, con el paso
-  contado en `steps` (`kind: "retry"`).
+  contado en `steps` (`kind: "sections_retry"`).
   - Request: derived: el panel y el log cuentan operaciones, no llamadas sueltas
   - Verify: test tests/test_summarize_retry_missing_sections.py
 

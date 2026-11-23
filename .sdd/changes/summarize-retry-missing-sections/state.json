@@ -4,9 +4,9 @@
   "title": "local_summarize troceado: reintentar una vez las secciones que faltan y nombrarlas en el aviso (#691)",
   "mode": "lite",
   "traceability": "strict",
-  "status": "result-review",
+  "status": "closed",
   "createdAt": "2026-11-23T12:34:17.274Z",
-  "updatedAt": "2026-11-23T17:32:45.621Z",
+  "updatedAt": "2026-11-23T18:51:03.186Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -27,16 +27,16 @@
       "actor": "implementer"
     },
     "conformance": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-11-23T18:50:54.404Z",
+      "evidence": "re-revisión de dos jueces sobre el arreglo de J1 (0.54.1): conforms-with-notes; J1, J2 y S2 resueltos con tests",
+      "actor": "implementer"
     },
     "memory": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-11-23T18:51:02.890Z",
+      "evidence": "nada durable nuevo: la regla (lo calculable lo da el programa) ya está en text-tools-common-cause/research.md; J1 queda en review.md",
+      "actor": "implementer"
     }
   },
   "history": [
@@ -105,6 +105,36 @@
       "to": "result-review",
       "at": "2026-11-23T17:32:45.621Z",
       "reason": "quality aprobada; revisión de dos jueces en review.md"
+    },
+    {
+      "type": "gate",
+      "gate": "conformance",
+      "status": "approved",
+      "at": "2026-11-23T18:50:54.404Z",
+      "evidence": "re-revisión de dos jueces sobre el arreglo de J1 (0.54.1): conforms-with-notes; J1, J2 y S2 resueltos con tests",
+      "actor": "implementer"
+    },
+    {
+      "type": "transition",
+      "from": "result-review",
+      "to": "closing",
+      "at": "2026-11-23T18:51:02.645Z",
+      "reason": "conformance aprobada"
+    },
+    {
+      "type": "gate",
+      "gate": "memory",
+      "status": "approved",
+      "at": "2026-11-23T18:51:02.890Z",
+      "evidence": "nada durable nuevo: la regla (lo calculable lo da el programa) ya está en text-tools-common-cause/research.md; J1 queda en review.md",
+      "actor": "implementer"
+    },
+    {
+      "type": "transition",
+      "from": "closing",
+      "to": "closed",
+      "at": "2026-11-23T18:51:03.186Z",
+      "reason": "J1 arreglado en la 0.54.1; dos jueces conforms-with-notes"
     }
   ]
 }

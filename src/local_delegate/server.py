@@ -8184,6 +8184,71 @@ def _test_figures(content: str, answer: str, text: str) -> str:
     return out
 
 
+#: #717: how many files and codes the line of the counts lists before saying how many more.
+_LINT_COUNTS_ITEMS = 10
+
+
+def _lint_counts(log: str, answer: str, text: str) -> str:
+    """#717: `text`, then the counts per file and per code of the log, read by the program, and a
+    warning when `answer` (what the model wrote) gives another figure for a file or a code.
+
+    In the smoke test of 0.54.0 the model gave `core.py` the F401 of `util.py` and per-file counts
+    that added up to 5 over 4 warnings, with no warning. Only for the formats that say the file of
+    each code (`lint_patterns.per_file_code_counts`: ruff/flake8 concise, ruff full, tsc); any
+    other log goes as before. The line comes after the totals of `_test_figures`, as the #715 one.
+    """
+    per_file = lint_patterns.per_file_code_counts(log)
+    if not per_file:
+        return text
+    totals: dict[str, int] = {}
+    for counts in per_file.values():
+        for code, n in counts.items():
+            totals[code] = totals.get(code, 0) + n
+    files = " | ".join(
+        f"{file} {sum(counts.values())} ({', '.join(f'{c} {n}' for c, n in counts.items())})"
+        for file, counts in list(per_file.items())[:_LINT_COUNTS_ITEMS]
+    )
+    if len(per_file) > _LINT_COUNTS_ITEMS:
+        files += i18n.t("mcp.lint_counts.more_files", count=len(per_file) - _LINT_COUNTS_ITEMS)
+    ranked = sorted(totals.items(), key=lambda item: -item[1])  # stable: first seen first
+    codes = ", ".join(f"{code} {n}" for code, n in ranked[:_LINT_COUNTS_ITEMS])
+    if len(ranked) > _LINT_COUNTS_ITEMS:
+        codes += i18n.t("mcp.lint_counts.more_codes", count=len(ranked) - _LINT_COUNTS_ITEMS)
+    # The line goes right after the summary, before the warnings the other checks added: those
+    # keep closing the answer, as they did.
+    line = i18n.t("mcp.lint_counts.line", files=files, codes=codes)
+    body, marker, warnings = text.rstrip().partition(f"\n\n{WARNING_MARKER}")
+    out = f"{body.rstrip()}\n\n{line}" + (f"{marker}{warnings}" if marker else "")
+    found = lint_patterns.count_mismatches(answer, per_file)
+    if not found:
+        return out
+    details = []
+    for item in found[: grounding.MAX_ITEMS]:
+        if item.file is None:
+            key = "code"
+        elif item.code is None:
+            key = "file_total"
+        elif item.written is None:
+            key = "foreign_code"
+        else:
+            key = "file_code"
+        details.append(
+            i18n.t(
+                f"mcp.lint_counts.{key}",
+                file=item.file,
+                code=item.code,
+                written=item.written,
+                real=item.real,
+            )
+        )
+    rest = len(found) - grounding.MAX_ITEMS
+    joined = "; ".join(details)
+    if rest > 0:
+        joined += i18n.t("mcp.warning.ungrounded_more", count=rest)
+    notice = i18n.t("mcp.warning.summary_lint_counts", details=joined)
+    return f"{out}\n\n{WARNING_MARKER}{notice}]"
+
+
 def _listed(items: list[str]) -> str:
     """`items` as «a», «b»…, the first `grounding.MAX_ITEMS`, and how many more."""
     shown = ", ".join(f"«{item}»" for item in items[: grounding.MAX_ITEMS])
@@ -9711,7 +9776,8 @@ def local_lint_summary(
             # Issue #688: and an entry for a file pytest names only in clean progress lines.
             checked = _lint_check_clean(_lint_check_failures(checked, failures), log, failures)
             # #714: and the totals and versions of the test output, by program.
-            return _test_figures(log, answer, checked)
+            # #717: and the counts per file and per code of the log, by program.
+            return _lint_counts(log, answer, _test_figures(log, answer, checked))
 
         lint_mapped = _chat_map_reduce(
             model,
@@ -9752,26 +9818,36 @@ def local_lint_summary(
         # Issue #641: and an answer that does not match the failures of a pytest log.
         # Issue #688: and an entry for a file pytest names only in clean progress lines.
         # #714: and the totals and versions of the test output, by program.
+        # #717: and the counts per file and per code of the log, by program.
         postprocess=(
-            lambda answer, _t: _test_figures(
+            lambda answer, _t: _lint_counts(
                 log,
                 answer,
-                _lint_check_clean(
-                    _lint_check_failures(
-                        _lint_not_mentioned(_lint_invented(answer, log), log, failures), failures
-                    ),
+                _test_figures(
                     log,
-                    failures,
+                    answer,
+                    _lint_check_clean(
+                        _lint_check_failures(
+                            _lint_not_mentioned(_lint_invented(answer, log), log, failures),
+                            failures,
+                        ),
+                        log,
+                        failures,
+                    ),
                 ),
             )
         )
         if role == "long"
         else (
-            lambda answer, _t: _test_figures(
+            lambda answer, _t: _lint_counts(
                 log,
                 answer,
-                _lint_check_clean(
-                    _lint_check_failures(_lint_invented(answer, log), failures), log, failures
+                _test_figures(
+                    log,
+                    answer,
+                    _lint_check_clean(
+                        _lint_check_failures(_lint_invented(answer, log), failures), log, failures
+                    ),
                 ),
             )
         ),

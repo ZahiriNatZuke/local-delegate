@@ -6,6 +6,20 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Corregido
+
+- **`local_lint_summary`: los recuentos por fichero y por código los da el programa** (#717). En la
+  prueba de humo de la 0.54.0, con 4 avisos de ruff en dos ficheros, el resumen le puso a un
+  fichero el F401 del otro y sus recuentos por fichero sumaban 5, sin aviso. Para los formatos que
+  dicen el fichero de cada código (ruff/flake8 conciso, ruff completo, tsc), la respuesta termina
+  ahora con una línea del programa («Recuentos del log…») con el total y los códigos de cada
+  fichero y el recuento por código del log entero, y con un aviso cuando el resumen da otra cifra
+  para un fichero o un código, o le pone a un fichero un código que el log no le da. Otros formatos
+  (eslint stylish, pytest, logs de CI) salen como antes.
+- **`local_summarize` troceado: una sección vacía dos veces ya no deja su título en el cuerpo**
+  (#691). Si una sección salía vacía en su trozo y otra vez en el reintento, su título se quedaba
+  vacío en el cuerpo y además se nombraba en el aviso. Ahora sale una sola vez, en el aviso.
+
 ## [0.54.0] - 2026-11-23
 
 ### Cambiado (incompatible)
