@@ -371,7 +371,7 @@ def test_an_undeclared_model_change_is_still_an_error(monkeypatch):
     Control: without the declaration the same difference is an error again."""
     notices: list[str] = []
     assert build.check_versioned(DESTINATION, notices=notices) == []
-    assert any("modelo por defecto de la 0.54.1" in n for n in notices), notices
+    assert any("modelo por defecto de la 0.55.0" in n for n in notices), notices
     monkeypatch.setattr(build, "MODEL_BOUNDARIES", {})
     errors = build.check_versioned(DESTINATION)
     assert "production_config ya no coincide con config.py" in errors

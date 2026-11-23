@@ -734,7 +734,7 @@ _PROMPT_BOUNDARY_FIELDS = frozenset({"system", "max_tokens"})
 # regeneran (sus respuestas se midieron con el modelo viejo) y la diferencia se dice como aviso.
 # vision-default-qwen36 (#699): el rol `vision` pasa a Qwen3.6 35B-A3B con `--mmproj`.
 MODEL_BOUNDARIES: dict[str, dict[str, tuple[str, str]]] = {
-    "0.54.1": {"vision": ("gemma4-12b", "qwen36-35b-a3b-vision")},
+    "0.55.0": {"vision": ("gemma4-12b", "qwen36-35b-a3b-vision")},
 }
 
 

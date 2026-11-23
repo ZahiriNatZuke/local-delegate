@@ -6,7 +6,11 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+## [0.55.0] - 2026-11-23
+
 ### Cambiado
+
+Versión menor: cambia el modelo de visión por defecto (#699, #721).
 
 **Cómo migrar.** Si tu catálogo de llama-swap no tiene la entrada `qwen36-35b-a3b-vision`, pon
 `LOCAL_DELEGATE_MODEL_VISION=gemma4-12b` (o añade la entrada: ver `docs/recipes/llama-swap-vision.md`).
@@ -5461,7 +5465,8 @@ los ficheros de datos. Lo que lee el usuario sigue en español.
 - Empaquetado para PyPI (`local-delegate-mcp`) ejecutable con `uvx`; `server.json` para el
   registro oficial de MCP.
 
-[Unreleased]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.54.0...HEAD
+[Unreleased]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.55.0...HEAD
+[0.55.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.54.0...v0.55.0
 [0.54.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.53.0...v0.54.0
 [0.53.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.52.0...v0.53.0
 [0.52.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.51.0...v0.52.0

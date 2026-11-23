@@ -659,7 +659,7 @@ Cuatro perfiles, todos cambiables por entorno (ver [Configuration](Configuration
 | código | `LOCAL_DELEGATE_MODEL_CODE` | `qwen36-35b-a3b` | boilerplate, commit-msg, explicar código |
 | visión | `LOCAL_DELEGATE_MODEL_VISION` | `qwen36-35b-a3b-vision` (ligera: `gemma4-12b`) | describir imágenes |
 
-Visión usa por defecto Qwen3.6 35B-A3B con `--mmproj` desde la 0.54.1: en la medición de #699 no
+Visión usa por defecto Qwen3.6 35B-A3B con `--mmproj` desde la 0.55.0: en la medición de #699 no
 inventó ningún defecto de layout (gemma4-12b, 5 de 9). En una máquina con menos VRAM, `LOCAL_DELEGATE_MODEL_VISION=gemma4-12b`.
 
 El salto de mecánico a largo es **automático** y se decide sondeando el tamaño: bytes del archivo
