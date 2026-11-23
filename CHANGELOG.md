@@ -6,6 +6,39 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Cambiado (incompatible)
+
+Va en la 0.54.0 (versión menor: cambia la forma de un valor de `local_extract`).
+
+- **`local_extract`: las líneas de un campo de ubicación las calcula siempre el programa, con
+  una forma nueva** (#694, #696, #697, #698). Con `path`, un campo que pide líneas
+  (`funciones_con_lineas`, `secciones_con_lineas`, `heading_line`, `ficheros_y_hunks_con_lineas`)
+  ya no devuelve la cadena «X: líneas a-b» escrita por el modelo, sino una lista de
+  `{"name", "start", "end"}` (con `hunks` en un diff cuando se piden), en orden de fichero, o
+  `null`. Un índice del fichero (Python, TS/JS, Markdown, diff, ids `REQ-NNN`) contesta solo, sin
+  llamar al modelo, cuando el nombre dice qué quiere; si no, el modelo elige nombres de ese índice
+  o copia un trozo literal de una línea y el programa lo busca exacto. Ningún número del modelo
+  llega al valor. Antes y después:
+
+  ```json
+  "funciones_con_lineas": "StepsPanel.onSaveOrder: líneas 317-321"
+  "funciones_con_lineas": [{"name": "StepsPanel.onSaveOrder", "start": 317, "end": 321}]
+  ```
+
+  Claves nuevas en `_local_delegate`: `located` (cómo se contestó cada campo) y `unlocated` (los
+  elementos sin ubicar, con su motivo y, si hay varias, sus líneas candidatas). Se retiran de
+  extract `lines_unverified`, `outline_copies` y `diff_files`. El modelo ya no ve números de
+  línea; un campo de ubicación que necesita modelo va al rol `code` o `long`, nunca al mecánico
+  (`role_reason` con `"reason": "location"`). Arregla líneas equivocadas sin aviso y rangos
+  buenos marcados como dudosos (#694, #696), un `null` en un parche con un nombre de campo no
+  previsto (`lista_de_ficheros_con_sus_lineas`, #697) y el JSON cortado o los rangos sin nombre
+  en un `.ts` grande (#698).
+- **`local_extract`: cada campo tiene su tipo en el esquema JSON** (#692). Un campo que pide
+  varias cosas (`tres_reglas_desactivadas`) ya no admite un booleano; solo una pregunta
+  (`tiene_tests`) es sí/no. Un valor que no cuadra tiene un reintento; si sigue sin cuadrar,
+  queda `null` y va en `_local_delegate.type_mismatch_keys`, con aviso. El tope de salida se
+  calcula por campo (de 512 a 4096 tokens) en vez de 512 fijo.
+
 ### Añadido
 
 - **Claude Fable 5.2 tiene precio en la tabla del paquete (#689).** El vigilante semanal de precios
