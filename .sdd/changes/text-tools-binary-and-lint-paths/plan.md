@@ -28,10 +28,18 @@
   - Files or modules: `src/local_delegate/lint_patterns.py`, `src/local_delegate/server.py`, i18n del aviso de inventados
   - Verification: `tests/test_lint_exact_paths.py` y toda la suite de lint en verde
   - Depends on: T1
+- [x] T5 — Arreglos de la revisión del PR #709 (REQ-002, REQ-004, REQ-007)
+  - Files or modules: `src/local_delegate/server.py`, `src/local_delegate/lint_patterns.py`, `tests/test_binary_input.py`, `tests/test_lint_exact_paths.py`
+  - Verification: NUL suelto, NUL fuera de la muestra y BEL en fichero diminuto se leen (rojos con el código anterior); progreso con colores, `-v` y xdist en verde; `_decode_input_file` sin uso, quitado
+  - Depends on: T2, T3
+- [x] T6 — Aviso por programa de entradas para ficheros en verde (REQ-010)
+  - Files or modules: `src/local_delegate/lint_patterns.py` (`clean_files`, `clean_file_entries`), `src/local_delegate/server.py` (`_lint_check_clean`), i18n es/en, `docs/wiki/Tools.md`
+  - Verification: `tests/test_lint_exact_paths.py` (rojo antes en `evidence/red-before-clean-entries.txt`; mutante sin el control dispara el assert del aviso); prueba en vivo en proceso dentro de `test-window`
+  - Depends on: T5
 - [x] T4 — CHANGELOG y suite completa (REQ-009)
   - Files or modules: `CHANGELOG.md`
   - Verification: suite completa con `pesado.sh` y `-n 2`; prueba en vivo contra el daemon dentro de `test-window`
-  - Depends on: T2, T3
+  - Depends on: T2, T3, T5, T6
 
 ## Test strategy
 

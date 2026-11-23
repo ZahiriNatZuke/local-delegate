@@ -241,3 +241,114 @@ def test_a_folder_must_match_at_a_boundary():
     """`edge/` is not in `knowledge/`: a substring is not a folder."""
     assert lint_patterns.invented_files("### edge/\n- glossary.md", MARKDOWN_LINT) == ["edge/"]
     assert lint_patterns.invented_files("edge/glossary.md", MARKDOWN_LINT) == ["edge/glossary.md"]
+
+
+# --- #688, live: the model reads the clean files from the log itself -----------------------------
+# The inventory no longer lists them, but `gemma3-4b` still gave an entry to each clean file it read
+# in the progress lines (live, 2026-11-23). What the program knows (pytest names those files only
+# in progress lines without failures) is now checked on the answer, as #641 does for failures.
+
+#: The answer of the live pass, in shape: an entry per clean file, the warning under one of them.
+CLEAN_ENTRIES_ANSWER = (
+    "- **tests/test_mod_00.py**: 0 errores\n"
+    "- **tests/test_mod_01.py**: 1 DeprecationWarning (línea 53)\n"
+    f"- **{RELATIVE}**: 1 DeprecationWarning\n"
+)
+
+
+def test_the_tool_warns_of_entries_for_clean_files(captured):
+    """Mutant "no clean-entry check": the answer comes back as it was and the assert fires."""
+    captured.answer = CLEAN_ENTRIES_ANSWER
+    out = server.local_lint_summary(text=PYTEST_ONE_WARNING)
+    assert len(captured) == 1  # guard: the model ran
+    assert out.startswith(CLEAN_ENTRIES_ANSWER.rstrip())
+    tail = out.split(CLEAN_ENTRIES_ANSWER.rstrip(), 1)[1]
+    assert "local-delegate warning" in tail
+    assert "tests/test_mod_00.py" in tail and "tests/test_mod_01.py" in tail
+    # The file the log does report is named as what it reports, not as a clean one.
+    assert RELATIVE in tail
+
+
+def test_an_answer_without_clean_entries_gets_no_warning(captured):
+    """Control: an entry only for the reported file passes before and after."""
+    captured.answer = f"- **{RELATIVE}**: 1 DeprecationWarning (línea 53)\n"
+    out = server.local_lint_summary(text=PYTEST_ONE_WARNING)
+    assert len(captured) == 1
+    assert "local-delegate warning" not in out
+
+
+def test_a_clean_file_cited_in_a_sentence_is_not_an_entry():
+    answer = f"- **{RELATIVE}**: 1 aviso. Los demás (tests/test_mod_00.py y otros) pasan.\n"
+    assert lint_patterns.clean_file_entries(answer, PYTEST_ONE_WARNING) == []
+
+
+#: The same run with colours (`--color=yes`, what CI writes) and with `-v` and `-v -n 2`.
+PYTEST_COLOUR = (
+    "\x1b[1m============ test session starts ============\x1b[0m\n"
+    "tests/test_a.py \x1b[32m.\x1b[0m\x1b[32m.\x1b[0m\x1b[32m                  [ 50%]\x1b[0m\n"
+    "tests/test_b.py \x1b[32m.\x1b[0m\x1b[33ms\x1b[0m\x1b[32m                  [100%]\x1b[0m\n"
+    "\x1b[32m============ 3 passed, 1 skipped in 0.10s ============\x1b[0m\n"
+)
+PYTEST_VERBOSE = (
+    "============ test session starts ============\n"
+    "tests/test_a.py::test_one PASSED                                     [ 25%]\n"
+    "tests/test_a.py::TestX::test_two PASSED                              [ 50%]\n"
+    "tests/test_b.py::test_three SKIPPED (no db)                          [ 75%]\n"
+    "tests/test_c.py::test_four XFAIL (known)                             [100%]\n"
+    "============ 2 passed, 1 skipped, 1 xfailed in 0.10s ============\n"
+)
+PYTEST_XDIST = (
+    "============ test session starts ============\n"
+    "[gw0] [ 50%] PASSED tests/test_a.py::test_one \n"
+    "[gw1] [100%] PASSED tests\\test_b.py::test_two \n"
+    "============ 2 passed in 0.10s ============\n"
+)
+
+
+@pytest.mark.parametrize(
+    ("log", "clean"),
+    [
+        (PYTEST_COLOUR, ["tests/test_a.py", "tests/test_b.py"]),
+        (PYTEST_VERBOSE, ["tests/test_a.py", "tests/test_b.py", "tests/test_c.py"]),
+        (PYTEST_XDIST, ["tests/test_a.py", "tests/test_b.py"]),
+    ],
+    ids=["colour", "verbose", "xdist"],
+)
+def test_clean_progress_in_every_pytest_shape(log, clean):
+    """Before, only the plain `file ....  [ 10%]` line was clean: colours and `-v` kept them."""
+    assert lint_patterns.reported_files(log) == []
+    assert sorted(lint_patterns.clean_files(log)) == clean
+
+
+@pytest.mark.parametrize(
+    "line",
+    [
+        "tests/test_a.py::test_one FAILED                                     [ 50%]",
+        "tests/test_a.py::test_one ERROR                                      [ 50%]",
+        "tests/test_a.py ..F.                                                 [ 50%]",
+        "tests/test_a.py ..E.                                                 [ 50%]",
+        "[gw0] [ 50%] FAILED tests/test_a.py::test_one ",
+        "tests/test_a.py::test_one XPASS(strict)                              [ 50%]",
+        "tests/test_a.py:12: PytestUnraisableExceptionWarning: boom",
+    ],
+    ids=["v_failed", "v_error", "f_mark", "e_mark", "xdist_failed", "xpass_strict", "warning"],
+)
+def test_a_line_with_a_problem_keeps_its_file(line):
+    """Controls: a failure, an error or a warning is not clean progress."""
+    log = f"{line}\n============ 1 failed in 0.10s ============\n"
+    assert lint_patterns.reported_files(log) == ["tests/test_a.py"]
+    assert lint_patterns.clean_files(log) == []
+
+
+def test_clean_files_only_on_a_pytest_log():
+    """A lint log is not pytest: no file of it is ever called clean by this rule."""
+    assert lint_patterns.clean_files("src/a.py .\nsrc/a.py:1:1: E501\n") == []
+
+
+def test_the_clean_line_check_is_linear():
+    line = "tests/" + "a" * 200_000 + " " + "." * 200_000 + "\n"
+    log = line + "1 passed in 0.1s\n"
+    start = time.perf_counter()
+    lint_patterns.clean_files(log)
+    lint_patterns.reported_files(log)
+    assert time.perf_counter() - start < 1.0

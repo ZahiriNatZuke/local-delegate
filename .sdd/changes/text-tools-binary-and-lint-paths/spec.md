@@ -21,10 +21,11 @@ Arreglos R3 y R4 de `.sdd/changes/text-tools-common-cause/research.md`.
   `local_describe_image`, y el backend no recibe ninguna llamada.
   - Request: "rechazar entradas binarias en las tools de texto con `path` (… firma de fichero conocida …) ANTES de llamar al modelo, con mensaje que remita a `local_describe_image` para imágenes"
   - Verify: test `tests/test_binary_input.py` (PNG y JPEG reales mínimos, 0 llamadas al backend)
-- **REQ-002** — Un fichero con firma de PDF, ZIP, gzip o 7z, con algún byte nulo (salvo UTF-16
-  con BOM) o con más del 10 % de bytes de control C0 (sin contar tabulador, saltos de línea,
-  avance de página ni ESC) en sus primeros 64 KiB da `InputError` con el motivo, sin llamar al
-  backend.
+- **REQ-002** — Un fichero con firma de PDF, ZIP, gzip o 7z, con más del 1 % de bytes nulos
+  (salvo UTF-16 con BOM) o con más del 10 % de bytes de control C0 (sin contar tabulador, saltos
+  de línea, avance de página ni ESC, y al menos 8) en sus primeros 64 KiB da `InputError` con el
+  motivo, sin llamar al backend. Un byte nulo suelto en un log largo, o uno de control en un
+  fichero diminuto, no lo hacen binario (revisión del PR #709).
   - Request: "rechazar entradas binarias … (bytes nulos, firma de fichero conocida, proporción de bytes de control) ANTES de llamar al modelo"
   - Verify: test `tests/test_binary_input.py`
 - **REQ-003** — El control vive en un único punto (`_read_input`) y lo heredan todas las tools de
@@ -46,7 +47,8 @@ Arreglos R3 y R4 de `.sdd/changes/text-tools-common-cause/research.md`.
   - Request: "descartar URLs como fichero"
   - Verify: test `tests/test_lint_exact_paths.py`
 - **REQ-007** — En un log de pytest, un fichero que solo aparece en líneas de progreso sin fallos
-  (`tests/test_a.py ....  [ 10%]`) no entra en el inventario que se le da al modelo ni en «sin
+  (`tests/test_a.py ....  [ 10%]`, con colores ANSI, `-v` con PASSED/SKIPPED/XFAIL/XPASS y
+  `-v -n N` con el prefijo `[gw0] [ 10%]`) no entra en el inventario que se le da al modelo ni en «sin
   mencionar».
   - Request: "derived: #688 espera «sin listar los ficheros que no tienen nada»; research.md R4 lo incluye"
   - Verify: test `tests/test_lint_exact_paths.py`
@@ -56,6 +58,13 @@ Arreglos R3 y R4 de `.sdd/changes/text-tools-common-cause/research.md`.
   aviso. Un nombre base sin carpetas se sigue aceptando por nombre base.
   - Request: "validar la ruta completa y sus carpetas contra la entrada (nada de aceptar por coincidencia de nombre)"
   - Verify: test `tests/test_lint_exact_paths.py` (forma de #690) y tests de #525 intactos
+- **REQ-010** — Con un log de pytest sin fallos, si el resumen da una entrada (línea de primer
+  nivel que empieza por el fichero, como las lee #641) a un fichero que el log solo nombra en
+  progreso sin fallos, el programa añade un `[local-delegate warning: …]` con esos ficheros y los
+  que el log sí reporta. Un fichero citado dentro de una frase no es una entrada; con fallos en el
+  log calla (ya avisa #641); en un log que no es de pytest no actúa.
+  - Request: "control por programa en lint_summary: con salida de pytest, los ficheros sin fallo según el propio log … no pueden aparecer como «con errores»; se quitan o se avisa, por programa"
+  - Verify: test `tests/test_lint_exact_paths.py` (`test_the_tool_warns_of_entries_for_clean_files`, rojo sin el arreglo; controles sin aviso)
 - **REQ-009** — CHANGELOG en «Sin publicar» con los dos arreglos; mensajes nuevos en `es` y `en`.
   - Request: "CHANGELOG en «Sin publicar», docs si cambia algo visible"
   - Verify: review del diff y test de catálogos i18n existente
@@ -87,7 +96,8 @@ Arreglos R3 y R4 de `.sdd/changes/text-tools-common-cause/research.md`.
 
 - Fichero vacío: no es binario (se lee como hoy).
 - UTF-16 sin BOM: tiene bytes nulos y se rechaza; el mensaje lo dice para que se convierta.
-- Un log con un único byte de control suelto no se rechaza (umbral por proporción).
+- Un log con un único byte de control suelto, o con un NUL suelto, no se rechaza (umbral por
+  proporción); un NUL más allá de los primeros 64 KiB no cuenta.
 - Una absoluta cuya relativa no aparece en el log queda como está; si hay varias relativas que
   son sufijo suyo, se une a la más larga.
 

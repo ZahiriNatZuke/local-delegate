@@ -1,0 +1,15 @@
+FAILED tests/test_lint_exact_paths.py::test_the_tool_warns_of_entries_for_clean_files
+FAILED tests/test_lint_exact_paths.py::test_a_clean_file_cited_in_a_sentence_is_not_an_entry
+FAILED tests/test_lint_exact_paths.py::test_clean_progress_in_every_pytest_shape[colour]
+FAILED tests/test_lint_exact_paths.py::test_clean_progress_in_every_pytest_shape[verbose]
+FAILED tests/test_lint_exact_paths.py::test_clean_progress_in_every_pytest_shape[xdist]
+FAILED tests/test_lint_exact_paths.py::test_a_line_with_a_problem_keeps_its_file[v_failed]
+FAILED tests/test_lint_exact_paths.py::test_a_line_with_a_problem_keeps_its_file[v_error]
+FAILED tests/test_lint_exact_paths.py::test_a_line_with_a_problem_keeps_its_file[f_mark]
+FAILED tests/test_lint_exact_paths.py::test_a_line_with_a_problem_keeps_its_file[e_mark]
+FAILED tests/test_lint_exact_paths.py::test_a_line_with_a_problem_keeps_its_file[xdist_failed]
+FAILED tests/test_lint_exact_paths.py::test_a_line_with_a_problem_keeps_its_file[xpass_strict]
+FAILED tests/test_lint_exact_paths.py::test_a_line_with_a_problem_keeps_its_file[warning]
+FAILED tests/test_lint_exact_paths.py::test_clean_files_only_on_a_pytest_log
+FAILED tests/test_lint_exact_paths.py::test_the_clean_line_check_is_linear - ...
+14 failed, 25 passed in 1.12s

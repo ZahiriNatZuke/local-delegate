@@ -153,9 +153,9 @@ def test_documents_and_archives_are_refused_by_signature(calls, tmp_path, data, 
     assert calls == []
 
 
-def test_a_nul_byte_makes_a_file_binary(calls, tmp_path):
+def test_nul_bytes_make_a_file_binary(calls, tmp_path):
     """An executable or a UTF-16 file without BOM: NUL bytes, which no text carries."""
-    data = b"texto normal\n" * 20 + b"\x00\x01\x02" + b"resto\n"
+    data = b"MZ\x90\x00\x03\x00\x00\x00\x04\x00\x00\x00\xff\xff\x00\x00" + b"texto\n" * 20
     with pytest.raises(server.InputError):
         server.local_lint_summary(path=_write(tmp_path, "output.log", data))
     assert calls == []
@@ -190,6 +190,10 @@ TEXTS = {
     "one_stray_control": b"src/a.py:1:1: E501 line too long\x0c\n" * 5 + b"\x07 bell\n",
     "form_feed_and_tabs": b"col1\tcol2\x0c\ncol3\tcol4\x0b\n" * 10,
     "empty": b"",
+    # Review of #709: a stray NUL in a long log, and one BEL in a tiny file, are not binaries.
+    "one_stray_nul": b"src/a.py:1:1: E501 line too long\n" * 50 + b"\x00\n" + b"tail\n" * 50,
+    "nul_past_the_sample": b"ok\n" * 40_000 + b"\x00" * 64,
+    "tiny_with_bell": b"hi\x07\n",
 }
 
 

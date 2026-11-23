@@ -1104,6 +1104,11 @@ _BINARY_SIGNATURES: tuple[tuple[bytes, str, bool], ...] = (
 #: which a file is binary. By share, not by one byte: a log may carry a stray BEL or form feed.
 _BINARY_SAMPLE = 64 * 1024
 _BINARY_CONTROL_SHARE = 0.10
+#: Review of #709: the share of NUL bytes in the sample above which a file is binary (UTF-16 text
+#: without BOM is ~50 %, an executable far above 1 %), and the fewest control bytes that make a
+#: file binary. Before, one NUL anywhere in a 50 MB log, or one BEL in a 4-byte file, refused it.
+_BINARY_NUL_SHARE = 0.01
+_BINARY_MIN_CONTROLS = 8
 #: C0 control bytes that no text carries: all but tab, line feed, vertical tab, form feed,
 #: carriage return and ESC (the colours of a CLI log, `\x1b[31m`).
 _BINARY_CONTROLS = frozenset(range(0x20)) - {0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x1B} | {0x7F}
@@ -1112,10 +1117,11 @@ _BINARY_CONTROLS = frozenset(range(0x20)) - {0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x1B}
 def _binary_kind(raw: bytes) -> tuple[str, bool] | None:
     """#693: why `raw` is not text, as `(reason, is_image)`, or `None` for text.
 
-    A known signature first (an image goes to `local_describe_image`), then a NUL byte (no text
-    carries one, but UTF-16 does, so a file with its BOM is text), then more than 10 % of control
-    bytes in the first 64 KiB. Before, any byte decoded as Latin-1 (#672), and `local_extract` on
-    a JPEG went to the model in 6 chunks to answer every field `null`.
+    A known signature first (an image goes to `local_describe_image`), then, in the first 64 KiB,
+    more than 1 % of NUL bytes (no text carries them, but UTF-16 does, so a file with its BOM is
+    text) or more than 10 % of control bytes (and at least `_BINARY_MIN_CONTROLS`). By share: a
+    log may carry a stray NUL or BEL. Before, any byte decoded as Latin-1 (#672), and
+    `local_extract` on a JPEG went to the model in 6 chunks to answer every field `null`.
     """
     for signature, kind, image in _BINARY_SIGNATURES:
         if raw.startswith(signature):
@@ -1124,11 +1130,13 @@ def _binary_kind(raw: bytes) -> tuple[str, bool] | None:
         return "WebP", True
     if raw.startswith(_UTF16_BOMS):
         return None
-    if b"\x00" in raw:
-        return "nul", False
     sample = raw[:_BINARY_SAMPLE]
+    if not sample:
+        return None
+    if sample.count(0) / len(sample) > _BINARY_NUL_SHARE:
+        return "nul", False
     controls = sum(1 for byte in sample if byte in _BINARY_CONTROLS)
-    if sample and controls / len(sample) > _BINARY_CONTROL_SHARE:
+    if controls >= _BINARY_MIN_CONTROLS and controls / len(sample) > _BINARY_CONTROL_SHARE:
         return "control", False
     return None
 
@@ -1144,11 +1152,6 @@ def _reject_binary(raw: bytes, path: str) -> None:
     if kind in {"nul", "control"}:
         raise InputError(i18n.t(f"mcp.input.binary_{kind}", path=path))
     raise InputError(i18n.t("mcp.input.binary_format", path=path, kind=kind))
-
-
-def _decode_input_file(p: Path) -> tuple[str, str | None]:
-    """The text of `p` and the encoding it was read with when it was not UTF-8 (#672)."""
-    return _decode_input_bytes(p.read_bytes())
 
 
 def _decode_input_bytes(raw: bytes) -> tuple[str, str | None]:
@@ -7327,6 +7330,29 @@ def _lint_invented(answer: str, log: str) -> str:
     return f"{answer.rstrip()}\n\n{WARNING_MARKER}{warning}]"
 
 
+def _lint_check_clean(
+    answer: str, log: str, failures: list[lint_patterns.PytestFailure] | None = None
+) -> str:
+    """Issue #688: a visible warning when the summary gives an entry to a clean pytest file.
+
+    The program knows which files pytest names only in progress lines without failures
+    (`lint_patterns.clean_files`); the inventory left them out and the small model, live, still
+    gave each one an entry it read from the log. With `failures` the check of #641 already flags
+    an entry for a file without failures, so this one stays quiet. A matching answer, and any log
+    that is not pytest, come back as they were.
+    """
+    if failures:
+        return answer
+    clean = lint_patterns.clean_file_entries(answer, log)
+    if not clean:
+        return answer
+    reported = lint_patterns.reported_files(log)
+    warning = i18n.t("mcp.warning.lint_clean_entries", files=_lint_capped(clean))
+    if reported:
+        warning += i18n.t("mcp.warning.lint_clean_entries_reported", files=_lint_capped(reported))
+    return f"{answer.rstrip()}\n\n{WARNING_MARKER}{warning}]"
+
+
 #: Issue #641: how many failures the facts of the prompt name one by one (the rest are counted).
 LINT_FACT_FAILURES = 10
 #: Issue #641: how many items each list of the mismatch warning names (the rest are counted).
@@ -9498,7 +9524,8 @@ def local_lint_summary(
             # Issue #525: and the reverse, the files the summary names that the log does not.
             checked = _lint_invented(answer, log)
             checked = _lint_not_mentioned(_lint_other_files(checked, left_out), log, failures)
-            return _lint_check_failures(checked, failures)
+            # Issue #688: and an entry for a file pytest names only in clean progress lines.
+            return _lint_check_clean(_lint_check_failures(checked, failures), log, failures)
 
         lint_mapped = _chat_map_reduce(
             model,
@@ -9537,13 +9564,22 @@ def local_lint_summary(
         path=path,
         # Issue #525: both roles flag the files the summary names that the log does not.
         # Issue #641: and an answer that does not match the failures of a pytest log.
+        # Issue #688: and an entry for a file pytest names only in clean progress lines.
         postprocess=(
-            lambda answer, _t: _lint_check_failures(
-                _lint_not_mentioned(_lint_invented(answer, log), log, failures), failures
+            lambda answer, _t: _lint_check_clean(
+                _lint_check_failures(
+                    _lint_not_mentioned(_lint_invented(answer, log), log, failures), failures
+                ),
+                log,
+                failures,
             )
         )
         if role == "long"
-        else (lambda answer, _t: _lint_check_failures(_lint_invented(answer, log), failures)),
+        else (
+            lambda answer, _t: _lint_check_clean(
+                _lint_check_failures(_lint_invented(answer, log), failures), log, failures
+            )
+        ),
     )
     return _with_input_encoding_notice(_truncation_prefix(content, truncated_in, raw_len) + result)
 

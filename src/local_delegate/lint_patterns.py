@@ -174,11 +174,59 @@ def _relative_owner(key: str, relative: set[str]) -> str | None:
     return None
 
 
-#: A pytest progress line with no failure (#688): `tests/test_a.py ....s.x  [ 40%]`. Only dots,
-#: skips and xfails; an `F` or an `E` keeps the file. Line by line, one class per quantifier.
-_PYTEST_CLEAN_PROGRESS = re.compile(
-    r"(?m)^[ \t]*\S+\.py[ \t]+[.sx]+[ \t]*(?:\[[ \t]*\d+%\])?[ \t]*$"
-)
+#: The marks of a progress line without failures (#688): passed, skipped, xfailed. An `F`, an `E`
+#: or an `X` (xpassed, a failure under `strict`) keeps the file.
+_CLEAN_MARKS = frozenset(".sx")
+#: The outcomes of a `pytest -v` line without failures. `XPASS(strict)` is a failure: not here.
+_CLEAN_OUTCOMES = frozenset({"PASSED", "SKIPPED", "XFAIL", "XPASS"})
+
+
+def _without_percent(text: str) -> str:
+    """`text` without the `[ 40%]` pytest writes at the end of a progress line."""
+    if text.endswith("%]"):
+        at = text.rfind("[")
+        if at != -1 and text[at + 1 : -2].strip().isdigit():
+            return text[:at].rstrip()
+    return text
+
+
+def _is_node(token: str) -> bool:
+    return "::" in token and _node_file(token.replace("\\", "/")) is not None
+
+
+def is_clean_progress(line: str) -> bool:
+    """Whether `line` is a pytest progress line without failures (#688), colours or not.
+
+    `tests/test_a.py ..s.x  [ 40%]`, `tests/test_a.py::test_x PASSED  [ 40%]` (`-v`, also
+    SKIPPED and XFAIL with their reason) and `[gw0] [ 40%] PASSED tests/test_a.py::test_x`
+    (`-v -n N`). With `str` methods, line by line: linear on untrusted input.
+    """
+    text = _without_percent(_ANSI.sub("", line).strip())
+    parts = text.split(None, 1)
+    if len(parts) != 2:
+        return False
+    first, rest = parts
+    if first.lower().endswith(".py") and set("".join(rest.split())) <= _CLEAN_MARKS:
+        return file_spans(first) == [(0, len(first))]
+    if _is_node(first):
+        return rest.split(None, 1)[0] in _CLEAN_OUTCOMES
+    return _xdist_clean(text)
+
+
+def _xdist_clean(text: str) -> bool:
+    """`[gw0] [ 40%] PASSED tests/test_a.py::test_x`: a clean outcome after the xdist prefix."""
+    for outcome in _CLEAN_OUTCOMES:
+        at = text.find(outcome + " ")
+        if at <= 0 or text[at - 1] != " " or not set(text[:at]) <= _XDIST_PREFIX_CHARS:
+            continue
+        node = text[at + len(outcome) + 1 :].split(None, 1)
+        return bool(node) and _is_node(node[0])
+    return False
+
+
+def _is_pytest_log(lines: list[str]) -> bool:
+    """A pytest log: its results line (`3 passed in 0.10s`) or its session header."""
+    return _pytest_counts(lines) is not None or any("test session starts" in s for s in lines)
 
 
 def reported_files(log: str) -> list[str]:
@@ -188,7 +236,45 @@ def reported_files(log: str) -> list[str]:
     put them in front of the model and the summary of the issue gave each one an entry with "0
     problems". Any other mention (a warning, a failure, a traceback) keeps the file.
     """
-    return files_by_frequency(_PYTEST_CLEAN_PROGRESS.sub("", log))
+    return files_by_frequency(
+        "\n".join(line for line in log.splitlines() if not is_clean_progress(line))
+    )
+
+
+def clean_files(log: str) -> list[str]:
+    """The files a pytest log names only in progress lines without failures (#688), or `[]`.
+
+    What the program knows and the model should not be asked: the files with nothing to report.
+    Only on a pytest log (`_is_pytest_log`); any other log gives `[]`.
+    """
+    if not _is_pytest_log(_ANSI.sub("", log).splitlines()):
+        return []
+    reported = {norm_path(f) for f in reported_files(log)}
+    return [f for f in files_by_frequency(log) if norm_path(f) not in reported]
+
+
+def clean_file_entries(answer: str, log: str) -> list[str]:
+    """The clean files of `log` (`clean_files`) that `answer` gives an entry to (#688).
+
+    Live, the inventory no longer listed them, and the small model still gave each clean file it
+    read in the progress lines an entry ("0 errors", once with the warning of another file). An
+    entry is a top-level line that starts with the file (`_entry_file`, as #641 reads them); a
+    file cited inside a sentence is not one. A spelling that also fits a reported file is left
+    alone: it is not known which one it means.
+    """
+    clean = clean_files(log)
+    if not clean:
+        return []
+    reported = reported_files(log)
+    found: list[str] = []
+    for line in MARKDOWN_ESCAPE.sub(r"\1", answer).splitlines():
+        entry = _entry_file(line)
+        if entry is None or any(_same_file(entry, r) for r in reported):
+            continue
+        own = next((c for c in clean if _same_file(entry, c)), None)
+        if own is not None and own not in found:
+            found.append(own)
+    return found
 
 
 def codes_by_frequency(log: str) -> list[str]:

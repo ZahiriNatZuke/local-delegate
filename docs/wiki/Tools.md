@@ -28,8 +28,9 @@ al principio. Si el texto sale raro (era otra codificación, como cp1251), convi
 UTF-8 y vuelve a llamar.
 
 **Ficheros binarios (desde #693).** Antes de decodificar, esas seis tools miran los bytes: un
-fichero con firma de imagen (PNG, JPEG, GIF, WebP), de PDF, ZIP, gzip o 7z, con algún byte nulo
-(salvo UTF-16 con BOM) o con más de un 10 % de bytes de control en sus primeros 64 KiB no es texto
+fichero con firma de imagen (PNG, JPEG, GIF, WebP), de PDF, ZIP, gzip o 7z, con más de un 1 % de
+bytes nulos (salvo UTF-16 con BOM) o con más de un 10 % de bytes de control en sus primeros 64 KiB
+(y al menos 8) no es texto
 y da un error, sin llamar al modelo. Para una imagen, el error remite a `local_describe_image`;
 para un PDF, conviértelo antes a texto (por ejemplo con `pdftotext`). Decide el contenido, no la
 extensión. Un UTF-16 sin BOM cae aquí por sus bytes nulos: guárdalo como UTF-8.
@@ -399,6 +400,13 @@ resumir», citando la línea del log cuando la hay, y con el recibo de lectura d
 backend abierto). Cualquier otra cosa va al modelo, y si el resumen nombra ficheros que no aparecen
 en la entrada, la respuesta termina con `[local-delegate warning: el resumen nombra ficheros que no aparecen en la entrada y
 pueden ser inventados: …]`.
+
+**Ficheros en verde de pytest (#688).** Un fichero que pytest solo nombra en líneas de progreso sin
+fallos (`tests/test_a.py ....  [ 10%]`, también con colores, con `-v` y con `-v -n N`) no entra en
+la lista de ficheros que se le da al modelo. Si el resumen aun así le da una entrada (el modelo lo
+lee en el propio log), la respuesta termina con `[local-delegate warning: el resumen da entrada a
+ficheros en los que el log no da ningún problema …]`, que nombra esos ficheros y los que el log sí
+reporta. Con fallos en el log, ese caso ya lo avisa la comprobación de fallos de pytest.
 
 **Líneas largas sin espacios.** Desde la 0.50.0 la búsqueda de ficheros del inventario y la de
 contadores en las claves de un informe JSON van en tiempo lineal: la línea de puntos de
