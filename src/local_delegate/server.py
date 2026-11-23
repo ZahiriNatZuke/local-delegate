@@ -8934,12 +8934,12 @@ def local_extract(
     difference in UTF-8, acceptable).
     By default it asks the backend for schema-constrained JSON (`LOCAL_DELEGATE_JSON_SCHEMA=auto`);
     if the backend does not support it, it retries in free mode. Each field has its own type: a
-    name that asks for several things (`tres_reglas`, `licensed_user_limits`) is a list, never a
-    boolean, and only a question (`tiene_tests`, `is_public`) is a yes/no. A value that breaks
+    name that asks for several things (`three_rules`, `licensed_user_limits`) is a list, never a
+    boolean, and only a question (`has_tests`, `is_public`) is a yes/no. A value that breaks
     its type gets one retry; if it still does, it is null and listed in `type_mismatch_keys`
     (`{key: {"expected", "got"}}`), with a warning.
     To locate: with 'path', a field whose name asks for lines (`sections_with_lines`,
-    `funciones_con_lineas`, `heading_line`, `files_and_hunks_with_lines`; also in Spanish)
+    `functions_with_lines`, `heading_line`, `files_and_hunks_with_lines`; also in Spanish)
     gets a list of `{"name", "start", "end"}` (plus `hunks` in a diff when asked), in file
     order, or null. The lines are ALWAYS the program's, never the model's: an index of the file
     (Python, TS/JS, Markdown headings, a unified diff, ids such as `REQ-012`) answers alone when
