@@ -17,6 +17,7 @@ from local_delegate import pricing
 from local_delegate.pricing import check_rows, entry, load_prices, normalize_id, verdict
 
 SPEC_IDS = [
+    "claude-fable-5-2",
     "claude-fable-5-1",
     "claude-fable-5",
     "claude-opus-5-5",

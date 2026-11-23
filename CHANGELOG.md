@@ -6,6 +6,13 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Añadido
+
+- **Claude Fable 5.2 tiene precio en la tabla del paquete (#689).** El vigilante semanal de precios
+  vio el modelo nuevo en la página oficial; `prices.json` recoge sus cifras (8 USD por millón de
+  tokens de entrada, 40 de salida, 10 y 16 de escritura de caché a 5 min y 1 h, y 0,20 de lectura),
+  con la familia de tokenizador nueva y soporte de `effort`, comprobados en la ficha del modelo.
+
 ## [0.53.0] - 2026-11-16
 
 Codex recibe la delegación casi como Claude Code y `local_extract` desconfía mejor de sus propias
