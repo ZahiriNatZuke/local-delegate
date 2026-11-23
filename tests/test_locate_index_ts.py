@@ -234,6 +234,31 @@ def test_unbalanced_braces_drop_the_index():
     assert locate.build_index("/* never closed\n", "t.mjs").unavailable_reason == "unbalanced"
 
 
+@pytest.mark.parametrize("blank", [" ", " ", "　"])
+def test_a_unicode_blank_is_skipped_like_a_space(blank):
+    """A Unicode blank before `{`, `}`, a regex or a string is a blank, never a word: the index is
+    the one of the same text with plain spaces."""
+    template = (
+        "export function first(a: number){B}{{\n"
+        "  const r ={B}/}}/;\n"
+        "  const s ={B}'}}';\n"
+        "  return a;{B}}}\n"
+        "export class Second {{\n"
+        "  run(){B}{{ return `x`; }}\n"
+        "}}\n"
+    )
+    with_blank = locate.build_index(template.format(B=blank), "u.ts")
+    with_space = locate.build_index(template.format(B=" "), "u.ts")
+    assert with_space.unavailable_reason is None
+    assert [(b.name, b.start, b.end) for b in with_space.blocks] == [
+        ("first", 1, 4),
+        ("Second", 5, 7),
+        ("Second.run", 6, 6),
+    ]
+    assert with_blank.unavailable_reason is None
+    assert with_blank.blocks == with_space.blocks
+
+
 def test_module_declarations_of_every_form():
     text = (
         "export default class {\n}\n"

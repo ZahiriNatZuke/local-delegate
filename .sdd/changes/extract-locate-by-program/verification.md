@@ -2,7 +2,7 @@
 
 ## Environment
 
-- Revision: rama `feat/extract-locate-b` (sobre main a776da37 con `origin/feat/extract-locate-a` eaad9b4e mezclado: T1–T4, T9 y el lexer rápido de TS), commit d58cd50e.
+- Revision: rama `feat/extract-locate-b` (sobre main a776da37 con `origin/feat/extract-locate-a` eaad9b4e mezclado: T1–T4, T9 y el lexer rápido de TS), commits d58cd50e y, tras la segunda revisión, f55e57ac (rendimiento, REQ-022) y el de sus hallazgos (NBSP del lexer, `role_reason` con tabla).
 - Relevant runtime and tool versions: Windows 11, CPython 3.11.15 (uv), pytest con xdist `-n 2`, ruff del entorno del proyecto; backend real de la PC para la prueba en vivo (llama-swap en 127.0.0.1:9292, modelos `gemma3-4b` y `qwen36-35b-a3b`).
 
 ## Evidence
@@ -14,7 +14,7 @@
 | REQ-001 | `test_extract_locate_server.py::test_model_numbers_never_reach_the_value` + mutante M2 | pass | verde; M2 (copiar el `start` del modelo) lo pone en rojo |
 | REQ-002 | `test_extract_locate_server.py::test_every_location_value_has_the_new_shape` | pass | verde en los caminos índice, selección, ancla, diff y troceado |
 | REQ-003 | `tests/test_locate_index_python.py` | pass | verde; M1 (sumar 1 a las líneas) lo pone en rojo |
-| REQ-004 | `tests/test_locate_index_ts.py` | pass | verde suelto; ver riesgo del test de 1 MB en «Deviations» |
+| REQ-004 | `tests/test_locate_index_ts.py` | pass | verde; `test_a_unicode_blank_is_skipped_like_a_space` (NBSP, U+2003, U+3000 antes de `{`, `}`, regex y cadena) y M12 lo pone en rojo |
 | REQ-005 | `test_locate_markdown_ids.py::test_sections_end_before_the_next_heading_of_same_or_higher_level`, `::test_blocks_at_a_line` | pass | verde |
 | REQ-006 | `test_extract_diff_files_names.py` y `test_extract_diff_files_and_cut.py` reescritos | pass | 31 + 27 verdes; mismos rangos que antes en la forma `{name, start, end}` (con `hunks`) |
 | REQ-007 | `test_locate_markdown_ids.py::test_sixty_requirements_get_their_exact_lines`, `test_extract_locate_server.py::test_the_696_fields` | pass | verdes; el de servidor (añadido tras la revisión) ancla a mitad de la tabla y en el título y da la tabla entera y la sección exactas |
@@ -24,14 +24,14 @@
 | REQ-011 | `tests/test_locate_anchor.py`, `test_extract_locate_server.py::test_a_jsdoc_anchor_is_never_returned_as_code` | pass | verdes; M3 (ancla sin mayúsculas) lo pone en rojo |
 | REQ-012 | `test_extract_line_numbers.py::test_no_line_number_reaches_the_model`, `::test_the_catalogue_is_left_out_when_too_long` | pass | verdes |
 | REQ-013 | `test_extract_line_numbers.py::test_chunked_anchors_are_resolved_against_the_whole_file` | pass | verde; M9 (ancla de trozo solo contra el fichero entero) lo pone en rojo |
-| REQ-014 | `test_extract_locate_server.py::test_location_fields_never_go_to_the_mechanical_role` | pass | verde; en vivo, el caso B fue al rol `code` con `role_reason.reason = location` |
+| REQ-014 | `test_extract_locate_server.py::test_location_fields_never_go_to_the_mechanical_role` | pass | verde; en vivo, el caso B fue al rol `code` con `role_reason.reason = location`. `::test_a_table_answered_by_program_has_no_role_reason` (fichero pequeño con tabla, todo por programa: ni la respuesta ni la fila del log llevan `role_reason`) y M13 lo pone en rojo |
 | REQ-015 | `test_extract_schema.py::test_field_kinds`, `tests/test_core.py::test_json_schema_payload_types_each_field` | pass | verdes; M8 (boolean en el esquema de `list`) lo pone en rojo |
 | REQ-016 | `test_extract_schema.py::test_a_boolean_in_a_list_field_is_retried_once`, `::test_a_mismatch_that_persists_is_null_and_said` | pass | verdes; M8b (validar acepta boolean en `list`) lo pone en rojo |
 | REQ-017 | `test_extract_schema.py::test_output_budget`, `test_extract_locate_server.py::test_the_real_max_tokens` | pass | verdes; M7 (512 fijo) lo pone en rojo (`[512] == [2464]`) |
 | REQ-018 | `test_extract_locate_server.py::test_meta_keys`, `test_extract_section_lines.py::test_the_shape_of_the_issue_is_reported` | pass | verdes; `lines_unverified`, `outline_copies` y `diff_files` ya no salen |
-| REQ-019 | suite de extract, explain_code, core, summarize, i18n y catálogo con `-n 2`; `git diff --stat origin/main` de los tests que se conservan | pass | 1164 verdes (los 2 fallos son los de tiempo de 1 MB, ver abajo); de los conservados solo cambia `test_extract_placeholder_values.py` (−14: se borra `test_a_numbered_marker_is_null`, que probaba el prefijo `N\|` retirado) |
+| REQ-019 | suite de extract, explain_code, core, summarize, i18n y catálogo con `-n 2`; `git diff --stat origin/main` de los tests que se conservan | pass | 1164 verdes (los 2 de tiempo de 1 MB se rehicieron, REQ-022); de los conservados solo cambia `test_extract_placeholder_values.py` (−14: se borra `test_a_numbered_marker_is_null`, que probaba el prefijo `N\|` retirado) |
 | REQ-020 | `tests/test_extract_locate_docs.py`, `tests/test_i18n_parity.py` | pass | verdes; CHANGELOG «Sin publicar» como incompatible de la 0.54.0, README, `docs/wiki/Tools.md`, skill es/en y memoria es/en |
-| REQ-021 | tabla de mutantes (abajo) | pass | 10 de 10 mutantes en rojo, cada uno con el assert que lo detecta |
+| REQ-021 | tabla de mutantes (abajo) | pass | 14 de 14 mutantes en rojo (M1–M13 y M8b), cada uno con el assert que lo detecta |
 | REQ-022 | `test_locate_index_ts.py::test_unbalanced_braces_drop_the_index`, `test_locate_index_python.py::test_syntax_error_gives_no_index`, `test_locate_anchor.py::test_index_and_anchors_cost_grows_linearly`, `test_locate_index_ts.py::test_typescript_index_cost_grows_linearly` | pass | criterio cambiado a crecimiento lineal (spec, 2026-11-23). En la PC: 100 KB → 1 MB crece ×13,8 (índice y 407 anclas, 0,52 s) y ×11,7 (índice TS, 0,45 s), tope ×25. Mutantes M10 y M11 abajo |
 
 ### Mutantes de REQ-021
@@ -52,6 +52,8 @@ Aplicados uno a uno en un worktree temporal (`scratchpad/mutants.py`), con su te
 | M9 ancla de un trozo solo contra el fichero entero | `locate.py` | `test_extract_line_numbers.py::test_chunked_anchors_are_resolved_against_the_whole_file` | `[{'end': None}] == [{'end': 664}]` |
 | M10 (REQ-022) volver a buscar el ancla línea a línea en Python (el código anterior a este arreglo) | `locate.py` | `test_locate_anchor.py::test_index_and_anchors_cost_grows_linearly` | `growth < MAX_GROWTH`: ×30,0 (1 MB en 1,31 s) |
 | M11 (REQ-022) la línea de un offset contada desde el principio (`src.count("\n", 0, offset)`) | `locate_ts.py` | `test_locate_index_ts.py::test_typescript_index_cost_grows_linearly` y `test_locate_anchor.py::test_index_and_anchors_cost_grows_linearly` | `growth < MAX_GROWTH`: ×72,2 y ×74,0 (1 MB en 9,6 s) |
+| M12 (REQ-004) blancos del lexer con retroceso (`(\s*)` en vez de `(\s*+)`): un NBSP antes de `{` o de `/re/` se lee como palabra | `locate_ts.py` | `test_locate_index_ts.py::test_a_unicode_blank_is_skipped_like_a_space` (los tres blancos) | `assert with_blank.unavailable_reason is None` |
+| M13 (REQ-014) no borrar el `role_reason` de la regla de tablas cuando todo lo contesta el programa | `server.py` | `test_extract_locate_server.py::test_a_table_answered_by_program_has_no_role_reason` | `'role_reason' not in {'role_reason': {'role': 'long', 'reason': 'table', …}}` |
 
 M6 sobrevivió en la primera pasada: el test usaba `intro_heading_line`, cuyo `intro` casaba con un título del índice y el resultado salía igual con y sin el mutante. Se cambió a `heading_line` y ahora lo detecta (commit 380f9d57).
 
@@ -101,5 +103,12 @@ Without a declaration, list what was run. Never invent a command. -->
   - la fila única del reintento;
   - fixtures de 140 KB y de 906 líneas;
   - la skill y la memoria con `located` y `type_mismatch_keys`.
+- Segunda revisión independiente (personal-sdd-result-reviewer, 2026-11-23, diff desde df3f3b19^): confirma cerrados el importante y los menores de la primera, y la equivalencia exacta de `_Lines.hits` y `_BlockSpans`. Hallazgos nuevos:
+  - H1 importante (REQ-004): el lexer rápido devolvía un NBSP (u otro blanco Unicode) delante de `{`, `}`, `/`, comillas o comilla invertida como palabra, porque `(\s*)` cedía un blanco a la clase de identificador; el lexer anterior lo saltaba. Arreglado con `(\s*+)` y su test (M12).
+  - H2 importante (evidencia): esta verificación citaba d58cd50e y la suite en rojo. Actualizada con la corrida sobre la cabeza y el CI del PR.
+  - El arreglo de `role_reason` de la primera revisión no tenía test que lo distinguiera: añadido (M13).
+  - H3 menor, justificado: en el test de anclas las anclas crecen con el fichero, así que mide índice más «anclas × tamaño» en C. Es a propósito: así M10 (búsqueda por línea en Python) sale en rojo. En producción las anclas están acotadas por `max_tokens`.
+  - H4 menor, aceptado: `_anchor_block` sigue recorriendo los contenedores (tablas, viñetas, bloques de código) de Markdown por ancla. Con las anclas acotadas por `max_tokens` el coste es lineal en el tamaño; queda como riesgo.
+  - H5 y H6 menores: la cuenta de mutantes y el comentario de `_FILE_WORDS` en `line_check.py`, arreglados. Las líneas de más de 100 caracteres de la skill y la memoria son prosa en Markdown, fuera de ruff; se dejan.
 - Desviación anotada (REQ-001): `_local_delegate.model_error.raw` y `dropped` pueden llevar texto del modelo, números incluidos. Son diagnóstico del fallo, no valores, y se conservan a propósito.
 - Desviación anotada (REQ-015): `extract_schema._NOT_PLURALS` (windows, macos, news, series…) es una lista corta de palabras acabadas en `s` que no son plurales. Resuelve `soporta_windows`, que el spec pedía `boolean` y que la regla de plural daba `list`.

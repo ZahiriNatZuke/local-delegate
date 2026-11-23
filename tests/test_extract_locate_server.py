@@ -451,6 +451,27 @@ def test_an_answer_by_program_has_no_role(backend, tmp_path):
     assert "role_reason" not in data.get("_local_delegate", {})
 
 
+def test_a_table_answered_by_program_has_no_role_reason(backend, tmp_path):
+    """The table rule marks the role on reading; when the program then answers every field there
+    is no role, so neither the answer nor the usage row may keep that reason."""
+    # small, so that the table rule (only below the size threshold) is the one that marks the role
+    text = (
+        "# Spec\n\n"
+        "- **REQ-001** — First requirement.\n"
+        "- **REQ-002** — Second requirement.\n\n"
+        "| name | value |\n| --- | --- |\n| a | 1 |\n| b | 2 |\n| c | 3 |\n"
+    )
+    path = _write(tmp_path, text, "s.md")
+    _role, _model, table_format = server._extract_role(len(text), text, ["requisitos_con_lineas"])
+    assert table_format is not None, "guard: the table rule marks this input"
+    data = server.local_extract(fields=["requisitos_con_lineas"], path=path)
+    assert backend["calls"] == []
+    assert [it["name"] for it in data["requisitos_con_lineas"]] == ["REQ-001", "REQ-002"]
+    assert "role_reason" not in data.get("_local_delegate", {})
+    [row] = _rows(backend)
+    assert "role_reason" not in row
+
+
 # --- REQ-017 ----------------------------------------------------------------------------------
 
 

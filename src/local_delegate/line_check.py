@@ -910,8 +910,8 @@ def asks_for_files(question: str | None) -> bool:
     return any(w in FILE_QUESTION_WORDS for w in _QUESTION_WORD.findall(_fold(question)))
 
 
-#: #665: the words of those that name the files, in plural: one must be in the field name. A
-#: singular (`fichero_con_lineas`, `file_line`) asks for one file, not the list of all of them.
+#: #665: the plurals that name files. Right after a count word (`changed_files`) they make it
+#: name those files, not count lines (`is_location_field`).
 _FILE_WORDS = frozenset({"ficheros", "archivos", "files", "rutas", "paths"})
 
 

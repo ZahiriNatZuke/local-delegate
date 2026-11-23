@@ -39,10 +39,12 @@ _EXPRESSION_KEYWORDS = frozenset(
 
 #: One match for the common tokens with the blanks before them (1): (2) a word, (3) a number or
 #: (4) a punctuator other than the ones the lexer reads by hand (`/`, quotes, backtick, braces);
-#: or (5) only blanks, before one of those. The token alternatives start with different
-#: characters and none with a blank, so it stays linear.
+#: or (5) only blanks, before one of those. The blanks are possessive (`\s*+`): a word may start
+#: with a Unicode blank such as U+00A0, and giving one back would read it as a word, where the
+#: lexer must skip it as a blank. The token alternatives start with different characters, so it
+#: stays linear.
 _SIMPLE = re.compile(
-    r"(\s*)(?:"
+    r"(\s*+)(?:"
     r"([A-Za-z_$\u00a0-\uffff][\w$\u00a0-\uffff]*)"
     r"|(\.?\d[\w.]*)"
     r"|(===|!==|\.\.\.|=>|==|!=|<=|>=|\?\.|\?\?|&&|\|\||[^\s/'\"`{}])"
