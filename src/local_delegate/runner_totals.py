@@ -12,7 +12,8 @@ So the totals line of the common runners is read from the input:
 - cargo test: `test result: FAILED. 5 passed; 1 failed; 2 ignored; 0 measured; 0 filtered out`;
 - go test -v: one `--- FAIL:` or `--- SKIP:` line per test.
 
-and two categories are kept, failures (failed, errors) and skips (skipped, ignored). Then each
+and three categories are kept, failures (failed and errors), errors alone (#714) and skips
+(skipped, ignored). Then each
 mention of a category in the summary («fallos», «saltos», «skipped», «errors»…) is looked at: if a
 negation («no», «sin», «ni», «ningún», «cero», «without», «none», «0»…) comes before it in the same
 clause, with no figure in between, and the runner counted that category above zero, a warning
@@ -30,9 +31,22 @@ import re
 import unicodedata
 from dataclasses import dataclass, field
 
-__all__ = ["FAILURES", "SKIPS", "Totals", "denied", "totals"]
+__all__ = [
+    "ERRORS",
+    "FAILURES",
+    "SKIPS",
+    "Totals",
+    "denied",
+    "pytest_header",
+    "python_versions",
+    "totals",
+]
 
+#: Failed tests and errors together: what «fallos»/«failures» of a summary talk about.
 FAILURES = "failures"
+#: #714: errors alone (`1 error`): what «errores»/«errors» talk about («1 falló, sin errores» over
+#: `1 failed` is faithful).
+ERRORS = "errors"
 SKIPS = "skips"
 
 #: Lines longer than this are not a runner's totals line (and are not scanned).
@@ -45,8 +59,8 @@ _MAX_TEXT = 2_000_000
 _OUTCOMES: dict[str, str | None] = {
     "passed": None,
     "failed": FAILURES,
-    "error": FAILURES,
-    "errors": FAILURES,
+    "error": ERRORS,
+    "errors": ERRORS,
     "skipped": SKIPS,
     "ignored": SKIPS,
     "xfailed": None,
@@ -79,14 +93,22 @@ class Totals:
 
     counts: dict[str, int] = field(default_factory=dict)
     lines: list[str] = field(default_factory=list)
+    #: #714: the `N outcome` parts of each totals line, as the runner wrote them
+    #: (`216 passed, 3 skipped`), for the line the program adds to the answer.
+    parts: list[str] = field(default_factory=list)
+    #: #714 (F3 of #684): the first line that counts each category above zero, to cite it.
+    line_for: dict[str, str] = field(default_factory=dict)
 
     def __bool__(self) -> bool:
         return bool(self.lines)
 
 
-def _parts(body: str, separator: str) -> dict[str, int] | None:
-    """`body` as `N outcome` parts split on `separator`, or None if one part is not that."""
+def _parts(body: str, separator: str) -> tuple[dict[str, int], list[str]] | None:
+    """`body` as `N outcome` parts split on `separator`, or None if one part is not that.
+
+    The kept counts per category (failures count the errors too), and the parts as written."""
     found: dict[str, int] = {}
+    written: list[str] = []
     pieces = [piece.strip() for piece in body.split(separator)]
     if not pieces or not any(pieces):
         return None
@@ -96,14 +118,18 @@ def _parts(body: str, separator: str) -> dict[str, int] | None:
         match = _PART.fullmatch(piece)
         if match is None:
             return None
+        written.append(piece)
         category = _OUTCOMES[match.group(2)]
+        count = int(match.group(1))
+        if category == ERRORS:
+            found[FAILURES] = found.get(FAILURES, 0) + count
         if category is not None:
-            found[category] = found.get(category, 0) + int(match.group(1))
-    return found
+            found[category] = found.get(category, 0) + count
+    return found, written
 
 
-def _totals_line(line: str) -> dict[str, int] | None:
-    """The kept counts of `line` if it is the totals line of pytest, jest or cargo."""
+def _totals_line(line: str) -> tuple[dict[str, int], list[str]] | None:
+    """The kept counts and the parts of `line` if it is a totals line of pytest, jest or cargo."""
     stripped = line.strip()
     if len(stripped) > _MAX_LINE or not stripped:
         return None
@@ -129,17 +155,23 @@ def totals(source: str) -> Totals:
     go = {FAILURES: 0, SKIPS: 0}
     go_lines: list[str] = []
     for line in source.splitlines():
-        counts = _totals_line(line)
-        if counts is not None:
+        parsed = _totals_line(line)
+        if parsed is not None:
+            counts, written = parsed
             found.lines.append(line.strip())
+            found.parts.append(", ".join(written))
             for category, count in counts.items():
                 found.counts[category] = found.counts.get(category, 0) + count
+                if count > 0:
+                    found.line_for.setdefault(category, line.strip())
             continue
         if len(line) <= _MAX_LINE:
             go_match = _GO_LINE.match(line)
             if go_match is not None:
-                go[FAILURES if go_match.group(1) == "FAIL" else SKIPS] += 1
+                category = FAILURES if go_match.group(1) == "FAIL" else SKIPS
+                go[category] += 1
                 go_lines.append(line.strip())
+                found.line_for.setdefault(category, line.strip())
     if go_lines:
         for category, count in go.items():
             found.counts[category] = found.counts.get(category, 0) + count
@@ -166,20 +198,16 @@ _CATEGORY_WORDS: dict[str, str] = {
             "fallida",
             "fallidas",
             "fallaron",
-            "fallo",
-            "error",
-            "errores",
-            "fallos",
             "failure",
             "failures",
             "failed",
             "fail",
             "fails",
             "failing",
-            "errors",
         ],
         FAILURES,
     ),
+    **dict.fromkeys(["error", "errores", "errors"], ERRORS),
     **dict.fromkeys(
         [
             "salto",
@@ -239,11 +267,90 @@ _CLAUSE_WORDS = frozenset(
     ["y", "pero", "aunque", "mientras", "and", "but", "while", "whereas", "although"]
 )
 
+#: #714: figures written in words (folded). Between a negation and a category word they count the
+#: category, like a figure in digits («No hubo fallos salvo dos omitidas»). «un», «una», «uno»,
+#: «one» are left out: they are also the article («No hubo ni un salto»).
+_FIGURE_WORDS = frozenset(
+    [
+        "dos",
+        "tres",
+        "cuatro",
+        "cinco",
+        "seis",
+        "siete",
+        "ocho",
+        "nueve",
+        "diez",
+        "once",
+        "doce",
+        "trece",
+        "catorce",
+        "quince",
+        "dieciseis",
+        "diecisiete",
+        "dieciocho",
+        "diecinueve",
+        "veinte",
+        "veintiuno",
+        "veintidos",
+        "veintitres",
+        "veinticuatro",
+        "veinticinco",
+        "veintiseis",
+        "veintisiete",
+        "veintiocho",
+        "veintinueve",
+        "treinta",
+        "cuarenta",
+        "cincuenta",
+        "sesenta",
+        "setenta",
+        "ochenta",
+        "noventa",
+        "cien",
+        "ciento",
+        "cientos",
+        "mil",
+        "two",
+        "three",
+        "four",
+        "five",
+        "six",
+        "seven",
+        "eight",
+        "nine",
+        "ten",
+        "eleven",
+        "twelve",
+        "thirteen",
+        "fourteen",
+        "fifteen",
+        "sixteen",
+        "seventeen",
+        "eighteen",
+        "nineteen",
+        "twenty",
+        "thirty",
+        "forty",
+        "fifty",
+        "sixty",
+        "seventy",
+        "eighty",
+        "ninety",
+        "hundred",
+        "hundreds",
+        "thousand",
+        "thousands",
+    ]
+)
+
 #: How many words back from a category word a negation may be.
 _REACH = 6
 
 #: A word, a figure or a clause mark: one class per alternative, no nesting, no backtracking.
-_TOKEN = re.compile(r"[^\W\d_]+|\d+(?:[.,]\d+)?|[.;:!?()\[\]\n]")
+#: #714: the comma is a clause mark too («Sin fallos, cuatro pruebas omitidas»); a decimal comma
+#: stays inside its figure (second alternative).
+_TOKEN = re.compile(r"[^\W\d_]+|\d+(?:[.,]\d+)?|[.,;:!?()\[\]\n]")
 
 
 def _negated_categories(summary: str) -> list[tuple[str, str]]:
@@ -262,7 +369,12 @@ def _negated_categories(summary: str) -> list[tuple[str, str]]:
                 found.append((category, summary[start:end]))
                 seen.add(category)
                 break
-            if word[0].isdigit() or not word[0].isalpha() or word in _CLAUSE_WORDS:
+            if (
+                word[0].isdigit()
+                or not word[0].isalpha()
+                or word in _CLAUSE_WORDS
+                or word in _FIGURE_WORDS
+            ):
                 break  # a figure counts the category; a mark or a conjunction ends the clause
     return found
 
@@ -280,3 +392,48 @@ def denied(summary: str, source: str) -> list[tuple[str, str, int]]:
         for category, clause in _negated_categories(summary)
         if found.counts.get(category, 0) > 0
     ]
+
+
+#: #714: the session header of pytest (`platform win32 -- Python 3.11.15, pytest-8.3.4, …`). Read
+#: per line of at most `_MAX_LINE` characters; bounded runs and no nesting: no backtracking.
+_PYTEST_HEADER = re.compile(
+    r"platform \S{1,40} -- Python (\d{1,3}\.\d{1,3}(?:\.\d{1,3})?)\S{0,20}, "
+    r"pytest-(\d{1,3}(?:\.\d{1,3}){0,3})"
+)
+
+#: A Python version named in a summary (`Python 3.11.5`, `python 3.12`), not cut in the middle.
+_PYTHON_IN_TEXT = re.compile(r"\b[Pp]ython\s{1,3}v?(\d{1,3}\.\d{1,3}(?:\.\d{1,3})?)(?![.\d]?\d)")
+
+
+def pytest_header(source: str) -> tuple[str, str] | None:
+    """(Python, pytest) versions of the first pytest session header in `source`, or None."""
+    if not source or len(source) > _MAX_TEXT:
+        return None
+    for line in source.splitlines():
+        if len(line) > _MAX_LINE or "-- Python " not in line:
+            continue
+        match = _PYTEST_HEADER.search(line)
+        if match is not None:
+            return match.group(1), match.group(2)
+    return None
+
+
+def python_versions(summary: str, source: str) -> list[str]:
+    """The Python versions `summary` names that are not the one of the pytest header of `source`.
+
+    A shorter form of the same version (`Python 3.11` for 3.11.15) is not another one. Empty
+    without a header: then there is nothing to compare with."""
+    if not summary or len(summary) > _MAX_TEXT:
+        return []
+    header = pytest_header(source)
+    if header is None:
+        return []
+    real = header[0]
+    other: list[str] = []
+    for match in _PYTHON_IN_TEXT.finditer(summary):
+        written = match.group(1)
+        if written == real or real.startswith(written + "."):
+            continue
+        if written not in other:
+            other.append(written)
+    return other

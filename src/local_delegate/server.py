@@ -8118,18 +8118,61 @@ def _test_totals_notice(
 
     def _notice(text: str, truncated: bool) -> str:
         found = runner_totals.denied(text, content)
-        text = before(text, truncated)
+        answer = text
+        text = _test_figures(content, answer, before(text, truncated))
         if not found:
             return text
         details = "; ".join(
             i18n.t(f"mcp.warning.denied_{category}", clause=clause, count=count)
             for category, clause, count in found
         )
-        line = runner_totals.totals(content).lines[-1][:200]
+        # #714 (F3 of #684): the line that counts the first denied category, not the last one.
+        counted = runner_totals.totals(content)
+        line = counted.line_for.get(found[0][0], counted.lines[-1])[:200]
         notice = i18n.t("mcp.warning.summary_denies_test_totals", details=details, line=line)
         return f"{text.rstrip()}\n\n{WARNING_MARKER}{notice}]"
 
     return _notice
+
+
+#: #714: how many totals lines the program line lists before saying how many more there are.
+_TEST_FACTS_LINES = 3
+
+
+def _test_figures(content: str, answer: str, text: str) -> str:
+    """#714: `text`, then the figures of a test output, read by the program, and a warning when
+    `answer` (what the model wrote) names another Python version than the pytest header.
+
+    The model rewrote them live («Python 3.11.5» for 3.11.15, «Veintiocho» tests for 216): what
+    the program can read is not asked of the model. The line gives the `N outcome` parts of each
+    totals line of pytest, jest or cargo as the runner wrote them and, with a pytest header, the
+    Python and pytest versions. Nothing is added without a totals line, nor when the answer already
+    quotes every totals part verbatim and names no other Python version. The figures of the prose
+    are not compared (a «3 fallos en test_a.py» of one file is fair): the line sits next to them.
+    """
+    counted = runner_totals.totals(content)
+    if not counted.parts:
+        return text
+    other = runner_totals.python_versions(answer, content)
+    if not other and all(part in answer for part in counted.parts):
+        return text  # the answer already carries the runner's own totals, verbatim
+    totals = " | ".join(counted.parts[:_TEST_FACTS_LINES])
+    rest = len(counted.parts) - _TEST_FACTS_LINES
+    if rest > 0:
+        totals += i18n.t("mcp.test_facts.more", count=rest)
+    header = runner_totals.pytest_header(content)
+    versions = (
+        i18n.t("mcp.test_facts.versions", python=header[0], pytest=header[1]) if header else ""
+    )
+    out = f"{text.rstrip()}\n\n{i18n.t('mcp.test_facts.line', totals=totals, versions=versions)}"
+    if other and header is not None:
+        notice = i18n.t(
+            "mcp.warning.summary_other_python",
+            written=", ".join(f"«Python {version}»" for version in other),
+            python=header[0],
+        )
+        out = f"{out}\n\n{WARNING_MARKER}{notice}]"
+    return out
 
 
 def _listed(items: list[str]) -> str:
@@ -9580,7 +9623,9 @@ def local_lint_summary(
             checked = _lint_invented(answer, log)
             checked = _lint_not_mentioned(_lint_other_files(checked, left_out), log, failures)
             # Issue #688: and an entry for a file pytest names only in clean progress lines.
-            return _lint_check_clean(_lint_check_failures(checked, failures), log, failures)
+            checked = _lint_check_clean(_lint_check_failures(checked, failures), log, failures)
+            # #714: and the totals and versions of the test output, by program.
+            return _test_figures(log, answer, checked)
 
         lint_mapped = _chat_map_reduce(
             model,
@@ -9620,19 +9665,28 @@ def local_lint_summary(
         # Issue #525: both roles flag the files the summary names that the log does not.
         # Issue #641: and an answer that does not match the failures of a pytest log.
         # Issue #688: and an entry for a file pytest names only in clean progress lines.
+        # #714: and the totals and versions of the test output, by program.
         postprocess=(
-            lambda answer, _t: _lint_check_clean(
-                _lint_check_failures(
-                    _lint_not_mentioned(_lint_invented(answer, log), log, failures), failures
-                ),
+            lambda answer, _t: _test_figures(
                 log,
-                failures,
+                answer,
+                _lint_check_clean(
+                    _lint_check_failures(
+                        _lint_not_mentioned(_lint_invented(answer, log), log, failures), failures
+                    ),
+                    log,
+                    failures,
+                ),
             )
         )
         if role == "long"
         else (
-            lambda answer, _t: _lint_check_clean(
-                _lint_check_failures(_lint_invented(answer, log), failures), log, failures
+            lambda answer, _t: _test_figures(
+                log,
+                answer,
+                _lint_check_clean(
+                    _lint_check_failures(_lint_invented(answer, log), failures), log, failures
+                ),
             )
         ),
     )

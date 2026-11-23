@@ -15,6 +15,14 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ### Corregido
 
+- **Resumen de salidas de tests: totales y versión por programa, y sin avisos falsos de totales**
+  (#714). `local_summarize` y `local_lint_summary` terminan con una línea escrita por el programa
+  con los totales del runner (pytest, jest, cargo) tal como los da, y la versión de Python y de
+  pytest de la cabecera: en vivo el modelo escribió «Python 3.11.5» por 3.11.15 y «Veintiocho»
+  pruebas por 216. Si el resumen nombra otra versión de Python, sale un aviso. El aviso del #684
+  deja de saltar sobre resúmenes fieles: la coma y una cifra en letras cortan la negación, y
+  «errores» solo se compara con los `error`/`errors` del runner («1 falló, sin errores» sobre
+  `1 failed` ya no avisa); el aviso cita la línea del runner que cuenta la categoría negada.
 - **Codex: una lectura literal levanta siempre el guard de escritura** (#707). Con el interruptor
   de lectura apagado (`LD_HOOK_READ_BLOCK=0`, `~/.claude/local-delegate-block-off`), el backend
   marcado caído o una escritura en el mismo comando, `codex-tool-guard` dejaba pasar la lectura sin
