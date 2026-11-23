@@ -4,9 +4,9 @@
   "title": "Codex en Windows: hooks que arrancan en PowerShell, cmd y bash (#718)",
   "mode": "lite",
   "traceability": "strict",
-  "status": "verifying",
+  "status": "result-review",
   "createdAt": "2026-11-23T18:52:12.138Z",
-  "updatedAt": "2026-11-23T19:14:50.448Z",
+  "updatedAt": "2026-11-23T19:28:37.220Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -98,6 +98,13 @@
       "at": "2026-11-23T19:14:50.448Z",
       "evidence": "suite local 8669 passed (1 fallo del detector de nombres arreglado y repasado: 146 passed); ruff check y format limpios; tests de shells rojos en main",
       "actor": "agente-codex-hooks-pwsh"
+    },
+    {
+      "type": "transition",
+      "from": "verifying",
+      "to": "result-review",
+      "at": "2026-11-23T19:28:37.220Z",
+      "reason": "dos jueces: conforms-with-notes; hallazgos F1-F5 arreglados"
     }
   ]
 }

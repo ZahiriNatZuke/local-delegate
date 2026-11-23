@@ -138,16 +138,15 @@ def short_path(path: str) -> str | None:
     if sys.platform != "win32":
         return None
     import ctypes
+    import ctypes.wintypes
 
     try:
-        from ctypes import wintypes
-
         # A private handle: `argtypes` set on `ctypes.windll.kernel32` would be shared by the
         # whole process (the convention of `server.py`).
         kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
         get = kernel32.GetShortPathNameW
-        get.argtypes = [wintypes.LPCWSTR, wintypes.LPWSTR, wintypes.DWORD]
-        get.restype = wintypes.DWORD
+        get.argtypes = [ctypes.wintypes.LPCWSTR, ctypes.wintypes.LPWSTR, ctypes.wintypes.DWORD]
+        get.restype = ctypes.wintypes.DWORD
         size = get(path, None, 0)
         if not size:
             return None
