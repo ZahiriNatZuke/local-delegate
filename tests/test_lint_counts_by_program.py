@@ -264,3 +264,67 @@ def test_a_total_word_followed_by_a_code_is_the_figure_of_that_code():
     assert lint_patterns.count_mismatches("- `pkg/core.py`: 3 errores de E501\n", per_file) == [
         lint_patterns.CountMismatch("pkg/core.py", "E501", 3, 2)
     ]
+
+
+#: A code in two files: the figure of one file is not the total of the log.
+SHARED = "pkg/a.py:1:1: E501 long\npkg/a.py:2:1: E501 long\npkg/b.py:1:1: E501 long\n"
+
+
+def test_a_paragraph_of_a_file_is_not_judged_against_the_whole_log():
+    """Review of #717, R7: a paragraph without indent under a heading entry, or a line that names a
+    file in the middle, speaks of that file: it is not a figure of the whole log."""
+    per_file = lint_patterns.per_file_code_counts(SHARED)
+    for answer in (
+        "### pkg/a.py\nTiene E501 ×2, en las líneas 1 y 2.\n",
+        "El fichero `pkg/b.py` tiene E501 ×1.\n",
+        "### pkg/a.py\n- E501 ×2\n\n### pkg/b.py\nSolo E501 ×1.\n",
+    ):
+        assert lint_patterns.count_mismatches(answer, per_file) == [], answer
+    # Control: a wrong figure in the entry, and a figure of the whole log, still warn.
+    assert lint_patterns.count_mismatches("### pkg/a.py\n- E501 ×3\n", per_file) == [
+        lint_patterns.CountMismatch("pkg/a.py", "E501", 3, 2)
+    ]
+    closed = "### pkg/a.py\n- E501 ×2\n\nPor código:\n- E501 ×5\n"
+    assert lint_patterns.count_mismatches(closed, per_file) == [
+        lint_patterns.CountMismatch(None, "E501", 5, 3)
+    ]
+    assert lint_patterns.count_mismatches("Por código: E501 ×2\n", per_file) == [
+        lint_patterns.CountMismatch(None, "E501", 2, 3)
+    ]
+
+
+def test_the_lines_of_the_program_go_together_before_the_warnings(captured):
+    """Review of #717, R6: the totals of the tests (#715) and the counts of the lint go right
+    after the summary, in that order, and the warnings close the answer."""
+    log = SMOKE + "1 failed, 3 passed in 0.12s\n"
+    captured.answer = "- `pkg/core.py`: 3 errores\n- `pkg/ghost.py`: 1 error\n"
+    out = server.local_lint_summary(text=log)
+    tests_line = out.index("Totales de la salida de tests")
+    lint_line = out.index("Recuentos del log")
+    first_warning = out.index(server.WARNING_MARKER)
+    assert out.index("pkg/core.py") < tests_line < lint_line < first_warning
+
+
+def test_bullets_after_a_paragraph_of_a_heading_entry_are_not_given_to_that_file():
+    """Second review of #717 (H1): a paragraph without `:` under `### b.py` leaves its bullets
+    to nobody: they are not the file's, and the program cannot tell they are the log's."""
+    per_file = lint_patterns.per_file_code_counts(SHARED)
+    answer = "### pkg/b.py\n- E501 ×1\n\nEn total por código\n- E501 ×3\n"
+    assert lint_patterns.count_mismatches(answer, per_file) == []
+    # Control: a heading closes that state and its entry is judged again.
+    again = answer + "\n### pkg/a.py\n- E501 ×4\n"
+    assert lint_patterns.count_mismatches(again, per_file) == [
+        lint_patterns.CountMismatch("pkg/a.py", "E501", 4, 2)
+    ]
+
+
+def test_a_line_that_names_files_warns_when_its_figure_is_neither_theirs_nor_the_log_s():
+    """Second review of #717 (H2): `E501: 7 (core.py)` is wrong for the file and for the log."""
+    per_file = lint_patterns.per_file_code_counts(SMOKE)
+    assert lint_patterns.count_mismatches("Por código:\n- E501: 7 (core.py)\n", per_file) == [
+        lint_patterns.CountMismatch(None, "E501", 7, 2)
+    ]
+    shared = lint_patterns.per_file_code_counts(SHARED)
+    # The figure of the named file, or of the whole log, is fair.
+    assert lint_patterns.count_mismatches("- E501 ×1 en `pkg/b.py`\n", shared) == []
+    assert lint_patterns.count_mismatches("- E501 ×3, sobre todo en `pkg/a.py`\n", shared) == []

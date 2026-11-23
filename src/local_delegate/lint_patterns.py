@@ -434,6 +434,18 @@ def _is_bullet(line: str) -> bool:
     return text.startswith(("- ", "* ", "+ ", "• ")) or _NUMBERED.match(text) is not None
 
 
+def _is_paragraph(line: str) -> bool:
+    """A top-level line of prose: not indented, not a bullet, a heading or bold, and not an
+    introducer that ends with `:` (`Por código:` opens the summary per code)."""
+    text = line.strip()
+    return (
+        line[0] not in " \t"
+        and not _is_bullet(line)
+        and not text.startswith(("#", "**", ">", "|"))
+        and not text.endswith(":")
+    )
+
+
 def _code_figures(line: str) -> list[tuple[str, int | None]]:
     """(code, figure or `None`) of each rule code the line names, outside its file tokens."""
     pieces, last = [], 0
@@ -476,9 +488,11 @@ def count_mismatches(answer: str, per_file: dict[str, Counter[str]]) -> list[Cou
     goes on it, and so does a bullet under an entry that is a heading. In an entry, its first total
     (`3 errores`) is compared with the file's, each code with a figure next to it (`E501 ×2`) with
     the file's count, and a code of the log the file does not have is named (a line that also names
-    another file of the log is context, not part of the entry). Outside the entries only a figure
-    next to a code counts, against the whole log. A line without figures says nothing: the line of
-    the program sits next to it.
+    another file of the log is context, not part of the entry). A paragraph of prose under a heading
+    entry, and a line outside the entries that names a file of the log in the middle, say nothing:
+    their figures may be of that file. Outside the entries only a figure next to a code counts,
+    against the whole log. A line without figures says nothing: the line of the program sits next
+    to it.
     """
     answer = MARKDOWN_ESCAPE.sub(r"\1", answer)
     totals: Counter[str] = Counter()
@@ -514,14 +528,28 @@ def count_mismatches(answer: str, per_file: dict[str, Counter[str]]) -> list[Cou
                 and int(first.group(1)) != sum(per_file[entry].values())
             ):
                 _add(CountMismatch(entry, None, int(first.group(1)), sum(per_file[entry].values())))
+        elif entry is not None and heading_entry and _is_paragraph(line):
+            # Review of #717 (R7): a paragraph under `### file` speaks of that file in prose; the
+            # program cannot tell its figures from the file's or the log's, so it says nothing,
+            # nor about the bullets under it, until a heading, bold line or `…:` closes it.
+            entry = ""
+            continue
         elif not (line[0] in " \t" or (heading_entry and _is_bullet(line))):
             entry = None
         if entry == "":
             continue
         if entry is None:
+            # Review of #717 (R7): a line that names files of the log in the middle may give the
+            # figures of those files or of the whole log; only a figure that is neither warns.
+            named = [f for f in per_file if mentions(f, line)]
             for code, figure in _code_figures(line):
-                if code in totals and figure is not None and figure != totals[code]:
+                if code not in totals or figure is None or figure == totals[code]:
+                    continue
+                in_named = sum(per_file[f].get(code, 0) for f in named)
+                if not named:
                     _add(CountMismatch(None, code, figure, totals[code]))
+                elif figure != in_named:
+                    _add(CountMismatch(None, code, figure, in_named))
             continue
         if _names_other(line, entry, per_file):
             continue

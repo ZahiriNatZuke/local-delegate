@@ -26,6 +26,7 @@ Without a declaration, list what was run. Never invent a command. -->
 | --- | --- | --- | --- |
 | `pytest -q -n 2` (con `pesado.sh`) | 2026-11-23 | pass | 8659 pasados, 31 saltados; dos tests de llama-swap que fallaron una vez bajo carga pasan solos y en las corridas siguientes |
 | `ruff check src tests` y `ruff format --check` | 2026-11-23 | pass | sin hallazgos |
+| `pytest -q -n 2` (con `pesado.sh`), PR #722 rebasado sobre main | 2026-11-23 | pass | 8722 pasados, 32 saltados; ruff limpio |
 | prueba en vivo en proceso (`test-window` `w-20261123T184924Z`, label `lint-0-54-1`) | 2026-11-23 | pass | antes/después con ruff, tsc y eslint, 2 corridas cada uno |
 
 ## Quality checks
@@ -38,4 +39,4 @@ Without a declaration, list what was run. Never invent a command. -->
 ## Deviations and residual risk
 
 - En vivo el modelo acertó las cifras: el fallo del humo no se reprodujo, así que el aviso se verifica con backend simulado; en vivo se verifica la línea y la ausencia de avisos falsos.
-- Deuda menor anotada en `review.md` (R6, R7).
+- R6 y R7 arreglados en el PR #722 (suite completa en verde con `pesado.sh -n 2`, 8686 pasados antes de los arreglos de su revisión; ver la fila de la corrida final).

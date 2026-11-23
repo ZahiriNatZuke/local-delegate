@@ -305,3 +305,12 @@ def test_the_program_line_in_english(monkeypatch, tmp_path):
     )
     assert "Totals of the test output (read by the program" in result
     assert "the summary names «Python 3.11.5»" in result
+
+
+def test_the_program_line_goes_before_the_warnings(monkeypatch, tmp_path):
+    """Review of #717, R6: in `local_summarize` too, the program line goes right after the summary
+    and the warnings (here, an acronym the input does not have) close the answer."""
+    answer = "La suite corrió en el clúster QWZE (Quick Web Zone Exchange) con Python 3.11.15; todo en orden."
+    result = _result(_call(monkeypatch, tmp_path, server.local_summarize, answer, text=PYTEST_LOG))
+    assert "QWZE" in result[result.index(server.WARNING_MARKER) :]  # control: there is a warning
+    assert result.index("216 passed, 3 skipped") < result.index(server.WARNING_MARKER)

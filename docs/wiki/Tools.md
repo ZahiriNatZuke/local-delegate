@@ -135,8 +135,8 @@ compara con los `error`/`errors` del runner; «fallos», con fallos y errores ju
 resumen no cambia. Para salida de tests la tool indicada es `local_lint_summary`.
 
 **Totales y versión por programa (#714).** Con una línea de totales de pytest, jest o cargo en la
-entrada, la respuesta de `local_summarize` y de `local_lint_summary` termina con una línea que
-escribe el programa: «Totales de la salida de tests (leídos por programa, mandan sobre el texto):
+entrada, la respuesta de `local_summarize` y de `local_lint_summary` lleva, justo tras el resumen
+y antes de los avisos, una línea que escribe el programa: «Totales de la salida de tests (leídos por programa, mandan sobre el texto):
 216 passed, 3 skipped · Python 3.11.15, pytest 8.3.4.» (la versión, solo con cabecera de pytest).
 El modelo cambiaba esas cifras («Python 3.11.5», «Veintiocho» pruebas por 216); lo que el programa
 sabe leer no se le pide. Si el resumen nombra otra versión de Python que la cabecera, además sale
@@ -414,15 +414,17 @@ acabar cortado, y entonces la respuesta lo avisa; lo que se pierde ahí lo cubre
 programa.
 
 **Recuentos por fichero y por código por programa (#717).** Con un log que dice el fichero de cada
-código (ruff/flake8 conciso, ruff completo, tsc), la respuesta termina, en cualquier tamaño, con una
-línea que escribe el programa: «Recuentos del log (leídos por programa, mandan sobre el texto):
+código (ruff/flake8 conciso, ruff completo, tsc), la respuesta lleva, en cualquier tamaño, una línea
+que escribe el programa, tras la de totales de tests y antes de los avisos: «Recuentos del log (leídos por programa, mandan sobre el texto):
 pkg/core.py 3 (E501 2, E741 1) | pkg/util.py 1 (F401 1) · por código: E501 2, E741 1, F401 1.»
 (hasta diez ficheros y diez códigos, y cuántos más hay). Si el resumen da otro total para un
 fichero, otra cifra para un código (dentro de la entrada de un fichero o fuera de las entradas), o le
 pone a un fichero un código que el log no le da, sale además `[local-delegate warning: el resumen da
 otras cifras que el log: «pkg/core.py»: F401 (el log no lo tiene en ese fichero); …]`. Los números
-de línea y columna no cuentan como cifras. Con otros formatos (eslint stylish, pytest, CI) no se
-añade nada.
+de línea y columna no cuentan como cifras. Un párrafo sin sangría bajo un título de fichero
+(`### a.py`) y lo que cuelga de él no se juzgan; una línea que nombra ficheros del log a media
+línea solo avisa si su cifra no es ni la de esos ficheros ni la del log entero. Con otros
+formatos (eslint stylish, pytest, CI) no se añade nada.
 
 **Log de pytest con fallos.** Si el log trae el resumen de pytest (`FAILED …`/`ERROR …`) y sus
 líneas cuadran con la de totales («1 failed, 660 passed in …»), el programa lee de ahí los fallos

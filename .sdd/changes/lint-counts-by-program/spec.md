@@ -23,6 +23,9 @@ nombra. Sin formato reconocido (eslint stylish, biome, pytest, CI), la salida es
 - **REQ-002** — Si una entrada del resumen da a un fichero otro total, otra cifra para un código,
   o un código que ese fichero no tiene en el log, o una línea fuera de las entradas da otra cifra
   para un código, la respuesta lleva un aviso que nombra cada discrepancia con la cifra del log.
+  Excepciones (revisión, R7): un párrafo sin sangría bajo un título de fichero y lo que cuelga de
+  él no se juzgan; una línea fuera de las entradas que nombra ficheros del log solo avisa si su
+  cifra no es ni la de esos ficheros ni la del log entero.
   - Request: "Y que avise si el resumen del modelo da otra cifra para un fichero o un código"
   - Verify: test tests/test_lint_counts_by_program.py
 - **REQ-003** — Un resumen con las cifras correctas no lleva aviso (sin falsos positivos con
