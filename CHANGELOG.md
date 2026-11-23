@@ -38,9 +38,10 @@ el modelo nuevo.
 - **`local_lint_summary` y `local_summarize`: las líneas del programa van juntas y sin avisos de
   más** (revisión del #717). La línea de totales de tests (#715) iba detrás de los avisos y la de
   recuentos del lint delante; ahora las dos van tras el resumen, en ese orden, y los avisos cierran
-  la respuesta. Y un párrafo sin sangría bajo un título de fichero (`### a.py`), o una línea que
-  nombra un fichero del log a media línea, ya no se compara con el total del log entero: con un
-  código repartido en varios ficheros daba un aviso de más.
+  la respuesta. Y un párrafo sin sangría bajo un título de fichero (`### a.py`) ya no se compara
+  con el total del log entero (con un código repartido en varios ficheros daba un aviso de más);
+  una línea que nombra ficheros del log a media línea solo avisa si su cifra no es ni la de esos
+  ficheros ni la del log.
 - **`local_summarize` troceado: una sección vacía dos veces ya no deja su título en el cuerpo**
   (#691). Si una sección salía vacía en su trozo y otra vez en el reintento, su título se quedaba
   vacío en el cuerpo y además se nombraba en el aviso. Ahora sale una sola vez, en el aviso.

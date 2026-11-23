@@ -34,10 +34,15 @@ decides and the decision goes in Resolution). -->
 | R3 | `E501 (10, 22)`, `(10 y 22)`, `(10-22)` leídos como cifra | menor | menor (L4) | confirmed | arreglado en `_AFTER_CODE`; tests |
 | R4 | Negrita `**Por código:**` tomada como viñeta de la última entrada de título | menor | bloqueante (L1) | confirmed | arreglado: viñeta exige marcador y espacio; test rojo antes |
 | R5 | Nombre base que comparten dos ficheros del log | menor | — | suspected | arreglado: la entrada no se juzga; test |
-| R6 | Orden: la línea de totales de tests (#715) va detrás de los avisos y esta delante | menor | menor (L6) | confirmed | spec ajustada; unificar el orden de #715 queda como deuda (cambiaría sus tests) |
-| R7 | Párrafo sin sangría bajo una entrada de título o fichero a media línea se compara con el total del log | menor | menor (L3) | confirmed | deuda: sin test; con un código en varios ficheros puede dar un aviso de más |
+| R6 | Orden: la línea de totales de tests (#715) va detrás de los avisos y esta delante | menor | menor (L6) | confirmed | arreglado en el PR #722: `_before_warnings` para las dos líneas; tests de orden en lint y summarize, rojos antes |
+| R7 | Párrafo sin sangría bajo una entrada de título o fichero a media línea se compara con el total del log | menor | menor (L3) | confirmed | arreglado en el PR #722: el párrafo y sus viñetas no se juzgan; la línea que nombra ficheros avisa solo si su cifra no es ni la de ellos ni la del log; tests rojos antes |
 | R8 | `MARKDOWN_ESCAPE.sub` con reemplazo vacío en `_names_other` | — | menor (L5) | suspected | arreglado (`\1`) |
 
 ## Required follow-up
 
-- R6 y R7 quedan anotados como deuda menor; no bloquean.
+- R6 y R7 arreglados en el PR #722. Su revisión independiente (conforms-with-notes) dejó H1 (un
+  párrafo dejaba la entrada abierta y daba un aviso de más a las viñetas siguientes), H2 (callar
+  toda línea que nombra un fichero perdía avisos reales), H4 (sin test del orden en
+  `local_summarize`) y H5 (wiki desfasada): los cuatro arreglados en el mismo PR, con tests rojos
+  antes. H3 (un código sin viñeta bajo un título queda sin juzgar) se acepta: antes se comparaba
+  con el total del log, que tampoco era correcto.

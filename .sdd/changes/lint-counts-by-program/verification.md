@@ -38,4 +38,4 @@ Without a declaration, list what was run. Never invent a command. -->
 ## Deviations and residual risk
 
 - En vivo el modelo acertó las cifras: el fallo del humo no se reprodujo, así que el aviso se verifica con backend simulado; en vivo se verifica la línea y la ausencia de avisos falsos.
-- Deuda menor anotada en `review.md` (R6, R7).
+- R6 y R7 arreglados en el PR #722 (suite completa en verde con `pesado.sh -n 2`, 8686 pasados antes de los arreglos de su revisión; ver la fila de la corrida final).

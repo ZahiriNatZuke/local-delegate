@@ -530,20 +530,26 @@ def count_mismatches(answer: str, per_file: dict[str, Counter[str]]) -> list[Cou
                 _add(CountMismatch(entry, None, int(first.group(1)), sum(per_file[entry].values())))
         elif entry is not None and heading_entry and _is_paragraph(line):
             # Review of #717 (R7): a paragraph under `### file` speaks of that file in prose; the
-            # program cannot tell its figures from the file's or the log's, so it says nothing.
+            # program cannot tell its figures from the file's or the log's, so it says nothing,
+            # nor about the bullets under it, until a heading, bold line or `…:` closes it.
+            entry = ""
             continue
         elif not (line[0] in " \t" or (heading_entry and _is_bullet(line))):
             entry = None
         if entry == "":
             continue
         if entry is None:
-            # Review of #717 (R7): a line that names a file of the log in the middle gives the
-            # figures of that file, not of the whole log.
-            if any(mentions(f, line) for f in per_file):
-                continue
+            # Review of #717 (R7): a line that names files of the log in the middle may give the
+            # figures of those files or of the whole log; only a figure that is neither warns.
+            named = [f for f in per_file if mentions(f, line)]
             for code, figure in _code_figures(line):
-                if code in totals and figure is not None and figure != totals[code]:
+                if code not in totals or figure is None or figure == totals[code]:
+                    continue
+                in_named = sum(per_file[f].get(code, 0) for f in named)
+                if not named:
                     _add(CountMismatch(None, code, figure, totals[code]))
+                elif figure != in_named:
+                    _add(CountMismatch(None, code, figure, in_named))
             continue
         if _names_other(line, entry, per_file):
             continue
