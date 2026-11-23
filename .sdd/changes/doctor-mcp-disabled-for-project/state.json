@@ -4,9 +4,9 @@
   "title": "doctor avisa si el MCP local-delegate está deshabilitado para el proyecto en Claude Code (#705)",
   "mode": "lite",
   "traceability": "strict",
-  "status": "verifying",
+  "status": "closed",
   "createdAt": "2026-11-23T12:34:17.515Z",
-  "updatedAt": "2026-11-23T12:52:36.437Z",
+  "updatedAt": "2026-11-23T17:32:52.660Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -27,16 +27,16 @@
       "actor": "implementer"
     },
     "conformance": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-11-23T17:32:46.426Z",
+      "evidence": "review.md con dos jueces (standard): REQ-001..004 implementados y verificados; A conforms, B conforms-with-notes (H4 menor en update); PR #711 mezclado y main 0696df14 con 20/20 checks en verde",
+      "actor": "user"
     },
     "memory": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-11-23T17:32:51.955Z",
+      "evidence": "nota del vault projects/local-delegate/jornada-2026-11-23-causa-comun-y-0-54-0.md, sección «Jornada 2026-11-23»",
+      "actor": "user"
     }
   },
   "history": [
@@ -98,6 +98,43 @@
       "at": "2026-11-23T12:52:36.437Z",
       "evidence": "suite 8379 pasados con pesado.sh -n 2; ruff limpio; tests nuevos rojos antes/verdes después",
       "actor": "implementer"
+    },
+    {
+      "type": "transition",
+      "from": "verifying",
+      "to": "result-review",
+      "at": "2026-11-23T17:32:46.018Z",
+      "reason": "quality aprobada; revisión de dos jueces en review.md"
+    },
+    {
+      "type": "gate",
+      "gate": "conformance",
+      "status": "approved",
+      "at": "2026-11-23T17:32:46.426Z",
+      "evidence": "review.md con dos jueces (standard): REQ-001..004 implementados y verificados; A conforms, B conforms-with-notes (H4 menor en update); PR #711 mezclado y main 0696df14 con 20/20 checks en verde",
+      "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "memory",
+      "status": "approved",
+      "at": "2026-11-23T17:32:51.955Z",
+      "evidence": "nota del vault projects/local-delegate/jornada-2026-11-23-causa-comun-y-0-54-0.md, sección «Jornada 2026-11-23»",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "result-review",
+      "to": "closing",
+      "at": "2026-11-23T17:32:52.306Z",
+      "reason": "quality, conformance y memory aprobadas"
+    },
+    {
+      "type": "transition",
+      "from": "closing",
+      "to": "closed",
+      "at": "2026-11-23T17:32:52.660Z",
+      "reason": "mezclado en main y publicado en la 0.54.0"
     }
   ]
 }

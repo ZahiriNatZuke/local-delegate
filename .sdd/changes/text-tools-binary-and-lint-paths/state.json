@@ -4,9 +4,9 @@
   "title": "Tools de texto: rechazo de binarios y rutas exactas en lint_summary",
   "mode": "lite",
   "traceability": "strict",
-  "status": "result-review",
+  "status": "closed",
   "createdAt": "2026-11-23T10:56:47.749Z",
-  "updatedAt": "2026-11-23T12:13:48.108Z",
+  "updatedAt": "2026-11-23T17:32:48.374Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -33,10 +33,10 @@
       "actor": "cerrar-688-y-revisar-709"
     },
     "memory": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-11-23T17:32:47.606Z",
+      "evidence": "nota del vault projects/local-delegate/jornada-2026-11-23-causa-comun-y-0-54-0.md, sección «Jornada 2026-11-23»",
+      "actor": "user"
     }
   },
   "history": [
@@ -113,6 +113,28 @@
       "at": "2026-11-23T12:13:48.108Z",
       "evidence": "review.md con dos jueces (standard): REQ-001..010 implementados y verificados, 15 hallazgos cerrados o justificados; prueba en vivo de #688 en proceso (aviso 0/3 -> 3/3); PR #709 con todos los checks en verde (gh pr checks), CLEAN",
       "actor": "cerrar-688-y-revisar-709"
+    },
+    {
+      "type": "gate",
+      "gate": "memory",
+      "status": "approved",
+      "at": "2026-11-23T17:32:47.606Z",
+      "evidence": "nota del vault projects/local-delegate/jornada-2026-11-23-causa-comun-y-0-54-0.md, sección «Jornada 2026-11-23»",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "result-review",
+      "to": "closing",
+      "at": "2026-11-23T17:32:47.966Z",
+      "reason": "quality, conformance y memory aprobadas"
+    },
+    {
+      "type": "transition",
+      "from": "closing",
+      "to": "closed",
+      "at": "2026-11-23T17:32:48.374Z",
+      "reason": "mezclado en main y publicado en la 0.54.0"
     }
   ]
 }

@@ -4,9 +4,9 @@
   "title": "local_extract: las líneas las calcula el programa y el esquema tiene tipos por campo (#692, #694, #696, #697, #698)",
   "mode": "standard",
   "traceability": "strict",
-  "status": "result-review",
+  "status": "closed",
   "createdAt": "2026-11-23T11:00:54.017Z",
-  "updatedAt": "2026-11-23T17:09:44.289Z",
+  "updatedAt": "2026-11-23T17:32:51.610Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -33,10 +33,10 @@
       "actor": "revisores-independientes"
     },
     "memory": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-11-23T17:32:50.910Z",
+      "evidence": "nota del vault projects/local-delegate/jornada-2026-11-23-causa-comun-y-0-54-0.md, sección «Jornada 2026-11-23»",
+      "actor": "user"
     }
   },
   "history": [
@@ -127,6 +127,28 @@
       "to": "result-review",
       "at": "2026-11-23T17:09:44.289Z",
       "reason": "quality y conformance aprobadas; CI 22/22 en a8c2574f"
+    },
+    {
+      "type": "gate",
+      "gate": "memory",
+      "status": "approved",
+      "at": "2026-11-23T17:32:50.910Z",
+      "evidence": "nota del vault projects/local-delegate/jornada-2026-11-23-causa-comun-y-0-54-0.md, sección «Jornada 2026-11-23»",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "result-review",
+      "to": "closing",
+      "at": "2026-11-23T17:32:51.253Z",
+      "reason": "quality, conformance y memory aprobadas"
+    },
+    {
+      "type": "transition",
+      "from": "closing",
+      "to": "closed",
+      "at": "2026-11-23T17:32:51.610Z",
+      "reason": "mezclado en main y publicado en la 0.54.0"
     }
   ]
 }
