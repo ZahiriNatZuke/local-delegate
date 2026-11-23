@@ -168,6 +168,10 @@ def _relative_owner(key: str, relative: set[str]) -> str | None:
         if start < shortest_start:
             continue
         candidate = path[start:]
+        # Review of #709: a bare basename is not an owner (`conftest.py` at the root is not
+        # `/venv/.../pkg/conftest.py`): only a relative path with folders says which file it is.
+        if "/" not in candidate:
+            continue
         for owner in (candidate, f"./{candidate}"):
             if owner in relative:
                 return owner
@@ -229,6 +233,39 @@ def _is_pytest_log(lines: list[str]) -> bool:
     return _pytest_counts(lines) is not None or any("test session starts" in s for s in lines)
 
 
+#: The marks a wrapped progress line may carry (pytest goes on in a line without the file).
+_ALL_MARKS = frozenset(".sxFEX")
+
+
+def _continuation(line: str) -> str | None:
+    """The marks of a wrapped progress line (`....F...  [100%]`, no file), or `None`."""
+    text = "".join(_without_percent(_ANSI.sub("", line).strip()).split())
+    return text if text and set(text) <= _ALL_MARKS else None
+
+
+def _reported_lines(log: str) -> list[str]:
+    """The lines of `log` but its clean progress lines (`is_clean_progress`).
+
+    Review of #709: pytest wraps a long progress line, and the rest goes on in a line without the
+    file; a failure there (`F`, `E`, `X`) belongs to the file of the line before, which is kept.
+    """
+    kept: list[str] = []
+    pending: str | None = None
+    for line in log.splitlines():
+        marks = _continuation(line) if pending is not None else None
+        if marks is not None:
+            if set(marks) - _CLEAN_MARKS:
+                kept.append(pending)  # type: ignore[arg-type]
+                pending = None
+            continue
+        pending = None
+        if is_clean_progress(line):
+            pending = line
+        else:
+            kept.append(line)
+    return kept
+
+
 def reported_files(log: str) -> list[str]:
     """The files of `files_by_frequency` that the log reports something about (#688).
 
@@ -236,9 +273,16 @@ def reported_files(log: str) -> list[str]:
     put them in front of the model and the summary of the issue gave each one an entry with "0
     problems". Any other mention (a warning, a failure, a traceback) keeps the file.
     """
-    return files_by_frequency(
-        "\n".join(line for line in log.splitlines() if not is_clean_progress(line))
-    )
+    return files_by_frequency("\n".join(_reported_lines(log)))
+
+
+def _clean_and_reported(log: str) -> tuple[list[str], list[str]]:
+    """`(clean_files, reported_files)` of `log`, each computed once."""
+    if not _is_pytest_log(_ANSI.sub("", log).splitlines()):
+        return [], []
+    reported = reported_files(log)
+    keys = {norm_path(f) for f in reported}
+    return [f for f in files_by_frequency(log) if norm_path(f) not in keys], reported
 
 
 def clean_files(log: str) -> list[str]:
@@ -247,10 +291,7 @@ def clean_files(log: str) -> list[str]:
     What the program knows and the model should not be asked: the files with nothing to report.
     Only on a pytest log (`_is_pytest_log`); any other log gives `[]`.
     """
-    if not _is_pytest_log(_ANSI.sub("", log).splitlines()):
-        return []
-    reported = {norm_path(f) for f in reported_files(log)}
-    return [f for f in files_by_frequency(log) if norm_path(f) not in reported]
+    return _clean_and_reported(log)[0]
 
 
 def clean_file_entries(answer: str, log: str) -> list[str]:
@@ -260,16 +301,25 @@ def clean_file_entries(answer: str, log: str) -> list[str]:
     read in the progress lines an entry ("0 errors", once with the warning of another file). An
     entry is a top-level line that starts with the file (`_entry_file`, as #641 reads them); a
     file cited inside a sentence is not one. A spelling that also fits a reported file is left
-    alone: it is not known which one it means.
+    alone: it is not known which one it means. A log whose results line counts failures or
+    errors gives `[]`: a failure the program cannot place must not make a file look clean.
     """
-    clean = clean_files(log)
+    entries = [
+        entry
+        for entry in map(_entry_file, MARKDOWN_ESCAPE.sub(r"\1", answer).splitlines())
+        if entry is not None
+    ]
+    if not entries:
+        return []
+    counts = _pytest_counts(_ANSI.sub("", log).splitlines()) or {}
+    if counts.get("failed", 0) or counts.get("error", 0):
+        return []
+    clean, reported = _clean_and_reported(log)
     if not clean:
         return []
-    reported = reported_files(log)
     found: list[str] = []
-    for line in MARKDOWN_ESCAPE.sub(r"\1", answer).splitlines():
-        entry = _entry_file(line)
-        if entry is None or any(_same_file(entry, r) for r in reported):
+    for entry in entries:
+        if any(_same_file(entry, r) for r in reported):
             continue
         own = next((c for c in clean if _same_file(entry, c)), None)
         if own is not None and own not in found:
@@ -388,6 +438,18 @@ def _log_carries(norm_log: str, path: str, *, folder: bool) -> bool:
     return re.search(r"(?<![\w.~-])" + re.escape(path) + tail, norm_log) is not None
 
 
+def _is_folder_name(path: str) -> bool:
+    """Whether a `_FOLDER` match (normalized) reads as a folder, not as prose (review of #709).
+
+    `w/` in "falla w/ timeout" is one letter, and `github.com/org/repo/` a domain without its
+    scheme, which `URL` does not cover: neither is a folder the summary made up.
+    """
+    first, _, more = path.partition("/")
+    if not more and len(first) < 2:
+        return False
+    return not ("." in first.strip(".") and not first.startswith("."))
+
+
 def invented_files(answer: str, log: str, limit: int = 10) -> list[str]:
     """The files and folders `answer` names that `log` never names (up to `limit`).
 
@@ -416,7 +478,12 @@ def invented_files(answer: str, log: str, limit: int = 10) -> list[str]:
         path = norm_path(folder)
         while path.startswith(("./", "../")):
             path = path.split("/", 1)[1]
-        if path and path != "~/" and not _log_carries(norm_log, path, folder=True):
+        if (
+            path
+            and path != "~/"
+            and _is_folder_name(path)
+            and not _log_carries(norm_log, path, folder=True)
+        ):
             folders.setdefault(folder, None)
     return (invented + list(folders))[:limit]
 

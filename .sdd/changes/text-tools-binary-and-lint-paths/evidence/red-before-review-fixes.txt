@@ -1,0 +1,7 @@
+FAILED tests/test_lint_exact_paths.py::test_a_failure_in_a_wrapped_progress_line_keeps_its_file
+FAILED tests/test_lint_exact_paths.py::test_no_clean_warning_when_the_results_line_counts_failures
+FAILED tests/test_lint_exact_paths.py::test_a_bare_basename_does_not_own_an_absolute_path
+FAILED tests/test_lint_exact_paths.py::test_prose_with_a_slash_is_not_a_made_up_folder[w_slash]
+FAILED tests/test_lint_exact_paths.py::test_prose_with_a_slash_is_not_a_made_up_folder[bare_domain]
+FAILED tests/test_lint_exact_paths.py::test_overstrike_text_is_not_refused
+6 failed, 44 passed in 2.67s

@@ -22,8 +22,8 @@ Arreglos R3 y R4 de `.sdd/changes/text-tools-common-cause/research.md`.
   - Request: "rechazar entradas binarias en las tools de texto con `path` (… firma de fichero conocida …) ANTES de llamar al modelo, con mensaje que remita a `local_describe_image` para imágenes"
   - Verify: test `tests/test_binary_input.py` (PNG y JPEG reales mínimos, 0 llamadas al backend)
 - **REQ-002** — Un fichero con firma de PDF, ZIP, gzip o 7z, con más del 1 % de bytes nulos
-  (salvo UTF-16 con BOM) o con más del 10 % de bytes de control C0 (sin contar tabulador, saltos
-  de línea, avance de página ni ESC, y al menos 8) en sus primeros 64 KiB da `InputError` con el
+  (salvo UTF-16 con BOM) o con más del 10 % de bytes de control C0 (sin contar retroceso, tabulador,
+  saltos de línea, avance de página ni ESC, y al menos 8) en sus primeros 64 KiB da `InputError` con el
   motivo, sin llamar al backend. Un byte nulo suelto en un log largo, o uno de control en un
   fichero diminuto, no lo hacen binario (revisión del PR #709).
   - Request: "rechazar entradas binarias … (bytes nulos, firma de fichero conocida, proporción de bytes de control) ANTES de llamar al modelo"
@@ -62,7 +62,9 @@ Arreglos R3 y R4 de `.sdd/changes/text-tools-common-cause/research.md`.
   nivel que empieza por el fichero, como las lee #641) a un fichero que el log solo nombra en
   progreso sin fallos, el programa añade un `[local-delegate warning: …]` con esos ficheros y los
   que el log sí reporta. Un fichero citado dentro de una frase no es una entrada; con fallos en el
-  log calla (ya avisa #641); en un log que no es de pytest no actúa.
+  log, o si la línea de totales cuenta fallos o errores, calla (ya avisa #641 o no se sabe dónde
+  está el fallo); en un log que no es de pytest no actúa. Una línea de progreso partida cuya
+  continuación (sin fichero) trae `F`, `E` o `X` deja el fichero como reportado.
   - Request: "control por programa en lint_summary: con salida de pytest, los ficheros sin fallo según el propio log … no pueden aparecer como «con errores»; se quitan o se avisa, por programa"
   - Verify: test `tests/test_lint_exact_paths.py` (`test_the_tool_warns_of_entries_for_clean_files`, rojo sin el arreglo; controles sin aviso)
 - **REQ-009** — CHANGELOG en «Sin publicar» con los dos arreglos; mensajes nuevos en `es` y `en`.
@@ -97,7 +99,11 @@ Arreglos R3 y R4 de `.sdd/changes/text-tools-common-cause/research.md`.
 - Fichero vacío: no es binario (se lee como hoy).
 - UTF-16 sin BOM: tiene bytes nulos y se rechaza; el mensaje lo dice para que se convierta.
 - Un log con un único byte de control suelto, o con un NUL suelto, no se rechaza (umbral por
-  proporción); un NUL más allá de los primeros 64 KiB no cuenta.
+  proporción); un NUL más allá de los primeros 64 KiB no cuenta. La sobreimpresión con retrocesos
+  (salida de `man`) es texto.
+- Una relativa que es solo un nombre base no se une a una absoluta (`conftest.py` no es
+  `/venv/.../pkg/conftest.py`). Una «carpeta» de una letra (`w/`) o con forma de dominio
+  (`github.com/org/`) no se avisa como inventada.
 - Una absoluta cuya relativa no aparece en el log queda como está; si hay varias relativas que
   son sufijo suyo, se une a la más larga.
 

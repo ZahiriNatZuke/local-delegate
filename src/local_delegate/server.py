@@ -1109,9 +1109,10 @@ _BINARY_CONTROL_SHARE = 0.10
 #: file binary. Before, one NUL anywhere in a 50 MB log, or one BEL in a 4-byte file, refused it.
 _BINARY_NUL_SHARE = 0.01
 _BINARY_MIN_CONTROLS = 8
-#: C0 control bytes that no text carries: all but tab, line feed, vertical tab, form feed,
-#: carriage return and ESC (the colours of a CLI log, `\x1b[31m`).
-_BINARY_CONTROLS = frozenset(range(0x20)) - {0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x1B} | {0x7F}
+#: C0 control bytes that no text carries: all but backspace (the overstrike of `man` and `less`
+#: output, `N\x08NA\x08A`, review of #709), tab, line feed, vertical tab, form feed, carriage
+#: return and ESC (the colours of a CLI log, `\x1b[31m`).
+_BINARY_CONTROLS = frozenset(range(0x20)) - {0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x1B} | {0x7F}
 
 
 def _binary_kind(raw: bytes) -> tuple[str, bool] | None:

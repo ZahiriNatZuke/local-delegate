@@ -345,10 +345,95 @@ def test_clean_files_only_on_a_pytest_log():
     assert lint_patterns.clean_files("src/a.py .\nsrc/a.py:1:1: E501\n") == []
 
 
-def test_the_clean_line_check_is_linear():
-    line = "tests/" + "a" * 200_000 + " " + "." * 200_000 + "\n"
-    log = line + "1 passed in 0.1s\n"
+@pytest.mark.parametrize(
+    "line",
+    [
+        "tests/" + "a" * 200_000 + " " + "." * 200_000,
+        # Review of #709: the `.py` branch of the check, and the folder and URL patterns.
+        "tests/" + "a" * 200_000 + ".py " + "." * 200_000,
+        "x/" * 100_000 + " https://" + "y/" * 100_000,
+    ],
+    ids=["no_py", "py_branch", "folders_and_url"],
+)
+def test_the_clean_line_check_is_linear(line):
+    log = line + "\n1 passed in 0.1s\n"
     start = time.perf_counter()
     lint_patterns.clean_files(log)
     lint_patterns.reported_files(log)
-    assert time.perf_counter() - start < 1.0
+    lint_patterns.clean_file_entries("- tests/a.py: 0", log)
+    lint_patterns.invented_files(line, "src/a.py:1:1: E501\n")
+    assert time.perf_counter() - start < 2.0
+
+
+# --- Review of PR #709 ---------------------------------------------------------------------------
+
+
+def test_the_long_role_warns_of_entries_for_clean_files(captured, monkeypatch):
+    """Mutant "no `_lint_check_clean` in the long postprocess": no warning."""
+    monkeypatch.setattr(config, "LONG_INPUT_CHARS", 10)
+    captured.answer = CLEAN_ENTRIES_ANSWER
+    out = server.local_lint_summary(text=PYTEST_ONE_WARNING)
+    assert len(captured) == 1
+    tail = out.split(CLEAN_ENTRIES_ANSWER.rstrip(), 1)[1]
+    assert "local-delegate warning" in tail and "tests/test_mod_00.py" in tail
+
+
+def test_the_chunked_path_warns_of_entries_for_clean_files(captured, monkeypatch):
+    """Mutant "no `_lint_check_clean` in `_add_not_mentioned`": no warning."""
+    monkeypatch.setitem(config.MAX_CHARS_BY_ROLE, "mechanical", 300)
+    monkeypatch.setitem(config.MAX_CHARS_BY_ROLE, "long", 300)
+    captured.answer = CLEAN_ENTRIES_ANSWER
+    out = server.local_lint_summary(text=PYTEST_ONE_WARNING)
+    assert len(captured) > 2  # guard: the log was chunked
+    tail = out.split(CLEAN_ENTRIES_ANSWER.rstrip(), 1)[1]
+    assert "tests/test_mod_00.py" in tail.split("local-delegate warning", 1)[1]
+
+
+#: pytest wraps a long progress line; the failure is in the line without the file.
+WRAPPED = (
+    "tests/test_big.py ........................................          [ 50%]\n"
+    "....F...                                                            [100%]\n"
+    "1 failed, 47 passed in 0.5s\n"
+)
+
+
+def test_a_failure_in_a_wrapped_progress_line_keeps_its_file():
+    """Before, `tests/test_big.py` was "clean" and the warning blamed a clean file."""
+    assert lint_patterns.reported_files(WRAPPED) == ["tests/test_big.py"]
+    assert lint_patterns.clean_files(WRAPPED) == []
+
+
+def test_a_clean_wrapped_progress_line_stays_clean():
+    """Control: the wrapped line has only dots, so the file is still clean."""
+    log = WRAPPED.replace("....F...", "........").replace("1 failed, 47", "48")
+    assert lint_patterns.reported_files(log) == []
+    assert lint_patterns.clean_files(log) == ["tests/test_big.py"]
+
+
+def test_no_clean_warning_when_the_results_line_counts_failures():
+    """A failure the program cannot place: it does not call any file clean in the answer."""
+    log = "tests/test_a.py ....  [100%]\nsomething odd\n1 failed, 4 passed in 0.5s\n"
+    assert lint_patterns.clean_file_entries("- tests/test_a.py: 0 errores", log) == []
+
+
+def test_a_bare_basename_does_not_own_an_absolute_path():
+    log = "conftest.py:3: in f\n/venv/lib/site-packages/pkg/conftest.py:9: W\n"
+    files = lint_patterns.files_by_frequency(log)
+    assert "conftest.py" in files and len(files) == 2
+
+
+@pytest.mark.parametrize(
+    "answer",
+    ["- src/a.py: falla w/ timeout", "Ver github.com/org/repo/ para la regla."],
+    ids=["w_slash", "bare_domain"],
+)
+def test_prose_with_a_slash_is_not_a_made_up_folder(answer):
+    assert lint_patterns.invented_files(answer, "src/a.py:1:1: E501\n") == []
+
+
+def test_overstrike_text_is_not_refused(tmp_path):
+    """`man` output saved to a file: a third of the bytes are backspaces, and it is text."""
+    path = tmp_path / "man.txt"
+    path.write_bytes(b"N\x08NA\x08AM\x08ME\x08E\n" * 50)
+    content, _truncated, _raw = server._read_input(None, str(path), server._NO_TRUNCATE)
+    assert content.startswith("N\x08N")
