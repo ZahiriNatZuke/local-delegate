@@ -161,6 +161,12 @@ class Verdict(NamedTuple):
     no_runner: bool = False
 
 
+#: Las únicas patas a las que se perdona el cancelado sin máquina: en las 400 corridas analizadas
+#: (2026-11-03 a 2026-11-23) los 71 casos fueron de macOS. Ubuntu y Windows llevan el grueso de la
+#: suite; si GitHub los cancela sin máquina, el PR no se probó y el gate no puede dar verde.
+NO_RUNNER_TOLERATED_SUFFIX = "(macos-latest)"
+
+
 def _never_ran(job: dict) -> bool:
     """Cancelado por la infraestructura: GitHub no le dio máquina y no se ejecutó ningún paso.
 
@@ -180,7 +186,11 @@ def job_verdict(job: dict) -> Verdict:
 
     if conclusion in GOOD_CONCLUSIONS:
         return Verdict(GOOD, f"conclusion={conclusion}")
-    if conclusion == "cancelled" and _never_ran(job):
+    if (
+        conclusion == "cancelled"
+        and str(job.get("name", "")).endswith(NO_RUNNER_TOLERATED_SUFFIX)
+        and _never_ran(job)
+    ):
         return Verdict(
             GOOD,
             "conclusion=cancelled sin runner asignado ni pasos ejecutados: cancelado por la "

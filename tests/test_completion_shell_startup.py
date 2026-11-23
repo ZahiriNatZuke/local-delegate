@@ -60,6 +60,32 @@ def test_control_a_pwsh_that_starts_is_not_reported(monkeypatch):
     assert completion_shells.startup_failure("pwsh", "/usr/bin/pwsh") is None
 
 
+@pytest.mark.parametrize(
+    "probe",
+    [
+        subprocess.CompletedProcess(["pwsh"], 1, stdout="", stderr="ParserError: bad profile\n"),
+        subprocess.CompletedProcess(["pwsh"], 0, stdout="", stderr=""),
+    ],
+)
+def test_control_a_failure_that_is_not_the_image_crash_is_not_skipped(monkeypatch, probe):
+    """Only the .NET abort of the image is forgiven; any other failure must fail its tests."""
+    _fake_runs(monkeypatch, probe)
+    assert completion_shells.startup_failure("pwsh", "/usr/bin/pwsh") is None
+
+
+def test_the_probe_does_not_go_through_the_product(monkeypatch):
+    seen = []
+
+    def run(cmd, env):
+        seen.append(env)
+        return subprocess.CompletedProcess(cmd, 0, stdout="7.5.4", stderr="")
+
+    monkeypatch.setattr(completion_shells, "_run_probe", run)
+    monkeypatch.setattr(completion_shells, "powershell_env", lambda name: pytest.fail("product"))
+    assert completion_shells.startup_failure("pwsh", "/usr/bin/pwsh") is None
+    assert seen
+
+
 def test_shells_that_are_not_powershell_are_not_probed(monkeypatch):
     calls = _fake_runs(monkeypatch)
     assert completion_shells.startup_failure("bash", "/bin/bash") is None
@@ -93,3 +119,10 @@ def test_the_skip_reason_is_read_back_from_a_report():
     reason = "('tests/x.py', 12, \"Skipped: shell 'pwsh' crashes at startup (version 7.5.4)\")"
     assert completion_shells.broken_shell_of(reason) == "pwsh"
     assert completion_shells.broken_shell_of("Skipped: shell 'pwsh' not found") is None
+
+
+def test_a_reason_with_double_quotes_is_still_read_through_the_report():
+    """`str` of the tuple escapes the single quotes when the reason holds a double one."""
+    reason = "Skipped: shell 'pwsh' crashes at startup (version 7.5.4, exit -6: \"x\")"
+    assert completion_shells.broken_shell_of(str(("t.py", 1, reason))) is None
+    assert completion_shells.broken_shell_of(("t.py", 1, reason)[2]) == "pwsh"

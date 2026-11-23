@@ -91,6 +91,10 @@ def _bash3() -> str | None:
 STARTUP_CRASH = "crashes at startup"
 _STARTUP_CRASH_RE = re.compile(rf"shell '(\w+)' {STARTUP_CRASH}")
 _PROBE = "$PSVersionTable.PSVersion.ToString()"
+#: The signature of the image's crash: the .NET runtime aborting (SIGABRT, `exit=-6` or 134) or
+#: failing to load its own assemblies. Any other failure to start is a real failure, not a skip.
+_IMAGE_CRASH_CODES = frozenset({-6, 134})
+_IMAGE_CRASH_TEXT = ("FileLoadException", "Unhandled exception")
 
 
 def _run_probe(cmd: list[str], env: Mapping[str, str]) -> subprocess.CompletedProcess:
@@ -118,19 +122,25 @@ def startup_failure(name: str, executable: str) -> str | None:
     """
     if name not in ("pwsh", "powershell"):
         return None
-    env = powershell_env(name)
+    # The runner's own environment, not `powershell_env`: that goes through the product
+    # (`shell_profiles`), and a regression there must fail the tests, not skip them.
+    env = os.environ
     try:
         probe = _run_probe([executable, "-NoProfile", "-NonInteractive", "-Command", _PROBE], env)
-    except (OSError, subprocess.TimeoutExpired) as exc:
-        return f"{type(exc).__name__}: {exc}"
+    except (OSError, subprocess.TimeoutExpired):
+        return None  # not the image's signature: let the tests run and fail for real
     if probe.returncode == 0 and probe.stdout.strip():
+        return None
+    if probe.returncode not in _IMAGE_CRASH_CODES and not any(
+        text in probe.stderr for text in _IMAGE_CRASH_TEXT
+    ):
         return None
     version = "5.1" if name == "powershell" else "unknown"
     if name == "pwsh":  # `pwsh -Version` prints it from the native host; 5.1 reads it as an option
         try:
             version = _run_probe([executable, "-Version"], env).stdout.strip() or version
-        except (OSError, subprocess.TimeoutExpired):
-            pass
+        except (OSError, subprocess.TimeoutExpired) as exc:
+            version = f"unknown ({type(exc).__name__})"
     first = next((line for line in probe.stderr.splitlines() if line.strip()), "")
     return f"version {version}, exit {probe.returncode}: {first[:200]}"
 

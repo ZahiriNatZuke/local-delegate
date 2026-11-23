@@ -140,6 +140,13 @@ def test_control_without_a_runner_only_cancelled_is_forgiven(conclusion):
     assert v.state == ci_gate.BAD
 
 
+@pytest.mark.parametrize("name", ["test (ubuntu-latest)", "test (windows-latest)", "perf", "lint"])
+def test_control_only_macos_is_forgiven_a_cancel_without_runner(name):
+    """Ubuntu and Windows carry the suite: cancelled there without a machine, nothing was tested."""
+    v = ci_gate.job_verdict(_job(name, conclusion="cancelled", runner=None))
+    assert v.state == ci_gate.BAD
+
+
 def test_the_phantom_job_passes_by_its_steps():
     """El caso que motiva todo: `in_progress`, sin `completed_at`, y el runner llegó al final."""
     v = ci_gate.job_verdict(

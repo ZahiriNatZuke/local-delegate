@@ -702,7 +702,10 @@ def pytest_runtest_logreport(report):
     if report.skipped and report.longrepr is not None:
         from completion_shells import broken_shell_of
 
-        broken = broken_shell_of(str(report.longrepr))
+        # `longrepr` of a skip is `(path, line, reason)`; its `str` would escape the quotes.
+        skip_info = report.longrepr
+        reason = skip_info[2] if isinstance(skip_info, tuple) and len(skip_info) == 3 else skip_info
+        broken = broken_shell_of(str(reason))
         if broken:
             _SHELL_BROKEN.add(broken)
     if report.when != "call" or not report.passed:

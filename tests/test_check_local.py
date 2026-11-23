@@ -181,10 +181,36 @@ def test_the_capture_runs_both_themes_against_a_free_port_and_stops_the_app(monk
         return subprocess.CompletedProcess(cmd, 0)
 
     monkeypatch.setattr(bump_version, "_wait_listening", lambda port, server, timeout: None)
-    bump_version.regenerate_captures(ROOT, run=run, popen=popen)
-    assert [cmd[cmd.index("--theme") + 1] for cmd in runs] == ["dark", "light"]
-    assert all(str(bump_version.CAPTURE_SCRIPT.as_posix()) in Path(c[1]).as_posix() for c in runs)
+    bump_version.regenerate_captures(ROOT, run=run, popen=popen, require=lambda: None)
+    # the tree is reinstalled first: the panel reads its version from the installed metadata
+    assert runs[0] == ["uv", "sync", "--inexact"]
+    captures = runs[1:]
+    assert [cmd[cmd.index("--theme") + 1] for cmd in captures] == ["dark", "light"]
+    assert all(bump_version.CAPTURE_SCRIPT.as_posix() in Path(c[1]).as_posix() for c in captures)
     assert events == ["start", "terminate", "wait"]
+
+
+def test_control_a_capture_that_still_shows_the_old_version_stops_the_bump(tmp_path, monkeypatch):
+    root = _repo(tmp_path, version="1.3.0", captured="1.2.3")
+
+    class Server:
+        def poll(self):
+            return None
+
+        def terminate(self):
+            pass
+
+        def wait(self, timeout):
+            return 0
+
+    monkeypatch.setattr(bump_version, "_wait_listening", lambda port, server, timeout: None)
+    with pytest.raises(bump_version.BumpError, match="dice 1.2.3"):
+        bump_version.regenerate_captures(
+            root,
+            run=lambda cmd, **kw: subprocess.CompletedProcess(cmd, 0),
+            popen=lambda cmd, cwd: Server(),
+            require=lambda: None,
+        )
 
 
 def test_control_a_failed_capture_stops_the_bump_and_the_app(monkeypatch):
@@ -204,10 +230,22 @@ def test_control_a_failed_capture_stops_the_bump_and_the_app(monkeypatch):
     with pytest.raises(bump_version.BumpError, match="dark"):
         bump_version.regenerate_captures(
             ROOT,
-            run=lambda cmd, **kw: subprocess.CompletedProcess(cmd, 1),
+            run=lambda cmd, **kw: subprocess.CompletedProcess(cmd, 1 if "--theme" in cmd else 0),
             popen=lambda cmd, cwd: Server(),
+            require=lambda: None,
         )
     assert events == ["terminate"]
+
+
+def test_control_without_playwright_the_bump_says_how_to_get_it_and_starts_nothing():
+    def require():
+        raise bump_version.BumpError("falta Playwright para regenerar la captura del README")
+
+    def popen(cmd, cwd):
+        raise AssertionError("no app without Playwright")
+
+    with pytest.raises(bump_version.BumpError, match="Playwright"):
+        bump_version.regenerate_captures(ROOT, popen=popen, require=require)
 
 
 def test_release_refuses_stale_generated_files(tmp_path):

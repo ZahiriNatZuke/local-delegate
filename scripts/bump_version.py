@@ -165,12 +165,7 @@ def _wait_listening(port: int, server: subprocess.Popen, timeout_s: float) -> No
     raise BumpError(f"la app de métricas no escuchó en {timeout_s:.0f} s")
 
 
-def regenerate_captures(root: Path = ROOT, *, run=subprocess.run, popen=subprocess.Popen) -> None:
-    """Las dos capturas del README contra la app de métricas del árbol, no contra el daemon.
-
-    El daemon instalado sirve SU versión, que tras un bump ya no es la del árbol; por eso se monta
-    solo `metrics.app` en un puerto libre, como documenta `scripts/dev/capture_dashboard.py`.
-    """
+def _require_playwright() -> None:
     try:
         import playwright  # noqa: F401
     except ImportError as exc:
@@ -178,6 +173,26 @@ def regenerate_captures(root: Path = ROOT, *, run=subprocess.run, popen=subproce
             "falta Playwright para regenerar la captura del README: `uv sync --group dev --group ui`"
             " y `uv run playwright install chromium`, o pasa --no-capture a sabiendas"
         ) from exc
+
+
+def regenerate_captures(
+    root: Path = ROOT,
+    *,
+    run=subprocess.run,
+    popen=subprocess.Popen,
+    require=_require_playwright,
+) -> None:
+    """Las dos capturas del README contra la app de métricas del árbol, no contra el daemon.
+
+    El daemon instalado sirve SU versión, que tras un bump ya no es la del árbol; por eso se monta
+    solo `metrics.app` en un puerto libre, como documenta `scripts/dev/capture_dashboard.py`.
+    """
+    require()
+    # La versión del panel sale de `importlib.metadata`, es decir, del `dist-info` de la instalación
+    # editable, que se escribe al instalar: sin reinstalar, la captura diría la versión anterior.
+    sync = run(["uv", "sync", "--inexact"], cwd=root, timeout=CAPTURE_TIMEOUT_S, check=False)
+    if sync.returncode != 0:
+        raise BumpError(f"`uv sync --inexact` falló (código {sync.returncode})")
     port = _free_port()
     app = (
         "import uvicorn; from local_delegate.web import metrics; "
@@ -209,6 +224,19 @@ def regenerate_captures(root: Path = ROOT, *, run=subprocess.run, popen=subproce
         except subprocess.TimeoutExpired:
             server.kill()
             server.wait(timeout=10)
+    stale = _stale_manifests(root)
+    if stale:
+        detail = ", ".join(f"{rel} dice {found}" for rel, found in stale.items())
+        raise BumpError(f"las capturas no muestran la versión nueva: {detail}")
+
+
+def _stale_manifests(root: Path) -> dict[str, str]:
+    spec = importlib.util.spec_from_file_location(
+        "_check_local", root / "scripts" / "check_local.py"
+    )
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module.stale_captures(root)
 
 
 def _read(path: Path) -> tuple[str, str]:
