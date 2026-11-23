@@ -147,7 +147,6 @@ _TOKEN = re.compile(
     r"""'[^']*'|"(?:\\.|[^"\\])*"|\|\||&&|>>|<<-?|2>&1|2>|[|;<>()&]|\n|(?:\\["']|[^\s|;<>()&'"])+"""
 )
 _HEREDOC = re.compile(r"<<-?\s*(['\"]?)([A-Za-z_][A-Za-z0-9_]*)\1")
-_HERESTRING = re.compile(r"@'.*?'@|@\".*?\"@", re.DOTALL)
 _SED_RANGE = re.compile(r"^(\d+)(?:,(\d+))?p$")
 _SED_QUIET = re.compile(r"-[a-zA-Z]*n[a-zA-Z]*")
 _NEGATIVE_NUMBER = re.compile(r"-\d+")
@@ -193,7 +192,7 @@ def _unquote(token: str) -> str:
 
 
 def herestring_spans(command: str) -> list[tuple[int, int]]:
-    """Where the here-strings of `_HERESTRING` are (``@'…'@``, ``@"…"@``), in linear time.
+    """Where the PowerShell here-strings are (``@'…'@``, ``@"…"@``), in linear time.
 
     The lazy regex looked for the end again from every opening with no end, quadratic
     (issue #724): once one kind has no end after an opening, no later opening of that kind has

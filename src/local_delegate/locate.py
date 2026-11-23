@@ -235,7 +235,7 @@ def classify_field(name: str) -> FieldRequest:
         for k, word in enumerate(words)
         if k not in taken
         and len(word) > _SHORT_WORD_MAX
-        and word not in line_check._LOCATION_NAME_WORDS
+        and not line_check.is_location_name_word(word)
         and word not in _QUANTIFIER_WORDS
         and word not in _NEUTRAL_WORDS
         and not word.isdigit()
