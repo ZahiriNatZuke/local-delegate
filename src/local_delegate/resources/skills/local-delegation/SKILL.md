@@ -106,7 +106,7 @@ líneas las calcula siempre el programa, nunca el modelo, y el valor es una list
 `{"name", "start", "end"}`: lee con `offset=start` y `limit=end-start+1`. Rinde mejor cuando el
 nombre dice qué quieres de un fichero con índice (`funciones_con_lineas` de un `.py` o `.ts`,
 `secciones_con_lineas` o `requisitos_con_lineas` de un Markdown, `ficheros_con_lineas` de un diff):
-entonces contesta el índice, sin modelo. Un elemento que sale en `_local_delegate.unlocated` se
+entonces contesta el índice, sin modelo (`_local_delegate.located` dice por qué camino). Un elemento que sale en `_local_delegate.unlocated` se
 busca con `grep -n`, no leyendo el fichero entero. Un fallo determinista (JSON cortado, un tipo
 que no cuadra en `type_mismatch_keys`) da lo mismo si repites la misma llamada.
 

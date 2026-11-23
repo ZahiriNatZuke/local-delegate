@@ -9168,6 +9168,12 @@ def local_extract(
     # row of the usage log is still written (`program_only`), at the end, so the panel sees it.
     program_only = bool(location_fields) and not model_fields
     if program_only:
+        # REQ-014: a call the program answers alone has no role, so no role reason either.
+        role_meta.clear()
+        _ROLE_REASON.set(None)
+        token = cancellation.current()
+        if token is not None:
+            token.role_reason = None
         raw = "{}"
         truncated_calls = retried_calls = calls = 0
         pieces = 1

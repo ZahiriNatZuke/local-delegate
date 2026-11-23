@@ -79,5 +79,7 @@ def test_the_changelog_marks_the_change_as_breaking():
 def test_the_skill_and_the_memory_say_the_lines_are_the_programs(path):
     text = path.read_text(encoding="utf-8")
     assert "unlocated" in text and "grep -n" in text
+    assert "`located`" in text or "`_local_delegate.located`" in text
+    assert "type_mismatch_keys" in text
     assert "lines_unverified" not in text
     assert "{name, start, end}" in text or '{"name", "start", "end"}' in text

@@ -4,7 +4,7 @@ A field asking for the line of one heading got the whole heading outline (the on
 carried since #568), and «Título: línea 1» on the document title was flagged. #594 cut such a
 copy by words. Since 0.54.0 (#692-#698) the model chooses one heading of the catalogue, the
 schema caps the list at one item and the program gives its line, so a copy cannot happen and
-`outline_copy` is gone. Backend faked (`_run_chat` doubled), no network.
+the old cut of a copied outline is gone. Backend faked (`_run_chat` doubled), no network.
 """
 
 from __future__ import annotations

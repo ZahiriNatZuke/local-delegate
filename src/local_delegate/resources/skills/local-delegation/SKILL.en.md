@@ -107,7 +107,7 @@ program, never by the model, and the value is a list of `{"name", "start", "end"
 `offset=start` and `limit=end-start+1`. It works best when the name says what you want from a
 file with an index (`functions_with_lines` of a `.py` or `.ts`, `sections_with_lines` or
 `requirements_with_lines` of a Markdown file, `files_with_lines` of a diff): then the index
-answers, with no model. An item listed in `_local_delegate.unlocated` is found with `grep -n`,
+answers, with no model (`_local_delegate.located` says by which path). An item listed in `_local_delegate.unlocated` is found with `grep -n`,
 not by reading the whole file. A deterministic failure (a cut JSON, a type that does not fit in
 `type_mismatch_keys`) gives the same if you repeat the same call.
 

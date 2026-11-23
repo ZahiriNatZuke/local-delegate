@@ -9,7 +9,7 @@ but a field that asks for the files AND their hunks, `changed_files_with_lines` 
 preamble before the first `diff --git`) still went to the model, chunk by chunk.
 
 Since 0.54.0 (#692-#698) the value is a list of `{name, start, end}` (with `hunks` when asked)
-and the meta key is `located`; `asks_for_diff_files`/`asks_for_diff_hunks` gave way to
+and the meta key is `located`; the old word lists for files and hunks gave way to
 `locate.classify_field`, which reads the categories by presence (#697).
 
 Inputs here have the SHAPE of the reports, never their content. Backend faked (`_run_chat`

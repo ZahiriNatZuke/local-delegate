@@ -20,7 +20,8 @@ first — the MCP reads them server-side and the content never enters the contex
   `local_explain_code` (with `path`; `local_extract` with a field that asks for lines:
   `…_with_lines`, which comes back as `{name, start, end}` computed by program) for the lines
   you need and read only that range with `offset`/`limit`; what comes back in `unlocated`,
-  find with `grep -n`. Quoting or editing exact lines justifies reading the range, not the
+  find with `grep -n` (`located` says how they were computed; a type that does not fit comes
+  back in `type_mismatch_keys`). Quoting or editing exact lines justifies reading the range, not the
   whole file.
 - **Without `ToolSearch` or the `local_*` tools** (an agent whose definition closes the list
   with `tools:`) there is no delegating: whoever launches it delegates first and passes it the

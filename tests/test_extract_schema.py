@@ -130,6 +130,8 @@ def test_a_mismatch_that_persists_is_null_and_said(backend):
     assert meta["warning"].endswith(
         i18n.t("mcp.warning.extract_type_mismatch", fields="tres_reglas")
     )
+    [row] = _rows(backend)  # the retry is folded in the row of the call
+    assert row["chunks"] == 2
 
 
 def test_free_mode_is_validated_too(backend, monkeypatch):

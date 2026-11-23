@@ -108,7 +108,7 @@ def _requirements() -> str:
     return "\n".join(out)
 
 
-def _diff(files: int) -> tuple[str, list[tuple[str, int, int]]]:
+def _diff(files: int, body: int = 0) -> tuple[str, list[tuple[str, int, int]]]:
     out: list[str] = []
     expected: list[tuple[str, int, int]] = []
     for k in range(files):
@@ -123,6 +123,7 @@ def _diff(files: int) -> tuple[str, list[tuple[str, int, int]]]:
             f"-const b = {k};",
             f"+const b = {k + 1};",
         ]
+        out += [f"+const filler_{k}_{i} = compute({i}, 'padding text');" for i in range(body)]
         expected.append((f"src/f{k}.ts", first, len(out)))
     return "\n".join(out) + "\n", expected
 
@@ -176,6 +177,16 @@ def test_model_numbers_never_reach_the_value(backend, tmp_path, item):
     line = _line_of(text, "la barra lateral se pliega")
     assert data[ANCHOR_FIELD] == [{"name": "barra", "start": line, "end": line}]
     assert "99" not in json.dumps(data["_local_delegate"])
+
+
+def test_a_bare_list_of_numbers_is_a_type_mismatch(backend, tmp_path):
+    """REQ-001: `[5, 9]` from the model never becomes lines 5-9."""
+    text = "\n".join(f"Línea de relleno número {k}." for k in range(30)) + "\n"
+    backend["answer"] = lambda call: json.dumps({ANCHOR_FIELD: [5, 9]})
+    data = server.local_extract(fields=[ANCHOR_FIELD], path=_write(tmp_path, text, "notes.txt"))
+    assert len(backend["calls"]) == 2, "one retry"
+    assert data[ANCHOR_FIELD] is None
+    assert ANCHOR_FIELD in data["_local_delegate"]["type_mismatch_keys"]
 
 
 def test_a_model_number_without_an_anchor_is_null(backend, tmp_path):
@@ -254,7 +265,8 @@ def test_every_location_value_has_the_new_shape(
 
 def test_index_only_fields_never_reach_the_backend_over_a_patch(backend, tmp_path):
     """#697: the literal name of the issue and its synonym give the same files, with no call."""
-    text, expected = _diff(26)
+    text, expected = _diff(26, body=110)
+    assert len(text) > 140_000 and len(text) > config.max_chars_for_role("long"), "guard: chunks"
     path = _write(tmp_path, text, "pr.patch")
     fields = ["ficheros_con_lineas", "lista_de_ficheros_con_sus_lineas"]
     data = server.local_extract(fields=fields, path=path)
@@ -280,6 +292,25 @@ def test_the_functions_of_a_typescript_file_are_only_functions(backend, tmp_path
     assert not {"Row", "Column", "LIMIT", "OTHER", "StepsPanel"} & set(names)
     first = data["funciones_con_lineas"][0]
     assert first["start"] == _line_of(text, "export function helper0(")
+
+
+def test_the_60_functions_of_a_906_line_typescript_file(backend, tmp_path):
+    """#698 with its size: 906 lines, 60 functions and methods, no backend call."""
+    from test_locate_index_ts import _big_ts
+
+    text, expected = _big_ts()
+    want = {
+        name: (start, end)
+        for name, (kind, start, end) in expected.items()
+        if kind in ("function", "method", "function_property")
+    }
+    assert len(want) == 60 and len(text.split("\n")) - 1 == 906
+    data = server.local_extract(
+        fields=["funciones_con_lineas"], path=_write(tmp_path, text, "steps.service.ts")
+    )
+    assert backend["calls"] == []
+    got = {item["name"]: (item["start"], item["end"]) for item in data["funciones_con_lineas"]}
+    assert got == want
 
 
 @pytest.mark.parametrize(
@@ -459,7 +490,7 @@ def test_meta_keys(backend, tmp_path):
     meta = data["_local_delegate"]
     assert meta["located"][ANCHOR_FIELD] == {
         "by": "anchor",
-        "index": meta["located"][ANCHOR_FIELD]["index"],
+        "index": None,  # a plain `.txt` has an index of tables, lists and ids, no language
         "items": 2,
         "unlocated": 1,
     }
@@ -489,3 +520,40 @@ def test_an_index_that_cannot_be_built_is_said(backend, tmp_path):
     meta = data["_local_delegate"]
     assert meta["located"][ANCHOR_FIELD]["index"] is None
     assert "syntax_error" in meta["warning"]
+
+
+# --- REQ-007 / REQ-011 in the server: the #696 fields -------------------------------------------
+
+
+def test_the_696_fields(backend, tmp_path):
+    """The 55 KB spec of #696: an anchor in the middle of the table gives the whole table, and
+    one on a section title gives the section, with their exact lines."""
+    from test_locate_markdown_ids import _spec_with_sixty_requirements
+
+    text, _expected = _spec_with_sixty_requirements()
+    lines = text.split("\n")
+    table_start = lines.index("| name | value | note |") + 1
+    table_end = lines.index("| param_39 | 117 | applies to REQ-040 |") + 1
+    section_start = lines.index("## Parameters") + 1
+    # Up to the last line before the next heading of the same level, its blank line left out.
+    section_end = lines.index("## Notes") - 1
+    assert lines[section_end] == "" and lines[section_end - 1].startswith("| param_39")
+    row = "| param_20 | 60 |"
+
+    def answer(call):
+        out: dict = {}
+        if row in call["user"]:
+            out["tabla_parametros_con_lineas"] = [{"name": "parámetros", "anchor": row}]
+        if "## Parameters" in call["user"]:
+            out["base_analisis_con_lineas"] = [{"name": "base", "anchor": "## Parameters"}]
+        return json.dumps(out)
+
+    backend["answer"] = answer
+    fields = ["base_analisis_con_lineas", "tabla_parametros_con_lineas"]
+    data = server.local_extract(fields=fields, path=_write(tmp_path, text, "spec.md"))
+    assert backend["calls"], "guard: the model was asked"
+    [table] = data["tabla_parametros_con_lineas"]
+    assert (table["start"], table["end"]) == (table_start, table_end)
+    [section] = data["base_analisis_con_lineas"]
+    assert (section["start"], section["end"]) == (section_start, section_end)
+    assert "unlocated" not in data["_local_delegate"]
