@@ -136,6 +136,11 @@ def _expected(row: dict, tool_input: dict) -> tuple[str, str]:
         # La medición vio en el resultado que la franja cubría el fichero entero; el clasificador
         # solo ve la entrada, y una franja pedida es una franja (el lado que no bloquea).
         return "read_range", "range"
+    command = str(tool_input.get("command") or "")
+    if via == "shell_cat_pipe" and re.search(r"\| Select-Object -Skip \d+ (?:;|$)", command):
+        # La medición contó `| Select-Object -Skip N` como parcial; es la franja de N+1 al final
+        # (issue #707), y como franja se cuenta ahora.
+        return via, "range"
     scope = row["scope"] if via in COVERED_VIAS else "unclassifiable"
     return via, scope
 
@@ -937,3 +942,49 @@ def test_mod_prefilter_does_not_drop_a_hidden_read(tool, command):
     assert _mod_prefilter().search(command), (
         f"el prefiltro del mod descartaría {command!r} sin clasificar"
     )
+
+
+@pytest.mark.parametrize(
+    ("command", "scope", "lines"),
+    [
+        ("Get-Content notes.md | Select-Object -Skip 100 -First 50", "range", (101, 150)),
+        ("Get-Content notes.md | Select-Object -First 50 -Skip 100", "range", (101, 150)),
+        ("Get-Content notes.md | Select-Object -Skip 100", "range", (101, None)),
+        ("Get-Content notes.md | Select-Object -First 50", "range", (1, 50)),
+        ("cat notes.md | head -n 30", "range", (1, 30)),
+        ("Get-Content notes.md | Select-Object -Last 5", "partial", None),
+        ("Get-Content notes.md | Select-Object -Skip 10 -Last 5", "partial", None),
+        ("Get-Content notes.md | Select-Object -Index 3", "partial", None),
+    ],
+)
+def test_select_object_skip_moves_the_range(command, scope, lines):
+    """Issue #707 (F3): `| Select-Object -Skip N -First M` is N+1..N+M, not 1..M."""
+    [read] = [a for a in classifier.classify_shell(command, "PowerShell") if a.kind == "read"]
+    assert (read.scope, read.lines) == (scope, lines)
+
+
+def test_escaped_quotes_outside_quotes_tokenize_in_linear_time():
+    """Issue #707 (security review): every `\\"` opened a string with no end, scanned to the end of
+    the command each time (20 000 of them: about 30 s of CPU). The write after them still counts."""
+    command = "echo {" + '\\"a\\":1,' * 20_000 + "} > notes.md"
+    start = time.process_time()
+    found = classifier.classify_shell(command, "Bash")
+    assert time.process_time() - start < 1.0
+    assert [(a.kind, a.path) for a in found] == [("write", "notes.md")]
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        "cat notes.md | head -n 5 > out.txt",
+        "Get-Content notes.md | Select-Object -First 1 | Out-File out.txt",
+        "cat notes.md > /dev/null",
+    ],
+)
+def test_a_read_whose_output_goes_to_a_file_is_marked(command):
+    """Issue #707 (security review): a pipe into a file is a copy too, and nothing of it enters
+    the context; the Codex guard leaves it out by this mark. A single stage stays out of the reads."""
+    reads = [a for a in classifier.classify_shell(command, "PowerShell") if a.kind == "read"]
+    assert all(a.to_file for a in reads)
+    plain = [a for a in classifier.classify_shell("cat notes.md | head -n 5", "PowerShell")]
+    assert [a.to_file for a in plain] == [False]  # control

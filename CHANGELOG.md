@@ -15,6 +15,20 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ### Corregido
 
+- **Codex: una lectura literal levanta siempre el guard de escritura** (#707). Con el interruptor
+  de lectura apagado (`LD_HOOK_READ_BLOCK=0`, `~/.claude/local-delegate-block-off`), el backend
+  marcado caído o una escritura en el mismo comando, `codex-tool-guard` dejaba pasar la lectura sin
+  apuntarla, y `apply_patch` sobre un fichero resumido se rechazaba en bucle. Además: solo se
+  deniega un comando que sea solo lecturas de un fichero (con varios ficheros o una tubería como
+  `| cat` o `| grep` pasa con la nota); todos los tramos de un comando compuesto suman al 80 %;
+  `| Select-Object -Skip N -First M` cuenta las líneas N+1..N+M (también en Claude Code); el plazo
+  de 150 s del resumen es total y no por petición; una lectura MCP no levanta el guard (ahora lo
+  dice la wiki); y el estado de `codex-read/` sin uso en 30 días se borra. De la revisión de
+  seguridad: una cabecera de parche con espacios delante sigue guardada, una lectura cuya salida
+  acaba en un fichero (`| head > out`, `| Out-File`) no levanta el guard, y el troceado de comandos
+  (compartido con Claude Code) ya no tarda minutos con miles de `\"` fuera de comillas.
+- **Codex: las rutas de un parche se sacan en tiempo lineal** (#706). Una cabecera de `apply_patch`
+  con decenas de miles de espacios tardaba segundos (cuadrático); ahora son milésimas.
 - **Las tools de texto rechazan un fichero binario antes de llamar al modelo** (#693). Con `path` a
   una imagen, `local_extract` avisaba de que no era UTF-8, la leía como Latin-1, la partía en 6
   trozos y devolvía todos los campos a `null`. Ahora el lector común de `path` (summarize, extract,

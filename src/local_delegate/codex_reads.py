@@ -30,6 +30,8 @@ import math
 import os
 import re
 import sys
+import threading
+import time
 import urllib.error
 import urllib.request
 from collections.abc import Callable, Mapping, Sequence
@@ -66,6 +68,9 @@ SUMMARY_TOOL = "local_summarize"
 MCP_PROTOCOL_VERSION = "2025-06-18"
 
 STATE_DIR = "codex-read"
+#: A session log nobody touched this long goes when another session starts (issue #707). Resuming
+#: a session older than that starts without its guard, which fails open like the rest of the hook.
+STATE_MAX_AGE_S = 30 * 86400
 MAIN_SCOPE = "main"
 _SESSION_ID = re.compile(r"[A-Za-z0-9_-]{1,128}")
 
@@ -83,7 +88,12 @@ TRUNCATION_KEYS = (
     "mcp.warning.time_budget_retries",
 )
 
-_PATCH_PATH = re.compile(r"^\*\*\* (?:(?:Add|Update|Delete) File|Move to): (.+?)\s*$", re.MULTILINE)
+#: The rest of the line, greedy: a lazy ``(.+?)`` before ``\s*$`` backtracked over every blank and
+#: took quadratic time (issue #706). ``.strip()`` takes the blanks and the ``\r`` of a CRLF line.
+#: Blanks before the header count too: a parser that trims the line would still apply it.
+_PATCH_PATH = re.compile(
+    r"^[ \t]*\*\*\* (?:(?:Add|Update|Delete) File|Move to): ([^\n]*)$", re.MULTILINE
+)
 _PATCH_BEGIN = "*** Begin Patch"
 
 Summarize = Callable[[str], "str | None"]
@@ -149,9 +159,29 @@ def _record(common: ModuleType, path: Path, scope: str, op: str, key: str, span=
         event["range"] = list(span)
     try:
         path.parent.mkdir(parents=True, exist_ok=True)
+        if not path.exists():
+            _prune(path)
         common.append_line(path, json.dumps(event, ensure_ascii=False))
     except OSError:
         pass  # the guard is lost for this file, the read itself is not affected
+
+
+def _prune(keep: Path) -> None:
+    """Delete the session logs nobody touched in `STATE_MAX_AGE_S`, once per new session: only
+    regular ``*.jsonl`` files of the folder, never a link and never ``keep`` (this session's)."""
+    limit = time.time() - STATE_MAX_AGE_S
+    try:
+        found = list(keep.parent.glob("*.jsonl"))
+    except OSError:
+        return
+    for item in found:
+        try:
+            if item == keep or item.is_symlink() or not item.is_file():
+                continue
+            if item.stat().st_mtime < limit:
+                item.unlink()
+        except OSError:
+            continue  # in use or already gone: the next new session tries again
 
 
 def file_key(path: str) -> str:
@@ -390,20 +420,36 @@ def daemon_summarize(
     token: str | None = None,
     timeout: float = SUMMARY_TIMEOUT_S,
 ) -> str | None:
-    """``local_summarize`` of ``path`` through the daemon, or ``None`` on any failure."""
-    try:
-        if url is None:
-            from .desktop_bridge import daemon_url
+    """``local_summarize`` of ``path`` through the daemon, or ``None`` on any failure.
 
-            url = daemon_url()
-        if token is None:
-            from . import token_source
+    ``timeout`` bounds the whole exchange, not each socket operation (issue #707): the call runs in
+    a daemon thread, and one still talking to the daemon when the time is up is left behind (the
+    hook process prints its answer and exits right after)."""
+    box: dict[str, str | None] = {}
 
-            token = token_source.web_token()
-        result = DaemonClient(url, token, timeout).call(SUMMARY_TOOL, {"path": path})
-        return result_text(result)
-    except Exception:
+    def work() -> None:
+        try:
+            daemon = url
+            if daemon is None:
+                from .desktop_bridge import daemon_url
+
+                daemon = daemon_url()
+            secret = token
+            if secret is None:
+                from . import token_source
+
+                secret = token_source.web_token()
+            result = DaemonClient(daemon, secret, timeout).call(SUMMARY_TOOL, {"path": path})
+            box["text"] = result_text(result)
+        except Exception:
+            box["text"] = None
+
+    worker = threading.Thread(target=work, name="codex-read-summary", daemon=True)
+    worker.start()
+    worker.join(timeout)
+    if worker.is_alive():
         return None
+    return box.get("text")
 
 
 # --- The decision ---------------------------------------------------------------------------------
@@ -428,15 +474,36 @@ def _shell_tool() -> str:
 
 
 _CD_VERBS = frozenset({"cd", "set-location", "pushd", "sl"})
+#: What may follow a read in its pipe and still leave the command only the read: they choose lines.
+_RANGE_FILTERS = frozenset({"head", "select-object"})
 
 
-def only_read(command: str) -> bool:
-    """Whether denying ``command`` drops nothing but the read: one segment (a leading ``cd`` aside),
-    with or without a pipe, no redirection, heredoc or substitution. A compound command passes."""
+def _file_operands(stage: list[str]) -> int:
+    """How many files the read of ``stage`` names (a ``sed`` script is not one), or 0."""
+    from .resources.hooks import read_classifier
+
+    verb, args, _ = read_classifier._verb(stage)
+    family = read_classifier._FAMILY.get(verb)
+    if family is None:
+        return 0
+    positional = read_classifier._operands(args, read_classifier._VALUE_FLAGS.get(family, set()))
+    if family == "sed":
+        return len(positional) - 1
+    if family == "cat" and read_classifier._flag_value(args, "-path", "-literalpath"):
+        return len(positional) + 1
+    return len(positional)
+
+
+def read_parts(command: str) -> int:
+    """How many parts ``command`` has when denying it drops nothing but reads, or 0.
+
+    Every part (a leading ``cd`` aside) reads one file and nothing else: no redirection, heredoc or
+    substitution, and its only pipe, if any, goes into a range filter (``head``, ``Select-Object``).
+    Another pipe (``| cat``, ``| grep``) or a second file would be dropped too (issue #707)."""
     from .resources.hooks import read_classifier
 
     if "$(" in command or "`" in command:
-        return False
+        return 0
     stripped, _ = read_classifier.strip_heredocs(command)
     parts = read_classifier.segments(read_classifier.tokenize(stripped))
     real = [
@@ -444,7 +511,47 @@ def only_read(command: str) -> bool:
         for part in parts
         if not (part.stages and read_classifier._verb(part.stages[0])[0] in _CD_VERBS)
     ]
-    return len(real) == 1 and not real[0].targets and not real[0].heredoc and not real[0].redirected
+    for part in real:
+        if part.targets or part.heredoc or part.redirected or not 1 <= len(part.stages) <= 2:
+            return 0
+        if _file_operands(part.stages[0]) != 1:
+            return 0
+        if len(part.stages) == 2 and read_classifier._verb(part.stages[1])[0] not in _RANGE_FILTERS:
+            return 0
+    return len(real)
+
+
+def only_read(command: str) -> bool:
+    """Whether denying ``command`` drops nothing but one read (`read_parts`)."""
+    return read_parts(command) == 1
+
+
+@dataclass(frozen=True)
+class LiteralRead:
+    """A read the command runs literally: its file, ``whole``/``range``/``partial`` and its lines."""
+
+    key: str
+    scope: str
+    span: tuple[int, int | None] | None = None
+
+
+def literal_reads(tool_input: dict, cwd: str | None, environ: Mapping) -> list[LiteralRead]:
+    """Every read of a shell call whose file resolves, in order. A search or anything the classifier
+    cannot place (``unclassifiable``) is not one: it shows no known part of the file."""
+    from .resources.hooks import read_classifier
+
+    found: list[LiteralRead] = []
+    for access in read_classifier.accesses(_shell_tool(), tool_input):
+        if access.kind != "read" or access.scope not in {"whole", "range", "partial"}:
+            continue
+        if access.to_file:
+            continue  # its output went to a file: nothing of it entered the context
+        resolved = read_classifier.resolve(access.path, cwd, environ)
+        if not resolved:
+            continue
+        span = _span(access.lines) if access.scope == "range" else None
+        found.append(LiteralRead(file_key(resolved), access.scope, span))
+    return found
 
 
 def write_targets(tool: str, tool_input: dict, cwd: str | None, environ: Mapping) -> list[str]:
@@ -456,7 +563,7 @@ def write_targets(tool: str, tool_input: dict, cwd: str | None, environ: Mapping
         return []
     raw: list[str] = []
     if tool == "apply_patch" or _PATCH_BEGIN in command:
-        raw += [m.group(1).strip() for m in _PATCH_PATH.finditer(command)]
+        raw += [m.group(1).strip() for m in _PATCH_PATH.finditer(command) if m.group(1).strip()]
     if tool != "apply_patch":
         raw += [
             access.path
@@ -477,22 +584,31 @@ class _Call:
     state_file: Path
     scope: str
     state: ScopeState
-    subagent: bool
-    classified: dict
+    reads: list[LiteralRead]
     key: str
 
     def note_real_read(self, count_range: bool = True) -> None:
-        """A literal read lifts the guard and adds to the coverage (``readNoteRealRead``)."""
-        span = _span(self.classified.get("range"))
-        if self.classified.get("scope") == "whole":
-            self.state.file(self.key).whole = True
-            _record(self.common, self.state_file, self.scope, "whole", self.key)
-        elif span is not None and count_range:
-            self.state.file(self.key).ranges.append(span)
-            _record(self.common, self.state_file, self.scope, "range", self.key, span)
-        elif self.key in self.state.guard:
-            _record(self.common, self.state_file, self.scope, "lift", self.key)
-        self.state.guard.discard(self.key)
+        """The command runs: each literal read lifts its file's guard, a whole one marks the file
+        and a range adds up (``readNoteRealRead``), for every file and range of the command."""
+        for read in self.reads:
+            if read.scope == "whole":
+                self.state.file(read.key).whole = True
+                _record(self.common, self.state_file, self.scope, "whole", read.key)
+            elif read.span is not None and count_range:
+                self.state.file(read.key).ranges.append(read.span)
+                _record(self.common, self.state_file, self.scope, "range", read.key, read.span)
+            elif read.key in self.state.guard:
+                _record(self.common, self.state_file, self.scope, "lift", read.key)
+            self.state.guard.discard(read.key)
+
+    def spans(self) -> list[tuple[int, int | None]]:
+        return [r.span for r in self.reads if r.key == self.key and r.span is not None]
+
+
+def _outer_span(spans: Sequence[tuple[int, int | None]]) -> tuple[int, int | None]:
+    """The lines from the first range's start to the last one's end, for the header."""
+    ends = [b for _a, b in spans]
+    return min(a for a, _b in spans), None if None in ends else max(e for e in ends if e)
 
 
 def decide(
@@ -545,17 +661,23 @@ def decide(
     request = {"tool_name": name, "tool_input": tool_input, "cwd": cwd}
     classified = json.loads(hook_classify.classify_text(request, environ))
     path = classified.get("path")
+    # An MCP read never lifts the guard: the hook cannot see which part of the file it returns.
+    reads = literal_reads(tool_input, cwd, environ) if tool == "Bash" else []
     if classified.get("kind") != "read" or classified.get("read_switch") != "on" or not path:
+        # The command runs as it is (the switch off, the backend down, a write in the same
+        # command): what it reads literally still lifts and counts (issue #707).
+        _Call(common, state_file, scope, state, reads, "").note_real_read(count_range=not subagent)
         return None
     size = classified.get("bytes")
     min_bytes = read_classifier.prefilter_config(environ)["min_bytes"]
     big = isinstance(size, int) and size >= min_bytes
     kb = round(size / 1024) if isinstance(size, int) else 0
-    call = _Call(common, state_file, scope, state, subagent, classified, file_key(path))
+    call = _Call(common, state_file, scope, state, reads, file_key(path))
 
     if classified.get("scope") == "unclassifiable" or tool != "Bash":
         # Not sure what enters the context, or a tool whose result this hook cannot stand in for
-        # (an MCP read): a note, never a block, and the guard stays.
+        # (an MCP read): a note, never a block, and the guard of this file stays.
+        call.note_real_read(count_range=not subagent)
         if not big:
             return None
         return _note(
@@ -575,9 +697,11 @@ def decide(
         if subagent and classified.get("scope") == "whole":
             return _note(common.hook_text("codex.read.warn.subagent", path=path, kb=kb))
         return None
-    if not only_read(command):
-        # Denying would drop the rest of the command too: the read passes, with the note.
-        call.note_real_read()
+    parts = read_parts(command)
+    if not parts or len(reads) != parts or any(r.key != call.key for r in reads):
+        # Denying would drop the rest of the command too (another order, another file, a filter):
+        # the reads pass, they all count, and the note goes with them.
+        call.note_real_read(count_range=not subagent)
         return _note(
             common.hook_text(
                 "codex.read.warn.subagent" if subagent else "codex.read.warn.large",
@@ -592,15 +716,15 @@ def decide(
         # outside the main thread's coverage (its scope is its own).
         call.note_real_read(count_range=False)
         return None
-    span = _span(classified.get("range"))
+    spans = call.spans()
     entry = state.file(call.key)
-    total = count_lines(path) if span else None
-    if span is None or not total or span[0] > total or short_file(total, size):
+    total = count_lines(path) if spans else None
+    if not spans or not total or all(a > total for a, _b in spans) or short_file(total, size):
         call.note_real_read()
         return None
-    covered = coverage([*entry.ranges, span], total)
+    covered = coverage([*entry.ranges, *spans], total)
     if not entry.whole and covered >= WHOLE_SHARE:
-        return _steer(call, path, summarize, (covered, total, entry), span)
+        return _steer(call, path, summarize, (covered, total, entry), _outer_span(spans))
     call.note_real_read()
     return None
 

@@ -1,0 +1,110 @@
+{
+  "schemaVersion": 1,
+  "slug": "codex-guard-fixes",
+  "title": "Codex: guard de escritura y lecturas, huecos de la revisión (#706, #707)",
+  "mode": "lite",
+  "traceability": "strict",
+  "status": "result-review",
+  "createdAt": "2026-11-23T13:22:03.386Z",
+  "updatedAt": "2026-11-23T14:03:21.076Z",
+  "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-11-23T13:37:44.051Z",
+      "evidence": "spec.md con 9 REQ (uno por hueco de #706/#707) sobre el código leído; revisión adversarial personal-sdd-plan-reviewer: approve-with-changes, 2 bloqueantes (escritura en el mismo comando ocultaba la lectura; qué estado deja cada alcance) y 7 menores aplicados a spec y plan",
+      "actor": "user"
+    },
+    "plan": {
+      "status": "approved",
+      "updatedAt": "2026-11-23T13:37:50.741Z",
+      "evidence": "plan.md con T1-T7 y trazabilidad REQ-001..REQ-009; revisión adversarial aplicada: T4 depende de T3, T7 cubre la tabla de la wiki, salvaguardas y vuelta atrás de la limpieza, nombres de tests al día",
+      "actor": "user"
+    },
+    "quality": {
+      "status": "approved",
+      "updatedAt": "2026-11-23T14:02:45.947Z",
+      "evidence": "pytest -n 2 completo con pesado.sh: 8340 passed, 32 skipped; ruff check y format --check limpios; tests nuevos rojos sobre el código anterior (27 + 6) y verdes ahora; huellas de hooks regeneradas; sin secretos en el diff",
+      "actor": "user"
+    },
+    "conformance": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "memory": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-11-23T13:22:03.386Z",
+      "reason": "SDD change created"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "specifying",
+      "at": "2026-11-23T13:37:43.788Z",
+      "reason": "Lite: brief del encargo y código leído (codex_reads.py, read_classifier.py), hallazgos F1-F10 del review anterior"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-11-23T13:37:44.051Z",
+      "evidence": "spec.md con 9 REQ (uno por hueco de #706/#707) sobre el código leído; revisión adversarial personal-sdd-plan-reviewer: approve-with-changes, 2 bloqueantes (escritura en el mismo comando ocultaba la lectura; qué estado deja cada alcance) y 7 menores aplicados a spec y plan",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-11-23T13:37:50.441Z",
+      "reason": "spec aprobada"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-11-23T13:37:50.741Z",
+      "evidence": "plan.md con T1-T7 y trazabilidad REQ-001..REQ-009; revisión adversarial aplicada: T4 depende de T3, T7 cubre la tabla de la wiki, salvaguardas y vuelta atrás de la limpieza, nombres de tests al día",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "implementing",
+      "at": "2026-11-23T13:37:51.043Z",
+      "reason": "tests rojos escritos (27 rojos antes del arreglo)"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-11-23T14:02:45.456Z",
+      "reason": "suite completa verde (8340 passed), ruff limpio"
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-11-23T14:02:45.947Z",
+      "evidence": "pytest -n 2 completo con pesado.sh: 8340 passed, 32 skipped; ruff check y format --check limpios; tests nuevos rojos sobre el código anterior (27 + 6) y verdes ahora; huellas de hooks regeneradas; sin secretos en el diff",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "verifying",
+      "to": "result-review",
+      "at": "2026-11-23T14:03:21.076Z",
+      "reason": "quality aprobada; revisión de seguridad hecha y hallazgos S1-S3 arreglados; falta la revisión de resultado con dos jueces"
+    }
+  ]
+}
