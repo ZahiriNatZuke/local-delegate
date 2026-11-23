@@ -159,7 +159,7 @@ def no_short_path(monkeypatch):
         (
             "win32",
             "C:\\Users\\o'neil\\python.exe",
-            '& "C:/Users/o\'neil/python.exe" -I -m local_delegate.hook codex-prompt',
+            "& 'C:/Users/o''neil/python.exe' -I -m local_delegate.hook codex-prompt",
         ),
         (
             "linux",
@@ -230,6 +230,10 @@ def test_short_path_outside_windows_is_none():
         (f"{PYTHON} -I -m local_delegate.hook codex-prompt", PYTHON),
         ("& 'C:/a b/python.exe' -I -m local_delegate.hook codex-prompt", "C:/a b/python.exe"),
         ('& "C:/o\'n/python.exe" -I -m local_delegate.hook codex-prompt', "C:/o'n/python.exe"),
+        (
+            "& 'C:/o''n $x/python.exe' -I -m local_delegate.hook codex-prompt",
+            "C:/o'n $x/python.exe",
+        ),
         ("C:/PROGRA~1/python.exe -I -m local_delegate.hook codex-prompt", "C:/PROGRA~1/python.exe"),
     ],
 )

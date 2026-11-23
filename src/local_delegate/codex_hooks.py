@@ -21,7 +21,9 @@ of event, matcher and handler. Hence three rules:
 - a group of ours that goes away becomes ``{"hooks": []}`` while other groups follow it: Codex
   still counts it in the index (``append_hook_events`` enumerates the groups) and loads nothing,
   so a user's group behind it keeps its key; at the end of the list it is dropped;
-- the command carries no version: the ``uv tool`` interpreter keeps its path on upgrade.
+- the command carries no version: the ``uv tool`` interpreter keeps its path on upgrade (on
+  Windows a path with spaces goes as its 8.3 name, which can change if the folder is recreated;
+  `doctor` then sees the line as stale).
 
 Codex runs the command with the shell of the session (``Shell::derive_exec_args``): on Windows
 ``pwsh -NoProfile -Command`` by default, or ``cmd /c`` or ``bash -c`` (#718, see `command`);
@@ -110,7 +112,7 @@ def matcher_matches(matcher: str | None, names: list[str] | tuple[str, ...]) -> 
 #: of the user's that ends the same way is not taken for ours.
 #: `& '…'` is the call operator of PowerShell (#718), only in front of a quoted interpreter.
 _OURS = re.compile(
-    r"\s*(?:&\s+(?=[\"']))?(?P<python>\"[^\"]*\"|'[^']*'|[^\s\"'&]+)"
+    r"\s*(?:&\s+(?=[\"']))?(?P<python>\"[^\"]*\"|'(?:[^']|'')*'|[^\s\"'&]+)"
     r"\s+-I\s+-m\s+local_delegate\.hook\s+(?P<name>codex-[a-z][a-z-]{0,40})\s*"
 )
 
@@ -135,11 +137,15 @@ def short_path(path: str) -> str | None:
     """
     if sys.platform != "win32":
         return None
+    import ctypes
+
     try:
-        import ctypes
         from ctypes import wintypes
 
-        get = ctypes.windll.kernel32.GetShortPathNameW
+        # A private handle: `argtypes` set on `ctypes.windll.kernel32` would be shared by the
+        # whole process (the convention of `server.py`).
+        kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+        get = kernel32.GetShortPathNameW
         get.argtypes = [wintypes.LPCWSTR, wintypes.LPWSTR, wintypes.DWORD]
         get.restype = wintypes.DWORD
         size = get(path, None, 0)
@@ -148,7 +154,7 @@ def short_path(path: str) -> str | None:
         buffer = ctypes.create_unicode_buffer(size)
         written = get(path, buffer, size)
         return buffer.value if 0 < written < size else None
-    except (AttributeError, OSError, ValueError):
+    except (AttributeError, ImportError, OSError, TypeError, ValueError, ctypes.ArgumentError):
         return None
 
 
@@ -159,8 +165,8 @@ def _windows_interpreter(python: str) -> str:
     (`Shell::derive_exec_args`), PowerShell by default on Windows. A line that opens with a quoted
     path is a `ParserError` in PowerShell and nothing starts (#718), so the path goes bare when the
     three shells read it as one word; else its 8.3 name, if that one is; else the call operator of
-    PowerShell, which only PowerShell understands: `& '…'`, literal (a `$` is not expanded), or
-    `& "…"` when the path has a `'` itself.
+    PowerShell, which only PowerShell understands: `& '…'`, literal (a `$` is not expanded), with
+    a `'` of the path doubled as PowerShell escapes it.
     """
     path = python.replace('"', "")
     forward = path.replace("\\", "/")
@@ -171,7 +177,7 @@ def _windows_interpreter(python: str) -> str:
         short = short.replace("\\", "/")
         if _BARE_WINDOWS_PATH.fullmatch(short):
             return short
-    return f"& '{forward}'" if "'" not in forward else f'& "{forward}"'
+    return "& '" + forward.replace("'", "''") + "'"
 
 
 def command(python: str, name: str, platform: str | None = None) -> str:
@@ -234,7 +240,9 @@ def python_of(candidate: dict) -> str:
     text = candidate["hooks"][0]["command"]
     head = _OURS.fullmatch(text).group("python")
     if len(head) >= 2 and head[0] == head[-1] and head[0] in "\"'":
-        head = head[1:-1]
+        quote, head = head[0], head[1:-1]
+        if quote == "'":
+            head = head.replace("''", "'")  # PowerShell's escape of `'` (`& '…'`, #718)
     return head
 
 

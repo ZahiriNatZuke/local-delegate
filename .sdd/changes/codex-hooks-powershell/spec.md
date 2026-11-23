@@ -26,8 +26,8 @@ un plazo; `install` sigue sin escribirlo.
 - **REQ-002** — Si la ruta lleva espacios u otros caracteres, se usa su ruta corta 8.3
   (`GetShortPathNameW`) cuando esta sí cumple REQ-001; si no la hay, la línea es
   `& '<ruta>' -I -m local_delegate.hook <nombre>` (operador de llamada de PowerShell, la shell por
-  defecto de Codex en Windows; comillas simples para que un `$` no se expanda, dobles si la ruta
-  lleva `'`), que arranca bajo `pwsh` y `powershell`.
+  defecto de Codex en Windows; comillas simples para que un `$` no se expanda, con la `'` de la
+  ruta duplicada), que arranca bajo `pwsh` y `powershell`.
   - Request: "si los lleva, usar la ruta corta 8.3 (`GetShortPathNameW`) o, si no hay, elegir la forma según la shell de Codex (`& \"…\"` para PowerShell)"
   - Verify: test tests/test_codex_hooks_shells.py
 - **REQ-003** — `our_name` y `python_of` reconocen las tres formas nuevas y la vieja entre

@@ -110,6 +110,10 @@ def test_the_line_starts_in_every_shell(safe_python, shell, tmp_path):
 def test_a_path_with_spaces_starts(spaced_python, shell, tmp_path):
     """REQ-002: the 8.3 name starts everywhere; without one, `& '…'` starts in PowerShell."""
     line = codex_hooks.command(spaced_python, "codex-prompt")
+    short = codex_hooks.short_path(spaced_python)
+    if short is not None and " " not in short:
+        # The volume has 8.3 names: the line must use one, not fall back (second review, J2-01).
+        assert not line.startswith("& "), line
     if line.startswith("& ") and shell in ("cmd", "bash"):
         pytest.skip("no 8.3 name on this volume: the fallback form is PowerShell's")
     started, stderr = _starts(shell, line, tmp_path)
