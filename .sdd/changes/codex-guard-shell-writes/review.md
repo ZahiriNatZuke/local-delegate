@@ -9,7 +9,7 @@ for example "Judges: result-reviewer-1, result-reviewer-2". -->
 
 - Level: standard
 - Judges: result-reviewer-a, result-reviewer-b
-- Security reviewer: n/a (lite)
+- Security reviewer: no — nivel lite; el cambio solo endurece un hook que falla en abierto y la regex cuadrática (F7) se cubrió con test de linealidad
 - Verdict: conforms-with-notes (tras los arreglos; A dio «no aprobado tal cual» por F1/F2, B «aprobado con notas»)
 
 ## Specification comparison

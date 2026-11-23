@@ -71,6 +71,20 @@ el modelo nuevo.
   línea con la forma vieja. Tras `local-delegate update` hay que aprobar los hooks otra vez en
   `/hooks`, porque la línea cambió. El plazo de las tools MCP de Codex ya es de 300 s por defecto,
   así que `install` sigue sin escribir `tool_timeout_sec`.
+- **Test inestable en Windows: `test_a_hostile_line_costs_linearly` mide el coste, no el reloj**
+  (#727). Comparaba el tiempo de pared de una línea hostil corta y otra larga, y en Windows el
+  reloj y la caché lo hacían fallar de vez en cuando. Ahora mide tiempo de CPU, cada ronda dura al
+  menos 0,2 s, alterna pequeño y grande, se queda con el menor cociente y la línea va de 20 000 a
+  200 000 caracteres. Solo cambia el test.
+
+### Documentación
+
+- La matriz de capacidades de Codex (`docs/wiki/Codex-capabilities.md`) pasa a «probado» en las
+  filas de hooks, atribución por sesión y resumen de lecturas con guard de escritura, tras la prueba
+  con Codex CLI 0.171 real en Windows (#669, #670, #718, #724).
+- Cerrados los SDD que quedaban abiertos de jornadas anteriores (`codex-session-attribution` y tres
+  más) y los de esta versión; `delegacion-precisa-y-fiable` sigue abierto hasta el corte de P-4
+  (#725, #726).
 
 ## [0.54.0] - 2026-11-23
 
