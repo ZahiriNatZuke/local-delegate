@@ -25,7 +25,10 @@ _SRC = str(Path(local_delegate.__file__).resolve().parent.parent)
 
 #: The hard cap of a child process: a backtracking rule takes far longer than this.
 _CHILD_CAP_S = 10.0
-#: REQ-009: each hostile input of 1 000 000 characters is resolved in less than this.
+#: REQ-009: each hostile input of 1 000 000 characters is resolved in less than this much CPU
+#: time. CPU time, not wall clock: on a shared CI runner (Windows, with xdist) the wall clock of
+#: the linear scan went over 1 s four times in one morning, while a backtracking rule burns CPU
+#: for far longer, so CPU time still tells them apart and the cap above bounds the wall clock.
 _HOSTILE_LIMIT_S = 1.0
 
 
@@ -344,9 +347,9 @@ def test_a_hostile_input_ends_in_less_than_a_second(name):
         "from local_delegate.table_detect import has_table\n"
         f"text = {_HOSTILE[name]}\n"
         "assert len(text) >= 1_000_000, len(text)\n"
-        "started = time.perf_counter()\n"
+        "started = time.process_time()\n"
         "result = has_table(text)\n"
-        "print(json.dumps({'elapsed': time.perf_counter() - started, 'result': result}))\n"
+        "print(json.dumps({'elapsed': time.process_time() - started, 'result': result}))\n"
     )
     try:
         done = subprocess.run(
@@ -361,7 +364,7 @@ def test_a_hostile_input_ends_in_less_than_a_second(name):
         pytest.fail(f"{name}: has_table did not end within {_CHILD_CAP_S} s")
     assert done.returncode == 0, done.stderr
     report = json.loads(done.stdout.strip().splitlines()[-1])
-    assert report["elapsed"] < _HOSTILE_LIMIT_S, f"{name}: {report['elapsed']:.2f} s"
+    assert report["elapsed"] < _HOSTILE_LIMIT_S, f"{name}: {report['elapsed']:.2f} s of CPU"
 
 
 def test_the_module_uses_no_regular_expression():
