@@ -16,19 +16,19 @@
 
 ## Ordered tasks
 
-- [ ] T1 — Tests rojos de R3 y R4 antes del arreglo (REQ-001, REQ-002, REQ-003, REQ-004, REQ-005, REQ-006, REQ-007, REQ-008)
+- [x] T1 — Tests rojos de R3 y R4 antes del arreglo (REQ-001, REQ-002, REQ-003, REQ-004, REQ-005, REQ-006, REQ-007, REQ-008)
   - Files or modules: `tests/test_binary_input.py`, `tests/test_lint_exact_paths.py`
   - Verification: corren contra `main` y fallan por el assert del arreglo; los controles (UTF-8 con acentos, UTF-16 con BOM) pasan ya
   - Depends on: none
-- [ ] T2 — Rechazo de binarios en `_read_input` (REQ-001, REQ-002, REQ-003, REQ-004)
+- [x] T2 — Rechazo de binarios en `_read_input` (REQ-001, REQ-002, REQ-003, REQ-004)
   - Files or modules: `src/local_delegate/server.py`, `src/local_delegate/resources/i18n/{es,en}/mcp.json`
   - Verification: `tests/test_binary_input.py` y `tests/test_input_encoding.py` en verde
   - Depends on: T1
-- [ ] T3 — Rutas exactas en lint (REQ-005, REQ-006, REQ-007, REQ-008)
+- [x] T3 — Rutas exactas en lint (REQ-005, REQ-006, REQ-007, REQ-008)
   - Files or modules: `src/local_delegate/lint_patterns.py`, `src/local_delegate/server.py`, i18n del aviso de inventados
   - Verification: `tests/test_lint_exact_paths.py` y toda la suite de lint en verde
   - Depends on: T1
-- [ ] T4 — CHANGELOG y suite completa (REQ-009)
+- [x] T4 — CHANGELOG y suite completa (REQ-009)
   - Files or modules: `CHANGELOG.md`
   - Verification: suite completa con `pesado.sh` y `-n 2`; prueba en vivo contra el daemon dentro de `test-window`
   - Depends on: T2, T3

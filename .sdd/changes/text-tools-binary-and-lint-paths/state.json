@@ -4,9 +4,9 @@
   "title": "Tools de texto: rechazo de binarios y rutas exactas en lint_summary",
   "mode": "lite",
   "traceability": "strict",
-  "status": "specifying",
+  "status": "verifying",
   "createdAt": "2026-11-23T10:56:47.749Z",
-  "updatedAt": "2026-11-23T11:00:18.489Z",
+  "updatedAt": "2026-11-23T11:19:08.837Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -69,6 +69,27 @@
       "at": "2026-11-23T11:00:18.489Z",
       "evidence": "Spec con REQ-001..009 trazados a T1..T4; sdd check en verde; alcance acotado a R3 y R4 de research.md, sin tocar el prompt de lint (huella de afinidad)",
       "actor": "binarios-y-rutas-lint"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-11-23T11:19:08.376Z",
+      "reason": "T1-T4 hechos; suite verde y prueba en vivo en verification.md"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "implementing",
+      "at": "2026-11-23T11:19:08.606Z",
+      "reason": "T1-T4 hechos; suite verde y prueba en vivo en verification.md"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-11-23T11:19:08.837Z",
+      "reason": "T1-T4 hechos; suite verde y prueba en vivo en verification.md"
     }
   ]
 }
