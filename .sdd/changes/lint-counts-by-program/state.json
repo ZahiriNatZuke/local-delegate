@@ -4,9 +4,9 @@
   "title": "local_lint_summary: recuentos por fichero y por código por programa, con aviso si el resumen da otra cifra (#717)",
   "mode": "lite",
   "traceability": "strict",
-  "status": "result-review",
+  "status": "closed",
   "createdAt": "2026-11-23T18:05:36.916Z",
-  "updatedAt": "2026-11-23T18:50:28.236Z",
+  "updatedAt": "2026-11-23T20:06:49.493Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -27,16 +27,16 @@
       "actor": "implementer"
     },
     "conformance": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-11-23T20:06:48.801Z",
+      "evidence": "dos jueces conforms-with-notes en #719; R6/R7 arreglados en PR #722 con tests rojos antes; su revisión independiente (conforms-with-notes) dejó H1, H2, H4, H5 arreglados y H3 aceptado; suite 8722 pasados tras rebase",
+      "actor": "implementer"
     },
     "memory": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-11-23T20:06:49.244Z",
+      "evidence": "línea en el vault projects/local-delegate/jornada-2026-11-23-causa-comun-y-0-54-0.md (lint-counts-by-program cerrado, PR #719 y #722)",
+      "actor": "implementer"
     }
   },
   "history": [
@@ -105,6 +105,36 @@
       "to": "result-review",
       "at": "2026-11-23T18:50:28.236Z",
       "reason": "dos jueces: conforms-with-notes tras arreglar L1/L2"
+    },
+    {
+      "type": "gate",
+      "gate": "conformance",
+      "status": "approved",
+      "at": "2026-11-23T20:06:48.801Z",
+      "evidence": "dos jueces conforms-with-notes en #719; R6/R7 arreglados en PR #722 con tests rojos antes; su revisión independiente (conforms-with-notes) dejó H1, H2, H4, H5 arreglados y H3 aceptado; suite 8722 pasados tras rebase",
+      "actor": "implementer"
+    },
+    {
+      "type": "transition",
+      "from": "result-review",
+      "to": "closing",
+      "at": "2026-11-23T20:06:49.021Z",
+      "reason": "conformidad aprobada; R6 y R7 arreglados en el PR #722"
+    },
+    {
+      "type": "gate",
+      "gate": "memory",
+      "status": "approved",
+      "at": "2026-11-23T20:06:49.244Z",
+      "evidence": "línea en el vault projects/local-delegate/jornada-2026-11-23-causa-comun-y-0-54-0.md (lint-counts-by-program cerrado, PR #719 y #722)",
+      "actor": "implementer"
+    },
+    {
+      "type": "transition",
+      "from": "closing",
+      "to": "closed",
+      "at": "2026-11-23T20:06:49.493Z",
+      "reason": "memoria registrada; SDD cerrado"
     }
   ]
 }
