@@ -1,0 +1,110 @@
+{
+  "schemaVersion": 1,
+  "slug": "test-summary-figures-by-program",
+  "title": "Resumen de salidas de tests: totales y versión por programa, y aviso de negación sin falsos positivos",
+  "mode": "lite",
+  "traceability": "strict",
+  "status": "result-review",
+  "createdAt": "2026-11-23T15:59:42.285Z",
+  "updatedAt": "2026-11-23T16:49:31.151Z",
+  "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-11-23T16:02:42.221Z",
+      "evidence": "spec con 7 REQ trazados a T1-T4 y decision linea fija vs aviso justificada; sdd check ok",
+      "actor": "user"
+    },
+    "plan": {
+      "status": "approved",
+      "updatedAt": "2026-11-23T16:02:42.221Z",
+      "evidence": "spec con 7 REQ trazados a T1-T4 y decision linea fija vs aviso justificada; sdd check ok",
+      "actor": "user"
+    },
+    "quality": {
+      "status": "approved",
+      "updatedAt": "2026-11-23T16:49:26.561Z",
+      "evidence": "suite -n 2: 8451 pasan, 6 de hooks fallan igual sin el cambio (entorno del worktree); ruff verde; CI del PR",
+      "actor": "user"
+    },
+    "conformance": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "memory": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-11-23T15:59:42.285Z",
+      "reason": "SDD change created"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "specifying",
+      "at": "2026-11-23T16:02:41.716Z",
+      "reason": "brief listo, issue #714"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-11-23T16:02:42.221Z",
+      "evidence": "spec con 7 REQ trazados a T1-T4 y decision linea fija vs aviso justificada; sdd check ok",
+      "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-11-23T16:02:42.221Z",
+      "evidence": "spec con 7 REQ trazados a T1-T4 y decision linea fija vs aviso justificada; sdd check ok",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-11-23T16:28:22.440Z",
+      "reason": "spec aprobado"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "implementing",
+      "at": "2026-11-23T16:28:22.721Z",
+      "reason": "plan aprobado"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-11-23T16:28:23.008Z",
+      "reason": "T1-T3 hechos, suite verde"
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-11-23T16:49:26.561Z",
+      "evidence": "suite -n 2: 8451 pasan, 6 de hooks fallan igual sin el cambio (entorno del worktree); ruff verde; CI del PR",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "verifying",
+      "to": "result-review",
+      "at": "2026-11-23T16:49:31.151Z",
+      "reason": "dos jueces, hallazgos arreglados o aceptados"
+    }
+  ]
+}

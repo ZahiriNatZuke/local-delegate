@@ -130,8 +130,18 @@ entrada.
 del resumen niega una categoría que el runner cuenta por encima de cero («No se reportaron fallos
 ni saltos», «without failures», «0 skipped»), el aviso nombra la frase y la línea del runner. Una
 negación cuenta si va antes de la palabra en la misma frase, a menos de seis palabras y sin una
-cifra ni un «y»/«pero» en medio. El resumen no cambia. Para salida de tests la tool indicada es
-`local_lint_summary`.
+cifra (también en letras: «dos», «two»), una coma ni un «y»/«pero» en medio. «Errores» solo se
+compara con los `error`/`errors` del runner; «fallos», con fallos y errores juntos (#714). El
+resumen no cambia. Para salida de tests la tool indicada es `local_lint_summary`.
+
+**Totales y versión por programa (#714).** Con una línea de totales de pytest, jest o cargo en la
+entrada, la respuesta de `local_summarize` y de `local_lint_summary` termina con una línea que
+escribe el programa: «Totales de la salida de tests (leídos por programa, mandan sobre el texto):
+216 passed, 3 skipped · Python 3.11.15, pytest 8.3.4.» (la versión, solo con cabecera de pytest).
+El modelo cambiaba esas cifras («Python 3.11.5», «Veintiocho» pruebas por 216); lo que el programa
+sabe leer no se le pide. Si el resumen nombra otra versión de Python que la cabecera, además sale
+un aviso. Las cifras de la prosa no se comparan (un «3 fallos en test_a.py» de un fichero es
+legítimo): la línea del programa va al lado.
 
 ### Resumen por secciones (experimental, apagado)
 
