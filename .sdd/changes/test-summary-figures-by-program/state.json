@@ -4,9 +4,9 @@
   "title": "Resumen de salidas de tests: totales y versión por programa, y aviso de negación sin falsos positivos",
   "mode": "lite",
   "traceability": "strict",
-  "status": "verifying",
+  "status": "result-review",
   "createdAt": "2026-11-23T15:59:42.285Z",
-  "updatedAt": "2026-11-23T16:28:23.008Z",
+  "updatedAt": "2026-11-23T16:49:31.151Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -21,10 +21,10 @@
       "actor": "user"
     },
     "quality": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-11-23T16:49:26.561Z",
+      "evidence": "suite -n 2: 8451 pasan, 6 de hooks fallan igual sin el cambio (entorno del worktree); ruff verde; CI del PR",
+      "actor": "user"
     },
     "conformance": {
       "status": "pending",
@@ -90,6 +90,21 @@
       "to": "verifying",
       "at": "2026-11-23T16:28:23.008Z",
       "reason": "T1-T3 hechos, suite verde"
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-11-23T16:49:26.561Z",
+      "evidence": "suite -n 2: 8451 pasan, 6 de hooks fallan igual sin el cambio (entorno del worktree); ruff verde; CI del PR",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "verifying",
+      "to": "result-review",
+      "at": "2026-11-23T16:49:31.151Z",
+      "reason": "dos jueces, hallazgos arreglados o aceptados"
     }
   ]
 }
