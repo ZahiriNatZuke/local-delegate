@@ -1,0 +1,102 @@
+{
+  "schemaVersion": 1,
+  "slug": "extract-locate-by-program",
+  "title": "local_extract: las líneas las calcula el programa y el esquema tiene tipos por campo (#692, #694, #696, #697, #698)",
+  "mode": "standard",
+  "traceability": "strict",
+  "status": "implementing",
+  "createdAt": "2026-11-23T11:00:54.017Z",
+  "updatedAt": "2026-11-23T14:27:20.242Z",
+  "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-11-23T14:24:36.453Z",
+      "evidence": "spec.md REQ-001..022; 1a pasada: revisor de spec (1 bloqueante, 8 importantes) y de plan (1 bloqueante, 7 importantes), corregidos; 2a pasada de confirmacion: todos resueltos, 5 menores corregidos en el acto",
+      "actor": "revisores-independientes"
+    },
+    "plan": {
+      "status": "approved",
+      "updatedAt": "2026-11-23T14:24:37.165Z",
+      "evidence": "plan.md T1..T11 en dos frentes con contrato de interfaz; revisor personal-sdd-plan-reviewer 1a pasada corregida; 2a pasada: aprobado con menores (Block.kind function_property, base git diff unificada), corregidos",
+      "actor": "revisores-independientes"
+    },
+    "quality": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "conformance": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "memory": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-11-23T11:00:54.017Z",
+      "reason": "SDD change created"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "researching",
+      "at": "2026-11-23T11:08:25.485Z",
+      "reason": "lectura de research de causa común, issues y tests"
+    },
+    {
+      "type": "transition",
+      "from": "researching",
+      "to": "specifying",
+      "at": "2026-11-23T11:08:25.718Z",
+      "reason": "research.md con inventario de tests y promesas de los cerrados"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-11-23T14:24:36.453Z",
+      "evidence": "spec.md REQ-001..022; 1a pasada: revisor de spec (1 bloqueante, 8 importantes) y de plan (1 bloqueante, 7 importantes), corregidos; 2a pasada de confirmacion: todos resueltos, 5 menores corregidos en el acto",
+      "actor": "revisores-independientes"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-11-23T14:24:36.701Z",
+      "reason": "spec aprobada"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "plan-review",
+      "at": "2026-11-23T14:24:36.930Z",
+      "reason": "plan escrito y revisado"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-11-23T14:24:37.165Z",
+      "evidence": "plan.md T1..T11 en dos frentes con contrato de interfaz; revisor personal-sdd-plan-reviewer 1a pasada corregida; 2a pasada: aprobado con menores (Block.kind function_property, base git diff unificada), corregidos",
+      "actor": "revisores-independientes"
+    },
+    {
+      "type": "transition",
+      "from": "plan-review",
+      "to": "implementing",
+      "at": "2026-11-23T14:27:20.242Z",
+      "reason": "frente A arranca T1 en feat/extract-locate-a"
+    }
+  ]
+}
