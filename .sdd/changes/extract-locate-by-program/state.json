@@ -4,9 +4,9 @@
   "title": "local_extract: las líneas las calcula el programa y el esquema tiene tipos por campo (#692, #694, #696, #697, #698)",
   "mode": "standard",
   "traceability": "strict",
-  "status": "verifying",
+  "status": "result-review",
   "createdAt": "2026-11-23T11:00:54.017Z",
-  "updatedAt": "2026-11-23T16:43:37.397Z",
+  "updatedAt": "2026-11-23T17:09:44.289Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -21,16 +21,16 @@
       "actor": "revisores-independientes"
     },
     "quality": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-11-23T17:09:37.518Z",
+      "evidence": "CI del PR 713 22/22 verde sobre a8c2574f; suite local -n 2 (fallos solo de entorno del worktree, verdes en CI); ruff check/format; 18/18 mutantes en rojo; revisor B: codigo aprobado con menores, evidencia actualizada",
+      "actor": "revisores-independientes"
     },
     "conformance": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-11-23T17:09:37.833Z",
+      "evidence": "review.md deep: jueces A y B + personal-security-reviewer; A-H1, B-H1, B-H2, S-1..S-3 y CodeQL arreglados con test y mutante; menores cerrados o justificados; veredicto conforms-with-notes",
+      "actor": "revisores-independientes"
     },
     "memory": {
       "status": "pending",
@@ -104,6 +104,29 @@
       "to": "verifying",
       "at": "2026-11-23T16:43:37.397Z",
       "reason": "T1-T11 hechas; CI del PR 713 en verde sobre 9dab4c2b; segunda revision cerrada"
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-11-23T17:09:37.518Z",
+      "evidence": "CI del PR 713 22/22 verde sobre a8c2574f; suite local -n 2 (fallos solo de entorno del worktree, verdes en CI); ruff check/format; 18/18 mutantes en rojo; revisor B: codigo aprobado con menores, evidencia actualizada",
+      "actor": "revisores-independientes"
+    },
+    {
+      "type": "gate",
+      "gate": "conformance",
+      "status": "approved",
+      "at": "2026-11-23T17:09:37.833Z",
+      "evidence": "review.md deep: jueces A y B + personal-security-reviewer; A-H1, B-H1, B-H2, S-1..S-3 y CodeQL arreglados con test y mutante; menores cerrados o justificados; veredicto conforms-with-notes",
+      "actor": "revisores-independientes"
+    },
+    {
+      "type": "transition",
+      "from": "verifying",
+      "to": "result-review",
+      "at": "2026-11-23T17:09:44.289Z",
+      "reason": "quality y conformance aprobadas; CI 22/22 en a8c2574f"
     }
   ]
 }

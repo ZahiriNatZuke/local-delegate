@@ -82,12 +82,13 @@ Without a declaration, list what was run. Never invent a command. -->
 | --- | --- | --- | --- |
 | `uv run --locked pytest -n 2` (bajo `pesado.sh`) | sí | pass | Primera pasada: 8520 pasan y 8 fallan, seis arreglados después y los dos de tiempo de 1 MB rehechos (REQ-022). Sobre f55e57ac, en el worktree con el `.venv` del checkout principal: 8599 pasan, 31 se saltan, 7 fallan; uno era el léxico (arreglado en 9dab4c2b) y seis de hooks (`test_hook_entry.py`, `test_hook_record_read_endpoint.py`, `test_read_classifier.py`) comparan la huella del CLI instalado, que en un worktree es la del checkout principal: en el checkout principal pasan, y en el CI limpio, también. Zona de locate y extract (258 tests) verde en 9dab4c2b |
 | CI del PR #713 sobre 9dab4c2b | sí | pass | 22 de 22 checks en verde (ubuntu, windows y macos, lint, CodeQL, secretos). El job de macOS se canceló una vez sin llegar a tener runner (0 pasos en 15 min) y pasó al relanzarlo |
+| CI del PR #713 sobre a8c2574f (rebasado sobre main con #715, con los arreglos de seguridad) | sí | pass | 22 de 22 checks en verde; hilo de CodeQL («Empty except») arreglado y resuelto; PR en estado CLEAN |
 | `uv run ruff check src tests scripts` | sí | pass | sin hallazgos |
 | `uv run ruff format --check src tests scripts` | sí | pass | sin cambios |
 
 ## Quality checks
 
-- [x] Project-native tests pass (CI del PR en verde sobre 9dab4c2b; ver «Commands»).
+- [x] Project-native tests pass (CI del PR en verde sobre a8c2574f; ver «Commands»).
 - [x] Lint, formatting, type checking, and build checks pass where applicable.
 - [x] Secret scanning passes (secrets, GitGuardian y code scanning en verde en el PR).
 - [x] No unrelated changes are present.
