@@ -1,0 +1,103 @@
+{
+  "schemaVersion": 1,
+  "slug": "codex-guard-shell-writes",
+  "title": "Guard de Codex: escrituras de shell sobre ficheros resumidos",
+  "mode": "lite",
+  "traceability": "strict",
+  "status": "verifying",
+  "createdAt": "2026-11-23T21:36:52.234Z",
+  "updatedAt": "2026-11-23T21:58:41.952Z",
+  "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-11-23T21:38:19.272Z",
+      "evidence": "spec con 8 REQ trazados a T1-T4; #724 ya cubre el caso (no se abre issue nuevo); formas ya vistas comprobadas con sonda (Set-Content, >, >>, tee, sed -i, cp, mv, Copy-Item); huecos medidos: .NET, variables, New-Item, Clear-Content, envoltorios; read_classifier no se toca",
+      "actor": "agente-guard-shell-writes"
+    },
+    "plan": {
+      "status": "approved",
+      "updatedAt": "2026-11-23T21:38:19.272Z",
+      "evidence": "spec con 8 REQ trazados a T1-T4; #724 ya cubre el caso (no se abre issue nuevo); formas ya vistas comprobadas con sonda (Set-Content, >, >>, tee, sed -i, cp, mv, Copy-Item); huecos medidos: .NET, variables, New-Item, Clear-Content, envoltorios; read_classifier no se toca",
+      "actor": "agente-guard-shell-writes"
+    },
+    "quality": {
+      "status": "approved",
+      "updatedAt": "2026-11-23T21:58:41.952Z",
+      "evidence": "suite completa pytest -n 2: 8835 passed (1 fallo del léxico arreglado); afectados 284 passed; ruff check/format verdes; 50 rojos antes; 4 mutantes tumbados",
+      "actor": "agente-guard-shell-writes"
+    },
+    "conformance": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "memory": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-11-23T21:36:52.234Z",
+      "reason": "SDD change created"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "specifying",
+      "at": "2026-11-23T21:38:19.050Z",
+      "reason": "issue #724 leído; guard localizado en codex_reads.py:557 (write_targets) y read_classifier.py:412/436"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-11-23T21:38:19.272Z",
+      "evidence": "spec con 8 REQ trazados a T1-T4; #724 ya cubre el caso (no se abre issue nuevo); formas ya vistas comprobadas con sonda (Set-Content, >, >>, tee, sed -i, cp, mv, Copy-Item); huecos medidos: .NET, variables, New-Item, Clear-Content, envoltorios; read_classifier no se toca",
+      "actor": "agente-guard-shell-writes"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-11-23T21:38:19.272Z",
+      "evidence": "spec con 8 REQ trazados a T1-T4; #724 ya cubre el caso (no se abre issue nuevo); formas ya vistas comprobadas con sonda (Set-Content, >, >>, tee, sed -i, cp, mv, Copy-Item); huecos medidos: .NET, variables, New-Item, Clear-Content, envoltorios; read_classifier no se toca",
+      "actor": "agente-guard-shell-writes"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-11-23T21:58:41.135Z",
+      "reason": "spec,plan aprobados; T1-T4 hechas y verificadas (tests, hook real)"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "implementing",
+      "at": "2026-11-23T21:58:41.418Z",
+      "reason": "spec,plan aprobados; T1-T4 hechas y verificadas (tests, hook real)"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-11-23T21:58:41.673Z",
+      "reason": "spec,plan aprobados; T1-T4 hechas y verificadas (tests, hook real)"
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-11-23T21:58:41.952Z",
+      "evidence": "suite completa pytest -n 2: 8835 passed (1 fallo del léxico arreglado); afectados 284 passed; ruff check/format verdes; 50 rojos antes; 4 mutantes tumbados",
+      "actor": "agente-guard-shell-writes"
+    }
+  ]
+}

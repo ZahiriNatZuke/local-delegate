@@ -27,6 +27,20 @@ el modelo nuevo.
 
 ### Corregido
 
+- **Codex: el guard de escritura ve las escrituras de PowerShell, cmd y bash** (#724, de #670). En
+  la prueba real con Codex CLI 0.171 en Windows, tras leer resumido un `.md`, el modelo lo editó con
+  `[System.IO.File]::WriteAllText(...)` y la ruta en una variable (`$p = '….md'`) dentro de
+  `exec_command`, y el guard no lo vio. Ahora `codex-tool-guard` rechaza con el mismo aviso que
+  `apply_patch` la API de .NET (`WriteAllText`, `WriteAllLines`, `AppendAllText`, `Copy`, `Move`…,
+  con la ruta literal, en variable o en `(Resolve-Path …)`), una ruta en una variable con un solo
+  valor literal, `New-Item -Value`, `Clear-Content`, `Tee-Object`, las órdenes dentro de un bloque
+  `{ … }` y las envueltas en `cmd /c`, `bash -c` o `powershell -Command`; las de antes (`>`, `>>`,
+  `tee`, `sed -i`, `cp`, `mv`, `Set-Content`, `Out-File`…) siguen. Una lectura, una escritura a otro
+  fichero o una ruta que no se puede saber sin ejecutar pasan, como siempre; la lista de lo que no
+  ve está en la wiki («Resumen de lecturas y guard de escritura en Codex»). Del clasificador que
+  comparten los hooks de Claude Code solo cambia cómo encuentra los here-strings (`@'…'@`): la
+  expresión regular perezosa era cuadrática con muchos `@'` sin cerrar (unos 70 s con 200 000
+  caracteres); ahora es lineal y encuentra lo mismo.
 - **`local_lint_summary`: los recuentos por fichero y por código los da el programa** (#717). En la
   prueba de humo de la 0.54.0, con 4 avisos de ruff en dos ficheros, el resumen le puso a un
   fichero el F401 del otro y sus recuentos por fichero sumaban 5, sin aviso. Para los formatos que

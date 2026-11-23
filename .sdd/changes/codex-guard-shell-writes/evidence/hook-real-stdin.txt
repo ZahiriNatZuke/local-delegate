@@ -1,0 +1,12 @@
+Hora (Uruguay): 2026-11-23 18:52
+instalado: 0.55.0
+== ANTES: codigo instalado (release/v0.55.0)
+issue-724 (notes.md, guardado): rc=0 -> (nada: pasa)
+control: misma orden sobre other.md: rc=0 -> (nada: pasa)
+control: solo lectura de notes.md: rc=0 -> (nada: pasa)
+codex-hooks-seen.json: {"codex-tool-guard": "2026-11-23T21:52:12+00:00"}
+== DESPUES: codigo de la rama
+issue-724 (notes.md, guardado): rc=0 -> deny | `<work>\notes.md` solo se ha leido resumido: antes de modificarlo, lee literal el tramo que vas a cambiar, por ejemplo con `sed -n '1,120p'` (con una lectura li
+control: misma orden sobre other.md: rc=0 -> (nada: pasa)
+control: solo lectura de notes.md: rc=0 -> (nada: pasa)
+codex-hooks-seen.json: {"codex-tool-guard": "2026-11-23T21:52:12+00:00"}
