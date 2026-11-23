@@ -10,7 +10,7 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 - **El CI deja de dar rojos sin fallo de código** (SDD `ci-root-cause`). Sale del análisis de 400
   corridas del 2026-11-03 al 2026-11-23; una regla por causa, no un parche por test:
-  - `ci-gate` da por bueno, con aviso, un job `cancelled` **sin runner asignado y sin pasos**
+  - `ci-gate` da por bueno, con aviso, una pata de macOS `cancelled` **sin runner asignado y sin pasos**
     (macOS sin máquina: 31 de los 90 rojos del gate). Un cancelado que llegó a correr, o un
     `timed_out`, sigue fallando.
   - Los tests de coste miden **crecimiento** entre dos tamaños con `tests/perf.py`

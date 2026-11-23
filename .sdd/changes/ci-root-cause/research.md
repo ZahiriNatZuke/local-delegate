@@ -53,7 +53,7 @@ cambio (`jobs.json`, `failed_tests.txt`, `logs/`). Las causas de los rojos, de m
 ## Existing conventions
 
 - `tests/test_ci_gate.py` ata `EXPECTED_JOBS` a los jobs de `ci.yml` por conjuntos iguales, la firma
-  20:00 del cuelgue y los límites de cada paso del navegador y de `test-lang-es` (`< MAX_WAIT_S`).
+  20:00 del cuelgue (25:00 tras este cambio) y los límites de cada paso del navegador y de `test-lang-es` (`< MAX_WAIT_S`).
 - La guarda de shells exigidas (`conftest.py`) falla la sesión si una shell de
   `COMPLETION_TEST_REQUIRE_SHELLS` no tuvo ningún test aprobado: la variable va solo en el paso
   principal de pytest, o la sesión `real_io` (sin tests de shell) fallaría.

@@ -11,9 +11,9 @@ CodeQL de `main`.
 ## Requirements
 
 - **REQ-001** — `ci_gate.py` da por bueno, con aviso nombrado en el informe y en el resumen del job,
-  un job `cancelled` sin runner asignado (`runner_id` vacío y `runner_name` vacío) y sin ningún paso
+  una pata `(macos-latest)` `cancelled` sin runner asignado (`runner_id` vacío y `runner_name` vacío) y sin ningún paso
   ejecutado. Un `cancelled` con runner o con algún paso ejecutado, y todo `timed_out`, siguen siendo
-  fallo.
+  fallo, y en Ubuntu, Windows o cualquier job sin matriz también el cancelado sin runner (revisión del PR: ahí no se probó nada).
   - Request: "un job cancelado SIN runner asignado (cancelado por infraestructura, sin pasos ejecutados) NO cuenta como fallo. Sale como aviso y macOS se sigue exigiendo cuando sí corre. Un cancelado con pasos ejecutados, o por timeout, sigue contando."
   - Verify: test tests/test_ci_gate.py
 - **REQ-002** — `pyproject.toml` registra los marcadores `perf` y `real_io`. Los pasos de pytest de
@@ -98,7 +98,7 @@ CodeQL de `main`.
 ## Non-functional requirements
 
 - Sin dependencias nuevas.
-- El job `test` mantiene `timeout-minutes: 15` (la firma 20:00 sigue valiendo).
+- El job `test` sube a `timeout-minutes: 20` por el paso `real_io` en serie, y la firma del cuelgue pasa a 25:00 (`docs/wiki/Repo-hardening.md`).
 
 ## Non-goals
 

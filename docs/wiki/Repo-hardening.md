@@ -102,7 +102,7 @@ Su regla, y el orden importa:
 | Estado del job | Veredicto |
 |---|---|
 | `conclusion` `success` o `skipped` | OK |
-| `conclusion` `cancelled`, **sin runner asignado y sin ningún paso ejecutado** | OK **con aviso**: GitHub no le dio máquina |
+| `conclusion` `cancelled` en una pata `(macos-latest)`, **sin runner asignado y sin ningún paso ejecutado** | OK **con aviso**: GitHub no le dio máquina |
 | `conclusion` cualquier otra | **falla**, sin esperar al resto |
 | sin `conclusion`, con algún step concluido en algo que no sea `success`/`skipped` | **falla** |
 | sin `conclusion`, y el **último step listado es `Complete job` en `success`** | OK — el job fantasma |
@@ -121,7 +121,7 @@ Tres detalles que no son cosméticos:
   de macOS salieron `cancelled` sin runner (`runner_id` y `runner_name` vacíos, `steps: []`): 31 de
   los 90 rojos del gate. Ahí no corrió nada del repo; el gate lo da por bueno, lo nombra en el
   informe y deja un `::warning::`. Basta un runner asignado o un paso ejecutado para que un
-  `cancelled` vuelva a fallar, y `timed_out` falla siempre. macOS se sigue exigiendo cuando corre.
+  `cancelled` vuelva a fallar, y `timed_out` falla siempre. macOS se sigue exigiendo cuando corre. Solo se perdona a macOS: si Ubuntu o Windows salen así, el PR no se probó y el gate falla.
 
 `needs` + `if: always()`, que es el patrón habitual, **no sirve**: `needs` espera a que el job
 *termine*, que es justo lo que no pasa. El gate corre en paralelo y hace polling.
