@@ -4,9 +4,9 @@
   "title": "local_summarize: aviso cuando el resumen niega una categoria que el runner de tests conto",
   "mode": "lite",
   "traceability": "strict",
-  "status": "verifying",
+  "status": "closed",
   "createdAt": "2026-11-16T15:34:53.245Z",
-  "updatedAt": "2026-11-16T15:45:38.072Z",
+  "updatedAt": "2026-11-23T11:00:20.283Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -21,22 +21,22 @@
       "actor": "user"
     },
     "quality": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-11-23T10:53:12.441Z",
+      "evidence": "PR #686 (merge bebd8635, publicado en 0.53.0): 22 de 22 checks en verde segun gh pr checks 686 (pytest 3.11-3.15 en Linux/macOS/Windows, CodeQL, Socket, GitGuardian), comprobado el 2026-11-23 07:55 UY",
+      "actor": "user"
     },
     "conformance": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-11-23T10:58:41.407Z",
+      "evidence": "review.md standard (2 jueces) conforms-with-notes; prueba en vivo 2026-11-23 ventana w-20261123T105026Z (evidence/vivo-2026-11-23.md): 4 resumenes fieles sin falso positivo; aviso (REQ-002) solo por test; falsos positivos F1/F2 como seguimiento",
+      "actor": "user"
     },
     "memory": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-11-23T11:00:20.201Z",
+      "evidence": "Nota del vault projects/local-delegate/jornada-2026-11-16-diez-issues-y-codex-nativo.md, seccion Seguimiento 2026-11-23 (actualizada el 2026-11-23); seguimientos en review.md de este SDD",
+      "actor": "user"
     }
   },
   "history": [
@@ -90,6 +90,51 @@
       "to": "verifying",
       "at": "2026-11-16T15:45:38.072Z",
       "reason": "implementado; tests de la zona y control positivo hechos"
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-11-23T10:53:12.441Z",
+      "evidence": "PR #686 (merge bebd8635, publicado en 0.53.0): 22 de 22 checks en verde segun gh pr checks 686 (pytest 3.11-3.15 en Linux/macOS/Windows, CodeQL, Socket, GitGuardian), comprobado el 2026-11-23 07:55 UY",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "verifying",
+      "to": "result-review",
+      "at": "2026-11-23T10:53:12.525Z",
+      "reason": "quality aprobada con el CI completo de #686; falta la revision de resultado"
+    },
+    {
+      "type": "gate",
+      "gate": "conformance",
+      "status": "approved",
+      "at": "2026-11-23T10:58:41.407Z",
+      "evidence": "review.md standard (2 jueces) conforms-with-notes; prueba en vivo 2026-11-23 ventana w-20261123T105026Z (evidence/vivo-2026-11-23.md): 4 resumenes fieles sin falso positivo; aviso (REQ-002) solo por test; falsos positivos F1/F2 como seguimiento",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "result-review",
+      "to": "closing",
+      "at": "2026-11-23T10:58:41.564Z",
+      "reason": "conformance aprobada; quedan la nota de memoria y el cierre"
+    },
+    {
+      "type": "gate",
+      "gate": "memory",
+      "status": "approved",
+      "at": "2026-11-23T11:00:20.201Z",
+      "evidence": "Nota del vault projects/local-delegate/jornada-2026-11-16-diez-issues-y-codex-nativo.md, seccion Seguimiento 2026-11-23 (actualizada el 2026-11-23); seguimientos en review.md de este SDD",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "closing",
+      "to": "closed",
+      "at": "2026-11-23T11:00:20.283Z",
+      "reason": "revision de resultado y prueba en vivo hechas el 2026-11-23; memoria en la jornada del vault"
     }
   ]
 }

@@ -4,9 +4,9 @@
   "title": "Codex: resumen automático de lecturas y guard de escritura (#670)",
   "mode": "standard",
   "traceability": "strict",
-  "status": "verifying",
+  "status": "result-review",
   "createdAt": "2026-11-16T15:38:42.960Z",
-  "updatedAt": "2026-11-16T16:08:19.681Z",
+  "updatedAt": "2026-11-23T10:53:12.692Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -21,10 +21,10 @@
       "actor": "user"
     },
     "quality": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-11-23T10:53:12.613Z",
+      "evidence": "PR #686 (merge bebd8635, publicado en 0.53.0): 22 de 22 checks en verde segun gh pr checks 686 (pytest 3.11-3.15 en Linux/macOS/Windows, CodeQL, Socket, GitGuardian), comprobado el 2026-11-23 07:55 UY",
+      "actor": "user"
     },
     "conformance": {
       "status": "pending",
@@ -104,6 +104,21 @@
       "to": "verifying",
       "at": "2026-11-16T16:08:19.681Z",
       "reason": "tests de los ficheros afectados en verde (396), mutantes caen, hooks/list en Codex 0.169.0"
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-11-23T10:53:12.613Z",
+      "evidence": "PR #686 (merge bebd8635, publicado en 0.53.0): 22 de 22 checks en verde segun gh pr checks 686 (pytest 3.11-3.15 en Linux/macOS/Windows, CodeQL, Socket, GitGuardian), comprobado el 2026-11-23 07:55 UY",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "verifying",
+      "to": "result-review",
+      "at": "2026-11-23T10:53:12.692Z",
+      "reason": "quality aprobada con el CI completo de #686; falta la revision de resultado"
     }
   ]
 }

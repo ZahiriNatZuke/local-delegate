@@ -36,6 +36,15 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   `knowledge/glossary.md` bajo `projects/knowledge/` pasaba sin aviso. Ahora una ruta con carpetas
   tiene que estar en el log tal cual, y también una carpeta que el resumen nombre sola.
 
+### Documentación
+
+- La matriz de capacidades de Codex (`docs/wiki/Codex-capabilities.md`) está al día con la 0.53.0:
+  la fila de hooks nombra los cuatro (`codex-prompt`, `codex-subagent-start`, `codex-tool-guard`,
+  `codex-mcp-call`), y la atribución por sesión y el resumen de lecturas con guard de escritura
+  pasan de «no disponible todavía» a «implementado, configurado», con «probado» pendiente de la
+  prueba con Codex real (#669, #670, #671).
+- Capturas del panel en claro y oscuro regeneradas con la columna «Codex» de «Quién delegó» (#669).
+
 ## [0.53.0] - 2026-11-16
 
 Codex recibe la delegación casi como Claude Code y `local_extract` desconfía mejor de sus propias

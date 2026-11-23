@@ -4,9 +4,9 @@
   "title": "local_extract: nombres de campo de ficheros y hunks de un diff por programa, sin null silencioso (#665)",
   "mode": "lite",
   "traceability": "strict",
-  "status": "result-review",
+  "status": "closed",
   "createdAt": "2026-11-16T15:54:39.440Z",
-  "updatedAt": "2026-11-16T16:08:51.159Z",
+  "updatedAt": "2026-11-23T11:00:20.121Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -27,16 +27,16 @@
       "actor": "user"
     },
     "conformance": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-11-23T10:58:41.321Z",
+      "evidence": "review.md standard (2 jueces) conforms-with-notes; prueba en vivo 2026-11-23 ventana w-20261123T105026Z (evidence/vivo-2026-11-23.md): REQ-001..003 contra el backend real; REQ-004/005 por test; seguimientos F2/F3/F5 fuera de este cambio",
+      "actor": "user"
     },
     "memory": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-11-23T11:00:20.034Z",
+      "evidence": "Nota del vault projects/local-delegate/jornada-2026-11-16-diez-issues-y-codex-nativo.md, seccion Seguimiento 2026-11-23 (actualizada el 2026-11-23); seguimientos en review.md de este SDD",
+      "actor": "user"
     }
   },
   "history": [
@@ -112,6 +112,36 @@
       "to": "result-review",
       "at": "2026-11-16T16:08:51.159Z",
       "reason": "verificacion local completa; falta la revision de dos jueces"
+    },
+    {
+      "type": "gate",
+      "gate": "conformance",
+      "status": "approved",
+      "at": "2026-11-23T10:58:41.321Z",
+      "evidence": "review.md standard (2 jueces) conforms-with-notes; prueba en vivo 2026-11-23 ventana w-20261123T105026Z (evidence/vivo-2026-11-23.md): REQ-001..003 contra el backend real; REQ-004/005 por test; seguimientos F2/F3/F5 fuera de este cambio",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "result-review",
+      "to": "closing",
+      "at": "2026-11-23T10:58:41.486Z",
+      "reason": "conformance aprobada; quedan la nota de memoria y el cierre"
+    },
+    {
+      "type": "gate",
+      "gate": "memory",
+      "status": "approved",
+      "at": "2026-11-23T11:00:20.034Z",
+      "evidence": "Nota del vault projects/local-delegate/jornada-2026-11-16-diez-issues-y-codex-nativo.md, seccion Seguimiento 2026-11-23 (actualizada el 2026-11-23); seguimientos en review.md de este SDD",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "closing",
+      "to": "closed",
+      "at": "2026-11-23T11:00:20.121Z",
+      "reason": "revision de resultado y prueba en vivo hechas el 2026-11-23; memoria en la jornada del vault"
     }
   ]
 }
