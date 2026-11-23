@@ -311,16 +311,14 @@ def test_a_singular_heading_field_gets_one_heading(backend, tmp_path):
     chosen: list[str] = []
 
     def answer(call):
-        names = _enum(call, "intro_heading_line")
-        assert (
-            call["response_format"]["schema"]["properties"]["intro_heading_line"]["maxItems"] == 1
-        )
+        names = _enum(call, "heading_line")
+        assert call["response_format"]["schema"]["properties"]["heading_line"]["maxItems"] == 1
         chosen.append(next(n for n in names if "Sección 2" in n))
-        return json.dumps({"intro_heading_line": [{"name": chosen[0]}]})
+        return json.dumps({"heading_line": [{"name": chosen[0]}]})
 
     backend["answer"] = answer
-    data = server.local_extract(fields=["intro_heading_line"], path=_write(tmp_path, text, "d.md"))
-    [item] = data["intro_heading_line"]
+    data = server.local_extract(fields=["heading_line"], path=_write(tmp_path, text, "d.md"))
+    [item] = data["heading_line"]
     assert item["name"] == chosen[0]
     assert item["start"] == _line_of(text, "## Sección 2")
 
