@@ -360,17 +360,3 @@ def test_chunked_reduce_marker_is_replaced_by_a_chunk_value(backend):
     meta = data.pop("_local_delegate", {})
     assert "placeholder_keys" not in meta
     assert data == {"a": "ZZZ"}
-
-
-def test_a_numbered_marker_is_null(backend, tmp_path):
-    """#568 numbering: the model copied the line prefix too (`"3| N/A"`); still a marker."""
-    calls, state = backend
-    source = tmp_path / "notes.txt"
-    source.write_text("uno\ndos\ntres\n", encoding="utf-8")
-    state["answer"] = lambda call: _ok('{"owner": "3| N/A", "start_line": 2}')
-    data = server.local_extract(fields=["owner", "start_line"], path=str(source))
-    assert "3| tres" in calls[0]["user"]  # guard: the input really was numbered
-    meta = data.pop("_local_delegate")
-    assert data == {"owner": None, "start_line": 2}
-    assert meta["placeholder_keys"] == {"owner": "3| N/A"}
-    assert meta["missing_keys"] == ["owner"]

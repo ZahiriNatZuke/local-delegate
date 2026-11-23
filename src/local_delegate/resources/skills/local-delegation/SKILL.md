@@ -101,8 +101,14 @@ y ni le recuerdan cargar las tools ni le bloquean la lectura.
 `local_extract` o `local_explain_code` (con `path`) las líneas que necesitas y lee solo ese
 rango con `Read(offset=…, limit=…)`. Citar `archivo:línea` o editar justifica leer el rango,
 no el archivo entero. Con `local_extract`, el nombre del campo tiene que pedir líneas
-(`…_con_lineas`, `numero_de_linea`, `linea_inicio`): solo así el modelo ve los números de línea del fichero (y,
-en un Markdown, sus encabezados con su línea); un campo sin esa palabra no puede dar líneas.
+(`…_con_lineas`, `numero_de_linea`, `linea_inicio`); un campo sin esa palabra no da líneas. Las
+líneas las calcula siempre el programa, nunca el modelo, y el valor es una lista de
+`{"name", "start", "end"}`: lee con `offset=start` y `limit=end-start+1`. Rinde mejor cuando el
+nombre dice qué quieres de un fichero con índice (`funciones_con_lineas` de un `.py` o `.ts`,
+`secciones_con_lineas` o `requisitos_con_lineas` de un Markdown, `ficheros_con_lineas` de un diff):
+entonces contesta el índice, sin modelo (`_local_delegate.located` dice por qué camino). Un elemento que sale en `_local_delegate.unlocated` se
+busca con `grep -n`, no leyendo el fichero entero. Un fallo determinista (JSON cortado, un tipo
+que no cuadra en `type_mismatch_keys`) da lo mismo si repites la misma llamada.
 
 Ejemplo de **revisión** (paso 1 del prompt de un revisor):
 

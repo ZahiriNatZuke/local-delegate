@@ -27,7 +27,7 @@ import subprocess
 import sys
 import threading
 import time
-from collections.abc import Callable, Collection, Generator, Iterable, Sequence
+from collections.abc import Callable, Collection, Generator, Iterable, Mapping, Sequence
 from contextlib import contextmanager, suppress
 from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime
@@ -52,6 +52,7 @@ from . import (
     cooldown,
     cost,
     cross_fill,
+    extract_schema,
     failures,
     git_history,
     grounding,
@@ -62,6 +63,7 @@ from . import (
     lint_patterns,
     llamaswap_api,
     llamaswap_config,
+    locate,
     matrix,
     pace,
     path_guard,
@@ -6008,6 +6010,7 @@ def _chat_map_reduce(
     response_format: dict | None = None,
     json_schema_fallback: bool = False,
     reduce_shortcut: Callable[[list[str]], str | None] | None = None,
+    map_partial_for: Callable[[Any, str], str] | None = None,
     report: dict | None = None,
     max_tokens_for: Callable[[int], int] | None = None,
     final_max_tokens_for: Callable[[int], int] | None = None,
@@ -6249,7 +6252,8 @@ def _chat_map_reduce(
                     time_short = True
                 truncated_pieces.append((current.chunk, piece))
             split.done()
-            return [out]
+            # A tool that reads each piece's answer against the piece itself (extract, REQ-013).
+            return [map_partial_for(piece, out) if map_partial_for is not None else out]
         if depth >= 2 or not _is_context_overflow(failed):
             return None
         parts = _split(piece)
@@ -6593,23 +6597,28 @@ def _strip_fences(s: str) -> str:
     return s
 
 
-def _json_schema_payload(fields: list[str]) -> dict:
+def _extract_kinds(fields: list[str], by_path: bool) -> dict[str, extract_schema.Kind]:
+    """#692: the kind of each requested field (`extract_schema.field_kind`), in request order."""
+    return {
+        name: extract_schema.field_kind(name, by_path)
+        for name in dict.fromkeys(fields)
+        if isinstance(name, str) and name != _EXTRACT_META_KEY
+    }
+
+
+def _json_schema_payload(
+    fields: list[str],
+    by_path: bool = False,
+    singular: Iterable[str] = (),
+    names: Mapping[str, list[str]] | None = None,
+) -> dict:
     """response_format json_object+schema para local_extract (ver doc de llama-server).
 
-    Cada propiedad se restringe a tipos primitivos (string/number/boolean/null): un
-    sub-schema vacío ({}) permite objetos/arrays anidados y algunos modelos (p. ej.
-    gemma3-4b) anidan el valor en vez de devolverlo plano — {"campo": {"valor": "x"}}
-    en lugar de {"campo": "x"}.
+    #692: each property has the type of its field's kind (`extract_schema`): a list never admits
+    a boolean, and no kind admits a free nested object (gemma3-4b nested the value,
+    `{"campo": {"valor": "x"}}` instead of `{"campo": "x"}`).
     """
-    primitive = {"type": ["string", "number", "boolean", "null"]}
-    return {
-        "type": "json_object",
-        "schema": {
-            "type": "object",
-            "properties": {f: primitive for f in fields},
-            "required": list(fields),
-        },
-    }
+    return extract_schema.payload(_extract_kinds(fields, by_path), singular=singular, names=names)
 
 
 # Códigos de idioma que se traducen a un nombre legible en la orden de `local_commit_msg`. Un mapa
@@ -8278,12 +8287,13 @@ def _extract_role(probe_len: int, content: str, fields: list[str]) -> tuple[str,
     return _table_role(probe_len, content, enabled)
 
 
-def _mark_role_reason() -> None:
-    """The table rule raised the role: every row of the operation carries `role_reason`."""
-    _ROLE_REASON.set(_ROLE_REASON_TABLE)
+def _mark_role_reason(reason: str = _ROLE_REASON_TABLE) -> None:
+    """A rule raised the role (the table's, or a location field's): every row of the operation
+    carries `role_reason`."""
+    _ROLE_REASON.set(reason)
     token = cancellation.current()
     if token is not None:
-        token.role_reason = _ROLE_REASON_TABLE
+        token.role_reason = reason
 
 
 def _with_table_role_notice(text: str, table_format: str | None) -> str:
@@ -8639,21 +8649,15 @@ def _is_no_data_marker(value: Any) -> bool:
     return text in _NO_DATA_MARKERS
 
 
-def _null_placeholders(
-    data: dict, fields: list[str], strip_prefix: Callable[[Any], Any] | None = None
-) -> dict[str, str]:
+def _null_placeholders(data: dict, fields: list[str]) -> dict[str, str]:
     """Set to null, in place, each requested key whose value is a "no data" marker.
 
-    `strip_prefix` (numbered input, #568) drops a copied `12| ` before looking (`"12| N/A"`).
     Returns {key: original value}, in request order. `_local_delegate` is left alone, as in
     `_normalize_extract_keys`.
     """
     found: dict[str, str] = {}
     for name in dict.fromkeys(fields):
-        value = data.get(name)
-        if strip_prefix is not None:
-            value = strip_prefix(value)
-        if name != _EXTRACT_META_KEY and _is_no_data_marker(value):
+        if name != _EXTRACT_META_KEY and _is_no_data_marker(data.get(name)):
             found[name] = data[name]
             data[name] = None
     return found
@@ -8750,138 +8754,157 @@ def _as_figure(value: Any) -> float | None:
         return None
 
 
-# --- #568: line numbers in `local_extract` --------------------------------------------------------
-# A field that asks for lines (`line_check.is_location_field`) had no possible answer: the model saw
-# the text bare, and each chunk started without knowing where it fell. With `path` and such a field,
-# the model sees `N| line` with the file's absolute line (the pieces of #460), Markdown headings
-# with their lines (by program, so it only has to filter), and the program checks the lines cited.
-# Without such a field, or with `text=`, nothing changes: a name extracted from a numbered line
-# would come back as `12| name`, so numbering is not the default.
+# --- #692-#698: the lines of a location field, by program -----------------------------------------
+# A field that asks for lines (`line_check.is_location_field`) read by `path` never takes a line
+# number from the model. An index of the file (`locate.build_index`: Python, TS/JS, Markdown, a
+# diff, ids) answers it alone when the name says what it wants (REQ-009); otherwise the model
+# chooses names of that index (REQ-010) or copies a literal piece of one line, an anchor
+# (REQ-011), and `locate.resolve` computes the lines. The content and the catalogue go to the
+# model without line numbers (REQ-012). Without such a field, or with `text=`, nothing changes.
 
-#: The share of a map piece's budget the Markdown outline may take; a longer outline is left out.
+#: The share of a piece's budget the catalogue of the index may take; a longer one is left out.
 _EXTRACT_OUTLINE_SHARE = 0.15
-#: The files whose `#` lines are headings, so the outline is computed for them only.
-_MARKDOWN_SUFFIXES = frozenset({".md", ".markdown", ".mdx"})
-#: #665: a file with one of these is read as a diff even when it does not open with a patch header
-#: (a preamble before its first `diff --git`); any other file is a diff only by its start (#499).
+#: #665: a file with one of these is read as a diff even when it does not open with a patch header;
+#: a location field asking for its files over one the index cannot read is warned about.
 _DIFF_SUFFIXES = frozenset({".patch", ".diff"})
+#: REQ-014: the value of `role_reason` when a location field sent the call to `code` or `long`.
+_ROLE_REASON_LOCATION = "location"
 
-_EXTRACT_LINES_CLAUSE = (
-    " Cada línea del contenido empieza por su número de línea en el fichero seguido de «| »; ese "
-    "prefijo no es parte del texto: no lo copies en los valores. En las claves de ubicación "
-    "({fields}) da esos números de línea, con lo que ubican (por ejemplo «Título: líneas "
-    "120-160»)."
+_EXTRACT_LOCATE_CLAUSE = (
+    ' Las claves de ubicación ({fields}) son listas de objetos con "name", "anchor" y '
+    '"anchor_end": en "name", qué es cada elemento (si hay catálogo, uno de sus nombres, '
+    'copiado tal cual); en "anchor", un trozo copiado literal de una sola línea del contenido '
+    'donde empieza el elemento, de código y no de un comentario; en "anchor_end", si hace falta, '
+    "un trozo literal de su última línea. No escribas números de línea: los calcula el programa."
 )
-#: The `N| ` of `_number_lines` at a line start (or `N|` ending the line, a blank file line);
-#: `12|34`, a table row, is data and stays.
-_EXTRACT_PREFIX = re.compile(r"(?m)^([ \t]*)(\d{1,7})\|(?: |$)")
 
 
-def _extract_outline_block(content: str, budget: int) -> str:
-    """The Markdown outline of `content` for the prompt, or "" if it has none or it is too long."""
-    outline = line_check.markdown_outline(content)
-    if not outline:
-        return ""
-    block = (
-        "Esquema de encabezados del documento completo (línea: encabezado; calculado por "
-        "programa, fiable):\n" + "\n".join(f"{n}: {heading}" for n, heading in outline) + "\n\n"
-    )
-    return block if len(block) <= budget * _EXTRACT_OUTLINE_SHARE else ""
+@dataclass(frozen=True)
+class _LocatedPiece:
+    """REQ-013: one map piece of a located extraction, with its absolute lines in the file."""
+
+    text: str
+    lines: tuple[int, int]
 
 
-def _strip_extract_prefixes(value: Any, total_lines: int) -> Any:
-    """`value` without the `N| ` the model copied at the start of a line from its numbered input.
+def _split_located_piece(piece: _LocatedPiece) -> list[_LocatedPiece]:
+    """A cut piece in two halves by lines, each with its own absolute lines; [] if indivisible."""
+    rows = piece.text.split("\n")
+    if len(rows) < 2:
+        return []
+    middle = len(rows) // 2
+    first, last = piece.lines
+    return [
+        _LocatedPiece("\n".join(rows[:middle]), (first, first + middle - 1)),
+        _LocatedPiece("\n".join(rows[middle:]), (first + middle, last)),
+    ]
 
-    Only a prefix whose N is a line of the file is dropped; strings inside lists and objects too.
+
+def _extract_object(raw: str) -> dict | None:
+    """The answer `raw` as a JSON object, or None if it is not one."""
+    try:
+        parsed = json.loads(_strip_fences(raw))
+    except json.JSONDecodeError:
+        return None
+    return parsed if isinstance(parsed, dict) else None
+
+
+def _extract_mismatches(
+    raw: str, fields: list[str], kinds: Mapping[str, extract_schema.Kind]
+) -> dict[str, dict[str, str]]:
+    """#692: the fields of the answer `raw` whose value breaks their kind, keys normalized first."""
+    data = _extract_object(raw)
+    if data is None:
+        return {}
+    _normalize_extract_keys(data, fields)
+    return extract_schema.validate(data, kinds)
+
+
+def _typed_partials(
+    partials: list[str], kinds: Mapping[str, extract_schema.Kind], found: dict[str, dict]
+) -> list[str]:
+    """#692: the map partials with each value that breaks its kind set to null, before joining.
+
+    No retry in the chunked path: the value is dropped and reported (`found`, first per field).
+    A partial that is not a JSON object is left as it is.
     """
-    if isinstance(value, str):
-        return _EXTRACT_PREFIX.sub(
-            lambda m: m.group(1) if 1 <= int(m.group(2)) <= total_lines else m.group(0), value
-        )
-    if isinstance(value, list):
-        return [_strip_extract_prefixes(v, total_lines) for v in value]
-    if isinstance(value, dict):
-        return {k: _strip_extract_prefixes(v, total_lines) for k, v in value.items()}
-    return value
-
-
-def _partial_objects(partials: list[str], strict: bool) -> list[dict] | None:
-    """The map partials that are JSON objects, in chunk order; `strict`: None if one is not."""
-    objects: list[dict] = []
+    out: list[str] = []
     for partial in partials:
-        try:
-            parsed = json.loads(_strip_fences(partial))
-        except json.JSONDecodeError:
-            parsed = None
-        if isinstance(parsed, dict):
-            objects.append(parsed)
-        elif strict:
-            return None
-    return objects
-
-
-def _merge_location_values(values: list[Any]) -> Any:
-    """#568: the values one location field took in several chunks, joined in chunk order.
-
-    Each chunk saw different lines, so they add up instead of competing: lists are concatenated
-    (an element repeated by two chunks once), objects merged (the first chunk's key wins),
-    strings joined by line; mixed shapes become one list.
-    """
-    if len(values) == 1:
-        return values[0]
-    if all(isinstance(v, dict) for v in values):
-        merged: dict = {}
-        for value in values:
-            for key, item in value.items():
-                merged.setdefault(key, item)
-        return merged
-    if all(isinstance(v, str) for v in values):
-        return "\n".join(dict.fromkeys(values))
-    out: list = []
-    seen: set[str] = set()
-    for value in values:
-        for item in value if isinstance(value, list) else [value]:
-            key = json.dumps(item, sort_keys=True, ensure_ascii=False)
-            if key not in seen:
-                seen.add(key)
-                out.append(item)
+        data = _extract_object(partial)
+        bad = extract_schema.validate(data, kinds) if data is not None else {}
+        if not bad:
+            out.append(partial)
+            continue
+        for name, info in bad.items():
+            data[name] = None
+            found.setdefault(name, info)
+        out.append(json.dumps(data, ensure_ascii=False))
     return out
 
 
-def _merged_from_partials(
-    objects: list[dict], fields: list[str], location_fields: list[str]
-) -> dict:
-    """The extraction built by program from the partials: location fields joined, others first."""
-    data: dict = {}
-    for name in dict.fromkeys(fields):
-        values = [o[name] for o in objects if o.get(name) is not None]
-        if name in location_fields:
-            data[name] = _merge_location_values(values) if values else None
-        else:
-            data[name] = values[0] if values else None
-    return data
+def _extract_located_shortcut(location_fields: list[str]) -> Callable[[list[str]], str | None]:
+    """REQ-013: the reduce of a located extraction, by program when no other field needs judgment.
 
-
-def _extract_location_shortcut(
-    fields: list[str], location_fields: list[str]
-) -> Callable[[list[str]], str | None]:
-    """#568: the reduce of a numbered extraction, by program when no other field needs judgment.
-
-    The location fields add up across chunks (`_merge_location_values`); only when two chunks
-    give values for the same OTHER field does the model decide, as in `_extract_shortcut`.
+    The location values never go through the reduce: each map partial had them resolved and
+    taken out (`_resolve_partial`), so they are null here. As in `_extract_shortcut`, only when
+    two partials give values for the same OTHER field does the model decide.
     """
 
     def shortcut(partials: list[str]) -> str | None:
-        objects = _partial_objects(partials, strict=True)
-        if not objects:
+        objects = [_extract_object(p) for p in partials]
+        if not objects or any(o is None for o in objects):
             return None
-        others = [f for f in fields if f not in location_fields]
-        if any(sum(o.get(f) is not None for o in objects) > 1 for f in others):
-            return None
-        merged = _merged_from_partials(objects, fields, location_fields)
+        merged: dict = {}
+        for obj in objects:
+            for name, value in obj.items():
+                if name in location_fields or value is None:
+                    continue
+                if name in merged:
+                    return None
+                merged[name] = value
         return json.dumps(merged, ensure_ascii=False)
 
     return shortcut
+
+
+def _location_meta(
+    req: locate.FieldRequest, items: list[locate.Item], index: locate.FileIndex
+) -> tuple[dict, list[dict]]:
+    """REQ-018: `located[field]` and the `unlocated[field]` entries of one location field."""
+    sources = [it.source for it in items] or ["program"]
+    placed = [it for it in items if it.start is not None]
+    indexes = [it.index for it in placed if it.index is not None]
+    by = max(dict.fromkeys(sources), key=sources.count)
+    entry: dict[str, Any] = {
+        "by": by,
+        # REQ-022: an index that could not be built is null, whatever the items carry.
+        "index": (
+            None
+            if index.unavailable_reason
+            else max(dict.fromkeys(indexes), key=indexes.count)
+            if indexes
+            else index.language
+        ),
+        "items": len(items),
+        "unlocated": len(items) - len(placed),
+    }
+    if req.singular and len(items) > 1:
+        entry["extra"] = len(items) - 1
+    conflicts = sum(it.conflict for it in items)
+    if conflicts:
+        entry["conflicts"] = conflicts
+    ignored = sum(it.anchor_end_ignored for it in items)
+    if ignored:
+        entry["anchor_end_ignored"] = ignored
+    unlocated: list[dict] = []
+    for it in items:
+        if it.start is not None:
+            continue
+        miss: dict[str, Any] = {"name": it.name, "reason": it.reason or "not_found"}
+        if it.candidates:
+            miss["candidates"] = list(it.candidates)
+        unlocated.append(miss)
+    return entry, unlocated
 
 
 @mcp.tool(annotations=_annotations(TOOL_TITLES["local_extract"]))
@@ -8910,23 +8933,32 @@ def local_extract(
     documents): the size probe uses file bytes for 'path' and characters for 'text' (~5-10%
     difference in UTF-8, acceptable).
     By default it asks the backend for schema-constrained JSON (`LOCAL_DELEGATE_JSON_SCHEMA=auto`);
-    if the backend does not support it, it retries in free mode.
+    if the backend does not support it, it retries in free mode. Each field has its own type: a
+    name that asks for several things (`three_rules`, `licensed_user_limits`) is a list, never a
+    boolean, and only a question (`has_tests`, `is_public`) is a yes/no. A value that breaks
+    its type gets one retry; if it still does, it is null and listed in `type_mismatch_keys`
+    (`{key: {"expected", "got"}}`), with a warning.
     To locate: with 'path', a field whose name asks for lines (`sections_with_lines`,
-    `line_number`, `start_line`, `lineRange`; also in Spanish) makes the model see line numbers
-    (and a Markdown file's headings with their lines), so it can answer for `Read` offset/limit;
-    cited lines that do not hold in the file are listed in `lines_unverified`, and a field that
-    asks for items (`tasks_with_lines`) but got only section ranges in `section_only_keys`.
-    Over a unified diff, a field that asks only for the files and their lines (`files_with_lines`)
-    gets one `path: first-last` per file, by program (`diff_files` says so); one that asks for
-    the files and their hunks (`files_and_hunks_with_lines`) gets each hunk's range too.
+    `functions_with_lines`, `heading_line`, `files_and_hunks_with_lines`; also in Spanish)
+    gets a list of `{"name", "start", "end"}` (plus `hunks` in a diff when asked), in file
+    order, or null. The lines are ALWAYS the program's, never the model's: an index of the file
+    (Python, TS/JS, Markdown headings, a unified diff, ids such as `REQ-012`) answers alone when
+    the name says what it wants, with no model call; otherwise the model picks names of that
+    index or copies a literal line, and the program finds it exactly. To read an item:
+    `offset=start`, `limit=end-start+1`. `located` says how each field was answered
+    (`{key: {"by": "program"|"selection"|"anchor", "index", "items", "unlocated"}}`); an item
+    the program could not place has null lines and is listed, with its reason (`not_found`,
+    `ambiguous` with `candidates`, `too_short`, `in_comment`, `not_in_index`), in `unlocated`,
+    with a warning. A field that asks for items (`tasks_with_lines`) but got only section
+    ranges is listed in `section_only_keys`. A location field that needs the model goes to the
+    code model (Python, TS/JS) or to the long-context one, never to the mechanical one
+    (`role_reason` with `"reason": "location"`). With `text=` a location field is an ordinary
+    field.
     A value that is a "no data" marker ("N/A", "unknown", "-", "", also the strings "null" and
     "undefined") comes back as null, listed in `missing_keys`, with the model's text in
     `placeholder_keys`. With a JSON object as input, a field that counts one of its top-level
     lists (`number_of_comments`) left empty or ABOVE the list's length is counted by the program,
     unless the JSON already holds a total for it; the model's figure is in `recounted_keys`.
-    A location field naming one heading (`intro_heading_line`) that got the whole Markdown
-    outline is cut to the only heading its singular name fits; with any doubt (a plural
-    subject, no single heading) it is left as it came. Both go to `outline_copies`, with a warning.
     A value found only in the row of another requested key (a table row, a JSON key or a `label:
     value` line) is kept but reported in `cross_filled_keys` (`{key: {"row", "other_key"}}`), with
     a warning: the model may have handed out the rows by position.
@@ -8966,61 +8998,135 @@ def local_extract(
             "format": table_format,
             "notice": i18n.t("mcp.warning.extract_role_reason_table"),
         }
-    max_chars = config.max_chars_for_role(role)
-    key_list = ", ".join(f'"{f}"' for f in fields)
-    system = _guard(f"un objeto JSON válido con exactamente estas claves: {{{key_list}}}")
-    # #568: with `path` and a field that asks for lines, the model sees them (see above).
-    location_fields = [f for f in fields if isinstance(f, str) and line_check.is_location_field(f)]
-    numbered = bool(path) and bool(location_fields)
-    outline_block = ""
-    if numbered:
-        system += _EXTRACT_LINES_CLAUSE.format(fields=", ".join(f'"{f}"' for f in location_fields))
-        # Only a Markdown file: in Python, YAML or shell a `# comment` would pass for a heading.
-        if Path(path).suffix.lower() in _MARKDOWN_SUFFIXES:
-            outline_block = _extract_outline_block(content, _map_budget(max_chars))
-    # #665: with `path` and a unified diff, each file's lines in the patch, by program (#582). A
-    # field that asks only for the files and their lines is answered from them, whatever the
-    # model listed: asked per chunk, it named the first file of each and the rest went missing.
-    # #665 (reopened): also the files and their hunks, and a `.patch`/`.diff` with a preamble.
-    diff_suffix = bool(path) and Path(path).suffix.lower() in _DIFF_SUFFIXES
-    diff_ranges = (
-        line_check.diff_file_hunks(content)
-        if numbered and (diff_suffix or sections.is_unified_diff(content))
+    # REQ-009: with `path`, the location fields; the index answers those it can, alone.
+    location_fields = (
+        [f for f in dict.fromkeys(fields) if isinstance(f, str) and line_check.is_location_field(f)]
+        if path
         else []
     )
-    asked_diff_fields = [
-        f
-        for f in location_fields
-        if line_check.asks_for_diff_files(f) or line_check.asks_for_diff_hunks(f)
-    ]
-    diff_file_fields = asked_diff_fields if diff_ranges else []
-    if diff_ranges:
-        system += _DIFF_LINES_CLAUSE
+    index = locate.build_index(content, path) if location_fields else None
+    requests = {name: locate.classify_field(name) for name in location_fields}
+    answered: dict[str, list[locate.Item]] = {}
+    for name, req in requests.items():
+        if index is not None:
+            items = locate.answer_by_program(req, index, content)
+            if items is not None:
+                answered[name] = items
+    model_location = [name for name in location_fields if name not in answered]
+    # REQ-010: the names the model may choose for each field; [] means anchors (REQ-011).
+    choices = {
+        name: locate.selectable_names(requests[name], index)
+        for name in model_location
+        if index is not None
+    }
+    if model_location:
+        # REQ-014: a location field the model answers goes to `code` (an index of code) or
+        # `long`, never to the mechanical role; this reason wins over the table's.
+        by_role = config.models_by_role()
+        role = (
+            "code"
+            if index is not None and index.language in locate.CODE_LANGUAGES and by_role.get("code")
+            else "long"
+        )
+        model = by_role[role]
+        _mark_role_reason(_ROLE_REASON_LOCATION)
+        role_meta["role_reason"] = {
+            "role": role,
+            "reason": _ROLE_REASON_LOCATION,
+            "notice": i18n.t("mcp.warning.extract_role_reason_location", role=role),
+        }
+    max_chars = config.max_chars_for_role(role)
+    model_fields = [f for f in fields if f not in answered]
+    key_list = ", ".join(f'"{f}"' for f in model_fields)
+    system = _guard(f"un objeto JSON válido con exactamente estas claves: {{{key_list}}}")
+    catalogue = ""
+    if model_location:
+        system += _EXTRACT_LOCATE_CLAUSE.format(fields=", ".join(f'"{f}"' for f in model_location))
+        # REQ-012: names of the whole file's index, without lines; the same in every piece.
+        budget_chars = int(_map_budget(max_chars) * _EXTRACT_OUTLINE_SHARE)
+        listed = locate.catalogue(index, budget_chars) if index is not None else ""
+        if listed:
+            catalogue = (
+                "Catálogo de elementos del fichero (tipo y nombre, calculado por programa):\n"
+                f"{listed}\n\n"
+            )
     use_schema = config.JSON_SCHEMA_MODE != "off"
-    response_format = _json_schema_payload(fields) if use_schema else None
+    # #692: each field typed by its name; #698: the output cap sized to what was asked.
+    kinds = _extract_kinds(model_fields, by_path=bool(path))
+    expected_items = {
+        name: len(choices[name]) if choices.get(name) else extract_schema.ANCHOR_ITEMS
+        for name in model_location
+    }
+    out_tokens = extract_schema.output_budget(kinds, expected_items)
+    response_format = (
+        extract_schema.payload(
+            kinds,
+            singular=[name for name in model_location if requests[name].singular],
+            names={name: names for name, names in choices.items() if names},
+        )
+        if use_schema
+        else None
+    )
     json_schema_fallback = config.JSON_SCHEMA_MODE == "auto"
     fallback_info: dict = {}
     report: dict = {}
     source = "path" if path else "inline"
 
     def _build(piece: str) -> str:
-        # The outline goes before the frozen instruction, which stays the same literal (corpus).
-        return outline_block + f"Extrae los campos del siguiente contenido:\n\n{piece}"
+        # The catalogue goes before the frozen instruction, which stays the same literal (corpus).
+        return catalogue + f"Extrae los campos del siguiente contenido:\n\n{piece}"
 
     reduce_system = (
         system + " Combina los objetos parciales: para cada clave, el valor que traigan; si "
         "difieren, el más completo y específico; null si ninguno lo trae."
     )
-    if numbered:
-        # #568: the location fields are joined by program from the partials (they can be long:
-        # ~60 sections cut a reduce capped at 512 tokens), so the model leaves them null.
+    if model_location:
+        # #568: the location fields are joined by program from the pieces, never by the reduce.
         reduce_system += (
             " Deja a null las claves de ubicación: el programa une las de todos los objetos."
         )
+    base_shortcut = (
+        _extract_located_shortcut(model_location) if model_location else _extract_shortcut
+    )
+    #: #692: {field: {"expected", "got"}} of the values dropped for breaking their type.
+    type_mismatch: dict[str, dict[str, str]] = {}
+    #: REQ-013: the location items each map piece gave, resolved against its own lines.
+    piece_items: list[dict[str, list[locate.Item]]] = []
+    location_kinds = {name: kinds[name] for name in model_location}
+
+    def _resolve_partial(piece: Any, partial: str) -> str:
+        # REQ-013: the anchors of a piece are looked for in its lines first; the location values
+        # leave the partial (null), so the reduce never sees them.
+        data = _extract_object(partial)
+        if data is None or not isinstance(piece, _LocatedPiece):
+            return partial
+        _normalize_extract_keys(data, model_fields)
+        bad = extract_schema.validate(data, location_kinds)
+        found: dict[str, list[locate.Item]] = {}
+        for name in model_location:
+            if name in bad:
+                type_mismatch.setdefault(name, bad[name])
+            elif data.get(name):
+                found[name] = locate.resolve(
+                    requests[name], data[name], index, content, piece_range=piece.lines
+                )
+            data[name] = None
+        piece_items.append(found)
+        return json.dumps(data, ensure_ascii=False)
+
+    def _pieces(budget: int) -> list[_LocatedPiece] | None:
+        if not model_location or index is None:
+            return None
+        # REQ-013: cut at the top-level blocks of the index (by paragraphs without one).
+        return [
+            _LocatedPiece(text, lines)
+            for text, lines in locate.split_at_blocks(content, index, budget - len(catalogue))
+        ]
 
     def _map_reduce(budget: int, into: dict) -> str:
         # SIN nada pegado al texto (`into`): esta tool parsea el resultado. El aviso de truncado,
         # el respaldo y el ahorro bajan a `_local_delegate`.
+        pieces = _pieces(budget)
         joined = _chat_map_reduce(
             model,
             system + " Si un campo no aparece en este fragmento, ponlo a null.",
@@ -9032,40 +9138,46 @@ def local_extract(
             source=source,
             max_words=_EXTRACT_WORDS,
             partial_max_words=_EXTRACT_WORDS,
+            # #698: every step (map, regroup, reduce) gets the cap sized to the fields.
+            max_tokens_for=lambda _words: out_tokens,
             temperature=0.0,
             reduce_system=reduce_system,
             build_reduce=lambda joined: (
                 "Estos son objetos JSON parciales y EN ORDEN extraídos de los fragmentos de un "
                 f"mismo documento. Devuelve un único objeto con las claves pedidas:\n\n{joined}"
             ),
-            reduce_shortcut=(
-                _extract_location_shortcut(fields, location_fields)
-                if numbered
-                else _extract_shortcut
+            # #692: a partial's value that breaks its field's type is dropped before joining.
+            reduce_shortcut=lambda partials: base_shortcut(
+                _typed_partials(partials, kinds, type_mismatch)
             ),
             raw_len=raw_len,
             path=path,
-            # #568: each piece numbered with its absolute lines; the outline leaves room for itself.
-            pieces=(
-                _numbered_code_pieces(content, budget - len(outline_block)) if numbered else None
-            ),
+            pieces=pieces,
+            user_for=(lambda piece: _build(piece.text.strip())) if pieces is not None else None,
+            split_for=_split_located_piece if pieces is not None else None,
+            map_partial_for=_resolve_partial if pieces is not None else None,
             response_format=response_format,
             json_schema_fallback=json_schema_fallback,
             report=into,
         )
+        if into.get("partials"):
+            into["partials"] = _typed_partials(into["partials"], kinds, type_mismatch)
         return joined
 
-    # #687: every field asked is answered by program from the diff, so the model's reply would be
-    # thrown away: no backend call (a 151 KB patch went through 7 chunks and 129 s for nothing).
-    # The answer is built below exactly as when the model gave no value; no backend call. The row
-    # of the usage log is still written (`program_only`), at the end, so the panel sees it.
-    program_only = bool(diff_file_fields) and all(name in diff_file_fields for name in fields)
+    # REQ-009 (#687): every field asked is answered by program, so there is no backend call. The
+    # row of the usage log is still written (`program_only`), at the end, so the panel sees it.
+    program_only = bool(location_fields) and not model_fields
     if program_only:
+        # REQ-014: a call the program answers alone has no role, so no role reason either.
+        role_meta.clear()
+        _ROLE_REASON.set(None)
+        token = cancellation.current()
+        if token is not None:
+            token.role_reason = None
         raw = "{}"
         truncated_calls = retried_calls = calls = 0
         pieces = 1
         unreduced = False
-    # Chunking is decided on the bare text, as in #460: the prefix travels, the threshold stays.
     elif len(content) > max_chars:
         raw = _map_reduce(_map_budget(max_chars), report)
         truncated_calls = report.get("truncated_calls", 0)
@@ -9077,46 +9189,50 @@ def local_extract(
         if report.get("fallback"):
             fallback_info.update(report["fallback"])
     else:
-        raw = _chat(
-            model,
-            system,
-            _build(_number_lines(content) if numbered else content),
-            max_tokens=512,
-            temperature=0.0,
-            tool="local_extract",
-            role=role,
-            fallback=fallback_info,
-            chars_in=len(content),
-            source=source,
-            raw_len=raw_len,
-            path=path,
-            response_format=response_format,
-            json_schema_fallback=json_schema_fallback,
-            # SIN la línea de ahorro pegada al texto: esta tool parsea el resultado, y ese sufijo
-            # convertía un JSON perfecto en uno imparseable. El dato no se pierde, baja unas
-            # líneas más abajo a `_local_delegate`, que es donde va lo que no son datos.
-            feedback=False,
-            report=report,
-        )
+        single_user = _build(content)
+
+        def _single(user: str, into: dict) -> str:
+            return _chat(
+                model,
+                system,
+                user,
+                max_tokens=out_tokens,
+                temperature=0.0,
+                tool="local_extract",
+                role=role,
+                fallback=fallback_info,
+                chars_in=len(content),
+                source=source,
+                raw_len=raw_len,
+                path=path,
+                response_format=response_format,
+                json_schema_fallback=json_schema_fallback,
+                # SIN la línea de ahorro pegada al texto: esta tool parsea el resultado, y ese
+                # sufijo convertía un JSON perfecto en uno imparseable. El dato no se pierde, baja
+                # unas líneas más abajo a `_local_delegate`, que es donde va lo que no son datos.
+                feedback=False,
+                report=into,
+            )
+
+        raw = _single(single_user, report)
         truncated_calls = 1 if report.get("truncated_out") else 0
         retried_calls = 0
         calls = 1
         pieces = 1
         unreduced = False
         if (
-            numbered
+            model_location
+            and index is not None
             and truncated_calls
             and len(content) > 2 * config.CHUNK_MIN_CHARS
-            # #665: fields the program answers gain nothing from more calls.
-            and any(f not in diff_file_fields for f in location_fields)
         ):
-            # #666: a location answer cut by `max_tokens` (the lines of a long list) was a JSON
-            # cut in two, with the error as the only answer. Redone in halves (the map/reduce
-            # splits again what is still cut), and the location fields are joined by program.
+            # #666: a location answer cut by `max_tokens` (a long list) was a JSON cut in two,
+            # with the error as the only answer. Redone in halves (the map/reduce splits again
+            # what is still cut), and the location items are joined by program.
             split_report: dict = {}
             pending_rows = _DEFERRED_EVENTS.get()
             first_row = len(pending_rows) - 1 if pending_rows else None
-            raw = _map_reduce(len(content) // 2 + 1 + len(outline_block), split_report)
+            raw = _map_reduce(len(content) // 2 + 1 + len(catalogue), split_report)
             # One tool call, one usage row: the cut call is folded into the row of its redo, so
             # the file read server-side is counted once (`_accounting`), as the map/reduce does.
             _fold_retried_row(first_row)
@@ -9128,6 +9244,19 @@ def local_extract(
             unreduced = bool(report.get("unreduced"))
             if report.get("fallback"):
                 fallback_info.update(report["fallback"])
+        elif not truncated_calls and (mismatches := _extract_mismatches(raw, model_fields, kinds)):
+            # #692: a value that breaks its field's type (`true` in a list field): ONE retry that
+            # says which field and what type, folded into the same usage row. A cut answer is
+            # never retried here: the redo in halves of #666 is the only retry it gets.
+            pending_rows = _DEFERRED_EVENTS.get()
+            first_row = len(pending_rows) - 1 if pending_rows else None
+            retry_report: dict = {}
+            again = _single(single_user + extract_schema.retry_message(mismatches), retry_report)
+            _fold_retried_row(first_row)
+            calls = 2
+            if _extract_object(again) is not None:
+                raw, report = again, retry_report
+                truncated_calls = 1 if report.get("truncated_out") else 0
     result = _strip_fences(raw)
 
     # `truncated`/`warning` significan desde B2c «salida truncada en un trozo» (REQ-010): la
@@ -9153,48 +9282,22 @@ def local_extract(
         previous = truncation.get("warning")
         truncation["warning"] = f"{previous}; {stopped}" if previous else stopped
 
-    # #568: with numbering, the partials the map gave (as objects) back the location fields.
-    location_partials = (
-        _partial_objects(report.get("partials") or [], strict=False)
-        if numbered and pieces > 1
-        else []
-    )
-    # #666: what the model wrote before a cut is not data, but the lines it cites still say
-    # whether it was inventing them: the cut answer and the cut map partials left out of the join
-    # are checked against the file too, labelled `raw`.
-    check_outline = (
-        line_check.markdown_outline(content)
-        if numbered and Path(path).suffix.lower() in _MARKDOWN_SUFFIXES
-        else []
-    )
-    cut_partials = (
-        [p for p in report.get("partials") or [] if not _partial_objects([p], strict=True)]
-        if numbered and truncated_calls and pieces > 1
-        else []
-    )
-
-    def _raw_unverified(texts: list[str]) -> list[str]:
-        out: list[str] = []
-        for raw_text in texts:
-            for citation in line_check.check_values(raw_text, content, check_outline):
-                label = f"raw: {citation.label()}"
-                if label not in out:
-                    out.append(label)
-        return out
-
     # #665: with a field answered by program, a reply the tool cannot use is not the whole answer:
     # the error travels in `model_error` beside the program's values instead of replacing them.
+    by_program = bool(answered) or any(piece_items)
     model_error: dict = {}
     try:
         data = json.loads(result)
     except json.JSONDecodeError:
         # #666: a JSON cut by `max_tokens` says so in the error itself, not only in `warning`.
         error_key = "mcp.extract.not_json_cut" if truncated_calls else "mcp.extract.not_json"
-        if location_partials:
-            # A reduce cut (or not JSON) does not lose what the chunks found: built by program.
-            data = _merged_from_partials(location_partials, fields, location_fields)
-        elif diff_file_fields:
-            # #665: the files of the diff do not depend on the model; the rest stays null.
+        if pieces > 1 and any(_extract_object(p) is not None for p in report.get("partials") or []):
+            # #568: a reduce cut (or not JSON) does not lose what the pieces found: the fields
+            # are filled from the partials by program, below.
+            data = {}
+        elif by_program:
+            # The pieces' items and the index's answers do not depend on the reply; the rest
+            # stays null.
             data = {}
             model_error = {"error": i18n.t(error_key), "raw": result}
         else:
@@ -9203,98 +9306,76 @@ def local_extract(
             # en vez de recibir una excepción de protocolo.
             # #586: whoever waited for the long model and got an error hears why it went there.
             error: dict = {"error": i18n.t(error_key), "raw": result}
-            raw_lines = (
-                _raw_unverified([result, *cut_partials]) if numbered and truncated_calls else []
-            )
-            if raw_lines:
-                error["lines_unverified"] = raw_lines
             return {
                 "_local_delegate": _with_input_encoding_meta({**error, **truncation, **role_meta})
             }
     if not isinstance(data, dict):
-        if not diff_file_fields:
+        if not by_program:
             error = {"error": i18n.t("mcp.extract.not_object"), "raw": result}
             return {
                 "_local_delegate": _with_input_encoding_meta({**error, **truncation, **role_meta})
             }
         data, model_error = {}, {"error": i18n.t("mcp.extract.not_object"), "raw": result}
 
-    if location_partials:
-        # The location values are joined by program, never left to the reduce (#568).
-        merged = _merged_from_partials(location_partials, fields, location_fields)
-        for name in location_fields:
-            if merged.get(name) is not None:
-                data[name] = merged[name]
     if pieces > 1:
-        _fill_nulls_from_partials(data, fields, report.get("partials") or [])
+        _fill_nulls_from_partials(
+            data, [f for f in fields if f not in location_fields], report.get("partials") or []
+        )
     # The contract is "exactly the requested keys": in free mode (`LOCAL_DELEGATE_JSON_SCHEMA=off`,
     # or `auto` after the backend refused the schema) nothing forces the model to it. Normalize
     # always, here, before `_local_delegate` is added (so it is never counted as an extra key).
     missing_keys, renamed_keys, dropped = _normalize_extract_keys(data, fields)
-    for name in diff_file_fields:
-        # #665: one entry per file of the diff, `path: first-last` in lines of the patch; what the
-        # model listed is replaced, never merged (it may name a file twice or at a hunk's lines).
-        # A field that asks for the hunks too gets each hunk's range after it.
-        with_hunks = line_check.asks_for_diff_hunks(name)
-        data[name] = [
-            f"{diff_path}: {first}-{last}"
-            + (
-                f" (hunks: {', '.join(f'{a}-{b}' for a, b in hunks)})"
-                if with_hunks and hunks
-                else ""
-            )
-            for first, last, diff_path, hunks in diff_ranges
-        ]
-    missing_keys = [name for name in missing_keys if name not in diff_file_fields]
+    # #692: what still breaks its type after the one retry (or a reduce that wrote it) is null.
+    for name, info in extract_schema.validate(data, kinds).items():
+        data[name] = None
+        type_mismatch.setdefault(name, info)
+    # REQ-001/REQ-002: every location value is built here, from the index or the anchors; a
+    # number the model wrote never reaches it.
+    located: dict[str, dict] = {}
+    unlocated: dict[str, list[dict]] = {}
+    section_only: list[str] = []
+    for name in location_fields:
+        req = requests[name]
+        if name in answered:
+            items = answered[name]
+        elif pieces > 1 or piece_items:
+            items = locate.merge([found.get(name, []) for found in piece_items])
+        elif isinstance(data.get(name), list):
+            items = locate.resolve(req, data[name], index, content)
+        else:
+            items = []
+        data[name] = locate.to_value(req, items)
+        if not items:
+            continue
+        located[name], misses = _location_meta(req, items, index)
+        if misses:
+            unlocated[name] = misses
+        if locate.section_only(req, items, index):
+            section_only.append(name)
+    missing_keys = [
+        name
+        for name in dict.fromkeys(fields)
+        if (name in missing_keys and name not in location_fields)
+        or (name in location_fields and data.get(name) is None)
+    ]
     # #586: a "no data" marker is null (and counts as missing); a count of a JSON input's list is
     # the program's, not the model's.
-    total_lines = len(content.split("\n")) - (1 if content.endswith("\n") else 0)
-    placeholders = _null_placeholders(
-        data, fields, (lambda v: _strip_extract_prefixes(v, total_lines)) if numbered else None
-    )
+    placeholders = _null_placeholders(data, [f for f in fields if f not in location_fields])
     recounted = _recount_lists(data, fields, content)
     for name in recounted:
         if name in placeholders:
             # What the model wrote, not the null it was turned into a line above.
             recounted[name]["model"] = placeholders.pop(name)
-    omitted = [name for name in missing_keys if name not in recounted]
-    missing_keys = [
-        name for name in dict.fromkeys(fields) if name in omitted or name in placeholders
+    omitted = [
+        name for name in missing_keys if name not in recounted and name not in location_fields
     ]
-    unverified: list[str] = []
-    outline_copies: dict[str, int | None] = {}
-    section_only: list[str] = []
-    if numbered:
-        # #594: the outline the prompt carries, to tell it apart from the place one field asks for.
-        outline = (
-            line_check.markdown_outline(content)
-            if Path(path).suffix.lower() in _MARKDOWN_SUFFIXES
-            else []
-        )
-        # #568: the prefix is the input's format, not data: it leaves the other fields; the lines
-        # cited in the location fields are checked against the whole file.
-        for name in dict.fromkeys(fields):
-            if name == _EXTRACT_META_KEY or data.get(name) is None or name in diff_file_fields:
-                continue
-            if name in location_fields:
-                copied, target = line_check.outline_copy(name, data[name], outline)
-                if copied:
-                    # #594: the whole outline in the field of one heading; cut to that heading
-                    # when only one fits the field's name, else left as it came, with a warning.
-                    outline_copies[name] = target[0] if target else None
-                    if target:
-                        data[name] = f"{target[1]}: {target[0]}"
-                # #633: a range is held by its section's heading; items asked, sections given.
-                for citation in line_check.check_values(data[name], content, outline):
-                    unverified.append(f"{name}: {citation.label()}")
-                if line_check.section_only(name, data[name], outline):
-                    section_only.append(name)
-            else:
-                data[name] = _strip_extract_prefixes(data[name], total_lines)
-        if truncated_calls:
-            # #666: the cut map partials left out of the join, and a cut reply the program's
-            # values stand beside (#665), are checked too, as `raw`.
-            unverified.extend(_raw_unverified([*cut_partials, *([result] if model_error else [])]))
+    missing_keys = [
+        name
+        for name in dict.fromkeys(fields)
+        if name in omitted
+        or name in placeholders
+        or (name in location_fields and data.get(name) is None)
+    ]
     # #650: a value that sits only in the row of another requested key; a warning, never a null.
     cross_filled = cross_fill.cross_filled(content, fields, data, skip=location_fields)
     # #667: a clause whose negation the source does not carry (or lost); a warning, never a change.
@@ -9344,40 +9425,34 @@ def local_extract(
             f"{name} = {info['count']} ({info['source']})" for name, info in recounted.items()
         )
         late_notices.append(i18n.t("mcp.warning.extract_recounted_keys", pairs=pairs))
-    if outline_copies:
-        meta["outline_copies"] = outline_copies
-        pairs = ", ".join(
-            f"{name} -> {i18n.t('mcp.warning.extract_outline_kept') if line is None else line}"
-            for name, line in outline_copies.items()
-        )
-        late_notices.append(i18n.t("mcp.warning.extract_outline_copies", pairs=pairs))
     if section_only:
         meta["section_only_keys"] = section_only
         late_notices.append(
             i18n.t("mcp.warning.extract_section_only", fields=", ".join(section_only))
         )
-    if diff_file_fields:
-        # #665: its own key, never `warning`: a value by program is not a failure (as `chunked`).
-        meta["diff_files"] = {
-            "fields": diff_file_fields,
-            "files": len(diff_ranges),
-            "notice": i18n.t(
-                "mcp.extract.diff_files_by_program",
-                fields=", ".join(diff_file_fields),
-                count=len(diff_ranges),
-            ),
-        }
-    if asked_diff_fields and not diff_ranges and numbered and diff_suffix:
-        # #665: a `.patch`/`.diff` where the program found no file: the value is the model's.
+    if located:
+        # REQ-018: its own key, never `warning`: a value by program is not a failure.
+        meta["located"] = located
+    if index is not None and index.unavailable_reason is not None:
+        # REQ-022: an index that could not be built (a syntax error, unbalanced braces) leaves the
+        # anchors without blocks; say so instead of a silent change of answer.
         late_notices.append(
-            i18n.t("mcp.warning.extract_diff_unparsed", fields=", ".join(asked_diff_fields))
+            i18n.t(
+                "mcp.warning.extract_index_unavailable",
+                fields=", ".join(location_fields),
+                reason=index.unavailable_reason,
+            )
         )
-    diff_nulls = [f for f in location_fields if f not in diff_file_fields and data.get(f) is None]
-    if diff_ranges and pieces > 1 and diff_nulls:
-        # #665: a location field over a chunked diff that no chunk answered; say which names the
-        # program answers whole, instead of a null whose only notice is "not seen".
+    asks_files = [name for name in location_fields if "files" in requests[name].categories]
+    if (
+        asks_files
+        and path
+        and Path(path).suffix.lower() in _DIFF_SUFFIXES
+        and (index is None or not any(block.kind == "file" for block in index.blocks))
+    ):
+        # #665: a `.patch`/`.diff` where the program found no file: say so, never a silent null.
         late_notices.append(
-            i18n.t("mcp.warning.extract_diff_null_hint", fields=", ".join(diff_nulls))
+            i18n.t("mcp.warning.extract_diff_unparsed", fields=", ".join(asks_files))
         )
     if model_error:
         # #665: the model's reply (or the backend's error) was not usable; the program's values
@@ -9395,16 +9470,27 @@ def local_extract(
         late_notices.append(
             i18n.t("mcp.warning.extract_polarity_flipped_keys", fields=", ".join(flipped))
         )
+    if type_mismatch:
+        # #692: an earlier warning keeps its exact text (#455).
+        meta["type_mismatch_keys"] = type_mismatch
+        late_notices.append(
+            i18n.t("mcp.warning.extract_type_mismatch", fields=", ".join(type_mismatch))
+        )
     if late_notices:
         previous = meta.get("warning")
         joined = "; ".join(late_notices)
         meta["warning"] = f"{previous}; {joined}" if previous else joined
-    if unverified:
-        meta["lines_unverified"] = unverified
-        # Appended, as #497 does: an earlier warning keeps its exact text and this one still shows.
-        lines_notice = i18n.t("mcp.warning.extract_lines_unverified", lines=", ".join(unverified))
+    if unlocated:
+        # REQ-018: appended last, as `lines_unverified` was: an earlier warning keeps its text.
+        meta["unlocated"] = unlocated
+        names = ", ".join(
+            f"{name}: {miss['name']} ({miss['reason']})"
+            for name, misses in unlocated.items()
+            for miss in misses
+        )
+        notice = i18n.t("mcp.warning.extract_unlocated", items=names)
         previous = meta.get("warning")
-        meta["warning"] = f"{previous}; {lines_notice}" if previous else lines_notice
+        meta["warning"] = f"{previous}; {notice}" if previous else notice
     meta = _with_input_encoding_meta(meta)
     if path and config.FEEDBACK_ENABLED:
         # Tokens de Claude de la fila en curso (REQ-035), no del modelo local.

@@ -212,15 +212,29 @@ def test_local_extract_sends_response_format_by_default(monkeypatch):
     assert sent["response_format"]["schema"]["required"] == ["a"]
 
 
-def test_json_schema_payload_restricts_properties_to_primitives():
-    # Un sub-schema vacío ({}) permite objetos/arrays anidados: algunos modelos (p. ej.
-    # gemma3-4b) responden {"campo": {"valor": "x"}} en vez de {"campo": "x"}. Cada
-    # propiedad debe restringirse a string/number/boolean/null.
-    payload = server._json_schema_payload(["a", "b"])
-    props = payload["schema"]["properties"]
-    assert set(props) == {"a", "b"}
-    for prop in props.values():
-        assert prop == {"type": ["string", "number", "boolean", "null"]}
+def test_json_schema_payload_types_each_field():
+    """#692: each property has its field's type. A sub-schema vacío ({}) permite objetos anidados:
+    gemma3-4b responde {"campo": {"valor": "x"}} en vez de {"campo": "x"}, so no `items` and no
+    property admits a free object; a list field (or a location one) never admits a boolean."""
+    fields = ["a", "tres_reglas", "tiene_tests", "number_of_comments", "secciones_con_lineas"]
+    for by_path in (False, True):
+        props = server._json_schema_payload(fields, by_path=by_path)["schema"]["properties"]
+        assert set(props) == set(fields)
+        assert props["a"] == {"type": ["string", "number", "boolean", "null"]}
+        assert props["tiene_tests"] == {"type": ["boolean", "null"]}
+        assert "boolean" not in props["tres_reglas"]["type"]
+        assert "boolean" not in props["secciones_con_lineas"]["type"]
+        for prop in props.values():
+            assert "object" not in prop["type"]
+            items = prop.get("items")
+            if items is not None:
+                assert (
+                    items["type"] == "object"
+                    and items["additionalProperties"] is False
+                    or ("object" not in items["type"])
+                )
+        location = props["secciones_con_lineas"]
+        assert ("items" in location and location["items"]["type"] == "object") is by_path
 
 
 @backend_mock.mock

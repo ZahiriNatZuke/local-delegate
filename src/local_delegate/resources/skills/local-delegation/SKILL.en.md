@@ -102,8 +102,14 @@ read.
 or `local_explain_code` (with `path`) for the lines you need and read only that range with
 `Read(offset=…, limit=…)`. Quoting `file:line` or editing justifies reading the range, not the
 whole file. With `local_extract`, the field name must ask for lines (`…_with_lines`, `line_number`,
-`start_line`): only then does the model see the file's line numbers (and, in a Markdown file, its
-headings with their lines); a field without such a word cannot give lines.
+`start_line`); a field without such a word gives no lines. The lines are always computed by the
+program, never by the model, and the value is a list of `{"name", "start", "end"}`: read with
+`offset=start` and `limit=end-start+1`. It works best when the name says what you want from a
+file with an index (`functions_with_lines` of a `.py` or `.ts`, `sections_with_lines` or
+`requirements_with_lines` of a Markdown file, `files_with_lines` of a diff): then the index
+answers, with no model (`_local_delegate.located` says by which path). An item listed in `_local_delegate.unlocated` is found with `grep -n`,
+not by reading the whole file. A deterministic failure (a cut JSON, a type that does not fit in
+`type_mismatch_keys`) gives the same if you repeat the same call.
 
 **Review** example (step 1 of a reviewer's prompt):
 
