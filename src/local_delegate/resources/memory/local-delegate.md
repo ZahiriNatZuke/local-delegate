@@ -18,8 +18,9 @@ primero — el MCP los lee del lado del servidor y el contenido nunca entra al c
   Nada de «si te conviene»: un condicional se lee como permiso para no delegar.
 - **Si eres un subagente**, ante un archivo grande localiza primero: pide a
   `local_extract` o `local_explain_code` (con `path`; a `local_extract`, con un campo que
-  pida líneas: `…_con_lineas`) las líneas que necesitas y lee solo
-  ese rango con `offset`/`limit`. Citar o editar líneas exactas justifica leer el rango, no
+  pida líneas: `…_con_lineas`, que vuelve como `{name, start, end}` calculados por programa)
+  las líneas que necesitas y lee solo ese rango con `offset`/`limit`; lo que salga en
+  `unlocated`, búscalo con `grep -n`. Citar o editar líneas exactas justifica leer el rango, no
   el archivo entero.
 - **Sin `ToolSearch` ni las `local_*`** (un agente cuya definición cierra la lista con
   `tools:`) no se puede delegar: quien lo lanza delega antes y le pasa el resultado, o elige

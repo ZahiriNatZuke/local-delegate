@@ -227,43 +227,59 @@ Dos cosas que conviene saber y solo estaban en el código:
   con aviso. Una cifra menor se respeta. No se recuenta si el JSON ya trae un número cuyo nombre
   nombra la lista (`total_comments`, `meta.file_count`) o un total genérico (`total_count`,
   `total`, `count`), si la lista está anidada o si dos claves encajan.
-- **Números de línea con `path`** (desde la 0.49.0, #568). Si un campo pide líneas por su nombre
-  (`sections_with_lines`, `start_line`, `heading_line`, `lineas`…; no `location` ni una cantidad
-  como `total_lines`), el modelo ve cada línea como `N| línea` con su número real, también en cada
-  trozo, y en un Markdown recibe el esquema de encabezados con su línea. Las líneas citadas se
-  comprueban contra el fichero: las que no casan van en `_local_delegate.lines_unverified` con aviso.
-  Al trocear, esos campos los une el programa en orden. Sin un campo así, o con `text=`, nada cambia.
-  Si un campo pide UN título (`local_extract_section_heading_line`) y el modelo copia el esquema
-  entero, el programa lo recorta al encabezado que nombra, pero solo sin duda: el nombre va en
-  singular y un único encabezado tiene todas sus palabras. Con duda (`tools_section_line`,
-  `pasos_heading_line`, ningún encabezado o varios) lo deja como vino. Los dos casos van en
-  `_local_delegate.outline_copies`, con aviso (#594). Un campo que pide varios sitios
-  (`sections_with_lines`, `capitulos_con_linea`, `line_of_each_heading`) no se toca. «Título:
-  línea 1» sobre un encabezado ya no cuenta como línea dudosa. Un rango que empieza dentro de un
-  apartado se comprueba también contra el título de ese apartado («Tareas: líneas 24-63» bajo
-  `## Tareas`). Si un campo pide elementos (`tareas_con_lineas`, `requisitos_con_lineas`) y el
-  modelo solo da el rango del apartado que los contiene, el campo va en
-  `_local_delegate.section_only_keys` con aviso: lee ese rango (#633).
-- **Los ficheros de un diff los da el programa** (#665). Con `path` a un diff unificado, un campo
-  que solo pide los ficheros y sus líneas (`ficheros_con_lineas`, `files_with_lines`,
-  `archivos_y_lineas`) vuelve con una entrada `ruta: primera-última` por cada fichero del parche,
-  en líneas del propio parche, calculada por el programa aunque el modelo nombre solo algunos. Lo
-  dice `_local_delegate.diff_files` (`fields`, `files`, `notice`), sin aviso de fallo. Si la
-  respuesta del modelo no sirve (no es JSON, no es un objeto o el backend falló), esos valores se
-  mantienen, el resto queda a `null` y el motivo va en `_local_delegate.model_error` (`error`,
-  `raw`) y en `warning`. Un nombre en singular (`fichero_con_lineas`) no cuenta. El modelo
-  recibe además la advertencia de que los números de `@@` no son líneas del parche. Un campo que
-  pide los ficheros y sus hunks (`ficheros_y_hunks_con_lineas`, `files_and_hunks_with_lines`)
-  recibe igual, por programa, `ruta: primera-última (hunks: a-b, c-d)`; `changed_files_with_lines`
-  cuenta como campo de ficheros. Un `.patch` o `.diff` se lee como diff aunque traiga un preámbulo
-  antes del primer `diff --git`; si no tiene cabeceras de fichero, `warning` lo dice. Otro campo de
-  líneas sobre un diff (`hunks_con_lineas`, `lineas_con_exec_con_lineas`) sigue siendo del modelo;
-  si queda en `null` en todos los trozos, `warning` nombra los campos que da el programa.
+- **Tipo por campo** (desde la 0.54.0, #692). Cada campo tiene su tipo en el esquema JSON según
+  su nombre: una pregunta (`tiene_tests`, `is_public`, o un nombre que acaba en `?`) es sí/no; un
+  recuento (`number_of_comments`, `total_lines`, `commentCount`) es un número; un nombre que pide
+  varias cosas (un numeral como `tres_reglas`, un cuantificador como `todos_los_autores` o un
+  plural como `licensed_user_limits`) es una lista o un número, **nunca** un booleano; el resto
+  admite texto, número o booleano. Si un valor no cuadra con su tipo hay **un** reintento que le
+  dice al modelo qué campo falló; si vuelve a fallar, el campo queda `null` y va en
+  `_local_delegate.type_mismatch_keys` (`{campo: {"expected", "got"}}`) con aviso. Al trocear no
+  hay reintento: el valor del trozo que no cuadra se descarta antes de unir y se informa igual.
+  El tope de salida se calcula por campo (512 como mínimo, 4096 como máximo) en vez de 512 fijo.
+- **Líneas con `path`: las calcula siempre el programa** (desde la 0.54.0, #694, #696, #697,
+  #698; **cambio incompatible**). Si un campo pide líneas por su nombre (`sections_with_lines`,
+  `funciones_con_lineas`, `heading_line`, `REQ_012_linea`…; no `location` ni una cantidad como
+  `total_lines`), su valor es una **lista** de `{"name", "start", "end"}` en orden de fichero
+  (también con un nombre en singular: una lista de un elemento), o `null` si no hay ninguno. Para
+  leer un elemento: `offset=start`, `limit=end-start+1`. Ningún número escrito por el modelo llega
+  al valor:
+  - un **índice del fichero** (Python por `ast`, TS/JS, títulos de Markdown, ficheros de un diff
+    unificado, ids como `REQ-012`) contesta solo, sin llamar al modelo, cuando el nombre dice qué
+    quiere en plural (`funciones_con_lineas`, `clases_con_lineas`, `secciones_con_lineas`,
+    `requisitos_con_lineas`, `ficheros_con_lineas`, `lista_de_ficheros_con_sus_lineas`); si todos
+    los campos se contestan así no hay llamada al backend y la fila del panel es `program_only`;
+  - si el nombre añade un filtro (`funciones_que_validan_entrada_con_lineas`) o pide un solo
+    elemento (`heading_line`), el modelo **elige nombres** del catálogo del índice y el programa
+    pone sus líneas;
+  - en el resto, el modelo **copia un trozo literal** de una línea (un ancla) y el programa la
+    busca exacta (mayúsculas y acentos cuentan; los espacios se normalizan). Si la línea está
+    dentro de una tabla, un elemento de lista o un bloque de código, o empieza una declaración o
+    una sección, el valor cubre ese bloque.
+  
+  `_local_delegate.located` dice cómo se contestó cada campo (`{campo: {"by":
+  "program"|"selection"|"anchor", "index", "items", "unlocated"}}`). Un elemento que no se pudo
+  ubicar queda con líneas `null` y va en `_local_delegate.unlocated` con su motivo (`not_found`,
+  `ambiguous` con hasta 5 `candidates`, `too_short`, `in_comment`, `not_in_index`), con aviso:
+  búscalo con `grep -n`. El modelo ya no ve números de línea en el contenido ni en el catálogo. Un
+  campo de ubicación que necesita al modelo va al rol `code` (Python, TS/JS) o `long`, nunca al
+  mecánico (`role_reason` con `"reason": "location"`). Si un campo pide elementos
+  (`tareas_con_lineas`) y solo llegan rangos de apartados, va en `section_only_keys` (#633). Un
+  `.patch` sin cabeceras de fichero lo dice en `warning`. Ya no existen en extract
+  `lines_unverified`, `outline_copies` ni `diff_files`. Con `text=`, un campo de ubicación es un
+  campo más.
+
+  Antes y después:
+
+  ```json
+  "funciones_con_lineas": "StepsPanel.onSaveOrder: líneas 317-321"
+  "funciones_con_lineas": [{"name": "StepsPanel.onSaveOrder", "start": 317, "end": 321}]
+  ```
 - **Una respuesta de líneas cortada por `max_tokens` se rehace en mitades** (#666). Si la llamada
   única con un campo de líneas se corta, se repite troceada (y el troceo vuelve a partir lo que
-  siga cortado), y los campos de líneas se unen por programa. Si aun así no queda JSON, el error
-  dice que el corte fue por `max_tokens` y las líneas citadas que no casan van en
-  `lines_unverified` como `raw: …`; también las de un trozo cortado que se quedó fuera de la unión.
+  siga cortado), y los elementos se unen por programa. Si aun así no queda JSON, el error dice que
+  el corte fue por `max_tokens`. Al trocear, cada trozo corta en los límites de los bloques del
+  índice y un ancla se busca primero dentro de su trozo.
 - **Valor de otra fila** (#650). Si el valor de una clave solo aparece en una fila o línea
   etiquetada de la entrada (tabla HTML, Markdown, CSV o TSV, clave de un JSON, `etiqueta: valor`)
   cuya etiqueta casa mejor con otra clave pedida, la clave va en

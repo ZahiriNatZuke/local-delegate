@@ -18,8 +18,9 @@ first — the MCP reads them server-side and the content never enters the contex
   No «if it helps»: a conditional reads as permission not to delegate.
 - **If you are a subagent**, for a large file locate first: ask `local_extract` or
   `local_explain_code` (with `path`; `local_extract` with a field that asks for lines:
-  `…_with_lines`) for the lines you need and read only that range with
-  `offset`/`limit`. Quoting or editing exact lines justifies reading the range, not the
+  `…_with_lines`, which comes back as `{name, start, end}` computed by program) for the lines
+  you need and read only that range with `offset`/`limit`; what comes back in `unlocated`,
+  find with `grep -n`. Quoting or editing exact lines justifies reading the range, not the
   whole file.
 - **Without `ToolSearch` or the `local_*` tools** (an agent whose definition closes the list
   with `tools:`) there is no delegating: whoever launches it delegates first and passes it the
