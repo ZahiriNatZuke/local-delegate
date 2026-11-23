@@ -25,9 +25,17 @@ _STRING = {
     "'": re.compile(r"'(?:[^'\\\n]|\\[\s\S])*'"),
     '"': re.compile(r'"(?:[^"\\\n]|\\[\s\S])*"'),
 }
+#: Where the scan of a string that does not close stops (the same body, without the quote).
+_STRING_REACH = {
+    "'": re.compile(r"'(?:[^'\\\n]|\\[\s\S])*+"),
+    '"': re.compile(r'"(?:[^"\\\n]|\\[\s\S])*+'),
+}
 #: The body of a template literal up to its closing backtick or its next `${`.
 _TEMPLATE_BODY = re.compile(r"(?:[^`\\$]|\\[\s\S]|\$(?!\{))*")
 _REGEX = re.compile(r"/(?![*/])(?:[^\\/\[\n]|\\.|\[(?:[^\]\\\n]|\\.)*\])+/[A-Za-z]*")
+#: How far a regex literal is looked for: a `/` that opens none costs at most this, never the rest
+#: of its line, so a long line of `(/[` stays linear (REQ-022). A longer literal reads as a `/`.
+_REGEX_REACH = 512
 #: After one of these words an expression starts, so a `/` opens a regex.
 _EXPRESSION_KEYWORDS = frozenset(
     {
@@ -85,6 +93,7 @@ def _tokenize(src: str) -> tuple[list[_Token], list[tuple[int, int]]]:
     tokens: list[_Token] = []
     comments: list[tuple[int, int]] = []
     braces: list[str] = []  # "{" for a brace, "${" for the expression of a template
+    dead = {"'": -1, '"': -1}  # per quote, where the last string that did not close stopped
     n = len(src)
     i = 0
     newline = False
@@ -144,7 +153,7 @@ def _tokenize(src: str) -> tuple[list[_Token], list[tuple[int, int]]]:
                 i = j + 2
                 continue
             if _regex_allowed(tokens):
-                m = _REGEX.match(src, i)
+                m = _REGEX.match(src, i, i + _REGEX_REACH)
                 if m:
                     add("re", i, m.end())
                     i = m.end()
@@ -153,11 +162,16 @@ def _tokenize(src: str) -> tuple[list[_Token], list[tuple[int, int]]]:
             i += 1
             continue
         if c in _STRING:
-            m = _STRING[c].match(src, i)
+            # a quote before `dead[c]` cannot close either: the failed scan read it as the second
+            # half of an escape, so a scan from it reads the same text and stops at the same
+            # place (without this, a long line of `'\` costs its length once per quote)
+            m = _STRING[c].match(src, i) if i >= dead[c] else None
             if m:
                 add("str", i, m.end())
                 i = m.end()
             else:  # a quote that does not close on its line (JSX text: «don't»): one mark
+                if i >= dead[c]:
+                    dead[c] = _STRING_REACH[c].match(src, i).end()
                 add("p", i, i + 1)
                 i += 1
             continue

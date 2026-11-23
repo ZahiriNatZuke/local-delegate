@@ -165,7 +165,7 @@ Frente B (implementador B). Ficheros propios: `src/local_delegate/extract_schema
   - Verification: `test_extract_locate_docs.py`; los tests de docstring que existen (`cross_filled_keys`, `polarity_flipped_keys`, regla de tabla) siguen en verde
   - Depends on: T8
 
-- [ ] T11 — Control positivo y suite completa (REQ-019, REQ-021)
+- [x] T11 — Control positivo y suite completa (REQ-019, REQ-021)
   - Files or modules: `verification.md` de este cambio (tabla de mutantes: mutante, test que falla, assert que dispara); sin cambios de código
   - Verification: cada mutante de REQ-021 aplicado a mano en un árbol de trabajo temporal y revertido (los de clasificación, sobre `locate.py`); `git diff --stat origin/main -- <tests marcados «conserva» en research.md>` vacío; suite completa con `bash ~/.claude/scripts/pesado.sh uv run pytest -n 2` en verde; `uv run ruff check .` y `uv run ruff format --check .`
   - Depends on: T9, T10

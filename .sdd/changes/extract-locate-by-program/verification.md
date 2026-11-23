@@ -31,8 +31,8 @@
 | REQ-018 | `test_extract_locate_server.py::test_meta_keys`, `test_extract_section_lines.py::test_the_shape_of_the_issue_is_reported` | pass | verdes; `lines_unverified`, `outline_copies` y `diff_files` ya no salen |
 | REQ-019 | suite de extract, explain_code, core, summarize, i18n y catálogo con `-n 2`; `git diff --stat origin/main` de los tests que se conservan | pass | 1164 verdes (los 2 de tiempo de 1 MB se rehicieron, REQ-022); de los conservados solo cambia `test_extract_placeholder_values.py` (−14: se borra `test_a_numbered_marker_is_null`, que probaba el prefijo `N\|` retirado) |
 | REQ-020 | `tests/test_extract_locate_docs.py`, `tests/test_i18n_parity.py` | pass | verdes; CHANGELOG «Sin publicar» como incompatible de la 0.54.0, README, `docs/wiki/Tools.md`, skill es/en y memoria es/en |
-| REQ-021 | tabla de mutantes (abajo) | pass | 14 de 14 mutantes en rojo (M1–M13 y M8b), cada uno con el assert que lo detecta |
-| REQ-022 | `test_locate_index_ts.py::test_unbalanced_braces_drop_the_index`, `test_locate_index_python.py::test_syntax_error_gives_no_index`, `test_locate_anchor.py::test_index_and_anchors_cost_grows_linearly`, `test_locate_index_ts.py::test_typescript_index_cost_grows_linearly` | pass | criterio cambiado a crecimiento lineal (spec, 2026-11-23). En la PC: 100 KB → 1 MB crece ×13,8 (índice y 407 anclas, 0,52 s) y ×11,7 (índice TS, 0,45 s), tope ×25. Mutantes M10 y M11 abajo |
+| REQ-021 | tabla de mutantes (abajo) | pass | 18 de 18 mutantes en rojo (M1–M17 y M8b), cada uno con el assert que lo detecta |
+| REQ-022 | `test_locate_index_ts.py::test_unbalanced_braces_drop_the_index`, `test_locate_index_python.py::test_syntax_error_gives_no_index`, `test_locate_anchor.py::test_index_and_anchors_cost_grows_linearly`, `test_locate_index_ts.py::test_typescript_index_cost_grows_linearly` | pass | criterio cambiado a crecimiento lineal (spec, 2026-11-23). En la PC: 100 KB → 1 MB crece ×13,8 (índice y 407 anclas, 0,52 s) y ×11,7 (índice TS, 0,45 s), tope ×25. Mutantes M10 y M11 abajo. Entrada hostil (revisión de seguridad): `tests/test_locate_hostile_input.py` (una línea de comillas que no cierran, de `(/[`, 25 000 encabezados y una cadena de 1 500 `elif`), lineal o sin caerse; M14–M17 en rojo |
 
 ### Mutantes de REQ-021
 
@@ -54,6 +54,10 @@ Aplicados uno a uno en un worktree temporal (`scratchpad/mutants.py`), con su te
 | M11 (REQ-022) la línea de un offset contada desde el principio (`src.count("\n", 0, offset)`) | `locate_ts.py` | `test_locate_index_ts.py::test_typescript_index_cost_grows_linearly` y `test_locate_anchor.py::test_index_and_anchors_cost_grows_linearly` | `growth < MAX_GROWTH`: ×72,2 y ×74,0 (1 MB en 9,6 s) |
 | M12 (REQ-004) blancos del lexer con retroceso (`(\s*)` en vez de `(\s*+)`): un NBSP antes de `{` o de `/re/` se lee como palabra | `locate_ts.py` | `test_locate_index_ts.py::test_a_unicode_blank_is_skipped_like_a_space` (los tres blancos) | `assert with_blank.unavailable_reason is None` |
 | M13 (REQ-014) no borrar el `role_reason` de la regla de tablas cuando todo lo contesta el programa | `server.py` | `test_extract_locate_server.py::test_a_table_answered_by_program_has_no_role_reason` | `'role_reason' not in {'role_reason': {'role': 'long', 'reason': 'table', …}}` |
+| M14 (REQ-022) sin la memoria de la comilla que no cierra (`dead`): cada comilla vuelve a recorrer la línea | `locate_ts.py` | `test_locate_hostile_input.py::test_a_hostile_line_costs_linearly[single_quote_escapes]` | `growth < MAX_GROWTH`: ×204,6 (50 KB en 22 s) |
+| M15 (REQ-022) sin el tope `_REGEX_REACH`: cada `/` de `(/[` recorre el resto de la línea | `locate_ts.py` | `test_locate_hostile_input.py::test_a_hostile_line_costs_linearly[regex_classes_never_closed]` | `growth < MAX_GROWTH`: ×308,6 (50 KB en 35 s) |
+| M16 (REQ-022) secciones con la copia `found_headings[k + 1 :]` por encabezado | `locate.py` | `test_locate_hostile_input.py::test_many_headings_cost_linearly` | `assert 74.67 < 25.0` |
+| M17 (REQ-022) recorrido recursivo del árbol de Python | `locate.py` | `test_locate_hostile_input.py::test_a_long_elif_chain_keeps_the_index` | `RecursionError: maximum recursion depth exceeded` |
 
 M6 sobrevivió en la primera pasada: el test usaba `intro_heading_line`, cuyo `intro` casaba con un título del índice y el resultado salía igual con y sin el mutante. Se cambió a `heading_line` y ahora lo detecta (commit 380f9d57).
 
@@ -76,15 +80,16 @@ Without a declaration, list what was run. Never invent a command. -->
 
 | Command | Run | Result | Evidence |
 | --- | --- | --- | --- |
-| `uv run --locked pytest -n 2` (bajo `pesado.sh`) | sí | fail (solo tiempo) | 8520 pasan, 32 se saltan y 8 fallan en la primera pasada. Seis se arreglaron después (corpus, docstring y nombres); quedan los dos tests de 1 MB del frente A, que pasan sueltos |
+| `uv run --locked pytest -n 2` (bajo `pesado.sh`) | sí | pass | Primera pasada: 8520 pasan y 8 fallan, seis arreglados después y los dos de tiempo de 1 MB rehechos (REQ-022). Sobre f55e57ac, en el worktree con el `.venv` del checkout principal: 8599 pasan, 31 se saltan, 7 fallan; uno era el léxico (arreglado en 9dab4c2b) y seis de hooks (`test_hook_entry.py`, `test_hook_record_read_endpoint.py`, `test_read_classifier.py`) comparan la huella del CLI instalado, que en un worktree es la del checkout principal: en el checkout principal pasan, y en el CI limpio, también. Zona de locate y extract (258 tests) verde en 9dab4c2b |
+| CI del PR #713 sobre 9dab4c2b | sí | pass | 22 de 22 checks en verde (ubuntu, windows y macos, lint, CodeQL, secretos). El job de macOS se canceló una vez sin llegar a tener runner (0 pasos en 15 min) y pasó al relanzarlo |
 | `uv run ruff check src tests scripts` | sí | pass | sin hallazgos |
 | `uv run ruff format --check src tests scripts` | sí | pass | sin cambios |
 
 ## Quality checks
 
-- [ ] Project-native tests pass (ver los dos de tiempo abajo).
+- [x] Project-native tests pass (CI del PR en verde sobre 9dab4c2b; ver «Commands»).
 - [x] Lint, formatting, type checking, and build checks pass where applicable.
-- [ ] Secret scanning passes (lo dicen GitGuardian y code scanning en el PR).
+- [x] Secret scanning passes (secrets, GitGuardian y code scanning en verde en el PR).
 - [x] No unrelated changes are present.
 
 ## Deviations and residual risk
@@ -110,5 +115,10 @@ Without a declaration, list what was run. Never invent a command. -->
   - H3 menor, justificado: en el test de anclas las anclas crecen con el fichero, así que mide índice más «anclas × tamaño» en C. Es a propósito: así M10 (búsqueda por línea en Python) sale en rojo. En producción las anclas están acotadas por `max_tokens`.
   - H4 menor, aceptado: `_anchor_block` sigue recorriendo los contenedores (tablas, viñetas, bloques de código) de Markdown por ancla. Con las anclas acotadas por `max_tokens` el coste es lineal en el tamaño; queda como riesgo.
   - H5 y H6 menores: la cuenta de mutantes y el comentario de `_FILE_WORDS` en `line_check.py`, arreglados. Las líneas de más de 100 caracteres de la skill y la memoria son prosa en Markdown, fuera de ruff; se dejan.
+- Revisión de seguridad (personal-security-reviewer, 2026-11-23): sin ejecución de código ni rutas; tres hallazgos de disponibilidad con un fichero hostil, todos medidos y arreglados:
+  - media: el lexer de TS/JS era cuadrático en una línea de comillas que no cierran (40 KB, 13 s) o de `(/[` (40 KB, 21 s). Ahora la comilla que no cierra se recuerda hasta dónde llegó su búsqueda (exacto: toda comilla intermedia era la mitad de un escape) y la regex literal se busca hasta 512 caracteres (una más larga se lee como `/`, y en el peor caso el índice queda vacío con aviso). 1 MB de comillas: 1,5 s;
+  - baja: las secciones de Markdown copiaban la lista de encabezados por cada uno (100 000 encabezados, 7,3 s); ahora una pila (0,3 s);
+  - baja: una cadena de 1 200 `elif` daba `RecursionError` sin capturar en el recorrido del árbol de Python; ahora el recorrido usa su propia pila, en el mismo orden.
+  - Además, CodeQL marcó un `except` vacío en `_python_comment_lines`: ahora devuelve lo leído con un comentario que dice por qué.
 - Desviación anotada (REQ-001): `_local_delegate.model_error.raw` y `dropped` pueden llevar texto del modelo, números incluidos. Son diagnóstico del fallo, no valores, y se conservan a propósito.
 - Desviación anotada (REQ-015): `extract_schema._NOT_PLURALS` (windows, macos, news, series…) es una lista corta de palabras acabadas en `s` que no son plurales. Resuelve `soporta_windows`, que el spec pedía `boolean` y que la regla de plural daba `list`.

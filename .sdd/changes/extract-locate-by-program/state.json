@@ -4,9 +4,9 @@
   "title": "local_extract: las líneas las calcula el programa y el esquema tiene tipos por campo (#692, #694, #696, #697, #698)",
   "mode": "standard",
   "traceability": "strict",
-  "status": "implementing",
+  "status": "verifying",
   "createdAt": "2026-11-23T11:00:54.017Z",
-  "updatedAt": "2026-11-23T14:27:20.242Z",
+  "updatedAt": "2026-11-23T16:43:37.397Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -97,6 +97,13 @@
       "to": "implementing",
       "at": "2026-11-23T14:27:20.242Z",
       "reason": "frente A arranca T1 en feat/extract-locate-a"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-11-23T16:43:37.397Z",
+      "reason": "T1-T11 hechas; CI del PR 713 en verde sobre 9dab4c2b; segunda revision cerrada"
     }
   ]
 }

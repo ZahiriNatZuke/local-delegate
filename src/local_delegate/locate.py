@@ -18,8 +18,9 @@ import io
 import re
 import tokenize
 from bisect import bisect_right
+from collections.abc import Iterator
 from dataclasses import dataclass
-from itertools import pairwise
+from itertools import chain, pairwise
 from pathlib import PurePath
 from typing import Literal
 
@@ -353,34 +354,38 @@ def _python_index(content: str) -> FileIndex:
         decorators = getattr(node, "decorator_list", [])
         return min([node.lineno, *(d.lineno for d in decorators)])
 
-    def walk(body: list[ast.stmt], prefix: str, scope: str) -> None:
-        for node in body:
-            top = scope == "module"
-            end = node.end_lineno or node.lineno
-            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-                name = prefix + node.name
-                kind = "method" if scope == "class" else "function"
-                blocks.append(Block(name, kind, first_line(node), end, top_level=top))
-                walk(node.body, name + ".", "function")
-            elif isinstance(node, ast.ClassDef):
-                name = prefix + node.name
-                blocks.append(Block(name, "class", first_line(node), end, top_level=top))
-                walk(node.body, name + ".", "class")
-            elif isinstance(node, (ast.Assign, ast.AnnAssign)):
-                if scope != "module":
-                    continue
-                targets = node.targets if isinstance(node, ast.Assign) else [node.target]
-                for name in _assigned_names(targets):
-                    blocks.append(Block(name, "variable", node.lineno, end, top_level=True))
-            else:  # if, try, with, for, while, match: their bodies keep the scope
-                for attr in ("body", "orelse", "finalbody"):
-                    inner = getattr(node, attr, None)
-                    if isinstance(inner, list):
-                        walk(inner, prefix, scope)
-                for part in [*getattr(node, "handlers", []), *getattr(node, "cases", [])]:
-                    walk(part.body, prefix, scope)
-
-    walk(tree.body, "", "module")
+    # depth first with a stack of its own, in the same order as a recursive walk: a long `elif`
+    # chain nests one `If` per branch in `orelse`, and recursion would end in a `RecursionError`
+    # on a file that `ast.parse` accepted (REQ-022)
+    stack: list[tuple[Iterator[ast.stmt], str, str]] = [(iter(tree.body), "", "module")]
+    while stack:
+        body, prefix, scope = stack[-1]
+        node = next(body, None)
+        if node is None:
+            stack.pop()
+            continue
+        top = scope == "module"
+        end = node.end_lineno or node.lineno
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            name = prefix + node.name
+            kind = "method" if scope == "class" else "function"
+            blocks.append(Block(name, kind, first_line(node), end, top_level=top))
+            stack.append((iter(node.body), name + ".", "function"))
+        elif isinstance(node, ast.ClassDef):
+            name = prefix + node.name
+            blocks.append(Block(name, "class", first_line(node), end, top_level=top))
+            stack.append((iter(node.body), name + ".", "class"))
+        elif isinstance(node, (ast.Assign, ast.AnnAssign)):
+            if scope != "module":
+                continue
+            targets = node.targets if isinstance(node, ast.Assign) else [node.target]
+            for name in _assigned_names(targets):
+                blocks.append(Block(name, "variable", node.lineno, end, top_level=True))
+        else:  # if, try, with, for, while, match: their bodies keep the scope
+            inner = [getattr(node, attr, None) for attr in ("body", "orelse", "finalbody")]
+            parts = [*getattr(node, "handlers", []), *getattr(node, "cases", [])]
+            bodies = [b for b in inner if isinstance(b, list)] + [part.body for part in parts]
+            stack.append((chain.from_iterable(bodies), prefix, scope))
     return FileIndex("python", _ordered(blocks), _python_comment_lines(content))
 
 
@@ -402,7 +407,9 @@ def _python_comment_lines(content: str) -> frozenset[int]:
             if tok.type == tokenize.COMMENT and not tok.line[: tok.start[1]].strip():
                 out.add(tok.start[0])
     except (tokenize.TokenError, SyntaxError):
-        pass
+        # `ast.parse` accepted the file, so this is the tokenizer giving up near its end (an
+        # unclosed bracket or string at EOF): the comment lines read so far are still right
+        return frozenset(out)
     return frozenset(out)
 
 
@@ -477,13 +484,16 @@ def _text_blocks(lines: list[str], headings: bool) -> list[Block]:
     if fence_start is not None:
         blocks.append(Block(_label(lines[fence_start - 1]), "fence", fence_start, total))
     heading_lines = {number for number, _ in found_headings}
+    # a section ends before the next heading of the same or a higher level: one pass with the
+    # open sections on a stack, never a scan of the later headings for each one (REQ-022)
+    section_end = [total] * len(found_headings)
+    open_sections: list[int] = []  # positions in `found_headings`, levels strictly growing
     for k, (number, level) in enumerate(found_headings):
-        end = total
-        for later, later_level in found_headings[k + 1 :]:
-            if later_level <= level:
-                end = later - 1
-                break
-        end = _trim_blank_end(lines, number, end)
+        while open_sections and found_headings[open_sections[-1]][1] >= level:
+            section_end[open_sections.pop()] = number - 1
+        open_sections.append(k)
+    for k, (number, _level) in enumerate(found_headings):
+        end = _trim_blank_end(lines, number, section_end[k])
         blocks.append(Block(_label(lines[number - 1]), "section", number, end, top_level=True))
     for number in items:
         width = _indent(lines[number - 1])
