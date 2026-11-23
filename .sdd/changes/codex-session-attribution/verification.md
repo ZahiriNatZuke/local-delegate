@@ -20,7 +20,7 @@
 | REQ-009 | `/api/stats?session=` con dos sesiones | pass | la de Codex da sus 2 filas, todas `codex_calls`; otra sesión da 0 |
 | REQ-010 | `test_measure_adoption_counts_codex_in_its_own_column`, `test_delegations_by_caller_counts_the_mod_first` (con una fila de Codex) | pass | `codex: 1` y la suma igual al total; «Codex 4» en es y en |
 | REQ-011 | `tests/test_wiki.py`, `test_i18n_parity.py`, `test_detect_spanish_names.py` (léxico ampliado con nueve palabras inglesas del test nuevo) | pass | CHANGELOG, README, `Integration-install.md` (tercer hook, `3 de 3`) y `Savings-and-metrics.md` (sección «Delegaciones de Codex») |
-| REQ-012 | pasos en `handoff.md` («Next action») | skip | necesita Codex real y aprobar en `/hooks`: lo hace la persona usuaria; no se simula |
+| REQ-012 | Prueba con Codex real (Codex CLI 0.171.0, local-delegate 0.55.0, hooks aprobados en `/hooks`), 2026-11-23 21:20Z–21:26Z, ventana `codex-final-0-55-0` | pass | 3 filas `codex-mcp-client` (hilo principal, subagente, `local_extract`) con `tool_use_id` `exec-…`, `caller_src: codex-hook`, `caller_model`, la misma `caller_session_key`, `caller_kind` `main`/`subagent` y `caller_agent_type: default`; `codex-hooks-seen.json` con los 4 hooks; evidencia en el comentario de cierre de #669 |
 
 ## Commands
 
@@ -39,3 +39,7 @@
 - [x] Lint, formatting, type checking, and build checks pass where applicable.
 - [x] Secret scanning passes.
 - [x] No unrelated changes are present.
+
+## Prueba en vivo (2026-11-23)
+
+- REQ-012 pasa con Codex real (ver la fila). El prefijo `exec-` no distingue code mode en Codex 0.171: todas las llamadas MCP pasan por `exec`.

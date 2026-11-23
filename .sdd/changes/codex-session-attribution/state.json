@@ -4,9 +4,9 @@
   "title": "Atribución de cada delegación de Codex a su sesión (#669, segunda parte)",
   "mode": "standard",
   "traceability": "strict",
-  "status": "result-review",
+  "status": "closed",
   "createdAt": "2026-11-16T15:41:02.583Z",
-  "updatedAt": "2026-11-16T16:12:42.656Z",
+  "updatedAt": "2026-11-23T21:34:04.773Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -27,16 +27,16 @@
       "actor": "user"
     },
     "conformance": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-11-23T21:33:44.293Z",
+      "evidence": "Prueba con Codex real 0.171.0 sobre local-delegate 0.55.0 (2026-11-23): REQ-001..REQ-012 pass; REQ-012 en vivo con 3 filas atribuidas (principal, subagente, extract) y 4 hooks vistos; evidencia en verification.md y en el cierre de #669",
+      "actor": "user"
     },
     "memory": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-11-23T21:34:04.513Z",
+      "evidence": "Una línea en la nota del vault projects/local-delegate/jornada-2026-11-23-causa-comun-y-0-54-0.md (sección Jornada) con el cierre y el hueco #724",
+      "actor": "user"
     }
   },
   "history": [
@@ -119,6 +119,36 @@
       "to": "result-review",
       "at": "2026-11-16T16:12:42.656Z",
       "reason": "tres revisiones hechas y aplicadas (review.md)"
+    },
+    {
+      "type": "gate",
+      "gate": "conformance",
+      "status": "approved",
+      "at": "2026-11-23T21:33:44.293Z",
+      "evidence": "Prueba con Codex real 0.171.0 sobre local-delegate 0.55.0 (2026-11-23): REQ-001..REQ-012 pass; REQ-012 en vivo con 3 filas atribuidas (principal, subagente, extract) y 4 hooks vistos; evidencia en verification.md y en el cierre de #669",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "result-review",
+      "to": "closing",
+      "at": "2026-11-23T21:33:44.523Z",
+      "reason": "conformance aprobada tras la prueba en vivo"
+    },
+    {
+      "type": "gate",
+      "gate": "memory",
+      "status": "approved",
+      "at": "2026-11-23T21:34:04.513Z",
+      "evidence": "Una línea en la nota del vault projects/local-delegate/jornada-2026-11-23-causa-comun-y-0-54-0.md (sección Jornada) con el cierre y el hueco #724",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "closing",
+      "to": "closed",
+      "at": "2026-11-23T21:34:04.773Z",
+      "reason": "prueba con Codex real superada; #669 y #671 cerrados"
     }
   ]
 }

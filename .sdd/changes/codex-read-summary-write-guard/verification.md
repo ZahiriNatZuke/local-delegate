@@ -54,3 +54,9 @@ Without a declaration, list what was run. Never invent a command. -->
   compartido como 1..M: la cobertura puede quedar por debajo de la real (no deja leer de más).
 - Los tests de #669 que fijaban «dos hooks» cuentan ahora los de `SPECS`, con las mismas aserciones
   sobre los dos consultivos.
+
+## Prueba en vivo (2026-11-23, Codex CLI 0.171.0, local-delegate 0.55.0)
+
+- Pasa: `cat` de prosa grande bloqueado y sustituido por el resumen; el texto literal no entra al transcript; `apply_patch` sin lectura literal rechazado; tras `Get-Content -TotalCount 40`, aceptado (estado `range [1, 40]`).
+- Falla: una escritura de PowerShell con `[System.IO.File]::WriteAllText` y la ruta en una variable (`$p`) no la ve `write_targets`; el cambio pasó sin lectura literal (#724). Este SDD sigue en `result-review` hasta que se cierre #724.
+- El criterio «no sabe la palabra rara» no discrimina con el centinela de párrafos repetidos: el resumen la menciona porque es lo único distinto; el que discrimina es la ausencia del texto literal en el transcript.
