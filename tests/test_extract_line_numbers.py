@@ -301,9 +301,9 @@ def _notes() -> str:
     for k in range(400):
         out.append(f"Párrafo {k}: relleno sin nada que buscar en esta línea.")
         if k == 20:
-            out.append("MARCA-A: el valor repetido vive aquí")
+            out.append("MARK-A: el valor repetido vive aquí")
         if k == 300:
-            out.append("MARCA-B: el valor repetido vive aquí")
+            out.append("MARK-B: el valor repetido vive aquí")
         if k == 330:
             out.append("una línea única al final del documento")
         out.append("")
@@ -318,19 +318,19 @@ def test_chunked_anchors_are_resolved_against_the_whole_file(backend, tmp_path, 
     def answer(call):
         content = call["user"].split(INSTRUCTION, 1)[-1]
         found = []
-        if "MARCA-B" in content:
+        if "MARK-B" in content:
             # Unique in this piece, repeated in the file: this piece's line, not `ambiguous`.
             found.append({"name": "repetido", "anchor": "el valor repetido vive aquí"})
-        if "una línea única" in content or "MARCA-A" in content:
+        if "una línea única" in content or "MARK-A" in content:
             # Two pieces anchor the same element (the second only knows it from elsewhere).
             found.append({"name": "único", "anchor": "una línea única al final"})
         return _ok(json.dumps({"lines": found or None}))
 
     state["answer"] = answer
-    data = server.local_extract(fields=["lines"], path=_write(tmp_path, text, "notas.txt"))
+    data = server.local_extract(fields=["lines"], path=_write(tmp_path, text, "notes.txt"))
     assert len(calls) > 3, "guard: it chunked"
     unique = _line_of(text, "una línea única")
-    repeated = _line_of(text, "MARCA-B")
+    repeated = _line_of(text, "MARK-B")
     assert data["lines"] == [
         {"name": "repetido", "start": repeated, "end": repeated},
         {"name": "único", "start": unique, "end": unique},

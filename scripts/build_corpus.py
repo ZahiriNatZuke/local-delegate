@@ -724,6 +724,9 @@ PROMPT_BOUNDARIES: dict[str, frozenset[str]] = {
             "local_commit_msg",
         }
     ),
+    # #692-#698: el tope de salida de `local_extract` sale de los tipos de los campos pedidos
+    # (`extract_schema.output_budget`, entre 512 y 4096) en vez de los 512 fijos.
+    "0.54.0": frozenset({"local_extract"}),
 }
 _PROMPT_BOUNDARY_FIELDS = frozenset({"system", "max_tokens"})
 # Campos de mas que una tool cambio a proposito en esa version. B2f: la llamada unica del rol `long`
@@ -733,6 +736,9 @@ _PROMPT_BOUNDARY_FIELDS = frozenset({"system", "max_tokens"})
 # corpus de afinidad; va bajo la misma frontera (el corpus se congelo antes de las dos).
 PROMPT_BOUNDARY_EXTRA_FIELDS: dict[str, dict[str, frozenset[str]]] = {
     "0.36.0": {"local_lint_summary": frozenset({"user_template"})},
+    # #692-#698: el esquema de `local_extract` da un tipo a cada campo (lista, booleano, numero o
+    # escalar) en vez de admitir los primitivos en todos.
+    "0.54.0": {"local_extract": frozenset({"response_format"})},
 }
 
 
