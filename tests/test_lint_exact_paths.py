@@ -102,7 +102,7 @@ def test_the_absolute_and_the_relative_path_are_one_file():
 def test_a_url_is_not_a_file():
     """Mutant "no URL spans": `docs.pytest.org/.../capture-warnings.html` is listed."""
     files = lint_patterns.files_by_frequency(PYTEST_ONE_WARNING)
-    assert not [f for f in files if "pytest.org" in f or "capture-warnings" in f]
+    assert set(files) == {*CLEAN_FILES, RELATIVE}
 
 
 def test_the_clean_files_of_pytest_progress_are_not_reported():
@@ -118,7 +118,7 @@ def test_the_inventory_of_the_issue_names_one_file(captured):
     line = _inventory(captured[0]["user"])
     assert RELATIVE in line
     assert line.count("testclient.py") == 1
-    assert "pytest.org" not in line
+    assert "capture-warnings" not in line
     assert not [f for f in CLEAN_FILES if f in line]
 
 
@@ -129,7 +129,7 @@ def test_the_long_call_does_not_list_clean_files_as_not_mentioned(captured, monk
     assert len(captured) == 1
     assert out.startswith(captured.answer)
     assert "test_mod_" not in out
-    assert "pytest.org" not in out.split(captured.answer, 1)[1]
+    assert "capture-warnings" not in out.split(captured.answer, 1)[1]
     assert "local-delegate warning" not in out
 
 
