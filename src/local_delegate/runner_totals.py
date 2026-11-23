@@ -39,6 +39,7 @@ __all__ = [
     "denied",
     "pytest_header",
     "python_versions",
+    "quotes_parts",
     "totals",
 ]
 
@@ -367,6 +368,22 @@ def _is_a_list(tokens: list[tuple[str, int, int]], comma: int) -> bool:
     )
 
 
+def _counted_after(tokens: list[tuple[str, int, int]], index: int) -> bool:
+    """Whether a figure follows the category word at `index`, right after it or after a colon.
+
+    «No failures, skipped 3» counts the skips (#714, second review J2-2)."""
+    following = [_fold(token) for token, _start, _end in tokens[index + 1 : index + 3]]
+    if following and following[0] == ":":
+        following = following[1:]
+    return bool(following) and (following[0][0].isdigit() or following[0] in _FIGURE_WORDS)
+
+
+def quotes_parts(answer: str, parts: list[str]) -> bool:
+    """Whether `answer` quotes every totals part verbatim, not inside a longer figure
+    («216 passed» does not quote `16 passed`; #714, second review J2-1)."""
+    return all(re.search(rf"(?<!\d){re.escape(part)}(?!\d)", answer) for part in parts)
+
+
 def _negated_categories(summary: str) -> list[tuple[str, str]]:
     """(category, clause) for each mention of a category that a negation of its clause denies."""
     tokens = [(m.group(0), m.start(), m.end()) for m in _TOKEN.finditer(summary)]
@@ -376,6 +393,8 @@ def _negated_categories(summary: str) -> list[tuple[str, str]]:
         category = _CATEGORY_WORDS.get(_fold(token))
         if category is None or category in seen:
             continue
+        if _counted_after(tokens, index):
+            continue  # «skipped 3», «saltadas: 2»: the summary counts it, it does not deny it
         for back in range(index - 1, max(-1, index - 1 - _REACH), -1):
             word = _fold(tokens[back][0])
             if word in _NEGATIONS:

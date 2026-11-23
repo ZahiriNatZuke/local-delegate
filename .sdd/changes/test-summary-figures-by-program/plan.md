@@ -26,7 +26,7 @@ línea fija y el aviso de versión.
   - Files or modules: src/local_delegate/server.py, src/local_delegate/resources/i18n/es/mcp.json, src/local_delegate/resources/i18n/en/mcp.json
   - Verification: tests de T1 con backend falso
   - Depends on: T2
-- [ ] T4 — Suite completa, CHANGELOG «Sin publicar», wiki, prueba en vivo en test-window (REQ-007)
+- [x] T4 — Suite completa, CHANGELOG «Sin publicar», wiki, prueba en vivo en test-window (REQ-007)
   - Files or modules: CHANGELOG.md, docs/wiki/Tools.md
   - Verification: pesado.sh pytest -n 2; tabla antes/después
   - Depends on: T3

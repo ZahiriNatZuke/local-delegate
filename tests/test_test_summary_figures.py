@@ -283,3 +283,25 @@ def test_go_output_gets_no_program_line(monkeypatch, tmp_path):
     log = "=== RUN   TestA\n--- FAIL: TestA (0.00s)\nFAIL\nok  \tpkg\t0.01s\n"
     result = _result(_call(monkeypatch, tmp_path, server.local_summarize, "Resumen.", text=log))
     assert "Totales de la salida de tests" not in result
+
+
+@pytest.mark.parametrize("summary", ["No failures, skipped 3.", "Sin errores, saltadas: 2."])
+def test_a_category_followed_by_its_figure_is_counted_not_denied(summary):
+    """Second review J2-2: «skipped 3» counts the skips even after a negated list."""
+    assert runner_totals.denied(summary, _short("10 passed, 2 skipped")) == []
+
+
+def test_a_longer_figure_does_not_quote_the_totals():
+    """Second review J2-1: «216 passed» does not quote `16 passed`."""
+    assert not runner_totals.quotes_parts("216 passed en total.", ["16 passed"])
+    assert not runner_totals.quotes_parts("11 failed, 5 passed.", ["1 failed, 5 passed"])
+    assert runner_totals.quotes_parts("Total: 16 passed.", ["16 passed"])
+
+
+def test_the_program_line_in_english(monkeypatch, tmp_path):
+    monkeypatch.setattr(server.i18n, "lang", lambda: "en")
+    result = _result(
+        _call(monkeypatch, tmp_path, server.local_summarize, BAD_SUMMARY, text=PYTEST_LOG)
+    )
+    assert "Totals of the test output (read by the program" in result
+    assert "the summary names «Python 3.11.5»" in result

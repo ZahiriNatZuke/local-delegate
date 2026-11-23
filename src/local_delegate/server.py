@@ -8154,7 +8154,7 @@ def _test_figures(content: str, answer: str, text: str) -> str:
     if not counted.parts:
         return text
     other = runner_totals.python_versions(answer, content)
-    if not other and all(part in answer for part in counted.parts):
+    if not other and runner_totals.quotes_parts(answer, counted.parts):
         return text  # the answer already carries the runner's own totals, verbatim
     totals = " | ".join(counted.parts[:_TEST_FACTS_LINES])
     rest = len(counted.parts) - _TEST_FACTS_LINES

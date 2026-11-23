@@ -13,12 +13,12 @@
 | Requirement | Check performed | Result | Evidence |
 | --- | --- | --- | --- |
 | REQ-001 | tests/test_test_summary_figures.py::test_a_comma_ends_the_negation | pass | rojo en main (avisaba `skips`), verde con el cambio; control positivo sin coma sigue avisando |
-| REQ-002 | tests/test_test_summary_figures.py::test_a_figure_in_words_ends_the_negation | pass | rojo en main; controles «las omitidas» y «ni un salto» siguen avisando |
+| REQ-002 | tests/test_test_summary_figures.py::test_a_figure_in_words_ends_the_negation | pass | rojo en main; controles «ni omitidas» y «ni un salto» siguen avisando |
 | REQ-003 | tests/test_test_summary_figures.py::test_errors_are_their_own_category | pass | rojo en main (`failures` por «sin errores»); «sin fallos» sobre `1 error` sigue avisando |
 | REQ-004 | tests/test_test_summary_figures.py::test_the_warning_cites_the_line_that_counts | pass | rojo en main (citaba `3 passed in 2.00s`) |
-| REQ-005 | tests/test_test_summary_figures.py::test_summarize_adds_the_program_line y test_lint_summary_* (mecánico, largo, troceado) | pass | rojos en main; la línea no se añade si la respuesta ya cita los totales literales (test_an_answer_quoting_the_totals_gets_no_line) |
+| REQ-005 | tests/test_test_summary_figures.py::test_summarize_adds_the_program_line y test_lint_summary_* (mecánico, largo, troceado) | pass | rojos en main; la línea no se añade si la respuesta ya cita los totales literales (test_an_answer_with_the_totals_gets_no_line) |
 | REQ-006 | tests/test_test_summary_figures.py::test_another_python_version_is_flagged | pass | rojo en main; la misma versión y `Python 3.11` no avisan |
-| REQ-007 | cmd pesado.sh pytest -n 2 (suite completa) | pass | 8438 pasan; 6 de hooks (`test_hook_entry`, `test_hook_record_read_endpoint`, `test_read_classifier`) fallan igual con el cambio guardado en `git stash`: entorno del worktree; 2 de `test_lint_pytest_failures` se arreglaron sin tocarlos (la línea no se añade si la respuesta cita los totales) |
+| REQ-007 | cmd pesado.sh pytest -n 2 (suite completa) | pass | 8451 pasan tras la revisión; 6 de hooks (`test_hook_entry`, `test_hook_record_read_endpoint`, `test_read_classifier`) fallan igual con el cambio guardado en `git stash`: entorno del worktree; 2 de `test_lint_pytest_failures` se arreglaron sin tocarlos (la línea no se añade si la respuesta cita los totales) |
 
 ## Commands
 
@@ -39,5 +39,5 @@ Without a declaration, list what was run. Never invent a command. -->
 
 ## Deviations and residual risk
 
-- La prueba en vivo depende de tener 8 GB libres; ver la sección de prueba en vivo del PR.
+- Prueba en vivo: `evidence/vivo-2026-11-23.md` (ventana `w-20261123T163619Z`); el aviso de otra versión no se vio en vivo, lo cubre el test con la frase del día.
 - No se comparan los recuentos de la prosa con los del runner (decisión del spec).
