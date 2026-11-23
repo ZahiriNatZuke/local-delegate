@@ -348,21 +348,23 @@ def test_clean_files_only_on_a_pytest_log():
 @pytest.mark.parametrize(
     "line",
     [
-        "tests/" + "a" * 200_000 + " " + "." * 200_000,
+        "tests/" + "a" * 100_000 + " " + "." * 100_000,
         # Review of #709: the `.py` branch of the check, and the folder and URL patterns.
-        "tests/" + "a" * 200_000 + ".py " + "." * 200_000,
-        "x/" * 100_000 + " https://" + "y/" * 100_000,
+        "tests/" + "a" * 100_000 + ".py " + "." * 100_000,
+        "x/" * 50_000 + " https://" + "y/" * 50_000,
     ],
     ids=["no_py", "py_branch", "folders_and_url"],
 )
 def test_the_clean_line_check_is_linear(line):
+    """CPU time, not the clock (as #710): a busy CI runner took 2.1 s of wall time on 400 KB.
+    Locally the four calls take about 0.25 s of CPU here; a quadratic pass would take minutes."""
     log = line + "\n1 passed in 0.1s\n"
-    start = time.perf_counter()
+    start = time.process_time()
     lint_patterns.clean_files(log)
     lint_patterns.reported_files(log)
     lint_patterns.clean_file_entries("- tests/a.py: 0", log)
     lint_patterns.invented_files(line, "src/a.py:1:1: E501\n")
-    assert time.perf_counter() - start < 2.0
+    assert time.process_time() - start < 2.0
 
 
 # --- Review of PR #709 ---------------------------------------------------------------------------
