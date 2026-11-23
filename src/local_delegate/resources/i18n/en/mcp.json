@@ -250,6 +250,8 @@
   "mcp.warning.lint_invented_files": "the summary names files that do not appear in the input and may be made up: {files}",
   "mcp.warning.sections_not_summarized": "{n} sections not summarized because of the word limit or the model",
   "mcp.warning.sections_not_summarized_one": "1 section not summarized because of the word limit or the model",
+  "mcp.warning.sections_not_summarized_named": "{n} sections not summarized because of the word limit or the model: {titles}",
+  "mcp.warning.sections_not_summarized_named_one": "1 section not summarized because of the word limit or the model: {titles}",
   "mcp.warning.headings_from_string_literals": "summary headings that copy a line of a string literal of the code (they are data, not the structure of the file): {headings}",
   "mcp.warning.summary_ungrounded": "the summary holds data the input does not contain as it is and that may be made up: {details}; check them against the source before using them",
   "mcp.warning.ungrounded_acronyms": "acronyms expanded in a way the input does not hold ({items})",

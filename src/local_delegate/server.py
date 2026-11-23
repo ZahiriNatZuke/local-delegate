@@ -6014,6 +6014,8 @@ def _chat_map_reduce(
     time_budget_s: float | None = None,
     time_report: dict | None = None,
     widen_cut_regroup: bool = False,
+    concat_retry: Callable[[str, bool], tuple[str, str, int, Callable[[str], str]] | None]
+    | None = None,
 ) -> str:
     """Resume un documento que no cabe en el modelo: resume por trozos y luego los resúmenes.
 
@@ -6051,6 +6053,11 @@ def _chat_map_reduce(
     on the chunks read, and the answer says how many were (`time_report` gets the figures).
     Without it, every chunk is read, as always. #598: `widen_cut_regroup` turns on the widened
     retry of a cut regroup step and the note-combining tail of the truncation notice.
+
+    #691: with `reduce="concat"`, `concat_retry(joined, truncated)` may ask for one more step over
+    the joined partials: it returns `(system, user, max_tokens, merge)` or `None`. That step runs
+    once, in the same operation (`kind: "sections_retry"` in `steps`); `merge(answer)` gives the
+    new text. A failed retry is not an error: the joined partials stay as they were.
     """
     down = _backend_down_text()
     if down is not None:
@@ -6387,6 +6394,15 @@ def _chat_map_reduce(
                 # Los parciales ya están en el formato final (una sección tras otra): unirlos en
                 # orden ES el resultado. Un reduce por el modelo los volvería a aplanar en prosa.
                 text = "\n\n".join(s.strip() for s in summaries)
+                request = concat_retry(text, truncated_calls > 0) if concat_retry else None
+                if request is not None and _time_fits(1):
+                    retry_system, retry_user, retry_tokens, merge = request
+                    _inflight_phase(entry_id, "retry")
+                    out = _one(retry_system, retry_user, retry_tokens, "sections_retry")
+                    if out is None:
+                        failed = None  # #691: optional; the partials stay as they were
+                    else:
+                        text = merge(out)
             elif len(summaries) == 1 and custom_reduce is None:
                 text = summaries[0]
             elif reduce_shortcut is not None and (shortcut := reduce_shortcut(summaries)):
@@ -7892,12 +7908,16 @@ def _structured_summary(
     terms = focus_terms or []
     literal = focus_literal or set()
 
-    def _complete(text: str, truncated: bool) -> str:
+    def _complete(text: str, truncated: bool, *, name_missing: bool = False) -> str:
         # #558: judged on what the model wrote, before `complete` puts back a missing heading
         # (with the focus term in it) as «(sin resumir)».
         missing = _focus_missing(text, content, terms, literal)
         text = sections.complete(
-            text, headings, truncated=truncated, empty_in_document=empty_in_document
+            text,
+            headings,
+            truncated=truncated,
+            empty_in_document=empty_in_document,
+            name_missing=name_missing,
         ).text
         text = after(text, truncated) if after is not None else text
         return _with_focus_warning(text, missing)
@@ -7953,6 +7973,39 @@ def _structured_summary(
             )
         return note + f"Resume el siguiente contenido:\n\n{text}"
 
+    allocation = sections.allocate_by_size(
+        [s.content_size for s in plan], max_words, minimum=_MIN_WORDS_PER_SECTION
+    )
+
+    def _retry_missing(joined: str, truncated: bool):
+        """#691: one more call for the sections the chunks left out or empty, or `None`.
+
+        The sections go in document order with their own text, as many as fit one chunk; what is
+        left out (or not summarized again) is named once in the notice by `complete`.
+        """
+        base = sections.without_cut_heading(joined, headings) if truncated else joined
+        targets = sections.retry_targets(base, headings, empty_in_document=empty_in_document)
+        room = _map_budget(max_chars)
+        chosen: list[int] = []
+        used = 0
+        for k in targets:
+            size = plan[k].end - plan[k].start + 2
+            if used + size <= room:
+                chosen.append(k)
+                used += size
+        if not chosen:
+            return None
+        asked = [plan[k] for k in chosen]
+        text = "\n\n".join(content[s.start : s.end].strip() for s in asked)
+        words = sum(allocation[k] for k in chosen)
+        user = _structured_user(asked, words, text, focus_note=_focus_note(text, terms))
+        return (
+            _structured_system(words, extra),
+            user,
+            _structured_max_tokens(words, asked),
+            lambda answer: sections.merge_retry(base, headings, answer),
+        )
+
     return _chat_map_reduce(
         model,
         _structured_system(max_words, extra),
@@ -7972,9 +8025,10 @@ def _structured_summary(
         tokens_for=lambda chunk, words: _structured_max_tokens(words, chunk.sections),
         split_for=lambda chunk: sections.split_chunk(chunk, content, plan, _chunk_text),
         reduce="concat",
-        postprocess=_complete,
+        postprocess=lambda text, truncated: _complete(text, truncated, name_missing=True),
         num_sections=len(plan),
         focus=focus,
+        concat_retry=_retry_missing,
     )
 
 

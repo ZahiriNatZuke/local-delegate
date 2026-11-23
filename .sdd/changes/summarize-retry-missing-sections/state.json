@@ -1,0 +1,103 @@
+{
+  "schemaVersion": 1,
+  "slug": "summarize-retry-missing-sections",
+  "title": "local_summarize troceado: reintentar una vez las secciones que faltan y nombrarlas en el aviso (#691)",
+  "mode": "lite",
+  "traceability": "strict",
+  "status": "verifying",
+  "createdAt": "2026-11-23T12:34:17.274Z",
+  "updatedAt": "2026-11-23T12:52:35.475Z",
+  "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-11-23T12:36:16.429Z",
+      "evidence": "Spec y plan lite escritos sobre el código localizado; plan cubre todos los REQ",
+      "actor": "implementer"
+    },
+    "plan": {
+      "status": "approved",
+      "updatedAt": "2026-11-23T12:36:16.429Z",
+      "evidence": "Spec y plan lite escritos sobre el código localizado; plan cubre todos los REQ",
+      "actor": "implementer"
+    },
+    "quality": {
+      "status": "approved",
+      "updatedAt": "2026-11-23T12:52:35.475Z",
+      "evidence": "suite 8379 pasados con pesado.sh -n 2; ruff limpio; tests nuevos rojos antes/verdes después",
+      "actor": "implementer"
+    },
+    "conformance": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "memory": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-11-23T12:34:17.274Z",
+      "reason": "SDD change created"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "specifying",
+      "at": "2026-11-23T12:36:16.183Z",
+      "reason": "spec en redacción"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-11-23T12:36:16.429Z",
+      "evidence": "Spec y plan lite escritos sobre el código localizado; plan cubre todos los REQ",
+      "actor": "implementer"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-11-23T12:36:16.429Z",
+      "evidence": "Spec y plan lite escritos sobre el código localizado; plan cubre todos los REQ",
+      "actor": "implementer"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-11-23T12:52:34.723Z",
+      "reason": "spec y plan aprobados; implementado y verificado con tests y suite"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "implementing",
+      "at": "2026-11-23T12:52:34.959Z",
+      "reason": "spec y plan aprobados; implementado y verificado con tests y suite"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-11-23T12:52:35.234Z",
+      "reason": "spec y plan aprobados; implementado y verificado con tests y suite"
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-11-23T12:52:35.475Z",
+      "evidence": "suite 8379 pasados con pesado.sh -n 2; ruff limpio; tests nuevos rojos antes/verdes después",
+      "actor": "implementer"
+    }
+  ]
+}

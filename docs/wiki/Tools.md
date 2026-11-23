@@ -153,6 +153,12 @@ secciones, y si un título del resumen copia una línea de un literal de cadena 
 dato (un fixture Markdown dentro de un test, por ejemplo), la respuesta lo avisa con
 `[local-delegate warning: …]`.
 
+Desde la versión siguiente a la 0.53.0 (issue #691), en un documento troceado las secciones que el
+modelo se saltó o dejó sin contenido se piden otra vez, **una sola vez**, en una llamada más de la
+misma operación (paso `sections_retry` en el log), y entran en su sitio. Lo que siga faltando no se
+rellena con «(sin resumir)» en el cuerpo: el aviso dice cuántas son y nombra cada título una vez.
+Con una sola llamada (sin trocear) el resumen sigue igual que antes.
+
 ## `local_classify`
 
 ```python

@@ -29,6 +29,18 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   (compartido con Claude Code) ya no tarda minutos con miles de `\"` fuera de comillas.
 - **Codex: las rutas de un parche se sacan en tiempo lineal** (#706). Una cabecera de `apply_patch`
   con decenas de miles de espacios tardaba segundos (cuadrático); ahora son milésimas.
+- **`local_summarize` troceado reintenta las secciones que faltan en vez de rellenarlas con
+  «(sin resumir)»** (#691). Con el resumen por secciones y un documento que se trocea, las secciones
+  que el modelo se saltó o dejó vacías se piden otra vez, una sola vez y juntas, en la misma
+  operación (paso `sections_retry` del log), y entran en su sitio. Lo que siga faltando ya no sale
+  en el cuerpo, ni repetido: el aviso lo cuenta y nombra cada título una vez. Si el reintento falla
+  en el backend, se devuelve el resumen de antes con ese aviso. Con una sola llamada nada cambia.
+- **`doctor` avisa si `local-delegate` está deshabilitado para el proyecto en Claude Code** (#705).
+  Antes daba todo `OK` aunque `/mcp` lo hubiera deshabilitado y la sesión no tuviera las `local_*`.
+  Ahora `MCP en Claude Code` da `[WARN]` si el servidor figura en `disabledMcpServers` o
+  `disabledMcpjsonServers` del proyecto del directorio actual (o del ancestro más cercano con
+  entrada) en `~/.claude.json`, con el remedio `/mcp` → `local-delegate` → habilitar. Solo lee esas
+  dos listas; no escribe el fichero y `update` no lo toca.
 - **Las tools de texto rechazan un fichero binario antes de llamar al modelo** (#693). Con `path` a
   una imagen, `local_extract` avisaba de que no era UTF-8, la leía como Latin-1, la partía en 6
   trozos y devolvía todos los campos a `null`. Ahora el lector común de `path` (summarize, extract,
