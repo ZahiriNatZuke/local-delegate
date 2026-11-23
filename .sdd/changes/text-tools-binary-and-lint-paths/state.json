@@ -1,0 +1,74 @@
+{
+  "schemaVersion": 1,
+  "slug": "text-tools-binary-and-lint-paths",
+  "title": "Tools de texto: rechazo de binarios y rutas exactas en lint_summary",
+  "mode": "lite",
+  "traceability": "strict",
+  "status": "specifying",
+  "createdAt": "2026-11-23T10:56:47.749Z",
+  "updatedAt": "2026-11-23T11:00:18.489Z",
+  "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-11-23T11:00:18.488Z",
+      "evidence": "Spec con REQ-001..009 trazados a T1..T4; sdd check en verde; alcance acotado a R3 y R4 de research.md, sin tocar el prompt de lint (huella de afinidad)",
+      "actor": "binarios-y-rutas-lint"
+    },
+    "plan": {
+      "status": "approved",
+      "updatedAt": "2026-11-23T11:00:18.489Z",
+      "evidence": "Spec con REQ-001..009 trazados a T1..T4; sdd check en verde; alcance acotado a R3 y R4 de research.md, sin tocar el prompt de lint (huella de afinidad)",
+      "actor": "binarios-y-rutas-lint"
+    },
+    "quality": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "conformance": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "memory": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-11-23T10:56:47.749Z",
+      "reason": "SDD change created"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "specifying",
+      "at": "2026-11-23T11:00:18.215Z",
+      "reason": "Investigación hecha en text-tools-common-cause/research.md (R3, R4) y issues #688, #690, #693 leídos"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-11-23T11:00:18.488Z",
+      "evidence": "Spec con REQ-001..009 trazados a T1..T4; sdd check en verde; alcance acotado a R3 y R4 de research.md, sin tocar el prompt de lint (huella de afinidad)",
+      "actor": "binarios-y-rutas-lint"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-11-23T11:00:18.489Z",
+      "evidence": "Spec con REQ-001..009 trazados a T1..T4; sdd check en verde; alcance acotado a R3 y R4 de research.md, sin tocar el prompt de lint (huella de afinidad)",
+      "actor": "binarios-y-rutas-lint"
+    }
+  ]
+}

@@ -27,6 +27,13 @@ leyó como cp1252; …]` delante de la respuesta, y `local_extract` en `_local_d
 al principio. Si el texto sale raro (era otra codificación, como cp1251), convierte el fichero a
 UTF-8 y vuelve a llamar.
 
+**Ficheros binarios (desde #693).** Antes de decodificar, esas seis tools miran los bytes: un
+fichero con firma de imagen (PNG, JPEG, GIF, WebP), de PDF, ZIP, gzip o 7z, con algún byte nulo
+(salvo UTF-16 con BOM) o con más de un 10 % de bytes de control en sus primeros 64 KiB no es texto
+y da un error, sin llamar al modelo. Para una imagen, el error remite a `local_describe_image`;
+para un PDF, conviértelo antes a texto (por ejemplo con `pdftotext`). Decide el contenido, no la
+extensión. Un UTF-16 sin BOM cae aquí por sus bytes nulos: guárdalo como UTF-8.
+
 ## De un vistazo
 
 | Tool | Qué hace | Modelo | Si la entrada no cabe |

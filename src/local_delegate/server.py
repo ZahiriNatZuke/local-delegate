@@ -1087,8 +1087,72 @@ _INPUT_ENCODING: contextvars.ContextVar[str | None] = contextvars.ContextVar(
 _UTF16_BOMS = (b"\xff\xfe", b"\xfe\xff")
 
 
+#: #693: signatures of binary formats a text tool cannot read, and whether each is an image (the
+#: error then points to `local_describe_image`). Checked on the first bytes, whatever the extension.
+_BINARY_SIGNATURES: tuple[tuple[bytes, str, bool], ...] = (
+    (b"\x89PNG\r\n\x1a\n", "PNG", True),
+    (b"\xff\xd8\xff", "JPEG", True),
+    (b"GIF87a", "GIF", True),
+    (b"GIF89a", "GIF", True),
+    (b"%PDF-", "PDF", False),
+    (b"PK\x03\x04", "ZIP", False),
+    (b"PK\x05\x06", "ZIP", False),
+    (b"\x1f\x8b", "gzip", False),
+    (b"7z\xbc\xaf\x27\x1c", "7z", False),
+)
+#: #693: how many leading bytes the share of control bytes is measured on, and the share above
+#: which a file is binary. By share, not by one byte: a log may carry a stray BEL or form feed.
+_BINARY_SAMPLE = 64 * 1024
+_BINARY_CONTROL_SHARE = 0.10
+#: C0 control bytes that no text carries: all but tab, line feed, vertical tab, form feed,
+#: carriage return and ESC (the colours of a CLI log, `\x1b[31m`).
+_BINARY_CONTROLS = frozenset(range(0x20)) - {0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x1B} | {0x7F}
+
+
+def _binary_kind(raw: bytes) -> tuple[str, bool] | None:
+    """#693: why `raw` is not text, as `(reason, is_image)`, or `None` for text.
+
+    A known signature first (an image goes to `local_describe_image`), then a NUL byte (no text
+    carries one, but UTF-16 does, so a file with its BOM is text), then more than 10 % of control
+    bytes in the first 64 KiB. Before, any byte decoded as Latin-1 (#672), and `local_extract` on
+    a JPEG went to the model in 6 chunks to answer every field `null`.
+    """
+    for signature, kind, image in _BINARY_SIGNATURES:
+        if raw.startswith(signature):
+            return kind, image
+    if raw[:4] == b"RIFF" and raw[8:12] == b"WEBP":
+        return "WebP", True
+    if raw.startswith(_UTF16_BOMS):
+        return None
+    if b"\x00" in raw:
+        return "nul", False
+    sample = raw[:_BINARY_SAMPLE]
+    controls = sum(1 for byte in sample if byte in _BINARY_CONTROLS)
+    if sample and controls / len(sample) > _BINARY_CONTROL_SHARE:
+        return "control", False
+    return None
+
+
+def _reject_binary(raw: bytes, path: str) -> None:
+    """#693: raise `InputError` when the bytes read from `path` are not text (`_binary_kind`)."""
+    found = _binary_kind(raw)
+    if found is None:
+        return
+    kind, image = found
+    if image:
+        raise InputError(i18n.t("mcp.input.binary_image", path=path, kind=kind))
+    if kind in {"nul", "control"}:
+        raise InputError(i18n.t(f"mcp.input.binary_{kind}", path=path))
+    raise InputError(i18n.t("mcp.input.binary_format", path=path, kind=kind))
+
+
 def _decode_input_file(p: Path) -> tuple[str, str | None]:
-    """The text of `p` and the encoding it was read with when it was not UTF-8 (#672).
+    """The text of `p` and the encoding it was read with when it was not UTF-8 (#672)."""
+    return _decode_input_bytes(p.read_bytes())
+
+
+def _decode_input_bytes(raw: bytes) -> tuple[str, str | None]:
+    """The text of `raw` and the encoding it was read with when it was not UTF-8 (#672).
 
     Before, every file was decoded as UTF-8 with `errors="replace"`: a Latin-1 file lost its `²`,
     `³` and accents to U+FFFD with no notice, and the check of the summary against that text took
@@ -1097,7 +1161,6 @@ def _decode_input_file(p: Path) -> tuple[str, str | None]:
     of 0x80-0x9F, what Windows tools write), and to Latin-1, which decodes any byte, for the five
     bytes Windows-1252 leaves undefined. Line ends are normalized as `read_text` did.
     """
-    raw = p.read_bytes()
     candidates: tuple[tuple[str, str | None], ...]
     if raw.startswith(_UTF16_BOMS):
         candidates = (("utf-16", "utf-16"),)
@@ -1150,6 +1213,8 @@ def _read_input(text: str | None, path: str | None, max_chars: int) -> tuple[str
     """Devuelve (contenido, truncado, raw_len). Si viene 'path', lo lee server-side.
 
     #672: la codificación con que se leyó (si no era UTF-8) queda en `_INPUT_ENCODING`.
+    #693: un fichero binario da `InputError` aquí, antes de cualquier llamada al modelo; es el
+    único lector de `path` de las tools de texto, así que el control vale para todas.
     """
     _INPUT_ENCODING.set(None)
     if path:
@@ -1157,7 +1222,9 @@ def _read_input(text: str | None, path: str | None, max_chars: int) -> tuple[str
         p = Path(path)
         if not p.is_file():
             raise InputError(i18n.t("mcp.input.missing_file", path=path))
-        content, encoding = _decode_input_file(p)
+        raw = p.read_bytes()
+        _reject_binary(raw, path)
+        content, encoding = _decode_input_bytes(raw)
         _INPUT_ENCODING.set(encoding)
     elif text is not None:
         content = text
@@ -7210,7 +7277,7 @@ def _lint_inventory(
     files = (
         _lint_inventory_line(
             "Ficheros que nombra el log (los más nombrados primero):",
-            lint_patterns.files_by_frequency(log),
+            lint_patterns.reported_files(log),
             half,
         )
         if with_files
@@ -7413,7 +7480,7 @@ def _lint_map_user(piece: str) -> str:
     iteration 1 the map wrote one sentence per rule and an entry for every file of the chunk, and
     38 of the 66 map steps ended in `length` (`evidence/lint-large-logs/plan.md`).
     """
-    files = lint_patterns.files_by_frequency(piece)
+    files = lint_patterns.reported_files(piece)
     head = (
         "Esto es un trozo de un log mayor. Responde en formato escueto: una línea por fichero, "
         "«fichero: códigos o tipos de problema separados por comas», sin explicarlos y sin "
@@ -7451,7 +7518,7 @@ def _lint_final_inventory(
             max_chars - len(facts) - 1,
         )
         return "\n".join(line for line in (facts, codes) if line), 0
-    files = lint_patterns.files_by_frequency(log)
+    files = lint_patterns.reported_files(log)
     top = files[:LINT_TOP_FILES]
     per_file = lint_patterns.per_file_code_counts(log)
     totals = {f.lower(): sum(c.values()) for f, c in (per_file or {}).items()}

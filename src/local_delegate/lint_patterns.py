@@ -100,17 +100,95 @@ def norm_path(text: str) -> str:
     return text.replace("\\", "/").lower()
 
 
+#: A URL (#688): what is inside one is a link, not a file (`docs.pytest.org/.../x.html`). One
+#: quantifier over a class without the delimiter: linear.
+URL = re.compile(r"(?i)\b(?:https?://|www\.)[^\s<>()\[\]`'\"]+")
+
+
+def _url_spans(text: str) -> list[tuple[int, int]]:
+    return [m.span() for m in URL.finditer(text)]
+
+
+def _outside(spans: list[tuple[int, int]], holes: list[tuple[int, int]]) -> list[tuple[int, int]]:
+    """The `spans` that do not start inside one of `holes`; both sorted, in one pass."""
+    kept, index = [], 0
+    for begin, end in spans:
+        while index < len(holes) and holes[index][1] <= begin:
+            index += 1
+        if index < len(holes) and holes[index][0] <= begin:
+            continue
+        kept.append((begin, end))
+    return kept
+
+
+def _is_absolute(text: str, begin: int, match: str) -> bool:
+    """Whether the path found at `begin` is absolute in the log: `~/…`, or after a slash that
+    `FILE` leaves out (`/home/…`, `C:\\Users\\…`, whose drive the `:` cuts)."""
+    return match.startswith(("~/", "~\\")) or (begin > 0 and text[begin - 1] in _SLASHES)
+
+
 def files_by_frequency(log: str) -> list[str]:
-    """The files the log names, most named first (ties in order of first appearance)."""
+    """The files the log names, most named first (ties in order of first appearance).
+
+    Issue #688: what is inside a URL is not a file, and an absolute path is the same file as the
+    relative path it ends in, at a folder boundary (pytest gives the relative one in the header of
+    its `warnings summary` and the absolute one in the message line): they count as one, under the
+    relative path. When several relative paths fit, the longest one; when none does, the absolute
+    path stays. Two relative paths are never merged (`tests/src/a.py` is not `src/a.py`).
+    """
     seen: dict[str, str] = {}
     counts: Counter[str] = Counter()
-    for begin, end in file_spans(log):
+    absolute: set[str] = set()
+    relative: set[str] = set()
+    for begin, end in _outside(file_spans(log), _url_spans(log)):
         match = log[begin:end]
         key = norm_path(match)
         seen.setdefault(key, match.replace("\\", "/"))
         counts[key] += 1
+        (absolute if _is_absolute(log, begin, match) else relative).add(key)
     order = {key: index for index, key in enumerate(seen)}
+    for key in absolute - relative:
+        owner = _relative_owner(key, relative)
+        if owner is not None:
+            counts[owner] += counts.pop(key)
+            order[owner] = min(order[owner], order[key])
     return [seen[k] for k in sorted(counts, key=lambda k: (-counts[k], order[k]))]
+
+
+def _relative_owner(key: str, relative: set[str]) -> str | None:
+    """The longest relative path that `key` ends in, at a folder boundary, or `None`."""
+    if not relative:
+        return None
+    path = key.removeprefix("~/")
+    # Only suffixes as long as some relative path can match: bounded work on a very deep path.
+    shortest_start = len(path) - max(len(r) for r in relative)
+    starts = [0] if path != key else []
+    starts += [i + 1 for i, char in enumerate(path) if char == "/"]
+    for start in starts:
+        if start < shortest_start:
+            continue
+        candidate = path[start:]
+        for owner in (candidate, f"./{candidate}"):
+            if owner in relative:
+                return owner
+    return None
+
+
+#: A pytest progress line with no failure (#688): `tests/test_a.py ....s.x  [ 40%]`. Only dots,
+#: skips and xfails; an `F` or an `E` keeps the file. Line by line, one class per quantifier.
+_PYTEST_CLEAN_PROGRESS = re.compile(
+    r"(?m)^[ \t]*\S+\.py[ \t]+[.sx]+[ \t]*(?:\[[ \t]*\d+%\])?[ \t]*$"
+)
+
+
+def reported_files(log: str) -> list[str]:
+    """The files of `files_by_frequency` that the log reports something about (#688).
+
+    The files pytest names only in progress lines without failures are clean: the inventory
+    put them in front of the model and the summary of the issue gave each one an entry with "0
+    problems". Any other mention (a warning, a failure, a traceback) keeps the file.
+    """
+    return files_by_frequency(_PYTEST_CLEAN_PROGRESS.sub("", log))
 
 
 def codes_by_frequency(log: str) -> list[str]:
@@ -208,19 +286,53 @@ def not_mentioned(
     #641: the files with failures of a pytest log) only those files are checked, not every file
     the log names: a clean file a summary leaves out is left out on purpose.
     """
-    named = files_by_frequency(log) if files is None else files
+    named = reported_files(log) if files is None else files
     items = named[:limit] + codes_by_frequency(log)[:limit]
     return [item for item in items if not mentions(item, answer)]
 
 
+#: A folder the summary names alone, ending in a slash (`projects/knowledge/`), issue #690. Not
+#: the folders of a file path (the lookahead), which the check of the full path covers.
+_FOLDER = re.compile(r"(?<![\w.~/-])(?:[\w.~-]+/)+(?![\w.~/-])")
+
+
+def _log_carries(norm_log: str, path: str, *, folder: bool) -> bool:
+    """Whether `norm_log` holds `path` (both `norm_path`) starting at a folder boundary."""
+    tail = "" if folder else r"(?![\w-]|\.\w)"
+    return re.search(r"(?<![\w.~-])" + re.escape(path) + tail, norm_log) is not None
+
+
 def invented_files(answer: str, log: str, limit: int = 10) -> list[str]:
-    """The files `answer` names that `log` never names (up to `limit`), most named first.
+    """The files and folders `answer` names that `log` never names (up to `limit`).
 
     The reverse of `not_mentioned` (issue #525): a summary that names a file the log does not
-    carry made it up. Matched as `mentions` does, by path or by basename.
+    carry made it up. Files first, most named first, then folders in order of appearance.
+
+    Issue #690: a path with folders must be in the log as it is, at a folder boundary (an
+    absolute path of the log holds its relative tail); before, any file whose basename the log
+    carries passed, and `projects/knowledge/glossary.md` over a log with `knowledge/glossary.md`
+    got no warning. A bare basename is still matched as `mentions` does. A folder the answer
+    names alone (`### projects/knowledge/`) must be in the log too. What is inside a URL is
+    neither a file nor a folder.
     """
-    named = files_by_frequency(MARKDOWN_ESCAPE.sub(r"\1", answer))
-    return [file for file in named if not mentions(file, log)][:limit]
+    answer = MARKDOWN_ESCAPE.sub(r"\1", answer)
+    norm_log = norm_path(log)
+    invented = []
+    for file in files_by_frequency(answer):
+        path = norm_path(file).removeprefix("./")
+        carried = _log_carries(norm_log, path, folder=False) if "/" in path else mentions(file, log)
+        if not carried:
+            invented.append(file)
+    text = URL.sub(lambda m: " " * len(m.group()), answer).replace("\\", "/")
+    folders: dict[str, None] = {}
+    for match in _FOLDER.finditer(text):
+        folder = match.group()
+        path = norm_path(folder)
+        while path.startswith(("./", "../")):
+            path = path.split("/", 1)[1]
+        if path and path != "~/" and not _log_carries(norm_log, path, folder=True):
+            folders.setdefault(folder, None)
+    return (invented + list(folders))[:limit]
 
 
 # --- Input with nothing to summarize (issue #525) ---------------------------------------------
