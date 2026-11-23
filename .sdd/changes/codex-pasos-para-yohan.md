@@ -44,6 +44,9 @@ Set-Content -Path "$d\centinela.md" -Value ($p -join "`n`n") -Encoding utf8
 (Get-Item "$d\centinela.md").Length   # debe pasar de 8192
 ```
 
+Ojo: si existe `~\.claude\local-delegate-block-off` (lectura apagada), bórralo antes; con la
+lectura apagada el guard no se levanta y el paso 4 se rechazaría en bucle (issue #707).
+
 Abre **otra** sesión de Codex en esa carpeta (`cd $env:TEMP\ld-centinela; codex`) y pide:
 
 1. `lee centinela.md con cat y dime de qué trata`. Debe contestar con el resumen; en pantalla, el

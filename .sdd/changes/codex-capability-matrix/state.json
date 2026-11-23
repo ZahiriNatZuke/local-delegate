@@ -4,9 +4,9 @@
   "title": "Codex: matriz de capacidades y alternativas para barra, comandos sin modelo y tools fijadas (#671)",
   "mode": "standard",
   "traceability": "strict",
-  "status": "closing",
+  "status": "closed",
   "createdAt": "2026-11-16T15:43:30.734Z",
-  "updatedAt": "2026-11-16T16:04:52.379Z",
+  "updatedAt": "2026-11-23T11:00:20.453Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -33,10 +33,10 @@
       "actor": "user"
     },
     "memory": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-11-23T11:00:20.368Z",
+      "evidence": "Nota del vault projects/local-delegate/jornada-2026-11-16-diez-issues-y-codex-nativo.md, seccion Seguimiento 2026-11-23 (actualizada el 2026-11-23); seguimientos en review.md de este SDD",
+      "actor": "user"
     }
   },
   "history": [
@@ -134,6 +134,21 @@
       "to": "closing",
       "at": "2026-11-16T16:04:52.379Z",
       "reason": "conformance aprobada; memory y closed los hace la sesion principal al integrar"
+    },
+    {
+      "type": "gate",
+      "gate": "memory",
+      "status": "approved",
+      "at": "2026-11-23T11:00:20.368Z",
+      "evidence": "Nota del vault projects/local-delegate/jornada-2026-11-16-diez-issues-y-codex-nativo.md, seccion Seguimiento 2026-11-23 (actualizada el 2026-11-23); seguimientos en review.md de este SDD",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "closing",
+      "to": "closed",
+      "at": "2026-11-23T11:00:20.453Z",
+      "reason": "revision de resultado y prueba en vivo hechas el 2026-11-23; memoria en la jornada del vault"
     }
   ]
 }
