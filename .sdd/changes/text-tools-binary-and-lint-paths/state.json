@@ -6,7 +6,7 @@
   "traceability": "strict",
   "status": "result-review",
   "createdAt": "2026-11-23T10:56:47.749Z",
-  "updatedAt": "2026-11-23T12:04:16.419Z",
+  "updatedAt": "2026-11-23T12:13:48.108Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -27,10 +27,10 @@
       "actor": "cerrar-688-y-revisar-709"
     },
     "conformance": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-11-23T12:13:48.108Z",
+      "evidence": "review.md con dos jueces (standard): REQ-001..010 implementados y verificados, 15 hallazgos cerrados o justificados; prueba en vivo de #688 en proceso (aviso 0/3 -> 3/3); PR #709 con todos los checks en verde (gh pr checks), CLEAN",
+      "actor": "cerrar-688-y-revisar-709"
     },
     "memory": {
       "status": "pending",
@@ -105,6 +105,14 @@
       "to": "result-review",
       "at": "2026-11-23T12:04:16.419Z",
       "reason": "quality aprobada; revisión de dos jueces en review.md"
+    },
+    {
+      "type": "gate",
+      "gate": "conformance",
+      "status": "approved",
+      "at": "2026-11-23T12:13:48.108Z",
+      "evidence": "review.md con dos jueces (standard): REQ-001..010 implementados y verificados, 15 hallazgos cerrados o justificados; prueba en vivo de #688 en proceso (aviso 0/3 -> 3/3); PR #709 con todos los checks en verde (gh pr checks), CLEAN",
+      "actor": "cerrar-688-y-revisar-709"
     }
   ]
 }
