@@ -1,16 +1,41 @@
-# Handoff: cadena de respaldo entre modelos locales y enfriamiento por modelo
+# Handoff: Cadena de respaldo entre modelos locales y enfriamiento temporal por modelo
+
+## Current state
+
+- SDD status: closed (2026-11-23)
+- Last completed gate: memory
+- Current revision: `0253b630`
+
+## What changed
+
+- Nada en esta carpeta: los 20 requisitos se implementaron como F3 de `delegacion-precisa-y-fiable` (tareas 22-31, PR #187-#199) y salieron en la 0.28.0.
+
+## Decisions
+
+- Cerrado como absorbido por delegacion-precisa-y-fiable (0.28.0). Las puertas se recorren con la evidencia de aquel SDD y los tests repetidos el 2026-11-23; no firman trabajo hecho aquí.
+
+## Next action
+
+- Ninguna. El corte P-4 del 2026-12-14 se hace en `delegacion-precisa-y-fiable`.
+
+## Memory
+
+- Canonical note: memoria `sdd-delegacion-precisa-y-fiable.md` del proyecto
+- Indexes updated: tarjeta «Ordenar el estado de los SDD que figuran abiertos» del Project 3 (Hecho)
+
+## Historia previa al cierre (texto de 2026-09-11, sin cambios)
 
 **Estado al 2026-09-11:** fase `specifying`, gate `spec` **sin aprobar**, cero código escrito.
 `brief.md`, `research.md` y `spec.md` están completos (20 requisitos, 16 escenarios).
 
-## Por qué se para aquí
+### Por qué se para aquí
 
 Decisión del usuario: **unificar este cambio con la investigación de modelos nuevos** que lleva otra
 sesión (nota del vault `projects/llms/investigacion-modelos-abiertos-2026-09.md`), en **una sola
 especificación SDD**, y decidir allí el orden de implementación. Este directorio queda como fuente de
 la parte de fiabilidad; no se aprueba su gate por separado.
 
-## Qué hay que llevarse
+### Qué hay que llevarse
 
 1. **La spec entera** (respaldo entre modelos + enfriamiento), ya alineada con la otra sesión: cadenas
    por rol y no por nombre de modelo, clase «capacidad o carga» separada por la política
@@ -25,7 +50,7 @@ la parte de fiabilidad; no se aprueba su gate por separado.
    - Un `ConnectTimeout` cae en `http_error`: no dispara autoarranque ni la pregunta.
    - Además, `retry_exhausted` (`server.py:659-663`) es inalcanzable.
 
-## Lo que el usuario dijo que le importa de verdad
+### Lo que el usuario dijo que le importa de verdad
 
 La prioridad no es la fiabilidad, es la **precisión de la delegación**: que las tareas mecánicas
 acaben en los modelos locales en vez de gastar contexto y cuota del modelo principal. De OmniRoute
@@ -42,11 +67,11 @@ salen cuatro ideas para eso, que deben entrar en la spec unificada:
 4. **Trazabilidad:** medir delegaciones ofrecidas, aceptadas y rechazadas, y por qué; hoy el panel solo
    ve las que ocurrieron.
 
-## Pendiente que no se hizo
+### Pendiente que no se hizo
 
 - Revisión independiente de esta spec buscando huecos (el usuario la prefería antes del gate).
 
-## ABSORBIDO (2026-09-11)
+### ABSORBIDO (2026-09-11)
 
 Este cambio queda absorbido por `.sdd/changes/delegacion-precisa-y-fiable/` como su fase **F3**, por
 decision del usuario. Sus 20 requisitos se heredan sin reescribir y conservan sus identificadores.

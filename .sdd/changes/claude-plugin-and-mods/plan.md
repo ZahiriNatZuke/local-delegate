@@ -1023,6 +1023,21 @@ apagada y el motivo queda en la wiki y en el backlog.
 - **Releases**: `chore: release v0.40.0` y `chore: release v0.41.0`.
 - **Mediciones en vivo**: su evidencia va en el PR siguiente.
 
+## Tareas (resumen de cierre para el harness)
+
+- [x] T1 — Ola 0: medición previa T0 y PR de documentos (REQ-003, REQ-024)
+  - Verification: `evidence/T0.md`
+- [x] T2 — Olas 1, 2a y 2b (F1): plugin empaquetado, hooks por subcomando, interruptor, entrega por plugin con fallback, migración, estado, `doctor`, `update`, `uninstall` y puente de Claude Desktop; publicado en la 0.40.0 (REQ-001, REQ-002, REQ-003, REQ-004, REQ-005, REQ-006, REQ-007, REQ-008, REQ-009, REQ-010, REQ-011, REQ-012)
+  - Verification: `evidence/F1-*.md`, `evidence/release-040.md`
+- [x] T3 — Olas 3 y 3b (F2): esqueleto del mod, tools fijas, comandos, delegaciones separables y medición en vivo; publicado en la 0.40.0 (REQ-013, REQ-014, REQ-015, REQ-016)
+  - Verification: `evidence/F2-*.md`
+- [x] T4 — Olas 3c, 4 y 4b: llamadas abandonadas, barra de estado (F3), medición de vías y clasificador único (primera parte de F4), credenciales de macOS (REQ-017, REQ-018, REQ-019)
+  - Verification: `evidence/abandoned-calls.md`, `evidence/F4-read-paths.md`, `evidence/F4-classifier.md`, `evidence/macos-keychain.md`
+- [x] T5 — Olas 5 y 6 (F4): mod de lectura, guarda de escritura, hooks que se apartan y verificación en vivo; publicado en la 0.41.0 y la 0.41.1 (REQ-020, REQ-021, REQ-022, REQ-023)
+  - Verification: `evidence/F4-*.md`
+- [x] T6 — Lectura de la medición de adopción a 14 días, hecha el 2026-11-23: no concluyente (REQ-024)
+  - Verification: fila REQ-024 de `verification.md`
+
 ## Trazabilidad REQ → lote → prueba
 
 | REQ | Lote | Prueba nombrada |

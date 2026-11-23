@@ -2,15 +2,14 @@
 
 ## Approach
 
-Explain the chosen design and why it fits the researched project constraints.
+No se implementó aquí: superado por el bloqueo de lectura de la 0.28.0 (F1 de `delegacion-precisa-y-fiable`) y por el mod de lectura de la 0.41.0 (`claude-plugin-and-mods`).
 
 ## Ordered tasks
 
-1. **Task 1**
-   - Files or modules:
-   - Requirements covered:
-   - Verification:
-   - Rollback or recovery:
+- [x] T1 — Cubierto por el bloqueo de lectura de la 0.28.0 y el mod de lectura de la 0.41.0 (REQ-001)
+  - Files or modules: `resources/hooks/suggest_delegate_read.py`, mod `read` del plugin
+  - Verification: fila REQ-001 de `verification.md`
+  - Depends on: none
 
 ## Test strategy
 

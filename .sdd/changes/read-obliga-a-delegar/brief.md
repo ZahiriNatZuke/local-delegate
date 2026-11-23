@@ -70,3 +70,9 @@ Dos cosas, **en este orden**, que fue decisión explícita del usuario:
    tiene respuesta.
 2. Si resulta que sí obedece, ¿el umbral correcto es 8 KB o aún más bajo? La franja 4–8 KB tuvo 4
    lecturas en tres semanas: probablemente no compensa.
+
+## Log
+
+- L1 2026-09-09 Original request: no se guardó literal (SDD anterior a la sección Log); el problema que lo motivó está en «Problem».
+- L2 2026-09-12 Absorbido por `delegacion-precisa-y-fiable` como fase F1.
+- L3 2026-11-23 Cerrado: superado por el bloqueo de lectura de la 0.28.0 y el mod de lectura de la 0.41.0.

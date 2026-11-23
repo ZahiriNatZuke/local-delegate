@@ -50,3 +50,10 @@ Alcance aprobado:
   daemon ni el `uv tool` instalado. Pruebas en carpetas propias del scratchpad o HOME simulado.
 - Comandos pesados con `bash ~/.claude/scripts/pesado.sh …` desde la tool Bash.
 - Nada huérfano al acabar.
+
+## Log
+
+- L1 2026-10-21 Original request: no se guardó literal; la decisión del usuario está en «Objetivo (decisión del usuario, 2026-10-21)».
+- L2 2026-10-22 Publicada la 0.40.0 (F1, F2 y F3) e instalada aquí a las 11:07:06Z.
+- L3 2026-10-23 Publicadas la 0.41.0 y la 0.41.1 (F4).
+- L4 2026-11-23 Medición de adopción de REQ-024: no concluyente (menos de 30 sesiones). SDD cerrado con ese dato; `pinned_tools` queda como tarjeta del Project 3.

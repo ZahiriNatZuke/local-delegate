@@ -51,63 +51,85 @@ siguen con la entrega por settings.** Hechos: `research.md`.
 
 ### F1 — Plugin, migración y estado
 
-- **REQ-001 — Plugin en el paquete.** El paquete incluye la carpeta del plugin `local-delegate`
+- **REQ-001** — Plugin en el paquete. El paquete incluye la carpeta del plugin `local-delegate`
   (`.claude-plugin/plugin.json`, `hooks/hooks.json`, el mod desde F2; sin `bin/` en su raíz) y un
   `marketplace.json` que la publica. La versión del plugin es la del paquete; `bump_version.py` la
   escribe y `tests/test_release_metadata.py` la comprueba. Pasa `claude plugin validate --strict`.
-- **REQ-002 — Hooks del plugin.** En 0.40, `hooks.json` declara los mismos eventos y filtros que la
+  - Request: derived: spec v2 aprobada por el usuario el 2026-10-21 (gate `spec`)
+  - Verify: test `test_plugin_package.py::test_plugin_version_matches_package`, `test_release_metadata.py::test_plugin_json_version_matches_pyproject`, job `plugin` (`validate --strict`, rueda)
+- **REQ-002** — Hooks del plugin. En 0.40, `hooks.json` declara los mismos eventos y filtros que la
   0.39 escribe en `settings.json`: los dos de siempre (`UserPromptSubmit` y `record_call` sobre
   `mcp__local-delegate__.*`) y las tres entradas del bloqueo de lectura (`Read`, `read_*` de otros
   MCP y `Bash|PowerShell`). En 0.41 cambia solo lo que dice REQ-023.
-- **REQ-003 — Hooks por subcomando, rápidos y que no bloquean.** Cada hook invoca
+  - Request: derived: spec v2 aprobada por el usuario el 2026-10-21 (gate `spec`)
+  - Verify: test `test_plugin_package.py::test_hooks_json_matches_settings_delivery_0_39`
+- **REQ-003** — Hooks por subcomando, rápidos y que no bloquean. Cada hook invoca
   `local-delegate hook <nombre>` por su ruta absoluta (`${user_config.ld_bin}`, rellenada por
   `install`), sin depender de `python` ni del `PATH` de la app (macOS). p95 ≤ 300 ms por invocación
   (20 invocaciones medidas en Windows). Un nombre de hook desconocido sale con 0 sin texto. Si el
   subcomando falla o no arranca, el hook **deja pasar** (nunca bloquea un prompt ni una tool por un
   fallo propio). Los scripts actuales siguen para la entrega por settings.
-- **REQ-004 — Interruptor del bloqueo de lectura.** El estado vive en la configuración de
+  - Request: derived: spec v2 aprobada por el usuario el 2026-10-21 (gate `spec`)
+  - Verify: test Control positivo y negativo de B-1 en `evidence/T0.md`, `test_plugin_package.py::test_every_hook_entry_is_fail_open`, `test_hook_entry.py::test_hook_crash_lets_the_call_through`, `::test_hook_path_does_not_import_server`, `measure_hook_latency.py`
+- **REQ-004** — Interruptor del bloqueo de lectura. El estado vive en la configuración de
   local-delegate (fichero como `language.json`); `install --enable-read-hook` lo enciende. Precedencia:
   `~/.claude/local-delegate-block-off` (apagado en caliente, nombre vigente desde 0.38) >
   `LD_HOOK_READ_BLOCK` > fichero de estado. Los hooks escriben la misma telemetría que hoy
   (`blocks.jsonl`), para no cortar la serie de la ventana P-4.
-- **REQ-005 — Entrega por plugin por defecto, con fallback.** Con `claude` en el `PATH` y versión
+  - Request: derived: spec v2 aprobada por el usuario el 2026-10-21 (gate `spec`)
+  - Verify: test `test_read_switch.py::test_active_layer_state_file_or_enabled_env`, `::test_block_state_values_unchanged`, `test_plugin_migration.py::test_migration_carries_read_switch_on/off`
+- **REQ-005** — Entrega por plugin por defecto, con fallback. Con `claude` en el `PATH` y versión
   ≥ `MIN_CLAUDE_PLUGIN_VERSION` (constante; el plan fija el número), HOME real y fuera de WSL,
   `install` usa la entrega por plugin: `claude plugin marketplace add <carpeta del paquete>` y
   `claude plugin install local-delegate@local-delegate --scope user --config ld_bin=<ruta>`, no
   interactivo. Flag `--claude-delivery plugin|settings`. En los demás casos (versión menor, sin CLI,
   HOME simulado sin `CLAUDE_CONFIG_DIR` comprobado, WSL), entrega por settings como hoy, con aviso.
   `--dry-run` muestra los comandos `claude plugin …` sin ejecutarlos.
-- **REQ-006 — Migración sin duplicados.** En el mismo paso que instala el plugin, `install` retira de
+  - Request: derived: spec v2 aprobada por el usuario el 2026-10-21 (gate `spec`)
+  - Verify: test `test_claude_plugin.py::test_min_version_gate`, `::test_simulated_home_passes_claude_config_dir`, `test_install_plugin_delivery.py::test_falls_back_to_settings_with_warning`
+- **REQ-006** — Migración sin duplicados. En el mismo paso que instala el plugin, `install` retira de
   `settings.json` (con una copia) los hooks que escribía la entrega por settings y borra
   `~/.claude/hooks/local-delegate/`. La entrada MCP, la skill y el bloque de `CLAUDE.md` no se tocan.
   Nada ajeno se toca. Idempotente.
-- **REQ-007 — Estado de la instalación.** Un fichero de estado en la configuración de local-delegate
+  - Request: derived: spec v2 aprobada por el usuario el 2026-10-21 (gate `spec`)
+  - Verify: test `test_plugin_migration.py::test_migration_removes_every_settings_hook_we_wrote`, `::test_backup_is_pre_install_bytes`, `::test_migration_is_idempotent` (+ mutantes)
+- **REQ-007** — Estado de la instalación. Un fichero de estado en la configuración de local-delegate
   registra la vía de entrega de Claude Code, la versión, y qué piezas escribió `install` (plugin,
   marketplace, entrada del chat de Desktop) con fecha. `doctor`/`update`/`uninstall` lo leen en vez
   de adivinar; una pieza que existía antes y no figura en el estado no se borra.
-- **REQ-008 — Migración desde la 0.39 y vuelta atrás.** (a) `update` en una instalación por settings
+  - Request: derived: spec v2 aprobada por el usuario el 2026-10-21 (gate `spec`)
+  - Verify: test `test_install_state.py::test_missing_state_means_unknown_not_empty`, `::test_state_follows_language_dir_rule`
+- **REQ-008** — Migración desde la 0.39 y vuelta atrás. (a) `update` en una instalación por settings
   que cumple REQ-005 migra al plugin con REQ-006 y avisa de reiniciar las sesiones abiertas.
   (b) `install --claude-delivery settings` con el plugin puesto lo desinstala y repone settings en el
   mismo paso. (c) Bajar a la 0.39 exige `uninstall` antes; la CHANGELOG y la wiki lo dicen, y
   `doctor` de la 0.40 avisa si encuentra hooks en settings y plugin a la vez. Una prueba por punto en
   HOME simulado (`CLAUDE_CONFIG_DIR`).
-- **REQ-009 — `doctor`.** Checks nuevos: vía de entrega (según el estado); plugin instalado,
+  - Request: derived: spec v2 aprobada por el usuario el 2026-10-21 (gate `spec`)
+  - Verify: test a: `test_update_plugin.py::test_settings_install_migrates_carries_switch_and_warns_restart`; b: `test_plugin_migration.py::test_revert_to_settings_in_one_step`; c: `test_checks_plugin.py::test_doctor_flags_hooks_in_settings_and_plugin`. Las tres en HOME simulado con `CLAUDE_CONFIG_DIR`
+- **REQ-009** — `doctor`. Checks nuevos: vía de entrega (según el estado); plugin instalado,
   habilitado y con la versión del paquete; `ld_bin` apunta a un ejecutable que existe; versión de
   `claude` ≥ la mínima; **duplicados** (hooks de local-delegate en `settings.json` y en el plugin a la
   vez); estado del mod (cargado o no, desde F2). En la pestaña Code de Desktop y VS Code no se puede
   medir la versión desde el CLI: la wiki dice las mínimas (Desktop ≥ 2.1.286, VS Code ≥ 2.1.299).
   Dentro de WSL no se espera plugin. Textos es/en, filas en la wiki y contador al día.
-- **REQ-010 — `update`.** Con plugin: tras subir el paquete, `claude plugin marketplace update` y
+  - Request: derived: spec v2 aprobada por el usuario el 2026-10-21 (gate `spec`)
+  - Verify: test `test_checks.py::test_check_ids_exact`, `test_checks_plugin.py::test_mod_loaded_from_heartbeat`
+- **REQ-010** — `update`. Con plugin: tras subir el paquete, `claude plugin marketplace update` y
   `claude plugin update local-delegate@local-delegate`, en ese orden; repara el plugin si falta; si
   encuentra duplicados, **retira** los de settings (no los repone). Con settings: como hoy. `plan_pin`
   y `service.daemon_auth` no cambian (el MCP sigue en `~/.claude.json`).
-- **REQ-011 — `uninstall`.** Desinstala el plugin y el marketplace si los puso `install` (según el
+  - Request: derived: spec v2 aprobada por el usuario el 2026-10-21 (gate `spec`)
+  - Verify: test `test_update_plugin.py::test_marketplace_update_before_plugin_update`, `::test_update_never_restores_settings_hooks_under_plugin`
+- **REQ-011** — `uninstall`. Desinstala el plugin y el marketplace si los puso `install` (según el
   estado), la entrada del chat de Desktop si la escribió `install`, y deshace lo de `--agents` (hoy no
   lo hace). Nada ajeno.
+  - Request: derived: spec v2 aprobada por el usuario el 2026-10-21 (gate `spec`)
+  - Verify: test `test_uninstall_plugin.py::test_removes_only_what_state_lists`, `test_agents_uninstall.py::test_uninstall_undoes_agents_edit`
 
 ### F1 — Chat de Claude Desktop (opcional)
 
-- **REQ-012 — Entrada del chat por un puente propio, con flag.** Medido el 2026-10-21
+- **REQ-012** — Entrada del chat por un puente propio, con flag. Medido el 2026-10-21
   (`research-r5-desktop-env-and-mcp-errors.md`): Desktop **no** pasa su entorno a los MCP (solo una
   lista fija de variables del sistema más el `env` literal de la entrada) y **no** expande `${VAR}`
   en `claude_desktop_config.json`. Por eso: un subcomando nuevo `local-delegate desktop-bridge`
@@ -120,33 +142,45 @@ siguen con la entrega por settings.** Hechos: `research.md`.
   dos veces (chat y Cowork/Code): el puente lo soporta. `doctor`: entrada con `${…}` → warn (no se
   expande); token literal en la entrada → warn sin imprimirlo; puente que no autentica → warn.
   `update` reescribe la ruta si cambia el ejecutable.
+  - Request: derived: spec v2 aprobada por el usuario el 2026-10-21 (gate `spec`)
+  - Verify: test `test_desktop_bridge.py::test_bridge_against_real_daemon_app`, `test_install_desktop.py::test_desktop_flag_on_macos_refuses_cleanly`, `test_desktop_config.py::test_detects_literal_token_without_printing`, puente contra el daemon real en `evidence/F2-live.md`
 
 ### F2 — Mod: tools fijas y comandos
 
-- **REQ-013 — Tools siempre cargadas.** El mod saca de ToolSearch una lista configurable
+- **REQ-013** — Tools siempre cargadas. El mod saca de ToolSearch una lista configurable
   (`userConfig`) de tools `mcp__local-delegate__*`, con 4 por defecto: `local_summarize`,
   `local_extract`, `local_lint_summary`, `local_commit_msg` (~2 000 tokens). Lista vacía = apagado.
-- **REQ-014 — Comandos sin turno del modelo.** `/local-summarize <ruta>`, `/local-commit` (diff
+  - Request: derived: spec v2 aprobada por el usuario el 2026-10-21 (gate `spec`)
+  - Verify: test `pinned-tools.test.ts` (job `plugin`)
+- **REQ-014** — Comandos sin turno del modelo. `/local-summarize <ruta>`, `/local-commit` (diff
   preparado → `local_commit_msg`; **solo muestra** el mensaje) y `/local-lint <fichero|comando>`. 0
   turnos del modelo; la salida queda como contexto del siguiente turno. `/local-lint` con comando usa
   `$.process.run` (argumentos partidos con las reglas de Windows y POSIX, tope 30 s); donde
   `process.run` no está disponible o un admin lo veta, acepta solo un fichero y lo dice. Si el daemon
   no responde, error claro. Textos en el idioma de salida de local-delegate.
-- **REQ-015 — Delegaciones del mod separables.** Las llamadas del mod llevan `tool_use_id`
+  - Request: derived: spec v2 aprobada por el usuario el 2026-10-21 (gate `spec`)
+  - Verify: test `commands.test.ts` (`lint_without_process_run_accepts_only_file`, `commit_temp_file_removed`)
+- **REQ-015** — Delegaciones del mod separables. Las llamadas del mod llevan `tool_use_id`
   `toolu_plugin_…` y `caller_src: "hook"` (medido en vivo: vault
   `investigacion-mods-claude-code-2026-10-21.md` §3). El panel y el script de medición las separan
   por ese prefijo de `tool_use_id`. Se vuelve a verificar en vivo en F2 con una llamada del mod y una
   del modelo en la misma sesión.
-- **REQ-016 — Mod acotado y degradable.** El mod solo lee la variable `LOCAL_DELEGATE_WEB_TOKEN`
+  - Request: derived: spec v2 aprobada por el usuario el 2026-10-21 (gate `spec`)
+  - Verify: test `test_dashboard_states.py::test_mod_calls_shown_apart`, `evidence/F2-live.md`
+- **REQ-016** — Mod acotado y degradable. El mod solo lee la variable `LOCAL_DELEGATE_WEB_TOKEN`
   (nombre literal), solo habla con `127.0.0.1`, nunca registra el token. Si el mod falla o la API
   cambia, los hooks y el MCP siguen funcionando (probado desactivando el mod). Cada pieza del mod se
   puede apagar por `userConfig`.
+  - Request: derived: spec v2 aprobada por el usuario el 2026-10-21 (gate `spec`)
+  - Verify: test `test_mod_static.py::test_mod_reads_only_the_token_variable`, `::test_register_loads_pieces_dynamically_inside_try`; en vivo, piezas a `off` y `register.js` que lanza
 
 ### F3 — Cuota y ahorro
 
-- **REQ-017 — Barra de estado.** % de cuota de la sesión (`session.measure`) y ahorro de la sesión
+- **REQ-017** — Barra de estado. % de cuota de la sesión (`session.measure`) y ahorro de la sesión
   según el daemon (`/api/stats` con el token del entorno). Si el daemon no responde, se oculta sin
   error. Apagable por `userConfig`.
+  - Request: derived: spec v2 aprobada por el usuario el 2026-10-21 (gate `spec`)
+  - Verify: test `test_metrics_session_filter.py::test_stats_filters_by_session`, `status.test.ts` (`hides_when_daemon_down`)
 
 ### F4 — Lectura delegada
 
@@ -156,20 +190,26 @@ siguen con la entrega por settings.** Hechos: `research.md`.
 > shell clasificó 1 681 lecturas como «no es un volcado» y los agentes bloqueados releyeron por
 > franjas. Cubrir solo `Read` repetiría ese error.
 
-- **REQ-018 — Medir antes por qué vías se lee.** Script versionado que recorre los transcripts
+- **REQ-018** — Medir antes por qué vías se lee. Script versionado que recorre los transcripts
   recientes (sin pasar su contenido por el contexto) y cuenta las lecturas de ficheros por vía:
   `Read` entero y por franjas, cada forma de comando de shell (incluidas tuberías), `Grep` con salida
   grande y tools de lectura de otros MCP (`filesystem`, `obsidian`, `github`, `markitdown`…), con
   tamaño del fichero. Se ejecuta antes de diseñar F4 y fija qué vías cubre F4 por volumen; la tabla
   queda en la evidencia.
-- **REQ-019 — Un solo clasificador de lectura.** Un único módulo decide si una llamada es «leer el
+  - Request: derived: spec v2 aprobada por el usuario el 2026-10-21 (gate `spec`)
+  - Verify: test `test_measure_read_paths.py::test_counts_each_path_kind`, `evidence/F4-read-paths.md`
+- **REQ-019** — Un solo clasificador de lectura. Un único módulo decide si una llamada es «leer el
   fichero X» y con qué alcance (entero, franja, volcado parcial, no clasificable). Lo usan el mod y
   los hooks de la entrega por settings (Codex). Cubrir una vía nueva es tocar solo ese módulo. Tests
   con un corpus de comandos reales sacado de REQ-018.
-- **REQ-020 — Lectura acumulada por fichero.** El mod lleva en la sesión cuánto de cada fichero se ha
+  - Request: derived: spec v2 aprobada por el usuario el 2026-10-21 (gate `spec`)
+  - Verify: test `test_read_classifier.py::test_corpus` (+ mutantes), `::test_classifier_change_moves_fingerprint`
+- **REQ-020** — Lectura acumulada por fichero. El mod lleva en la sesión cuánto de cada fichero se ha
   leído y por qué vías; si las franjas o volcados parciales suman ≥ un umbral del fichero (el plan lo
   fija con los datos de REQ-018), cuenta como lectura entera.
-- **REQ-021 — Lectura con elección.** Con entrega por plugin y el interruptor de REQ-004 encendido,
+  - Request: derived: spec v2 aprobada por el usuario el 2026-10-21 (gate `spec`)
+  - Verify: test `read.test.ts` (`accumulates_ranges_to_whole`)
+- **REQ-021** — Lectura con elección. Con entrega por plugin y el interruptor de REQ-004 encendido,
   para las vías **clasificables con seguridad** y por encima de los umbrales: en sesión con diálogo,
   botones «resumir con el modelo local / leer entero» (resumir llama a `local_summarize` y entrega el
   resumen como resultado); sin diálogo (`-p`, subagentes), **el mod resume él mismo y entrega el
@@ -184,28 +224,36 @@ siguen con la entrega por settings.** Hechos: `research.md`.
   > ni suma a la cobertura compartida del fichero, igual que el principio del #443; (b) en el hilo
   > principal, un fichero corto (≤ 200 líneas y < 32 KB) pasa literal; (c) un rango que empieza
   > después de la última línea del fichero pasa literal. El texto de los REQ no cambia.
+  - Request: derived: spec v2 aprobada por el usuario el 2026-10-21 (gate `spec`)
+  - Verify: test `read.test.ts` (`buttons_when_dialog`, `denies_without_dialog`, `unclassifiable_only_warns`, `respects_read_switch_off`)
 
-- **REQ-022 — Nunca escribe sobre un resumen.** Tras una lectura resumida de un fichero (por
+- **REQ-022** — Nunca escribe sobre un resumen. Tras una lectura resumida de un fichero (por
   cualquier vía), el mod rechaza `Edit`, `Write`, `NotebookEdit` y escrituras de shell reconocibles
   sobre ese fichero con el mensaje «léelo con `offset`/`limit` antes de modificarlo» hasta que haya
   una lectura real. Verificable en `-p`: control positivo (sin mod, `Write` pasa) y negativo (con mod,
   `Write` se rechaza y el hash del fichero no cambia). `--resume` tras una lectura resumida: probado o
   límite documentado.
-- **REQ-023 — Sustitución de los hooks de lectura.** En 0.41, con entrega por plugin, `hooks.json`
+  - Request: derived: spec v2 aprobada por el usuario el 2026-10-21 (gate `spec`)
+  - Verify: test `read.test.ts` (`blocks_write_after_summary`, `guard_survives_resume`); control positivo y negativo en `evidence/F4-live.md`
+- **REQ-023** — Sustitución de los hooks de lectura. En 0.41, con entrega por plugin, `hooks.json`
   deja de declarar las entradas de lectura que el mod cubre (según REQ-018/019); las que no cubra
   siguen como hooks con el mismo interruptor. F4 sale **apagada por defecto** hasta cumplir REQ-022 en
   vivo; mientras, los hooks de lectura siguen como en 0.40. `doctor` avisa si el mod de lectura y un
   hook de lectura cubren la misma vía a la vez.
+  - Request: derived: spec v2 aprobada por el usuario el 2026-10-21 (gate `spec`)
+  - Verify: test `test_hook_step_aside.py::test_read_hook_steps_aside_when_mod_active`, `::test_read_hook_does_not_step_aside_for_another_session`, `::test_no_gap_when_active_but_not_blocking`, `::test_read_hook_acts_when_mod_off_or_stale`, `test_checks_plugin.py::test_read_mod_and_read_hook_overlap_warns`
 
 ### Medición
 
-- **REQ-024 — Medición fijada antes.** Script versionado (de `scratchpad/r4/baseline_sessions.py`),
+- **REQ-024** — Medición fijada antes. Script versionado (de `scratchpad/r4/baseline_sessions.py`),
   que cuenta por `tool_use_id` sin depender del prefijo de las tools: % de sesiones interactivas de
   Claude Code con ≥ 1 delegación decidida por el modelo (sin `toolu_plugin_` ni ventanas de prueba).
   Base: recalculada **solo desde el 2026-10-08** (antes faltan `tool_use_id`). Se mide 14 días tras
   instalar la 0.40.0 aquí. Éxito: ≥ +10 puntos con ≥ 30 sesiones. Mide el efecto conjunto de la 0.40
   (no se puede atribuir solo a las tools fijas); sin control de Codex (no discrimina: 0
   delegaciones). Si no sube: se apagan las tools fijas y se quedan los comandos.
+  - Request: derived: spec v2 aprobada por el usuario el 2026-10-21 (gate `spec`)
+  - Verify: test `test_measure_plugin_adoption.py::test_counts_sessions_not_calls`, `::test_plugin_calls_excluded`; la lectura con fecha
 
 ## Tabla pieza × verbo (entrega por plugin)
 

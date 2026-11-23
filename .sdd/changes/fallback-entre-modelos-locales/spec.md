@@ -42,16 +42,22 @@ nuevos (`local-delegate-44`, 2026-09-11):
 
 - **REQ-001:** Todo fallo de una llamada al backend se asigna a una de las clases de la tabla. Lo que no
   encaje en ninguna va a «sin clasificar».
+  - Request: derived: spec del 2026-09-11 con las decisiones del usuario; absorbida tal cual como F3 de `delegacion-precisa-y-fiable`
+  - Verify: test tests por clase, incluido un caso sin clasificar
 - **REQ-002:** Un fallo **del modelo** provoca un reintento con el siguiente candidato válido de la
   cadena del rol, en orden. Hay un máximo de **2 saltos** por llamada lógica (configurable), y cada
   salto exige que el intento anterior fallara también por el modelo: un fallo de otra clase corta la
   cadena. Si hay reintento de schema (`json_schema_fallback`), va antes y sigue funcionando igual.
+  - Request: derived: spec del 2026-09-11 con las decisiones del usuario; absorbida tal cual como F3 de `delegacion-precisa-y-fiable`
+  - Verify: test tests con doble que responde según `model`: un salto, dos saltos, tope alcanzado, cadena cortada por un 4xx
 - **REQ-003:** Un candidato es válido si:
   - está en el catálogo de modelos de texto (`ALLOWED_MODELS`);
   - es distinto del que falló;
   - no está en enfriamiento;
   - su límite de caracteres (`max_chars_for`) admite el tamaño de la petición que se va a enviar.
   El que no cumpla algo se salta sin llamarlo.
+  - Request: derived: spec del 2026-09-11 con las decisiones del usuario; absorbida tal cual como F3 de `delegacion-precisa-y-fiable`
+  - Verify: test tests: candidato en enfriamiento, igual al fallido, fuera de catálogo, sin sitio
 - **REQ-004:** Las cadenas se declaran **por rol, no por nombre de modelo**, y se resuelven al vuelo con
   la configuración vigente. Así sobreviven a un cambio de los modelos por defecto (hay candidatos nuevos
   en estudio para todos los roles). La regla es «primero el residente, después el resto»:
@@ -66,21 +72,31 @@ nuevos (`local-delegate-44`, 2026-09-11):
   Tras resolver, se quitan los repetidos: si dos roles apuntan al mismo modelo (por ejemplo, largo y
   código consolidados en uno solo), ese modelo se intenta una vez. Cada rol se puede sobrescribir con una
   lista ordenada de roles o modelos, y una lista vacía desactiva el respaldo de ese rol.
+  - Request: derived: spec del 2026-09-11 con las decisiones del usuario; absorbida tal cual como F3 de `delegacion-precisa-y-fiable`
+  - Verify: test tests de cadena por defecto, sobrescrita y vacía
 - **REQ-005:** Una llamada con `model` **explícito** en `local_delegate` no usa respaldo. Se envía
   aunque el modelo esté en enfriamiento, y su resultado actualiza el estado de ese modelo igual que
   cualquier otra llamada.
+  - Request: derived: spec del 2026-09-11 con las decisiones del usuario; absorbida tal cual como F3 de `delegacion-precisa-y-fiable`
+  - Verify: test test con el modelo en enfriamiento
 - **REQ-006:** En una operación de varios trozos (`_chat_chunked`, `_chat_map_reduce`), si un trozo
   respondió con el respaldo, los trozos siguientes de esa misma operación van directos a ese respaldo.
   Así la salida cambia de modelo como mucho una vez y no se vuelve a llamar a un modelo que acaba de
   fallar.
+  - Request: derived: spec del 2026-09-11 con las decisiones del usuario; absorbida tal cual como F3 de `delegacion-precisa-y-fiable`
+  - Verify: test test de `local_translate` en 4 trozos
 - **REQ-007:** Cuando respondió un respaldo, la respuesta de la tool lo dice: qué modelo respondió, en
   lugar de cuál y por qué, y desde qué trozo si hubo varios. El aviso **nunca** se mezcla con el
   contenido que el agente usa tal cual:
   - en el JSON de `local_extract`, va dentro de su bloque de metadatos;
   - con `local_boilerplate`, va en la respuesta, no en el fichero que se escribe en disco.
+  - Request: derived: spec del 2026-09-11 con las decisiones del usuario; absorbida tal cual como F3 de `delegacion-precisa-y-fiable`
+  - Verify: test tests de summarize, extract y boilerplate con respaldo
 - **REQ-008:** Si fallan también los respaldos, la tool devuelve el error del modelo original, igual que
   hoy, más una línea con los respaldos que se probaron y cómo falló cada uno. Cada fallo cuenta para el
   enfriamiento de su modelo según su propia clase.
+  - Request: derived: spec del 2026-09-11 con las decisiones del usuario; absorbida tal cual como F3 de `delegacion-precisa-y-fiable`
+  - Verify: test test con los dos modelos fallando
 - **REQ-009:** Un modelo que acumula **N** fallos seguidos de las clases que cuentan (por defecto 3,
   sumando todos los procesos) entra en enfriamiento durante **T** segundos (por defecto 120). Mientras
   tanto:
@@ -88,16 +104,24 @@ nuevos (`local-delegate-44`, 2026-09-11):
   - si es el modelo principal de un rol, se va directo a la cadena de respaldo;
   - si no queda ningún candidato, la tool falla **al momento**, con un error propio que dice qué modelo
     está en enfriamiento y hasta cuándo. Nunca espera un timeout.
+  - Request: derived: spec del 2026-09-11 con las decisiones del usuario; absorbida tal cual como F3 de `delegacion-precisa-y-fiable`
+  - Verify: test test de 3 fallos desde dos «procesos» y tiempo de respuesta
 - **REQ-010:** Cuando vence el enfriamiento, el modelo vuelve a recibir peticiones. El primer éxito lo
   deja limpio (contador y espera a cero). El primer fallo que cuente lo enfría otra vez con la espera
   doblada, hasta un tope **Tmax** (por defecto 900 s). Todo enfriamiento tiene fecha de vencimiento
   menor o igual a Tmax: ninguno es permanente.
+  - Request: derived: spec del 2026-09-11 con las decisiones del usuario; absorbida tal cual como F3 de `delegacion-precisa-y-fiable`
+  - Verify: test tests con reloj controlado
 - **REQ-011:** Cualquier éxito de un modelo pone a cero su contador de fallos seguidos. Los fallos del
   endpoint, de la petición y sin clasificar ni suman ni ponen a cero.
+  - Request: derived: spec del 2026-09-11 con las decisiones del usuario; absorbida tal cual como F3 de `delegacion-precisa-y-fiable`
+  - Verify: test tests de secuencias mixtas
 - **REQ-012:** El estado de enfriamiento es el mismo para todos los procesos de local-delegate de la
   máquina (daemon y stdio) y sobrevive a un reinicio del proceso. Si el estado no se puede leer o
   escribir (fichero corrupto, bloqueo ocupado), la llamada sigue como si no hubiera enfriamiento: nunca
   bloquea ni falla por eso.
+  - Request: derived: spec del 2026-09-11 con las decisiones del usuario; absorbida tal cual como F3 de `delegacion-precisa-y-fiable`
+  - Verify: test tests de fichero corrupto y bloqueo ocupado
 - **REQ-013:** El log de cada operación registra:
   - el modelo pedido y el que respondió;
   - si hubo respaldo y por qué;
@@ -106,6 +130,8 @@ nuevos (`local-delegate-44`, 2026-09-11):
   salto**, con la clase del fallo, para que un benchmark o una medición sepa si la contaminó un swap.
   `local_status` lista los modelos en enfriamiento, con el tiempo que les queda y cuántas veces seguidas
   han vuelto a entrar.
+  - Request: derived: spec del 2026-09-11 con las decisiones del usuario; absorbida tal cual como F3 de `delegacion-precisa-y-fiable`
+  - Verify: test tests de `_log_event`, `web/metrics.py` y `local_status`
 - **REQ-014:** Todo es configurable por variables de entorno, registradas en `VARIABLES_DE_ENTORNO`:
   - apagar el respaldo;
   - apagar el enfriamiento;
@@ -113,22 +139,34 @@ nuevos (`local-delegate-44`, 2026-09-11):
   - el número máximo de saltos;
   - la cadena de cada rol.
   Un modelo de una cadena que no esté en el catálogo se ignora, y `doctor` lo avisa.
+  - Request: derived: spec del 2026-09-11 con las decisiones del usuario; absorbida tal cual como F3 de `delegacion-precisa-y-fiable`
+  - Verify: test `test_aislamiento_entorno.py` en verde; test del check
 - **REQ-015:** Una respuesta con `content` nulo o ausente se convierte en un fallo, nunca en una
   excepción que salga de la tool. Se clasifica así:
   - `length` con razonamiento no vacío → de configuración (REQ-019);
   - `length` sin razonamiento → sin clasificar;
   - cualquier otro motivo de parada → del modelo (`bad_response`).
+  - Request: derived: spec del 2026-09-11 con las decisiones del usuario; absorbida tal cual como F3 de `delegacion-precisa-y-fiable`
+  - Verify: test test con `content: null`
 - **REQ-016:** Un `ConnectTimeout` se clasifica como fallo del endpoint (sin respaldo ni enfriamiento).
   El comportamiento de autoarranque y de la pregunta por elicitation no cambia en este change.
+  - Request: derived: spec del 2026-09-11 con las decisiones del usuario; absorbida tal cual como F3 de `delegacion-precisa-y-fiable`
+  - Verify: test test que asevera cero enfriamiento y cero respaldo
 - **REQ-017:** La llamada del respaldo ocupa la misma plaza de concurrencia que la original: el mecanismo
   nunca supera `MAX_CONCURRENT_REQUESTS`.
+  - Request: derived: spec del 2026-09-11 con las decisiones del usuario; absorbida tal cual como F3 de `delegacion-precisa-y-fiable`
+  - Verify: test test de concurrencia con el semáforo a 1
 - **REQ-018:** Un fallo **de capacidad o carga** solo puede saltar al residente, que ya está en memoria y
   no obliga a cargar nada. No hay segundo salto y no cuenta para el enfriamiento. Un timeout de lectura
   cuenta como de carga si el modelo todavía se estaba montando cuando venció.
+  - Request: derived: spec del 2026-09-11 con las decisiones del usuario; absorbida tal cual como F3 de `delegacion-precisa-y-fiable`
+  - Verify: test tests con OOM simulado y con timeout durante la carga
 - **REQ-019:** Un fallo **de configuración** no dispara el respaldo ni cuenta para el enfriamiento. El
   error dice la causa en claro («el modelo agotó `max_tokens` sin responder; súbelo o desactiva el
   razonamiento») y queda registrado como causa propia en el log y en el panel, para que se vea y se
   arregle.
+  - Request: derived: spec del 2026-09-11 con las decisiones del usuario; absorbida tal cual como F3 de `delegacion-precisa-y-fiable`
+  - Verify: test test con `finish_reason: length` y contenido vacío; campo en log y panel
 - **REQ-020:** La forma de reconocer los fallos de capacidad, carga y configuración se basa en respuestas
   **reales** de llama-swap y llama-server capturadas en el plan, no en suposiciones:
   - Casos a capturar: OOM, error de carga, carga en curso, timeout de carga y parada por `length`.
@@ -139,6 +177,8 @@ nuevos (`local-delegate-44`, 2026-09-11):
     pruebas en estudio, v255 y b10909.
   Una variante que no encaje en ningún patrón va a «sin clasificar» (sin respaldo ni enfriamiento), nunca
   a «del modelo».
+  - Request: derived: spec del 2026-09-11 con las decisiones del usuario; absorbida tal cual como F3 de `delegacion-precisa-y-fiable`
+  - Verify: test capturas de llama-swap y llama-server guardadas como fixtures; test de variante desconocida → sin clasificar
 
 ## Acceptance scenarios
 

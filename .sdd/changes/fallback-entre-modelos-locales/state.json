@@ -3,39 +3,39 @@
   "slug": "fallback-entre-modelos-locales",
   "title": "Cadena de respaldo entre modelos locales y enfriamiento temporal por modelo",
   "mode": "standard",
-  "status": "specifying",
+  "status": "closed",
   "createdAt": "2026-09-11T14:55:17.163Z",
-  "updatedAt": "2026-09-11T15:06:44.816Z",
+  "updatedAt": "2026-11-23T21:30:29.466Z",
   "gates": {
     "spec": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-11-23T21:30:26.288Z",
+      "evidence": "Spec cerrada como absorbido por delegacion-precisa-y-fiable (0.28.0); la aprobó el usuario dentro de delegacion-precisa-y-fiable (F3). Cierre aprobado por el coordinador el 2026-11-23.",
+      "actor": "coordinador"
     },
     "plan": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-11-23T21:30:27.052Z",
+      "evidence": "Plan ejecutado dentro de delegacion-precisa-y-fiable (absorbido por delegacion-precisa-y-fiable (0.28.0)); plan.md lo enlaza. Cierre aprobado el 2026-11-23.",
+      "actor": "coordinador"
     },
     "quality": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-11-23T21:30:28.047Z",
+      "evidence": "Tests citados en verification.md repetidos en 0253b630 (996 passed, 2026-11-23); sdd check sin avisos.",
+      "actor": "coordinador"
     },
     "conformance": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-11-23T21:30:28.696Z",
+      "evidence": "review.md: conforms-with-notes; lo pedido existe en el producto (absorbido por delegacion-precisa-y-fiable (0.28.0)).",
+      "actor": "coordinador"
     },
     "memory": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-11-23T21:30:29.241Z",
+      "evidence": "Sin memoria nueva: el estado vive en sdd-delegacion-precisa-y-fiable.md y en la tarjeta del Project 3 'Ordenar el estado de los SDD'.",
+      "actor": "coordinador"
     }
   },
   "history": [
@@ -64,6 +64,95 @@
       "type": "note",
       "at": "2026-11-02T14:22:03.000Z",
       "reason": "Revision del 2026-11-02 de SDD sin cerrar: NO se cierra como hecho aqui: este cambio quedo absorbido por delegacion-precisa-y-fiable, cuya fase F3 implemento la cadena de respaldo y el enfriamiento (#187-#199, publicado en 0.28.0). Su gate spec nunca se aprobo por separado (handoff.md); el harness no tiene estado 'absorbido', asi que queda en specifying y su cierre sigue al de delegacion-precisa-y-fiable."
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-11-23T21:30:26.288Z",
+      "evidence": "Spec cerrada como absorbido por delegacion-precisa-y-fiable (0.28.0); la aprobó el usuario dentro de delegacion-precisa-y-fiable (F3). Cierre aprobado por el coordinador el 2026-11-23.",
+      "actor": "coordinador"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-11-23T21:30:26.549Z",
+      "reason": "Cierre de SDD absorbido por delegacion-precisa-y-fiable (0.28.0) (2026-11-23)"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "plan-review",
+      "at": "2026-11-23T21:30:26.820Z",
+      "reason": "Cierre de SDD absorbido por delegacion-precisa-y-fiable (0.28.0) (2026-11-23)"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-11-23T21:30:27.052Z",
+      "evidence": "Plan ejecutado dentro de delegacion-precisa-y-fiable (absorbido por delegacion-precisa-y-fiable (0.28.0)); plan.md lo enlaza. Cierre aprobado el 2026-11-23.",
+      "actor": "coordinador"
+    },
+    {
+      "type": "transition",
+      "from": "plan-review",
+      "to": "implementing",
+      "at": "2026-11-23T21:30:27.275Z",
+      "reason": "Cierre de SDD absorbido por delegacion-precisa-y-fiable (0.28.0) (2026-11-23)"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-11-23T21:30:27.658Z",
+      "reason": "Cierre de SDD absorbido por delegacion-precisa-y-fiable (0.28.0) (2026-11-23)"
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-11-23T21:30:28.047Z",
+      "evidence": "Tests citados en verification.md repetidos en 0253b630 (996 passed, 2026-11-23); sdd check sin avisos.",
+      "actor": "coordinador"
+    },
+    {
+      "type": "transition",
+      "from": "verifying",
+      "to": "result-review",
+      "at": "2026-11-23T21:30:28.354Z",
+      "reason": "Cierre de SDD absorbido por delegacion-precisa-y-fiable (0.28.0) (2026-11-23)"
+    },
+    {
+      "type": "gate",
+      "gate": "conformance",
+      "status": "approved",
+      "at": "2026-11-23T21:30:28.696Z",
+      "evidence": "review.md: conforms-with-notes; lo pedido existe en el producto (absorbido por delegacion-precisa-y-fiable (0.28.0)).",
+      "actor": "coordinador"
+    },
+    {
+      "type": "transition",
+      "from": "result-review",
+      "to": "closing",
+      "at": "2026-11-23T21:30:28.961Z",
+      "reason": "Cierre de SDD absorbido por delegacion-precisa-y-fiable (0.28.0) (2026-11-23)"
+    },
+    {
+      "type": "gate",
+      "gate": "memory",
+      "status": "approved",
+      "at": "2026-11-23T21:30:29.241Z",
+      "evidence": "Sin memoria nueva: el estado vive en sdd-delegacion-precisa-y-fiable.md y en la tarjeta del Project 3 'Ordenar el estado de los SDD'.",
+      "actor": "coordinador"
+    },
+    {
+      "type": "transition",
+      "from": "closing",
+      "to": "closed",
+      "at": "2026-11-23T21:30:29.466Z",
+      "reason": "Cierre de SDD absorbido por delegacion-precisa-y-fiable (0.28.0) (2026-11-23)"
     }
   ]
 }
