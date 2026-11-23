@@ -583,18 +583,23 @@ Qué hace, en el orden del mod:
 `Copy-Item`/`Move-Item` al fichero, y la API de .NET `[System.IO.File]`/`[IO.File]`/`[File]`
 (`WriteAllText`, `WriteAllLines`, `WriteAllBytes`, `AppendAllText`, `AppendAllLines`, `Create`,
 `CreateText`, `AppendText`, `OpenWrite`; `Copy`, `Move` y `Replace` sobre el destino), con la ruta
-literal, en una variable o dentro de `(Resolve-Path …)`. cmd: `>`, `>>`, `copy`, `move`. bash: `>`,
-`>>`, `tee`, `sed -i`, `cp`, `mv`. También dentro de un bloque `{ … }` y de `cmd /c`, `bash -c` o
-`powershell -Command`. Una variable cuenta si la misma orden le da un solo valor literal
-(`$p = 'x.md'`, `p=x.md`).
+literal, en una variable o dentro de `(Resolve-Path …)`/`(Convert-Path …)` (también con `.Path`,
+`.ProviderPath` o `.FullName`). cmd: `>`, `>>`, `copy`, `move`. bash: `>`, `>>`, `tee`, `sed -i`,
+`cp`, `mv`. También tras `$null = …`, dentro de un bloque `{ … }` y de `cmd /c`/`/k`, `bash -c`
+(`-lc`…) o `powershell`/`pwsh -Command`. Una variable cuenta si la misma orden le da un solo valor
+literal (`$p = 'x.md'`, `p=x.md`). Una lectura literal dentro de `cmd /c`, `bash -c` o
+`powershell -Command` levanta el guard, salvo si su salida sigue por una tubería o va a un fichero.
 
 **Lo que no ve, y pasa** (mismo criterio que el resto del hook: ante la duda, no bloquea): una ruta
-que no se puede saber sin ejecutar (`Join-Path`, `"$dir\x.md"`, una variable con dos valores o
-ligada por un bucle, `read`, `param`, `-OutVariable` o `[ref]`), una ruta relativa de .NET tras un
-`cd`/`Set-Location` (.NET la resuelve contra la carpeta del proceso), `-EncodedCommand`,
-`StreamWriter`/`New-Object`, `[IO.File]::Open(…)` con modo, una escritura de .NET anidada en los
-argumentos de otra, `perl -i`, `python -c "open(…, 'w')"`, `dd`, `truncate` y los borrados (`rm`,
-`Remove-Item`, que no editan a partir del resumen).
+que no se puede saber sin ejecutar (`Join-Path`, `"$dir\x.md"`, una variable asignada a una
+expresión como `$p = (Resolve-Path x.md).Path` o `$p = Convert-Path x.md`, con dos valores, o
+ligada por un bucle, `read`, `param`, `function`, `Set-Variable`, `-OutVariable` o `[ref]`), una
+ruta relativa de .NET tras un `cd`/`Set-Location`/`Push-Location` (.NET la resuelve contra la
+carpeta del proceso), el texto entre comillas o en un comentario (`Write-Output "[IO.File]::…"`),
+`-EncodedCommand`, `powershell 'orden'` sin `-Command`, `pwsh -cwa`, los parámetros con dos puntos
+o abreviados (`-Value:x`, `-Fo`), `StreamWriter`/`New-Object`, `[IO.File]::Open(…)` con modo, una
+escritura de .NET anidada en los argumentos de otra, `perl -i`, `python -c "open(…, 'w')"`, `dd`,
+`truncate` y los borrados (`rm`, `Remove-Item`, que no editan a partir del resumen).
 
 **Fallo en abierto.** Si el daemon no termina en 150 s (en total, no por petición), el backend
 está marcado caído, el resumen

@@ -10,12 +10,15 @@ and the hook process are those of ``test_codex_reads``.
 from __future__ import annotations
 
 import json
+import random
+import re
 import time
 
 import pytest
 import test_codex_reads as base
 
 from local_delegate import codex_reads
+from local_delegate.resources.hooks import read_classifier
 
 world = base.world
 
@@ -63,6 +66,10 @@ DOTNET = [
     "[System.IO.File]::WriteAllText((Resolve-Path notes.md).Path, 'x')",
     "[System.IO.File]::WriteAllText( ( Convert-Path -Path 'notes.md' ).ProviderPath , 'x' )",
     PREAMBLE + "[System.IO.File]::WriteAllText('notes.md', 'x')",
+    "[IO.File]::Create('notes.md').Close()",
+    "$w = [IO.File]::AppendText('notes.md')",
+    "$p = 'notes.md'; $s = \"don't\"; [IO.File]::WriteAllText($p, $s)",
+    "# it's fine\n[IO.File]::WriteAllText('notes.md', 'x')",
     ISSUE_724,
     PREAMBLE + ISSUE_724,
 ]
@@ -144,6 +151,9 @@ MORE_POWERSHELL = [
     "Copy-Item other.md notes.md",
     "Copy-Item -Path other.md -Destination notes.md -Force",
     "Move-Item -Path other.md -Destination notes.md -Force",
+    "$null = New-Item -ItemType File -Force notes.md",
+    "$f = New-Item notes.md -Value x",
+    "$null=New-Item notes.md -Force",
     "if (Test-Path notes.md) { Set-Content notes.md x }",
     "try { 'x' | Out-File notes.md } catch { Write-Error $_ }",
     "Get-ChildItem *.md | ForEach-Object { Add-Content notes.md $_.Name }",
@@ -186,7 +196,8 @@ WRAPPED = [
     'powershell -NoProfile -Command "Set-Content notes.md x"',
     "pwsh -c \"[IO.File]::WriteAllText('notes.md','x')\"",
     'powershell.exe -NoProfile -Command "& { Set-Content -Path notes.md -Value x }"',
-    "powershell -NoProfile -Command $p = 'notes.md'; Set-Content $p x",
+    'cmd /k "echo x > notes.md"',
+    'powershell -Command "& {Set-Content notes.md x}"',
 ]
 
 
@@ -244,6 +255,16 @@ CONTROLS = [
     "New-Item -ItemType Directory -Force notes.md",
     "powershell -EncodedCommand ZQBjAGgAbwAgAHgA",
     "[IO.File]::Open('notes.md', 'Open')",
+    "Write-Output \"[IO.File]::WriteAllText('notes.md', 1)\"",
+    "git commit -m \"usar [IO.File]::Copy('a', 'notes.md')\"",
+    "# [IO.File]::WriteAllText('notes.md', 'x')",
+    'echo "it\'s"; Write-Output \'[IO.File]::WriteAllText("notes.md", 1)\'',
+    "$p = 'notes.md'; function f($p) { Set-Content $p x }; f 'other.md'",
+    "$p = 'notes.md'; Set-Variable -Name p -Value other.md; Set-Content $p x",
+    "$p = 'notes.md'; Set-Ref ([ref]$p); Set-Content $p x",
+    "Push-Location sub; Clear-Content notes.md",
+    "Set-Location -Path sub; New-Item notes.md -Force",
+    "cp notes.md{,.bak}",
     "awk '{ print > \"notes.md\" }' other.md",
     'Write-Output "{ Set-Content notes.md x }"',
 ]
@@ -266,21 +287,57 @@ def test_the_controls_do_not_lift_the_guard_by_accident(world):
 @pytest.mark.parametrize(
     "command",
     [
-        "[IO.File]::WriteAllText(" * 20_000,
-        "[IO.File]::WriteAllText(" + "(" * 100_000 + "'notes.md'" + ")" * 99_999,
-        "$p = " * 40_000 + "'notes.md'",
-        "cmd /c " * 20_000 + "echo x",
-        "[IO.File]::WriteAllText('" + "'" * 100_000,
-        "$p = 'notes.md'\n" + "[IO.File]::WriteAllText($p, 'x')\n" * 6_000,
+        "{ cat notes.md; } | head -n 40",
+        "& { Get-Content notes.md } | Select-Object -First 5",
+        "Get-Content notes.md | Where-Object { $_ -like '*x*' } | Set-Content out.md",
+        "bash -c 'cat notes.md' | head -5",
+        "cmd /c type notes.md > out.txt",
     ],
 )
-def test_the_analysis_is_linear(command, tmp_path):
-    """REQ-006: no backtracking and no rescans: a hostile 200 000-character command is quick."""
+def test_a_read_whose_output_goes_on_does_not_lift_the_guard(world, command):
+    """Review of #724: a read in a block or a wrapped command whose output is piped or redirected
+    outside does not put the file in the context, so the patch after it is still refused."""
+    _guard(world)
+    base._bash(world, command)
+    base._denied(base._patch(world, "*** Update File: notes.md\n@@\n-a\n+b"))
+
+
+HOSTILE = [
+    lambda n: "[IO.File]::WriteAllText(" * n,
+    lambda n: "[IO.File]::WriteAllText(" + "(" * (5 * n) + "'notes.md'" + ")" * (5 * n - 1),
+    lambda n: "$p = " * (2 * n) + "'notes.md'",
+    lambda n: "cmd /c " * n + "echo x",
+    lambda n: "[IO.File]::WriteAllText('" + "'" * (5 * n),
+    lambda n: "$p = 'notes.md'\n" + "[IO.File]::WriteAllText($p, 'x')\n" * (n // 3),
+    lambda n: "@'x" * (2 * n),
+    lambda n: ";".join(f"echo x > a{i}" for i in range(n)),
+    lambda n: 'Write-Output "' + "[IO.File]::WriteAllText(" * n,
+]
+
+
+def _cpu(command: str, cwd: str) -> float:
     start = time.process_time()
-    codex_reads.write_targets("Bash", {"command": command}, str(tmp_path), {})
-    codex_reads.literal_reads({"command": command}, str(tmp_path), {})
-    spent = time.process_time() - start
-    assert spent < 2.0, f"{spent:.2f} s of CPU"
+    codex_reads.write_targets("Bash", {"command": command}, cwd, {})
+    codex_reads.literal_reads({"command": command}, cwd, {})
+    return time.process_time() - start
+
+
+@pytest.mark.parametrize("build", HOSTILE)
+def test_the_analysis_is_linear(build, tmp_path):
+    """REQ-006: no backtracking and no rescans. Four times the command costs about four times the
+    CPU (a quadratic cost would be sixteen), measured as a ratio so a slow runner does not fail it."""
+    small, large = _cpu(build(5_000), str(tmp_path)), _cpu(build(20_000), str(tmp_path))
+    assert large < 8 * small + 0.25, f"{small:.2f} s -> {large:.2f} s of CPU"
+    assert large < 15.0, f"{large:.2f} s of CPU"
+
+
+def test_the_here_strings_are_found_as_the_old_regex_found_them():
+    """`herestring_spans` replaced a lazy regex that was quadratic: same matches on random text."""
+    old = re.compile(r"@'.*?'@|@\".*?\"@", re.DOTALL)
+    rng = random.Random(724)
+    for _ in range(5_000):
+        text = "".join(rng.choice("@'\"x\n") for _ in range(rng.randint(0, 30)))
+        assert read_classifier.herestring_spans(text) == [m.span() for m in old.finditer(text)]
 
 
 def test_the_hook_process_refuses_the_write_of_issue_724(world, tmp_path):

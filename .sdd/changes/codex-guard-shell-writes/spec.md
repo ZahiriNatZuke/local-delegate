@@ -94,7 +94,7 @@ comparten los hooks de Claude Code y su comportamiento no se toca.
 - Borrados (`rm`, `Remove-Item`): no editan a partir del resumen; no se tocan.
 - `perl -i`, `python -c "open(..., 'w')"`, `dd of=`, `truncate`, `[IO.File]::Open(...)` con modo,
   `StreamWriter`/`New-Object`, rutas compuestas: no se analizan (documentado).
-- Cambiar `read_classifier` (Claude Code).
+- Cambiar lo que `read_classifier` (Claude Code) clasifica. Solo se reescribe, con el mismo resultado, la búsqueda de here-strings, que era cuadrática (revisión de #724; ver REQ-006).
 
 ## Traceability
 

@@ -192,10 +192,42 @@ def _unquote(token: str) -> str:
     return token
 
 
+def herestring_spans(command: str) -> list[tuple[int, int]]:
+    """Where the here-strings of `_HERESTRING` are (``@'…'@``, ``@"…"@``), in linear time.
+
+    The lazy regex looked for the end again from every opening with no end, quadratic
+    (issue #724): once one kind has no end after an opening, no later opening of that kind has
+    one either, so the search for it stops."""
+    spans: list[tuple[int, int]] = []
+    done = {"'": False, '"': False}
+    i = 0
+    while True:
+        start = command.find("@", i)
+        if start < 0 or start + 1 >= len(command):
+            return spans
+        kind = command[start + 1]
+        if kind not in done or done[kind]:
+            i = start + 1
+            continue
+        end = command.find(kind + "@", start + 2)
+        if end < 0:
+            done[kind] = True
+            i = start + 1
+            continue
+        spans.append((start, end + 2))
+        i = end + 2
+
+
 def strip_heredocs(command: str) -> tuple[str, list[str]]:
     """(comando sin los cuerpos de heredocs y here-strings, los cuerpos)."""
-    bodies = [m.group(0) for m in _HERESTRING.finditer(command)]
-    command = _HERESTRING.sub("@''@", command)
+    spans = herestring_spans(command)
+    bodies = [command[a:b] for a, b in spans]
+    if spans:
+        pieces, last = [], 0
+        for a, b in spans:
+            pieces += [command[last:a], "@''@"]
+            last = b
+        command = "".join([*pieces, command[last:]])
     out: list[str] = []
     lines = command.split("\n")
     i = 0

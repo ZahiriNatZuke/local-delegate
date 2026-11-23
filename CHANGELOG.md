@@ -37,8 +37,10 @@ el modelo nuevo.
   `{ … }` y las envueltas en `cmd /c`, `bash -c` o `powershell -Command`; las de antes (`>`, `>>`,
   `tee`, `sed -i`, `cp`, `mv`, `Set-Content`, `Out-File`…) siguen. Una lectura, una escritura a otro
   fichero o una ruta que no se puede saber sin ejecutar pasan, como siempre; la lista de lo que no
-  ve está en la wiki («Resumen de lecturas y guard de escritura en Codex»). El clasificador que
-  comparten los hooks de Claude Code no cambia.
+  ve está en la wiki («Resumen de lecturas y guard de escritura en Codex»). Del clasificador que
+  comparten los hooks de Claude Code solo cambia cómo encuentra los here-strings (`@'…'@`): la
+  expresión regular perezosa era cuadrática con muchos `@'` sin cerrar (unos 70 s con 200 000
+  caracteres); ahora es lineal y encuentra lo mismo.
 - **`local_lint_summary`: los recuentos por fichero y por código los da el programa** (#717). En la
   prueba de humo de la 0.54.0, con 4 avisos de ruff en dos ficheros, el resumen le puso a un
   fichero el F401 del otro y sus recuentos por fichero sumaban 5, sin aviso. Para los formatos que

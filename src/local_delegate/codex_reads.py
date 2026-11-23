@@ -481,6 +481,8 @@ def _shell_tool() -> str:
 
 
 _CD_VERBS = frozenset({"cd", "set-location", "pushd", "sl"})
+#: What moves the location for the writes of the guard (`read_parts` keeps `_CD_VERBS`).
+_MOVE_VERBS = _CD_VERBS | {"push-location", "chdir"}
 #: What may follow a read in its pipe and still leave the command only the read: they choose lines.
 _RANGE_FILTERS = frozenset({"head", "select-object"})
 
@@ -733,10 +735,13 @@ def _wrapped(verb: str, args: list[str]) -> str | None:
 
 def _unbrace(text: str) -> str:
     """``text`` with the braces of a script block or a group (``if (…) { Set-Content … }``,
-    ``{ cmd; }``) turned into line breaks, so each command inside is a command of its own for the
-    classifier. Braces inside quotes, of ``${p}`` or ``@{``, and ``{}`` stay. One pass."""
+    ``& {Set-Content …}``, ``{ cmd; }``) turned into line breaks, so each command inside is a
+    command of its own for the classifier. A brace opens a block only after a blank, ``(``, ``;``,
+    ``&``, ``|`` or at the start; ``${p}``, ``@{…}``, ``{}``, ``file{,.bak}`` and braces inside
+    quotes stay, and each ``}`` closes the brace it pairs with. One pass."""
     out = list(text)
     quote = ""
+    blocks: list[bool] = []
     i = 0
     while i < len(text):
         ch = text[i]
@@ -748,38 +753,46 @@ def _unbrace(text: str) -> str:
                 quote = ""
         elif ch in "'\"":
             quote = ch
-        else:
-            opens = ch == "{" and (i == 0 or text[i - 1] not in "$@")
-            closes = ch == "}" and i > 0
-            if (opens and text[i + 1 : i + 2].isspace()) or (
-                closes and (text[i - 1].isspace() or text[i - 1] == ";")
-            ):
+        elif ch == "{":
+            prev = text[i - 1] if i else " "
+            block = (prev.isspace() or prev in "(;&|") and text[i + 1 : i + 2] != "}"
+            blocks.append(block)
+            if block:
                 out[i] = "\n"
+        elif ch == "}" and blocks and blocks.pop():
+            out[i] = "\n"
         i += 1
     return "".join(out)
 
 
-def _inner_commands(command: str, depth: int = 0) -> list[str]:
-    """The commands ``command`` wraps (``cmd /c "…"``), two levels down at most."""
+def _inner_commands(command: str, depth: int = 0, piped: bool = False) -> list[tuple[str, bool]]:
+    """The commands ``command`` wraps (``cmd /c "…"``), two levels down at most, each with whether
+    its output goes on through a pipe or into a file (then what it reads never reaches the context
+    as it is)."""
     from .resources.hooks import read_classifier
 
     if depth >= 2:
         return []
     stripped, _ = read_classifier.strip_heredocs(command)
-    found: list[str] = []
+    found: list[tuple[str, bool]] = []
     for part in read_classifier.segments(read_classifier.tokenize(_unbrace(stripped))):
+        onward = piped or part.redirected or bool(part.targets) or len(part.stages) > 1
         for stage in part.stages:
             verb, args, _ = read_classifier._verb(stage)
             inner = _wrapped(verb, args)
             if inner:
-                found.append(inner)
-                found += _inner_commands(inner, depth + 1)
+                found.append((inner, onward))
+                found += _inner_commands(inner, depth + 1, onward)
     return found
 
 
-def _shell_texts(command: str) -> list[str]:
-    """The command, then each command it wraps: each is analyzed with its own variables."""
-    return [command, *_inner_commands(command)]
+def _shell_texts(command: str, reads: bool = False) -> list[str]:
+    """The command, then each command it wraps, each analyzed with its own variables. For
+    ``reads``, a wrapped command whose output is piped or redirected outside is left out."""
+    return [
+        command,
+        *(inner for inner, onward in _inner_commands(command) if not (reads and onward)),
+    ]
 
 
 def _call_arguments(text: str, start: int) -> tuple[list[str], int] | None:
@@ -812,9 +825,24 @@ def _call_arguments(text: str, start: int) -> tuple[list[str], int] | None:
     return None
 
 
+def _closing_quote(text: str, start: int) -> int:
+    """The index after the ``"`` that closes the one at ``start`` (a backtick or a backslash
+    escapes the next character), or the end of ``text``."""
+    i = start + 1
+    while i < len(text):
+        ch = text[i]
+        if ch in "`\\":
+            i += 2
+            continue
+        if ch == '"':
+            return i + 1
+        i += 1
+    return len(text)
+
+
 def _dotnet_calls(text: str) -> list[tuple[str, list[str]]]:
     """Each ``[IO.File]::Method(…)`` call of a write method, with its arguments, outside
-    single quotes. A call is skipped whole once read (a write nested in its arguments is not seen);
+    quotes and comments (``pwsh -c "…"`` is looked into as a wrapped command). A call is skipped whole once read (a write nested in its arguments is not seen);
     one that does not close ends the scan: the rest is its argument."""
     found: list[tuple[str, list[str]]] = []
     i = 0
@@ -822,6 +850,15 @@ def _dotnet_calls(text: str) -> list[tuple[str, list[str]]]:
         ch = text[i]
         if ch == "'":
             end = text.find("'", i + 1)
+            if end < 0:
+                break
+            i = end + 1
+            continue
+        if ch == '"':
+            i = _closing_quote(text, i)
+            continue
+        if ch == "#" and (i == 0 or text[i - 1].isspace() or text[i - 1] == ";"):
+            end = text.find("\n", i)
             if end < 0:
                 break
             i = end + 1
@@ -902,7 +939,7 @@ def _dotnet_writes(command: str, variables: Mapping[str, str]) -> list[str]:
 
     stripped, _ = read_classifier.strip_heredocs(command)
     moved = any(
-        part.stages and read_classifier._verb(part.stages[0])[0] in _CD_VERBS
+        part.stages and read_classifier._verb(part.stages[0])[0] in _MOVE_VERBS
         for part in read_classifier.segments(read_classifier.tokenize(_unbrace(stripped)))
     )
     found: list[str] = []
@@ -947,6 +984,19 @@ def _powershell_writes(verb: str, args: list[str]) -> list[str]:
     return []
 
 
+def _without_assignment(stage: list[str]) -> list[str]:
+    """``stage`` without a leading ``$x =`` (``$null = New-Item …``), which `_verb` would take
+    for the verb."""
+    first = _PS_ASSIGN.fullmatch(stage[0]) if stage else None
+    if first is None:
+        return stage
+    if first.group(3):
+        return [first.group(3), *stage[1:]]  # `$null=New-Item …`, one token
+    if first.group(2):
+        return stage[1:]
+    return stage[2:] if stage[1:2] == ["="] else stage
+
+
 def _more_writes(command: str) -> list[str]:
     """`_powershell_writes` of every stage, a relative path joined to the command's last ``cd``."""
     from .resources.hooks import read_classifier
@@ -957,14 +1007,16 @@ def _more_writes(command: str) -> list[str]:
     for part in read_classifier.segments(read_classifier.tokenize(stripped)):
         if not part.stages:
             continue
-        verb, args, _ = read_classifier._verb(part.stages[0])
-        if verb in _CD_VERBS and args:
-            target = read_classifier._unquote(args[0])
+        verb, args, _ = read_classifier._verb(_without_assignment(part.stages[0]))
+        if verb in _MOVE_VERBS and args:
+            target = read_classifier._flag_value(args, "-path", "-literalpath") or (
+                read_classifier._unquote(args[0])
+            )
             absolute = read_classifier._is_absolute(target)
             cwd = target if cwd is None or absolute else os.path.join(cwd, target)
             continue
         for stage in part.stages:
-            stage_verb, stage_args, _ = read_classifier._verb(stage)
+            stage_verb, stage_args, _ = read_classifier._verb(_without_assignment(stage))
             for target in _powershell_writes(stage_verb, stage_args):
                 if cwd and not read_classifier._is_absolute(target):
                     target = os.path.join(cwd, target)
@@ -1011,10 +1063,9 @@ def literal_reads(tool_input: dict, cwd: str | None, environ: Mapping) -> list[L
     if not isinstance(command, str):
         return []
     found: list[LiteralRead] = []
-    for text in _shell_texts(command):
-        flat = _unbrace(text)
-        variables = literal_variables(flat)
-        for access in read_classifier.accesses(_shell_tool(), {"command": flat}):
+    for text in _shell_texts(command, reads=True):
+        variables = literal_variables(text)
+        for access in read_classifier.accesses(_shell_tool(), {"command": text}):
             if access.kind != "read" or access.scope not in {"whole", "range", "partial"}:
                 continue
             if access.to_file:
@@ -1039,12 +1090,12 @@ def write_targets(tool: str, tool_input: dict, cwd: str | None, environ: Mapping
         raw += [m.group(1).strip() for m in _PATCH_PATH.finditer(command) if m.group(1).strip()]
     if tool != "apply_patch":
         raw += shell_writes(command)
-    found: list[str] = []
+    found: dict[str, None] = {}
     for item in raw:
         resolved = read_classifier.resolve(item, cwd, environ)
-        if resolved and resolved not in found:
-            found.append(resolved)
-    return found
+        if resolved:
+            found[resolved] = None
+    return list(found)
 
 
 @dataclass
