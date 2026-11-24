@@ -10,10 +10,11 @@ of the issue.
 from __future__ import annotations
 
 import json
-import time
 
 import backend_mock
 import httpx2
+import perf
+import pytest
 
 from local_delegate import config, i18n, sections, server
 
@@ -159,13 +160,20 @@ def test_literal_focus_terms_are_the_ones_the_model_copies():
     assert sections.literal_focus_terms("security risks") == set()
 
 
+@pytest.mark.perf
 def test_one_pass_over_a_big_input_with_many_terms():
     # Review of #561: terms x distinct words took 24 s on 9 MB with 80 terms.
-    text = "\n".join(" ".join(f"w{i}_{j}" for j in range(200)) for i in range(5000))
+    def text(lines: int) -> str:
+        return "\n".join(" ".join(f"w{i}_{j}" for j in range(200)) for i in range(lines))
+
     terms = sections.focus_terms(" ".join(f"term{k}x" for k in range(80)))
-    started = time.perf_counter()
-    assert sections.focus_terms_in(text, terms) == []
-    assert time.perf_counter() - started < 5
+    small, big = text(500), text(5000)
+    assert sections.focus_terms_in(big, terms) == []
+    perf.assert_linear(
+        lambda: sections.focus_terms_in(small, terms),
+        lambda: sections.focus_terms_in(big, terms),
+        size_ratio=10,
+    )
 
 
 def test_focus_sections_names_the_section_that_treats_the_focus():

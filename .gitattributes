@@ -48,3 +48,8 @@ src/local_delegate/resources/completion/** -text
 # Copias de los casos del SDD extract-cross-fill-and-routing (#586): el rol se decide por el tamaño
 # en bytes del fichero, y la tabla antes/después compara con las medidas de la investigación.
 tests/fixtures/extract_table_routing/** -text
+
+# Los scripts de shell del CI corren también en `windows-latest` (SDD ci-root-cause): con
+# `core.autocrlf=true` llegarían con CRLF y bash se cae en la primera línea (`$'\r': command not
+# found`).
+*.sh text eol=lf

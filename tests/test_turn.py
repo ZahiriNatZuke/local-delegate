@@ -274,6 +274,7 @@ def wait_in_queue(t: Turn, op_id: str) -> None:
         time.sleep(0.002)
 
 
+@pytest.mark.real_io
 def test_wrapper_no_progress_forced_by_periodic_check():
     """Mutante 1: `wait()` sin tope no despierta nunca si nadie llega ni sale."""
     clock = Clock()
@@ -289,6 +290,7 @@ def test_wrapper_no_progress_forced_by_periodic_check():
     assert decision is not None and decision.forced
 
 
+@pytest.mark.real_io
 def test_wrapper_long_call_in_flight_not_forced():
     """Escenario «llamada larga con plazo HTTP mayor que 600 s»: 700 s en vuelo."""
     clock = Clock()
@@ -312,6 +314,7 @@ def test_wrapper_long_call_in_flight_not_forced():
     assert not decision.forced
 
 
+@pytest.mark.real_io
 def test_when_a_reserve_shrinks_queue_is_rechecked():
     """Escenario «cuando una reserva se reduce, la cola se vuelve a mirar»."""
     t = Turn(clashes_today, tick=5.0)
@@ -333,6 +336,7 @@ def test_when_a_reserve_shrinks_queue_is_rechecked():
     assert w2_started < w1_done
 
 
+@pytest.mark.real_io
 def test_abandoned_wait_lets_next_compatible_pass():
     t = Turn(clashes_today, tick=5.0)
     t.request(req("larga", M26B))
@@ -350,6 +354,7 @@ def test_abandoned_wait_lets_next_compatible_pass():
     assert t.snapshot().queued("qwen") is None
 
 
+@pytest.mark.real_io
 def test_topology_change_grants_a_wait_that_now_fits():
     t = Turn(clashes_today, tick=5.0)
     t.request(req("larga", M26B))
@@ -362,6 +367,7 @@ def test_topology_change_grants_a_wait_that_now_fits():
     assert granted_in_time
 
 
+@pytest.mark.real_io
 def test_tick_hook_shows_new_topology_to_waiters():
     """T10 (revisión): nadie llega ni sale y nadie llama a `topology_change` desde fuera.
 
@@ -395,6 +401,7 @@ def test_acquisition_order_request_with_slot_raises():
     assert t.request(req("op", M26B)).model == M26B  # sin la marca, se concede
 
 
+@pytest.mark.real_io
 def test_wait_warnings_and_back_to_head_with_threads():
     """`on_wait` recibe posición y modelos en uso; `back` re-espera en la cabeza."""
     t = Turn(clashes_today, tick=0.02)
@@ -439,6 +446,7 @@ def test_abandon_by_exception_in_hook_cleans_queue():
     assert t.snapshot().queue == ()
 
 
+@pytest.mark.real_io
 def test_wrapper_choose_after_forced_waits_and_chooses():
     """`Turn.choose`: sin modelo que quepa vuelve a la cabeza, espera y elige al concederse."""
     t = Turn(clashes_today, tick=0.02)
@@ -475,6 +483,7 @@ def test_choose_without_waiting_is_valid_with_a_slot():
     assert own is not None and own.reserve == {M26B}
 
 
+@pytest.mark.real_io
 def test_choose_without_waiting_returns_none_and_leaves_op_at_head():
     t = Turn(clashes_today, tick=5.0)
     t.request(req("op", M4B, M26B))
@@ -506,6 +515,7 @@ def test_wait_for_grant_with_a_slot_raises():
     assert t.wait_for_grant("op").model == M4B  # sin la marca, la recoge
 
 
+@pytest.mark.real_io
 def test_choose_without_waiting_wakes_the_queue_when_it_shrinks():
     """La reducción de `choose_without_waiting` avisa a la cola sin esperar al tic (aquí, 5 s)."""
     t = Turn(clashes_today, tick=5.0)

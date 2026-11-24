@@ -82,6 +82,7 @@ def test_the_connect_timeout_does_not_exceed_the_total(new_client, monkeypatch):
     assert _connect_timeout(server._get_client().timeout) == 5.0
 
 
+@pytest.mark.real_io
 def test_a_delegation_without_route_gives_up_in_10_s(monkeypatch, recorders, new_client):
     """Red real: `192.0.2.1` (TEST-NET-1) no contesta nunca.
 

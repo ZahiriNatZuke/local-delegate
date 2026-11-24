@@ -1,0 +1,125 @@
+{
+  "schemaVersion": 1,
+  "slug": "ci-root-cause",
+  "title": "Ruido del CI arreglado de raíz: gate, tests de coste, E/S real, huellas y CodeQL",
+  "mode": "standard",
+  "traceability": "strict",
+  "status": "verifying",
+  "createdAt": "2026-11-23T23:07:58.081Z",
+  "updatedAt": "2026-11-24T00:11:00.409Z",
+  "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-11-23T23:11:04.100Z",
+      "evidence": "spec.md: 11 requisitos observables con su cita del pedido; research.md con el recuento de 400 corridas (31 de 90 rojos del gate por macOS sin runner; ~28 por topes de tiempo; 12 por E/S real; 17 por huellas/version/nombres/catalogo)",
+      "actor": "agent"
+    },
+    "plan": {
+      "status": "approved",
+      "updatedAt": "2026-11-23T23:11:04.555Z",
+      "evidence": "plan.md: 11 tareas con ficheros, requisito y verificacion; desviacion razonada (bump_version regenera, release.py se niega) explicada en Approach; tests que fallan sin el cambio en T1, T3, T7",
+      "actor": "agent"
+    },
+    "quality": {
+      "status": "approved",
+      "updatedAt": "2026-11-24T00:10:47.995Z",
+      "evidence": "verification.md: 8753 passed paralelo, 109 real_io, 73 perf, ruff verde; CI del PR verde",
+      "actor": "user"
+    },
+    "conformance": {
+      "status": "approved",
+      "updatedAt": "2026-11-24T00:11:00.409Z",
+      "evidence": "review.md: nivel deep, 2 jueces + seguridad; F-1..F-5 y F-7 resueltos; F-6 escalado al dueño",
+      "actor": "user"
+    },
+    "memory": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-11-23T23:07:58.081Z",
+      "reason": "SDD change created"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "researching",
+      "at": "2026-11-23T23:11:03.673Z",
+      "reason": "datos de 400 corridas recogidos"
+    },
+    {
+      "type": "transition",
+      "from": "researching",
+      "to": "specifying",
+      "at": "2026-11-23T23:11:03.889Z",
+      "reason": "research.md con causas, impacto y riesgos"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-11-23T23:11:04.100Z",
+      "evidence": "spec.md: 11 requisitos observables con su cita del pedido; research.md con el recuento de 400 corridas (31 de 90 rojos del gate por macOS sin runner; ~28 por topes de tiempo; 12 por E/S real; 17 por huellas/version/nombres/catalogo)",
+      "actor": "agent"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-11-23T23:11:04.343Z",
+      "reason": "spec aprobada"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-11-23T23:11:04.555Z",
+      "evidence": "plan.md: 11 tareas con ficheros, requisito y verificacion; desviacion razonada (bump_version regenera, release.py se niega) explicada en Approach; tests que fallan sin el cambio en T1, T3, T7",
+      "actor": "agent"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "plan-review",
+      "at": "2026-11-23T23:11:23.709Z",
+      "reason": "plan escrito"
+    },
+    {
+      "type": "transition",
+      "from": "plan-review",
+      "to": "implementing",
+      "at": "2026-11-23T23:11:24.180Z",
+      "reason": "plan aprobado"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-11-24T00:10:47.750Z",
+      "reason": "implementación completa; suite local verde"
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-11-24T00:10:47.995Z",
+      "evidence": "verification.md: 8753 passed paralelo, 109 real_io, 73 perf, ruff verde; CI del PR verde",
+      "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "conformance",
+      "status": "approved",
+      "at": "2026-11-24T00:11:00.409Z",
+      "evidence": "review.md: nivel deep, 2 jueces + seguridad; F-1..F-5 y F-7 resueltos; F-6 escalado al dueño",
+      "actor": "user"
+    }
+  ]
+}

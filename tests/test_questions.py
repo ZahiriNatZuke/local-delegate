@@ -163,6 +163,7 @@ def test_client_without_elicitation_support():
     assert anyio.run(_run, _mount(None, try_it), None) == "respuesta=None"
 
 
+@pytest.mark.real_io
 def test_the_client_that_does_not_answer_does_not_hang_the_tool():
     """REQ-006, y es la prueba que justifica el diseño del plazo.
 
@@ -179,6 +180,7 @@ def test_the_client_that_does_not_answer_does_not_hang_the_tool():
     assert elapsed < 15, f"la tool tardó {elapsed:.1f}s: el plazo no está cortando"
 
 
+@pytest.mark.real_io
 def test_the_timeout_expires_and_not_before():
     """Complemento del anterior: que no devuelva None por no haber preguntado siquiera.
 

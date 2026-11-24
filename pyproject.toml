@@ -203,4 +203,9 @@ markers = [
     # El único test que pregunta de verdad a pwsh por la ruta de su perfil (solo lectura); apaga
     # la fixture `real_profiles_untouchable` de tests/conftest.py (SDD cli-completion, L3a).
     "real_profile_query: consulta real y de solo lectura del perfil de pwsh",
+    # SDD ci-root-cause: el CI corre en paralelo (`-n auto`) todo lo que NO lleva estos dos, y
+    # aparte, sin `-n` y con un reintento, lo que sí. `tests/test_timing_marker_guard.py` exige uno
+    # de los dos en todo test que compare un reloj con un tope.
+    "perf: mide el coste con tests/perf.py (crecimiento entre dos tamaños); job `perf` de ci.yml",
+    "real_io: espera a procesos, sockets o relojes reales con un tope; paso propio en serie",
 ]

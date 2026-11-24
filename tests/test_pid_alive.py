@@ -35,6 +35,7 @@ def _running_process() -> subprocess.Popen:
     return subprocess.Popen([sys.executable, "-c", "import time; time.sleep(60)"])
 
 
+@pytest.mark.real_io
 @windows_only
 def test_a_finished_process_with_a_held_handle_is_dead():
     proc = _finished_process()
@@ -64,6 +65,7 @@ def log_dir(tmp_path, monkeypatch):
     return tmp_path
 
 
+@pytest.mark.real_io
 def test_the_snapshot_prunes_the_entry_of_a_dead_pid(log_dir):
     dead = _finished_process()
     live = _running_process()

@@ -14,6 +14,7 @@ import subprocess
 import sys
 from pathlib import Path
 
+import perf
 import pytest
 
 import local_delegate
@@ -24,12 +25,8 @@ REPO = Path(__file__).resolve().parent.parent
 _SRC = str(Path(local_delegate.__file__).resolve().parent.parent)
 
 #: The hard cap of a child process: a backtracking rule takes far longer than this.
-_CHILD_CAP_S = 10.0
-#: REQ-009: each hostile input of 1 000 000 characters is resolved in less than this much CPU
-#: time. CPU time, not wall clock: on a shared CI runner (Windows, with xdist) the wall clock of
-#: the linear scan went over 1 s four times in one morning, while a backtracking rule burns CPU
-#: for far longer, so CPU time still tells them apart and the cap above bounds the wall clock.
-_HOSTILE_LIMIT_S = 1.0
+_CHILD_CAP_S = 30.0
+_TESTS = str(Path(__file__).resolve().parent)
 
 
 def _cases() -> list[dict]:
@@ -340,31 +337,39 @@ _HOSTILE = {
 }
 
 
+@pytest.mark.perf
 @pytest.mark.parametrize("name", sorted(_HOSTILE))
-def test_a_hostile_input_ends_in_less_than_a_second(name):
+def test_a_hostile_input_costs_linearly(name):
+    """Growth, not a ceiling in seconds (`tests/perf.py`): a tenth of the input against all of it,
+    in a child so that a backtracking rule ends at `_CHILD_CAP_S` instead of hanging the suite.
+    The ceiling of one second of CPU failed nine times on Windows between 2026-11-03 and -23."""
     script = (
-        "import json, time\n"
+        "import json\n"
+        "import perf\n"
         "from local_delegate.table_detect import has_table\n"
-        f"text = {_HOSTILE[name]}\n"
-        "assert len(text) >= 1_000_000, len(text)\n"
-        "started = time.process_time()\n"
-        "result = has_table(text)\n"
-        "print(json.dumps({'elapsed': time.process_time() - started, 'result': result}))\n"
+        f"big = {_HOSTILE[name]}\n"
+        "assert len(big) >= 1_000_000, len(big)\n"
+        "small = big[: len(big) // 10]\n"
+        "m = perf.growth(lambda: has_table(small), lambda: has_table(big),\n"
+        "                ceiling=perf.max_growth(10))\n"
+        "print(json.dumps({'ratio': m.ratio, 'small_ns': m.small_ns, 'big_ns': m.big_ns}))\n"
     )
+    env = _child_env()
+    env["PYTHONPATH"] = _TESTS + os.pathsep + env["PYTHONPATH"]
     try:
         done = subprocess.run(
             [sys.executable, "-c", script],
             capture_output=True,
             text=True,
             timeout=_CHILD_CAP_S,
-            env=_child_env(),
+            env=env,
             check=False,
         )
     except subprocess.TimeoutExpired:
         pytest.fail(f"{name}: has_table did not end within {_CHILD_CAP_S} s")
     assert done.returncode == 0, done.stderr
     report = json.loads(done.stdout.strip().splitlines()[-1])
-    assert report["elapsed"] < _HOSTILE_LIMIT_S, f"{name}: {report['elapsed']:.2f} s of CPU"
+    assert report["ratio"] < perf.max_growth(10), (name, report)
 
 
 def test_the_module_uses_no_regular_expression():

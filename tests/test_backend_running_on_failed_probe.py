@@ -80,6 +80,7 @@ class _SlowModelsBackend:
         self.thread.join(5)
 
 
+@pytest.mark.real_io
 def test_a_slow_models_probe_still_reports_the_model_that_is_starting(monkeypatch):
     """The repro of the issue with a slow double: `/v1/models` does not answer within the probe's
     read deadline while `/running` shows a model in `starting`."""

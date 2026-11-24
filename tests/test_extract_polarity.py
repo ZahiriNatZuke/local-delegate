@@ -18,6 +18,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import perf
 import pytest
 
 from local_delegate import config, i18n, polarity, server
@@ -241,14 +242,16 @@ def test_a_key_that_names_a_ban_is_not_checked(name):
     }
 
 
+@pytest.mark.perf
 def test_many_negations_stay_linear():
     # 400 000 characters of «no no no …» in one clause: one pass, never a quadratic scan.
-    import time
-
-    source = ("no " * 133_000)[: polarity.MAX_SOURCE_CHARS]
-    start = time.perf_counter()
-    polarity.flipped(source, ["a"], {"a": FLIPPED_667})
-    assert time.perf_counter() - start < 5
+    big = ("no " * 133_000)[: polarity.MAX_SOURCE_CHARS]
+    small = big[: len(big) // 10]
+    perf.assert_linear(
+        lambda: polarity.flipped(small, ["a"], {"a": FLIPPED_667}),
+        lambda: polarity.flipped(big, ["a"], {"a": FLIPPED_667}),
+        size_ratio=10,
+    )
 
 
 def test_the_issue_flag_names_both_clauses():

@@ -44,7 +44,12 @@ Qué hacer: `gh run cancel <run-id>` y luego `gh run rerun <run-id>`. Ojo, **el 
 retraso en las dos direcciones**: la cancelación puede tardar en verse, y `gh run rerun --job`
 responde «cannot be rerun» mientras el job siga `in_progress`.
 
-### `timeout-minutes` sí actúa, y su firma son 20 minutos (13 hasta el 2026-10-13)
+### `timeout-minutes` sí actúa, y su firma son 30 minutos (20 hasta el 2026-11-23, 13 hasta el 2026-10-13)
+
+> **Revisado el 2026-11-23** (SDD ci-root-cause). Los tests `real_io` corren en un paso propio, en
+> serie, después del paralelo; eso suma ~3 min en Windows, que ya iba por 8 de máximo. El job `test`
+> tiene que superar la suma de los límites de sus pasos (10 + 8 + 6 = 24): sube a 25 y la firma pasa
+> a **25 + 5 = 30:00**.
 
 > **Revisado el 2026-10-13.** La suite ya tardaba ~5 min en Windows y el límite de 5 del paso
 > cortó tres corridas sin ningún test fallido. El paso sube a 10 y el job a 15, así que la firma
@@ -69,13 +74,13 @@ matarlo a la fuerza. De ahí que la conclusión sea `cancelled` y no `timed_out`
 
 | Lo que ves | Qué es |
 |---|---|
-| `cancelled` en `main`, job de ~20:00, resto en `success` | El cuelgue conocido de GitHub. **No hay avería.** No bloquea nada: en un push a `main` no hay merge esperando |
+| `cancelled` en `main`, job de ~30:00, resto en `success` | El cuelgue conocido de GitHub. **No hay avería.** No bloquea nada: en un push a `main` no hay merge esperando |
 | `cancelled` en un PR | Lo mismo, pero ahí sí bloquearía. Lo resuelve `ci-gate`, que da el veredicto por los pasos en segundos |
 | `failure` en el paso `Tests (pytest)` a los ~10 min | Eso **sí** es nuestro: el límite propio del paso, que corta un pytest colgado y deja log |
 
 El límite del paso se añadió por lo segundo que enseñó la medición: en dos de los tres casos quien
 seguía corriendo era **pytest**, no el runner. Ahí un límite de paso corta pronto y con log, en vez
-de arrastrar veinte minutos que además acaban sin log (`BlobNotFound`).
+de arrastrar treinta minutos que además acaban sin log (`BlobNotFound`).
 
 Los números están atados en `tests/test_ci_gate.py`: si alguien cambia el límite, el test exige que
 el texto que explica la firma se actualice. Un comentario no falla nunca por su cuenta, y este ya
@@ -98,10 +103,11 @@ Su regla, y el orden importa:
 | Estado del job | Veredicto |
 |---|---|
 | `conclusion` `success` o `skipped` | OK |
+| `conclusion` `cancelled` en una pata `(macos-latest)`, **sin runner asignado y sin ningún paso ejecutado** | OK **con aviso**: GitHub no le dio máquina |
 | `conclusion` cualquier otra | **falla**, sin esperar al resto |
 | sin `conclusion`, con algún step concluido en algo que no sea `success`/`skipped` | **falla** |
 | sin `conclusion`, y el **último step listado es `Complete job` en `success`** | OK — el job fantasma |
-| el resto | sigue esperando, hasta 25 min |
+| el resto | sigue esperando, hasta 40 min |
 
 Tres detalles que no son cosméticos:
 
@@ -109,8 +115,15 @@ Tres detalles que no son cosméticos:
   numeración salta (un job de Windows lista los pasos 1-5 y luego 9-11).
 - **Los steps malos se miran ANTES que el fantasma.** Cuando un step falla, GitHub cierra el job con
   su `Complete job` en `success` igualmente; al revés, esto sería un falso verde de manual.
-- **El plazo de 25 min cubre cola + ejecución**, que no es lo que mide `timeout-minutes`. Con el
+- **El plazo de 40 min cubre cola + ejecución**, que no es lo que mide `timeout-minutes`. Con el
   plazo ajustado a la ejecución, un job que espere runner daría fallo estando todo bien.
+
+- **El job sin máquina no es un fallo** (SDD ci-root-cause). Del 2026-11-03 al 2026-11-23, 71 jobs
+  de macOS salieron `cancelled` sin runner (`runner_id` y `runner_name` vacíos, `steps: []`): 31 de
+  los 90 rojos del gate. Ahí no corrió nada del repo; el gate lo da por bueno, lo nombra en el
+  informe y deja un `::warning::`. Basta un runner asignado o un paso ejecutado para que un
+  `cancelled` vuelva a fallar, y `timed_out` falla siempre. `scripts/check_main.py`, en cambio, sí
+  lo lista: tras mezclar se mira todo lo que no está en verde en `main`. macOS se sigue exigiendo cuando corre. Solo se perdona a macOS: si Ubuntu o Windows salen así, el PR no se probó y el gate falla.
 
 `needs` + `if: always()`, que es el patrón habitual, **no sirve**: `needs` espera a que el job
 *termine*, que es justo lo que no pasa. El gate corre en paralelo y hace polling.
@@ -131,6 +144,26 @@ descartó porque pedía `actions: write`, contra el mínimo privilegio del repo.
 - `Complete job` es un nombre que pone GitHub. Si lo renombraran, el gate dejaría de reconocer al
   fantasma y esperaría hasta agotar el plazo: degrada al comportamiento de antes, **nunca a un falso
   verde**.
+
+### Qué corre dónde, y por qué el CI no da rojos sin fallo de código
+
+El análisis de 400 corridas (2026-11-03 a 2026-11-23) dio cinco causas de rojo que no eran el
+código. Cada una tiene ahora su regla, no un parche por test:
+
+| Causa | Regla | Dónde |
+|---|---|---|
+| macOS cancelado sin runner (31 rojos del gate) | el gate lo da por bueno con aviso | `scripts/ci_gate.py` |
+| Topes en segundos o en CPU bajo `-n auto`; `process_time` de Windows a saltos de 15,6 ms (~28) | coste = crecimiento entre dos tamaños con `tests/perf.py` y `@pytest.mark.perf`, en el job `perf` (Ubuntu, sin `-n`, un reintento) | `tests/perf.py`, `tests/test_timing_marker_guard.py` |
+| Daemons, sockets y plazos reales (12) | `@pytest.mark.real_io`: paso propio en los tres sistemas, en serie, un reintento (`scripts/ci_pytest_retry.sh`) | `ci.yml`, `tests/timing_scan.py` |
+| pwsh de la imagen que aborta al arrancar | salto con su versión y aviso en la guarda de shells | `tests/completion_shells.py` |
+| Huellas, versión de la captura, nombres, catálogo (17) | `scripts/check_local.py` en pre-commit; `bump_version.py X` regenera huellas y capturas; `release.py` no publica sin ellas | `.pre-commit-config.yaml` |
+
+La descarga del navegador de Playwright se reintenta (`scripts/ci_retry.sh`, 3 intentos de 60 s),
+como ya se reintentaba apt.
+
+**Después de mezclar**, `uv run python scripts/check_main.py`: los checks del último commit de
+`main` que no estén en verde y las **alertas abiertas de CodeQL en `main`**, que no salen en los
+hilos de ningún PR (así pasaron días abiertas las #228 y #231).
 
 `ci.yml` declara además `concurrency`, para que un push nuevo a una rama de trabajo cancele el run
 anterior — en `main` no, porque ahí el run es el registro de que ese estado pasó el CI.

@@ -9,12 +9,11 @@ and the hook process are those of ``test_codex_reads``.
 
 from __future__ import annotations
 
-import gc
 import json
 import random
 import re
-import time
 
+import perf
 import pytest
 import test_codex_reads as base
 
@@ -316,29 +315,22 @@ HOSTILE = [
 ]
 
 
-def _cpu(command: str, cwd: str) -> float:
-    """The best of two runs, with the garbage collector off: its pauses grow with the objects
-    alive and made a linear run look quadratic on the Ubuntu runner."""
-    spent = []
-    gc.disable()
-    try:
-        for _ in range(2):
-            start = time.process_time()
-            codex_reads.write_targets("Bash", {"command": command}, cwd, {})
-            codex_reads.literal_reads({"command": command}, cwd, {})
-            spent.append(time.process_time() - start)
-    finally:
-        gc.enable()
-    return min(spent)
+def _analyse(command: str, cwd: str) -> None:
+    codex_reads.write_targets("Bash", {"command": command}, cwd, {})
+    codex_reads.literal_reads({"command": command}, cwd, {})
 
 
+@pytest.mark.perf
 @pytest.mark.parametrize("build", HOSTILE)
 def test_the_analysis_is_linear(build, tmp_path):
-    """REQ-006: no backtracking and no rescans. Four times the command costs about four times the
-    CPU (a quadratic cost would be sixteen), measured as a ratio so a slow runner does not fail it."""
-    small, large = _cpu(build(5_000), str(tmp_path)), _cpu(build(20_000), str(tmp_path))
-    assert large < 8 * small + 0.25, f"{small:.2f} s -> {large:.2f} s of CPU"
-    assert large < 15.0, f"{large:.2f} s of CPU"
+    """REQ-006: no backtracking and no rescans. Four times the command costs about four times
+    (a quadratic cost would be sixteen), measured with `tests/perf.py` (garbage collector off)."""
+    small, large = build(5_000), build(20_000)
+    perf.assert_linear(
+        lambda: _analyse(small, str(tmp_path)),
+        lambda: _analyse(large, str(tmp_path)),
+        size_ratio=4,
+    )
 
 
 def test_the_here_strings_are_found_as_the_old_regex_found_them():

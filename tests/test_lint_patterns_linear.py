@@ -16,42 +16,40 @@ from __future__ import annotations
 import json
 import random
 import re
-import time
 
+import perf
 import pytest
 
 from local_delegate import config, lint_patterns, server
 
-#: Twenty times the measured linear cost, and fifty times under the old one.
-CAP_SECONDS = 1.0
+#: The size of the big side; the small side is ten times smaller (`tests/perf.py`).
 N = 20_000
 
+#: Each run of `n` characters without spaces.
 LONG_RUNS = {
-    "dots": "." * N,
-    "word_dot": "a." * (N // 2),
-    "word_slash": "a/" * (N // 2),
-    "tilde_word": "~a" * (N // 2),
-    "word": "a" * N,
-    "file_dots_file": "a.py" + "." * N + "b.py",
-    "dirs_no_extension": "dir.v1/" * (N // 7) + "x.pyz",
+    "dots": lambda n: "." * n,
+    "word_dot": lambda n: "a." * (n // 2),
+    "word_slash": lambda n: "a/" * (n // 2),
+    "tilde_word": lambda n: "~a" * (n // 2),
+    "word": lambda n: "a" * n,
+    "file_dots_file": lambda n: "a.py" + "." * n + "b.py",
+    "dirs_no_extension": lambda n: "dir.v1/" * (n // 7) + "x.pyz",
 }
 
 
-def _timed(func, *args):
-    start = time.perf_counter()
-    result = func(*args)
-    return result, time.perf_counter() - start
-
-
+@pytest.mark.perf
 @pytest.mark.parametrize("name", sorted(LONG_RUNS))
 def test_a_long_run_without_spaces_is_searched_in_linear_time(name):
-    text = f"Ran 3 tests\n{LONG_RUNS[name]}\nFAIL: tests/test_x.py:3: E501 line\n"
-    files, elapsed = _timed(lint_patterns.files_by_frequency, text)
-    assert elapsed < CAP_SECONDS, f"files_by_frequency took {elapsed:.2f} s on {name}"
-    assert "tests/test_x.py" in files
-    codes, elapsed = _timed(lint_patterns.code_counts, text)
-    assert elapsed < CAP_SECONDS, f"code_counts took {elapsed:.2f} s on {name}"
-    assert ("E501", 1) in codes
+    def text(n: int) -> str:
+        return f"Ran 3 tests\n{LONG_RUNS[name](n)}\nFAIL: tests/test_x.py:3: E501 line\n"
+
+    small, big = text(N // 10), text(N)
+    assert "tests/test_x.py" in lint_patterns.files_by_frequency(big)
+    assert ("E501", 1) in lint_patterns.code_counts(big)
+    for func in (lint_patterns.files_by_frequency, lint_patterns.code_counts):
+        perf.assert_linear(
+            lambda f=func: f(small), lambda f=func: f(big), size_ratio=10, label=func.__name__
+        )
 
 
 # --- Same result as the regex ----------------------------------------------------------------------
@@ -128,18 +126,26 @@ def test_the_finding_counter_check_is_the_regex():
     assert hits > 1_500
 
 
+@pytest.mark.perf
 def test_a_long_json_key_is_checked_in_linear_time():
-    key = "error " * 40_000 + "x"
-    report = json.dumps([{"filePath": "a.js", "messages": [], key: 1}])
-    verdict, elapsed = _timed(lint_patterns.clean_verdict, report)
-    assert elapsed < CAP_SECONDS, f"clean_verdict took {elapsed:.2f} s"
-    assert verdict == ""  # the key is no counter: the report is clean, as before
+    def report(n: int) -> str:
+        return json.dumps([{"filePath": "a.js", "messages": [], "error " * n + "x": 1}])
+
+    small, big = report(4_000), report(40_000)
+    # the key is no counter: the report is clean, as before
+    assert lint_patterns.clean_verdict(big) == ""
+    perf.assert_linear(
+        lambda: lint_patterns.clean_verdict(small),
+        lambda: lint_patterns.clean_verdict(big),
+        size_ratio=10,
+    )
 
 
 # --- The tool's own path ---------------------------------------------------------------------------
 
 
-def test_a_chunked_unittest_log_returns_in_seconds(monkeypatch, tmp_path):
+@pytest.mark.perf
+def test_a_chunked_unittest_log_costs_linearly(monkeypatch, tmp_path):
     users: list[str] = []
 
     def run_chat(model, system, user, max_tokens, temperature, **_):
@@ -153,18 +159,27 @@ def test_a_chunked_unittest_log_returns_in_seconds(monkeypatch, tmp_path):
     monkeypatch.setattr(config, "USAGE_LOG", tmp_path / "usage.jsonl")
     monkeypatch.setitem(config.MAX_CHARS_BY_ROLE, "mechanical", 6000)
     monkeypatch.setitem(config.MAX_CHARS_BY_ROLE, "long", 6000)
-    log = (
-        "." * N
-        + "F\n"
-        + "=" * 70
-        + "\nFAIL: test_parse (tests.test_x.ParseTest)\nTraceback (most recent call last):\n"
-        + '  File "tests/test_x.py", line 3, in test_parse\nAssertionError: 1 != 2\n'
-        + "-" * 70
-        + f"\nRan {N + 1} tests in 4.2s\n\nFAILED (failures=1)\n"
-    )
-    out, elapsed = _timed(server.local_lint_summary, None, log)
-    assert elapsed < 5 * CAP_SECONDS, f"local_lint_summary took {elapsed:.2f} s"
+
+    def unittest_log(n: int) -> str:
+        return (
+            "." * n
+            + "F\n"
+            + "=" * 70
+            + "\nFAIL: test_parse (tests.test_x.ParseTest)\nTraceback (most recent call last):\n"
+            + '  File "tests/test_x.py", line 3, in test_parse\nAssertionError: 1 != 2\n'
+            + "-" * 70
+            + f"\nRan {n + 1} tests in 4.2s\n\nFAILED (failures=1)\n"
+        )
+
+    log = unittest_log(N)
+    out = server.local_lint_summary(None, log)
     assert not out.startswith("[local-delegate error]")
     assert len(users) > 1  # guard: the log was chunked, so the inventory was built
     assert any("tests/test_x.py" in user.split("La lista de arriba")[0] for user in users)
     assert lint_patterns.files_by_frequency(log) == ["tests/test_x.py"]
+    small = unittest_log(N // 10)
+    perf.assert_linear(
+        lambda: server.local_lint_summary(None, small),
+        lambda: server.local_lint_summary(None, log),
+        size_ratio=10,
+    )

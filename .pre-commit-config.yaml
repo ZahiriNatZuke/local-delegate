@@ -29,3 +29,14 @@ repos:
         entry: uv run ruff format
         language: system
         types_or: [python, pyi]
+
+      # Lo generado que el CI comprueba, antes del commit (SDD ci-root-cause, REQ-008): huellas de
+      # los hooks (se unen solas con --fix; vuelve a añadir el fichero), versión de la captura del
+      # README, nombres en español y textos fuera del catálogo. Los dos últimos son los mismos tests
+      # del CI, lanzados por el script.
+      - id: check-local
+        name: huellas, captura, nombres y catálogo (scripts/check_local.py)
+        entry: uv run python scripts/check_local.py --fix
+        language: system
+        pass_filenames: false
+        files: ^(src|scripts|tests|docs/assets)/|^pyproject\.toml$

@@ -290,6 +290,7 @@ def test_entering_with_the_session_does_not_hand_out_a_new_one_each_time():
     assert "set-cookie" not in fresh.headers
 
 
+@pytest.mark.real_io
 def test_the_session_in_use_is_renewed_before_expiring():
     """Media vida gastada es el punto de renovación: así una sesión usada no caduca nunca."""
     client = _app(duration=1000)

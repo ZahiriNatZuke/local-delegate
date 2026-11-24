@@ -21,8 +21,7 @@ The backend is faked (`_run_chat`): no network. Each block names the mutant that
 
 from __future__ import annotations
 
-import time
-
+import perf
 import pytest
 
 from local_delegate import config, i18n, lint_patterns, server
@@ -284,20 +283,26 @@ def test_a_summary_that_disagrees_with_the_count_gives_no_facts():
     assert lint_patterns.pytest_failures(log) == []
 
 
-def test_reading_the_failures_is_linear_on_hostile_input():
+_HOSTILE_FAILURES = {
+    "slashes": lambda n: "FAILED " + "a/" * (n // 2),
+    "colons": lambda n: "FAILED tests/t.py::" + ":" * n,
+    "underscores_then_paths": lambda n: "_" * n + "\n" + "a.py:" * (n // 5),
+    "counts": lambda n: "1 failed, " * (n // 10) + " in 1s",
+    "paths_then_counts": lambda n: "- " + "a.py" * (n // 4) + ": " + "1 fallo " * (n // 8),
+}
+
+
+def _read_failures(text: str) -> None:
+    lint_patterns.pytest_failures(text)
+    lint_patterns.failure_mismatch(text, lint_patterns.pytest_failures(MANY_LOG))
+
+
+@pytest.mark.perf
+@pytest.mark.parametrize("name", sorted(_HOSTILE_FAILURES))
+def test_reading_the_failures_is_linear_on_hostile_input(name):
     """The input is not trusted (ReDoS antecedent in `lint_patterns`): long runs without breaks."""
-    n = 200_000
-    for text in (
-        "FAILED " + "a/" * (n // 2),
-        "FAILED tests/t.py::" + ":" * n,
-        "_" * n + "\n" + "a.py:" * (n // 5),
-        "1 failed, " * (n // 10) + " in 1s",
-        "- " + "a.py" * (n // 4) + ": " + "1 fallo " * (n // 8),
-    ):
-        start = time.perf_counter()
-        lint_patterns.pytest_failures(text)
-        lint_patterns.failure_mismatch(text, lint_patterns.pytest_failures(MANY_LOG))
-        assert time.perf_counter() - start < 2.0
+    small, big = _HOSTILE_FAILURES[name](20_000), _HOSTILE_FAILURES[name](200_000)
+    perf.assert_linear(lambda: _read_failures(small), lambda: _read_failures(big), size_ratio=10)
 
 
 # --- The model gets them as facts ----------------------------------------------------------------

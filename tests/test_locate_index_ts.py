@@ -7,10 +7,13 @@ lines are recorded while each fixture is written, never read from the index unde
 
 from __future__ import annotations
 
+import perf
 import pytest
-from linear_cost import MAX_GROWTH, SIZE_RATIO, cpu_growth
 
 from local_delegate import locate
+
+#: Ten times the input: linear grows ~10x, quadratic ~100x (`tests/perf.py`).
+SIZE_RATIO = 10
 
 FUNCTION_KINDS = {"function", "method", "function_property"}
 
@@ -327,6 +330,7 @@ def _classes_of_ts(units: int) -> str:
     )
 
 
+@pytest.mark.perf
 def test_typescript_index_cost_grows_linearly():
     """REQ-022: indexing 1 MB costs about ten times 100 KB, never the hundred of a quadratic
     cost."""
@@ -335,8 +339,8 @@ def test_typescript_index_cost_grows_linearly():
     index = locate.build_index(big_text, "huge.ts")
     assert index.unavailable_reason is None
     assert len(index.blocks) == 6800 * 4
-    small, big, growth = cpu_growth(
+    perf.assert_linear(
         lambda: locate.build_index(small_text, "huge.ts"),
         lambda: locate.build_index(big_text, "huge.ts"),
+        size_ratio=SIZE_RATIO,
     )
-    assert growth < MAX_GROWTH, (small, big, growth)

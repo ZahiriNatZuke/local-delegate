@@ -21,6 +21,7 @@ def _always_clash(_a: str, _b: str) -> bool:
     return True
 
 
+@pytest.mark.real_io
 def test_cancelled_wait_leaves_turn_queue_without_waiting_the_tick():
     # Tic de 30 s: si la espera solo mirara la parada en cada tic, el test lo vería.
     state = turn.Turn(_always_clash, tick=30.0)
@@ -57,6 +58,7 @@ def test_cancelled_wait_leaves_turn_queue_without_waiting_the_tick():
     assert state.snapshot().queue == ()
 
 
+@pytest.mark.real_io
 def test_run_abandonable_returns_as_soon_as_cancelled():
     token = cancellation.Token("local_summarize")
     finished = threading.Event()
@@ -238,6 +240,7 @@ class _HangingBackend:
             thread.join(2)
 
 
+@pytest.mark.real_io
 def test_cancelled_send_closes_the_backend_connection(monkeypatch):
     """Al cancelar, el envío en curso CORTA su conexión: el backend lo ve y deja de generar."""
     backend = _HangingBackend(hold=6.0)

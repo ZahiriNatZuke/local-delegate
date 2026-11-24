@@ -8,10 +8,13 @@ copied the list of the later headings, and a long `elif` chain recursed past Pyt
 
 from __future__ import annotations
 
+import perf
 import pytest
-from linear_cost import MAX_GROWTH, SIZE_RATIO, cpu_growth
 
 from local_delegate import locate
+
+#: Ten times the input: linear grows ~10x, quadratic ~100x (`tests/perf.py`).
+SIZE_RATIO = 10
 
 BACKSLASH = chr(92)
 
@@ -23,6 +26,7 @@ HOSTILE_UNITS = [
 ]
 
 
+@pytest.mark.perf
 @pytest.mark.parametrize(
     ("unit", "name"), [(u, n) for _, u, n in HOSTILE_UNITS], ids=[h[0] for h in HOSTILE_UNITS]
 )
@@ -32,22 +36,24 @@ def test_a_hostile_line_costs_linearly(unit, name):
     small_size = 20_000
     small_text = unit * (small_size // len(unit))
     big_text = unit * (small_size * SIZE_RATIO // len(unit))
-    small, big, growth = cpu_growth(
-        lambda: locate.build_index(small_text, name), lambda: locate.build_index(big_text, name)
+    perf.assert_linear(
+        lambda: locate.build_index(small_text, name),
+        lambda: locate.build_index(big_text, name),
+        size_ratio=SIZE_RATIO,
     )
-    assert growth < MAX_GROWTH, (small, big, growth)
 
 
+@pytest.mark.perf
 def test_many_headings_cost_linearly():
     small_text = "# a\n" * 5_000
     big_text = "# a\n" * (5_000 * SIZE_RATIO)
     index = locate.build_index(small_text, "h.md")
     assert sum(b.kind == "section" for b in index.blocks) == 5_000
-    small, big, growth = cpu_growth(
+    perf.assert_linear(
         lambda: locate.build_index(small_text, "h.md"),
         lambda: locate.build_index(big_text, "h.md"),
+        size_ratio=SIZE_RATIO,
     )
-    assert growth < MAX_GROWTH, (small, big, growth)
 
 
 def test_sections_still_end_before_the_next_heading_of_same_or_higher_level():

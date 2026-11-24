@@ -163,6 +163,7 @@ def test_d_llamaswap_off_gives_down(tmp_path: Path) -> None:
         assert ls.reload_detail == "conexión rechazada"
 
 
+@pytest.mark.real_io
 @pytest.mark.parametrize("case", ["model_changes", "foreign_change"])
 def test_d_8_s_request_in_progress_on_reload(tmp_path: Path, case: str) -> None:
     """Anota si la recarga corta una petición en curso. Fija lo observado con v255."""

@@ -98,10 +98,11 @@ jobs:
           path: ~/.cache/ms-playwright
           key: playwright-chromium-${{ runner.os }}-${{ runner.arch }}-${{ steps.playwright.outputs.image }}-${{ steps.playwright.outputs.version }}
 
+      # La descarga también se reintenta (SDD ci-root-cause): 3 intentos de 60 s como mucho.
       - name: Install browser for the dashboard UI tests
         if: steps.browser-cache.outputs.cache-hit != 'true'
-        timeout-minutes: 4
-        run: uv run playwright install chromium
+        timeout-minutes: 5
+        run: bash scripts/ci_retry.sh 3 60 uv run playwright install chromium
 
       - name: Install the browser system dependencies
         timeout-minutes: 8
@@ -143,7 +144,7 @@ jobs:
   # De ahí que la conclusión sea `cancelled` y no `timed_out`: un job que expira y cuyo runner no
   # responde lo cierra GitHub como cancelado.
   #
-  # Consecuencia práctica: un `cancelled` en `main` que haya durado 20:00 (13:00 hasta el 2026-10-13,
+  # Consecuencia práctica: un `cancelled` en `main` que haya durado 30:00 (20:00 hasta el 2026-11-23 y 13:00 hasta el 2026-10-13,
   # ver la revisión de abajo) **no es una avería del
   # repo** — es este cuelgue de GitHub y el límite haciendo su trabajo. No bloquea nada, porque en
   # un push a `main` no hay merge esperando; en un PR sí lo bloquea, y ahí `ci-gate` da el
@@ -158,6 +159,13 @@ jobs:
   # 15 el job (paso + checkout, sync y el instalador e2e). Un cuelgue fantasma pasa a durar
   # 15 + 5 de gracia = 20:00 en vez de 13:00. Los tres `cancelled` de arriba son de cuando el
   # límite era 8.
+  #
+  # REVISIÓN del 2026-11-23 (SDD ci-root-cause): los tests que esperan a procesos, sockets o relojes
+  # reales con un tope (`real_io`) salen del paso paralelo y corren después, en serie y con un
+  # reintento: bajo `-n auto` competían por los núcleos y daban rojos sin fallo de código. Ese paso
+  # suma ~3 min en Windows, que ya iba por 6,9 min de mediana y 8 de máximo. El job tiene que
+  # superar la suma de los límites de sus pasos (10 + 8 + 6 = 24) o los corta él, sin log; sube a 25
+  # y la firma de un cuelgue fantasma pasa a 25 + 5 de gracia = 30:00.
   test:
     strategy:
       # Sin fail-fast: si un sistema falla interesa ver también qué hicieron los otros dos,
@@ -171,7 +179,7 @@ jobs:
     # the `latest` label (actions/runner-images#14748). Not `matrix.include`: `tests/test_ci_gate.py`
     # refuses it. macOS and Windows keep their `-latest` labels.
     runs-on: ${{ matrix.os == 'ubuntu-latest' && 'ubuntu-26.04' || matrix.os }}
-    timeout-minutes: 15
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v7
 
@@ -186,7 +194,7 @@ jobs:
       # Límite propio del paso, además del que gobierna el job entero. Cubre el caso en que quien
       # se cuelga es **pytest** y no el runner: en dos de los tres `cancelled` medidos el paso
       # seguía `in_progress` al morir el job. Con esto, ese cuelgue se corta a los 10 minutos y deja
-      # un fallo con log, en vez de veinte minutos que además acaban sin log (`BlobNotFound`).
+      # un fallo con log, en vez de treinta minutos que además acaban sin log (`BlobNotFound`).
       #
       # 10 son ~2x el peor caso real en CI (4 m 58 s en Windows, 2026-10-13; antes 5 = 2,6x de 1,9 min). Si el que se cuelga es el runner, esto no
       # rescata —no hay proceso que matar— y manda el límite del job.
@@ -200,11 +208,22 @@ jobs:
       # a required shell that is missing fails its tests, and the guard of `tests/conftest.py`
       # fails the run if none of its tests passed. An expression and not `matrix.include`, which
       # `tests/test_ci_gate.py` refuses; `tests/test_completion_ci_shells.py` pins the value.
+      #
+      # Without `perf` (their own job) and `real_io` (the next step): the parallel run holds no
+      # test that compares a clock with a ceiling (`tests/test_timing_marker_guard.py`).
       - name: Tests (pytest)
         timeout-minutes: 10
         env:
           COMPLETION_TEST_REQUIRE_SHELLS: ${{ matrix.os == 'windows-latest' && 'pwsh,powershell,bash' || matrix.os == 'macos-latest' && 'zsh,bash,bash3,pwsh' || 'bash,pwsh' }}
-        run: uv run pytest -q -n auto --dist loadgroup
+        run: uv run pytest -q -n auto --dist loadgroup -m "not perf and not real_io"
+
+      # Real processes, sockets and clocks with a ceiling, alone and on every system: in series,
+      # and once more with only the failures (`scripts/ci_pytest_retry.sh`).
+      - name: Tests with real I/O (pytest, serial)
+        timeout-minutes: 8
+        # Git Bash on Windows, never the WSL `bash.exe` of System32 that `pwsh` may find first.
+        shell: bash
+        run: bash scripts/ci_pytest_retry.sh -m real_io
 
       # El instalador ejercido de verdad, y no solo sus funciones. Va en los tres sistemas porque
       # el punto del paso es justo ese: `install` escribe rutas, monta comandos de shell y decide
@@ -236,7 +255,7 @@ jobs:
   # En Windows `LANG` no decide el idioma (REQ-018 mira la interfaz), así que solo Linux discrimina.
   test-lang-es:
     runs-on: ubuntu-26.04
-    timeout-minutes: 24
+    timeout-minutes: 33
     env:
       LANG: es_ES.UTF-8
     steps:
@@ -269,10 +288,11 @@ jobs:
           path: ~/.cache/ms-playwright
           key: playwright-chromium-${{ runner.os }}-${{ runner.arch }}-${{ steps.playwright.outputs.image }}-${{ steps.playwright.outputs.version }}
 
+      # La descarga también se reintenta (SDD ci-root-cause): 3 intentos de 60 s como mucho.
       - name: Install browser for the dashboard UI tests
         if: steps.browser-cache.outputs.cache-hit != 'true'
-        timeout-minutes: 4
-        run: uv run playwright install chromium
+        timeout-minutes: 5
+        run: bash scripts/ci_retry.sh 3 60 uv run playwright install chromium
 
       - name: Install the browser system dependencies
         timeout-minutes: 8
@@ -289,7 +309,11 @@ jobs:
 
       - name: Tests (pytest, LANG=es_ES.UTF-8)
         timeout-minutes: 10
-        run: uv run pytest -q -n auto --dist loadgroup
+        run: uv run pytest -q -n auto --dist loadgroup -m "not perf and not real_io"
+
+      - name: Tests with real I/O (pytest, serial, LANG=es_ES.UTF-8)
+        timeout-minutes: 8
+        run: bash scripts/ci_pytest_retry.sh -m real_io
 
   # D8 (frente B, ola B1a): el armazón de argparse («usage:», «options:», sus errores) se traduce
   # con los msgid del argparse del intérprete, y esos cambian entre versiones de Python. El paquete
@@ -604,6 +628,29 @@ jobs:
         timeout-minutes: 5
         run: uv run python scripts/check_plugin_install.py "$CLAUDE_BIN"
 
+  # SDD ci-root-cause: the cost tests (`@pytest.mark.perf`, `tests/perf.py`) measure how a
+  # computation grows between two sizes. They run here, alone and without `-n`, so no other worker
+  # shares the cores while they measure; Ubuntu only, because the growth of a cost does not depend on
+  # the system, and the coarse clock of Windows was half of the noise. One retry of the failures.
+  # It blocks through `ci-gate`, like every other job.
+  perf:
+    runs-on: ubuntu-26.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          python-version: "3.11"
+
+      - name: Sync deps
+        run: uv sync --group dev
+
+      - name: Cost tests (pytest -m perf, serial)
+        timeout-minutes: 8
+        run: bash scripts/ci_pytest_retry.sh -m perf
+
   secrets:
     runs-on: ubuntu-26.04
     timeout-minutes: 5
@@ -639,8 +686,8 @@ jobs:
   # `actions: write` habría sido la otra vía, y se descartó por eso mismo.
   ci-gate:
     runs-on: ubuntu-26.04
-    # Cubre cola + ejecución del job más lento, no solo su ejecución: el script espera hasta 25 min.
-    timeout-minutes: 30
+    # Cubre cola + ejecución del job más lento, no solo su ejecución: el script espera hasta 40 min.
+    timeout-minutes: 45
     permissions:
       contents: read
       actions: read

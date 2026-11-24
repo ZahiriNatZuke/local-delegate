@@ -692,7 +692,27 @@ def pytest_runtest_setup(item):
         item.user_properties.append(("shell", mark.args[0]))
 
 
+#: Shells skipped because they crash at startup (SDD ci-root-cause, REQ-007): the runner image, not
+#: the repo, so the guard warns instead of failing. Read from the skip reason, which travels in the
+#: report under xdist too.
+_SHELL_BROKEN: set[str] = set()
+
+
 def pytest_runtest_logreport(report):
+    if report.skipped and report.longrepr is not None:
+        from completion_shells import broken_shell_of
+
+        # `longrepr` of a skip is `(path, line, reason)` (a list after xdist's JSON); its `str` would
+        # escape the quotes.
+        skip_info = report.longrepr
+        reason = (
+            skip_info[2]
+            if isinstance(skip_info, (tuple, list)) and len(skip_info) == 3
+            else skip_info
+        )
+        broken = broken_shell_of(str(reason))
+        if broken:
+            _SHELL_BROKEN.add(broken)
     if report.when != "call" or not report.passed:
         return
     for name, value in report.user_properties:  # tuples here, lists after xdist's JSON
@@ -703,13 +723,20 @@ def pytest_runtest_logreport(report):
 def pytest_sessionfinish(session):
     if hasattr(session.config, "workerinput"):
         return  # an xdist worker: the controller decides with the reports of all of them
-    from completion_shells import REQUIRE_ENV, required_shells
+    from completion_shells import REQUIRE_ENV, required_shells, required_without_pass
 
-    missing = sorted(name for name in required_shells() if not _SHELL_PASSES.get(name))
+    missing, broken = required_without_pass(required_shells(), _SHELL_PASSES, _SHELL_BROKEN)
+    reporter = session.config.pluginmanager.get_plugin("terminalreporter")
+    if broken and reporter is not None:
+        for name in broken:
+            reporter.write_line(
+                f"::warning::{REQUIRE_ENV}: the shell {name!r} crashes at startup on this runner "
+                "(see the skip reason for its version); its tests were skipped, not failed",
+                yellow=True,
+            )
     if not missing:
         return
     session.exitstatus = pytest.ExitCode.TESTS_FAILED
-    reporter = session.config.pluginmanager.get_plugin("terminalreporter")
     if reporter is not None:
         reporter.write_line(
             f"{REQUIRE_ENV}: no test passed for the required shell(s): {', '.join(missing)}",

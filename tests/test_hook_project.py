@@ -279,6 +279,7 @@ def test_a_search_that_raises_still_writes_the_line(world, monkeypatch):
     assert "project" not in line and "project_kind" not in line
 
 
+@pytest.mark.real_io
 def test_the_salt_and_the_list_come_from_the_process_log_dir(world):
     transcript = _session(world.root, OTHER_DIR)
     env = _request_env(world)
@@ -292,6 +293,7 @@ def test_the_salt_and_the_list_come_from_the_process_log_dir(world):
     assert (world.logs / "project-salt").is_file()
 
 
+@pytest.mark.real_io
 def test_the_projects_root_is_the_process_one_not_the_requests(world):
     transcript = _session(world.root, OTHER_DIR)
     request_home = world.tmp / "request-home"

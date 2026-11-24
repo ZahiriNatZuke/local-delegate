@@ -24,6 +24,7 @@ import sys
 import time
 from pathlib import Path
 
+import perf
 import pytest
 
 from local_delegate import config
@@ -963,14 +964,22 @@ def test_select_object_skip_moves_the_range(command, scope, lines):
     assert (read.scope, read.lines) == (scope, lines)
 
 
+@pytest.mark.perf
 def test_escaped_quotes_outside_quotes_tokenize_in_linear_time():
     """Issue #707 (security review): every `\\"` opened a string with no end, scanned to the end of
     the command each time (20 000 of them: about 30 s of CPU). The write after them still counts."""
-    command = "echo {" + '\\"a\\":1,' * 20_000 + "} > notes.md"
-    start = time.process_time()
-    found = classifier.classify_shell(command, "Bash")
-    assert time.process_time() - start < 1.0
+
+    def command(n: int) -> str:
+        return "echo {" + '\\"a\\":1,' * n + "} > notes.md"
+
+    small, big = command(2_000), command(20_000)
+    found = classifier.classify_shell(big, "Bash")
     assert [(a.kind, a.path) for a in found] == [("write", "notes.md")]
+    perf.assert_linear(
+        lambda: classifier.classify_shell(small, "Bash"),
+        lambda: classifier.classify_shell(big, "Bash"),
+        size_ratio=10,
+    )
 
 
 @pytest.mark.parametrize(

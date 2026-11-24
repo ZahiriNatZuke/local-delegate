@@ -68,6 +68,7 @@ def test_if_the_timer_did_not_fire_it_is_unknown_and_not_queried():
     assert calls == []
 
 
+@pytest.mark.real_io
 def test_a_slow_query_holds_no_longer_than_its_cap():
     release = threading.Event()
 

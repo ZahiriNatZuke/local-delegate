@@ -475,6 +475,7 @@ def test_self_check_stops_on_inconsistent_result(monkeypatch):
 # --- La consulta al daemon y la config que no se sabe ------------------------------------------
 
 
+@pytest.mark.real_io
 def test_fixture_cuts_real_daemon(request):
     """La consulta del CLI va al servidor que corta (`conftest.RejectingServer`), no al daemon:
     falla en el acto (no los ~2,1 s de un puerto cerrado en Windows) y el corte la recibió."""

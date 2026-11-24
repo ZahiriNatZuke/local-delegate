@@ -10,9 +10,9 @@ lines of each code identifier of the question (whole-word search over the whole 
 
 from __future__ import annotations
 
-import time
 from pathlib import Path
 
+import perf
 import pytest
 
 from local_delegate import config, i18n, line_check, server
@@ -358,13 +358,16 @@ def test_a_backticked_file_name_is_not_an_identifier(question, expected):
     assert line_check.identifiers(question) == expected
 
 
+@pytest.mark.perf
 def test_the_colon_form_is_linear():
     """Without the lookbehind, a 32 000-letter word with no colon took 21 s (each letter retried
     the word); 16 000 take ~5 s that way and ~1 ms with it."""
-    text = "a" * 16_000
-    start = time.perf_counter()
-    line_check.citations(text, ["focus"], total_lines=365)
-    assert time.perf_counter() - start < 1.0
+    small, big = "a" * 1_600, "a" * 16_000
+    perf.assert_linear(
+        lambda: line_check.citations(small, ["focus"], total_lines=365),
+        lambda: line_check.citations(big, ["focus"], total_lines=365),
+        size_ratio=10,
+    )
 
 
 # --- #616: a citation that names what the line does through an alias or a constant ------------
@@ -466,17 +469,24 @@ def test_a_name_bound_mid_statement_is_not_an_alias(binding, use):
     assert _warned("¿Dónde se usa `local_summarize`?", text, content) == ["5"]
 
 
+@pytest.mark.perf
 def test_the_alias_search_is_linear():
     """Long lines that hold the name, so the binding patterns do run on them."""
-    content = (
-        "TOOL = local_summarize" + " " * 50_000 + "x\n"
-        + "a = " + "local_summarize " * 5_000 + "\n"
-        + "from m import " + "local_summarize as " * 5_000 + "\n"
-        + "call(TOOL)\n"
-    )  # fmt: skip
-    start = time.perf_counter()
-    line_check.check("`local_summarize` en la línea 4.", "¿`local_summarize`?", content)
-    assert time.perf_counter() - start < 1.0
+
+    def content(k: int) -> str:
+        return (
+            "TOOL = local_summarize" + " " * (5_000 * k) + "x\n"
+            + "a = " + "local_summarize " * (500 * k) + "\n"
+            + "from m import " + "local_summarize as " * (500 * k) + "\n"
+            + "call(TOOL)\n"
+        )  # fmt: skip
+
+    small, big = content(1), content(10)
+    perf.assert_linear(
+        lambda: line_check.check("`local_summarize` en la línea 4.", "¿`local_summarize`?", small),
+        lambda: line_check.check("`local_summarize` en la línea 4.", "¿`local_summarize`?", big),
+        size_ratio=10,
+    )
 
 
 # --- #627: a citation in prose is not checked against what the rest of the paragraph names ----
@@ -699,9 +709,16 @@ def test_a_call_or_an_attribute_is_not_a_file_name(text, expected):
     assert sorted(line_check.identifiers(text)) == sorted(expected)
 
 
+@pytest.mark.perf
 def test_the_own_text_of_a_long_answer_is_linear():
     """Scanning the sentence for each citation was quadratic: 256 000 characters took 1,3 s."""
-    text = " ".join(f"`usage_logs` en la línea {n % 299 + 1} y" for n in range(8_000))
-    start = time.perf_counter()
-    line_check.check(text, ADOPTION_QUESTION, ADOPTION)
-    assert time.perf_counter() - start < 2.0
+
+    def answer(count: int) -> str:
+        return " ".join(f"`usage_logs` en la línea {n % 299 + 1} y" for n in range(count))
+
+    small, big = answer(800), answer(8_000)
+    perf.assert_linear(
+        lambda: line_check.check(small, ADOPTION_QUESTION, ADOPTION),
+        lambda: line_check.check(big, ADOPTION_QUESTION, ADOPTION),
+        size_ratio=10,
+    )

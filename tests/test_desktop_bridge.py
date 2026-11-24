@@ -24,6 +24,9 @@ import uvicorn
 
 from local_delegate import config, daemon, desktop_bridge, server, token_source
 
+#: the bridge against a real daemon app and real subprocesses (SDD ci-root-cause): in the serial step, with one retry.
+pytestmark = pytest.mark.real_io
+
 TOKEN = "bridge-test-port-token-1234567890"
 INIT = {
     "jsonrpc": "2.0",

@@ -40,13 +40,14 @@ Luego, para publicar una versión nueva:
 # 1. cerrar la sección `## [Unreleased]` del CHANGELOG con la versión y la fecha, y bumpear.
 #    `bump_version.py` toca los CUATRO sitios de una vez y regenera el lock: acertar cuatro
 #    veces a mano es justo lo que falló en la 0.8.1, donde el lock se quedó atrás.
+#    Desde el SDD ci-root-cause también regenera SIEMPRE lo que depende de la versión: une la
+#    huella de hoy de cada hook al conjunto «después» de las mediciones de adopción
+#    (`scripts/data/hook_hashes_after.json`; solo añade, nunca quita) y rehace las dos capturas
+#    del README contra la app de métricas del árbol. Necesita Playwright (`uv sync --group ui` y
+#    `uv run playwright install chromium`); `--no-capture` lo salta a sabiendas.
 uv run python scripts/bump_version.py X.Y.Z
 uv run python scripts/bump_version.py --check     # los cuatro declaran lo mismo
-# Une la huella de hoy de cada hook al conjunto «después» de las mediciones de adopción
-# (`scripts/data/hook_hashes_after.json`). Solo añade, nunca quita: una máquina que se quede en
-# la versión anterior sigue midiéndose en el tramo «antes». `test_hook_boundaries.py` falla si un
-# hook cambió y su huella no está.
-uv run python scripts/bump_version.py --boundaries
+uv run python scripts/check_local.py             # huellas, captura, nombres y catálogo al día
 
 uv run ruff check .
 uv run ruff format --check .
@@ -109,8 +110,10 @@ enseña la versión vieja y parece que el release falló. Pasó en las dos direc
 índice trajo la 0.12.1 recién publicada, y con la 0.13.0 fue al revés — el índice ya servía la nueva
 mientras el JSON seguía anunciando la anterior. Espera un par de minutos y repite con `--refresh`.
 
-**Regenera la captura del README después del bump**, porque la imagen enseña el badge de versión.
-Ya no depende de que te acuerdes: `docs/assets/dashboard.json` declara con qué versión se generó
+**La captura del README se regenera con el bump**, porque la imagen enseña el badge de versión:
+`bump_version.py X.Y.Z` la rehace en los dos temas, y `release.py` se niega a publicar si los
+manifiestos o las huellas de los hooks no son de esa versión. Los pasos a mano de abajo quedan para
+regenerarla sin subir de versión. Y no depende de que te acuerdes: `docs/assets/dashboard.json` declara con qué versión se generó
 y `tests/test_capture.py` lo compara con `pyproject.toml`, así que **el PR del bump falla hasta
 que la regeneres**. Antes esto se pedía solo con palabras, y de 25 releases solo 5 la
 regeneraron — la 0.16.0 se publicó con el badge diciendo `v0.15.0`.

@@ -15,10 +15,10 @@ a summary naming another Python version gets a warning. The inputs are synthetic
 from __future__ import annotations
 
 import json
-import time
 
 import backend_mock
 import httpx2
+import perf
 import pytest
 
 from local_delegate import config, runner_totals, server
@@ -106,15 +106,18 @@ def test_errors_are_their_own_category():
     assert [(c, n) for c, _clause, n in found] == [(runner_totals.FAILURES, 1)]
 
 
+@pytest.mark.perf
 def test_the_new_negation_cuts_stay_linear_on_hostile_input():
-    hostile = "no " * 50_000 + "dos " * 50_000 + ", " * 50_000 + "errores"
-    start = time.perf_counter()
-    runner_totals.denied(hostile, _short("1 error"))
     header = "platform x -- Python 3.11.15, pytest-8.3.4, " + "1." * 150 + "\n"
     assert len(header) < 400  # reaches the header pattern, not the length guard
-    runner_totals.python_versions("Python 3." * 200_000, header + "Python 3." * 200_000)
-    runner_totals.pytest_header(("platform x -- Python " + "1." * 150 + "\n") * 5_000)
-    assert time.perf_counter() - start < 5
+
+    def check(k: int) -> None:
+        hostile = "no " * 5_000 * k + "dos " * 5_000 * k + ", " * 5_000 * k + "errores"
+        runner_totals.denied(hostile, _short("1 error"))
+        runner_totals.python_versions("Python 3." * 20_000 * k, header + "Python 3." * 20_000 * k)
+        runner_totals.pytest_header(("platform x -- Python " + "1." * 150 + "\n") * 500 * k)
+
+    perf.assert_linear(lambda: check(1), lambda: check(10), size_ratio=10)
 
 
 # --- The figures, by program --------------------------------------------------------------------------

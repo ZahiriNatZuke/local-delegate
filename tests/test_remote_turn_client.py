@@ -1006,6 +1006,7 @@ def drip(env, monkeypatch):
         listener.close()
 
 
+@pytest.mark.real_io
 def test_a_dripping_daemon_does_not_hold_acquire(drip):
     lease = remote_turn.RemoteLease(drip, op="op1", host=MAC, tool="t", model=LONG)
     t0 = time.monotonic()
@@ -1017,6 +1018,7 @@ def test_a_dripping_daemon_does_not_hold_acquire(drip):
     assert elapsed < 2 * 3.5 + 2.5, f"acquire took {elapsed:.1f} s"
 
 
+@pytest.mark.real_io
 def test_a_dripping_daemon_respects_cancellation(drip):
     lease = remote_turn.RemoteLease(drip, op="op1", host=MAC, tool="t", model=LONG)
     t0 = time.monotonic()
@@ -1026,6 +1028,7 @@ def test_a_dripping_daemon_respects_cancellation(drip):
     assert elapsed < 3.5, f"the cancellation waited {elapsed:.1f} s"
 
 
+@pytest.mark.real_io
 def test_a_release_against_a_dripping_daemon_is_bounded(drip):
     lease = remote_turn.RemoteLease(drip, op="op1", host=MAC, tool="t", model=LONG)
     lease.lease_id = "some-lease"

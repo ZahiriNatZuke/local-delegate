@@ -7,8 +7,7 @@ recorded while each fixture is built, never by reading the index under test.
 
 from __future__ import annotations
 
-import time
-
+import perf
 import pytest
 
 from local_delegate import line_check, locate
@@ -225,18 +224,25 @@ def test_ids_are_offered_by_name():
     assert (ids["REQ-030"].start, ids["REQ-030"].end) == expected[30]
 
 
-def test_a_large_markdown_is_fast():
+def _big_markdown(sections: int) -> str:
     parts = []
-    for n in range(2500):
+    for n in range(sections):
         parts.append(f"## Section {n}\n\n- **TASK-{n:04d}** — do it\n  - detail {n}\n")
         parts.append("| a | b |\n| - | - |\n| 1 | 2 |\n\nSome paragraph text here to fill.\n\n")
-    text = "".join(parts) * 2
-    assert len(text) > 400_000
-    started = time.process_time()
+    return "".join(parts) * 2
+
+
+def _sections_of(text: str) -> list:
     index = locate.build_index(text, "big.md")
-    items = locate.answer_by_program(locate.classify_field("secciones_con_lineas"), index, text)
-    assert time.process_time() - started < 2.0
-    assert len(items) == 5000
+    return locate.answer_by_program(locate.classify_field("secciones_con_lineas"), index, text)
+
+
+@pytest.mark.perf
+def test_a_large_markdown_costs_linearly():
+    small, big = _big_markdown(250), _big_markdown(2500)
+    assert len(big) > 400_000
+    assert len(_sections_of(big)) == 5000
+    perf.assert_linear(lambda: _sections_of(small), lambda: _sections_of(big), size_ratio=10)
 
 
 # --- REQ-006: diff -------------------------------------------------------------------------------
