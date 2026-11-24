@@ -4,9 +4,9 @@
   "title": "Ruido del CI arreglado de raíz: gate, tests de coste, E/S real, huellas y CodeQL",
   "mode": "standard",
   "traceability": "strict",
-  "status": "implementing",
+  "status": "verifying",
   "createdAt": "2026-11-23T23:07:58.081Z",
-  "updatedAt": "2026-11-23T23:11:24.180Z",
+  "updatedAt": "2026-11-24T00:11:00.409Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -21,16 +21,16 @@
       "actor": "agent"
     },
     "quality": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-11-24T00:10:47.995Z",
+      "evidence": "verification.md: 8753 passed paralelo, 109 real_io, 73 perf, ruff verde; CI del PR verde",
+      "actor": "user"
     },
     "conformance": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-11-24T00:11:00.409Z",
+      "evidence": "review.md: nivel deep, 2 jueces + seguridad; F-1..F-5 y F-7 resueltos; F-6 escalado al dueño",
+      "actor": "user"
     },
     "memory": {
       "status": "pending",
@@ -97,6 +97,29 @@
       "to": "implementing",
       "at": "2026-11-23T23:11:24.180Z",
       "reason": "plan aprobado"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-11-24T00:10:47.750Z",
+      "reason": "implementación completa; suite local verde"
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-11-24T00:10:47.995Z",
+      "evidence": "verification.md: 8753 passed paralelo, 109 real_io, 73 perf, ruff verde; CI del PR verde",
+      "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "conformance",
+      "status": "approved",
+      "at": "2026-11-24T00:11:00.409Z",
+      "evidence": "review.md: nivel deep, 2 jueces + seguridad; F-1..F-5 y F-7 resueltos; F-6 escalado al dueño",
+      "actor": "user"
     }
   ]
 }
