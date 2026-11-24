@@ -56,13 +56,16 @@ SKIP_VERIFY=0
 # mano. Quien lo cubre ahora es `ci-gate`, que mira los STEPS de todos los jobs de `ci.yml` —Windows
 # incluido— en vez de su estado agregado. El porqué completo está en `docs/wiki/Repo-hardening.md`.
 #
+# `test (macos-latest)` tampoco, desde el 2026-11-23 (#730): cuando GitHub no le asigna máquina,
+# el job sale `cancelled` a los 15:00 sin pasos y exigirlo por nombre bloqueaba el merge aunque
+# `ci-gate` lo diera por bueno con aviso. `ci-gate` lo sigue exigiendo cuando sí corre.
+#
 # Los demás siguen exigiéndose por su cuenta a propósito: si `ci-gate` tuviera un defecto, lo que se
 # desprotege es un job, no los cinco.
 REQUIRED_CHECKS=(
   "ci-gate"
   "lint"
   "test (ubuntu-latest)"
-  "test (macos-latest)"
   "secrets"
   "Analyze (python)"
 )

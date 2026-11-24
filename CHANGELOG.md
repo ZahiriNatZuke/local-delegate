@@ -8,6 +8,9 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ### Cambiado
 
+- **El ruleset de `main` ya no exige `test (macos-latest)` por nombre**: lo cubre `ci-gate`, que lo
+  da por bueno con aviso solo cuando GitHub no le asigna máquina. `scripts/setup_repo_security.sh`
+  deja de añadirlo por defecto.
 - **El CI deja de dar rojos sin fallo de código** (SDD `ci-root-cause`). Sale del análisis de 400
   corridas del 2026-11-03 al 2026-11-23; una regla por causa, no un parche por test:
   - `ci-gate` da por bueno, con aviso, una pata de macOS `cancelled` **sin runner asignado y sin pasos**

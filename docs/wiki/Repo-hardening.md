@@ -134,8 +134,11 @@ descartó porque pedía `actions: write`, contra el mínimo privilegio del repo.
 **Qué deja de estar cubierto, dicho claro:**
 
 - `test (windows-latest)` **ya no se exige por nombre** en el ruleset. Lo cubre el gate. Los otros
-  cinco contextos siguen exigiéndose por su cuenta: si el gate tuviera un defecto, se desprotege un
+  contextos siguen exigiéndose por su cuenta: si el gate tuviera un defecto, se desprotege un
   job, no todos.
+- `test (macos-latest)` **tampoco**, desde el 2026-11-23: cuando GitHub no le da máquina, el job sale
+  `cancelled` sin pasos y exigirlo por nombre bloqueaba el merge aunque el gate lo diera por bueno
+  con aviso. El gate lo sigue exigiendo cuando sí corre.
 - **`install-smoke` pasa a bloquear de hecho**, cosa que antes no hacía, porque está en la lista de
   jobs que el gate espera. Fue una decisión, no un efecto colateral, y tiene su pero: ese job
   depende de PyPI en vivo, así que **un índice degradado bloqueará PRs sin que nada esté roto**.
