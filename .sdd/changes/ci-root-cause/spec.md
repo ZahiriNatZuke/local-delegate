@@ -98,7 +98,7 @@ CodeQL de `main`.
 ## Non-functional requirements
 
 - Sin dependencias nuevas.
-- El job `test` sube a `timeout-minutes: 20` por el paso `real_io` en serie, y la firma del cuelgue pasa a 25:00 (`docs/wiki/Repo-hardening.md`).
+- El job `test` sube a `timeout-minutes: 25` (la suma de los límites de sus pasos es 24) por el paso `real_io` en serie, y la firma del cuelgue pasa a 30:00 (`docs/wiki/Repo-hardening.md`).
 
 ## Non-goals
 

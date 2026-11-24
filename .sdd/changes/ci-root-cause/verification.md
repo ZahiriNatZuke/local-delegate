@@ -42,5 +42,5 @@
 
 - `release.py` no regenera: lo hace `bump_version.py X` (razón en `plan.md`, Approach); `release.py` se niega a publicar con huellas o capturas viejas.
 - `bump_version.py X` ahora exige Playwright para la captura; `--no-capture` lo salta a sabiendas.
-- El job `test` sube a 20 min (firma 25:00) por el paso en serie; `test-lang-es` a 33 y el plazo del gate a 40.
+- El job `test` sube a 25 min (firma 30:00; sus pasos suman 24) por el paso en serie; `test-lang-es` a 33 y el plazo del gate a 40.
 - La prueba en CI (3 corridas verdes en los tres sistemas) va en el PR.

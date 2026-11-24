@@ -18,8 +18,8 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
     corren en un job `perf` propio, en Ubuntu, sin `-n` y con un reintento. Se acabaron los topes en
     segundos y `process_time`.
   - Los tests que esperan a daemons, sockets o plazos reales llevan `@pytest.mark.real_io` y corren
-    en un paso propio de los tres sistemas, en serie y con un reintento. El job `test` sube a 20 min
-    (firma de un cuelgue fantasma: 25:00).
+    en un paso propio de los tres sistemas, en serie y con un reintento. El job `test` sube a 25 min
+    (firma de un cuelgue fantasma: 30:00).
   - `tests/test_timing_marker_guard.py` falla si un test compara un reloj con un tope sin `perf`
     o `real_io`, o si aparece `process_time` en `tests/`.
   - Un pwsh que aborta al arrancar (imagen del runner) salta sus tests con su versión y la guarda

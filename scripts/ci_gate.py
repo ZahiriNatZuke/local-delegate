@@ -23,7 +23,7 @@ se midió y se corrigió el 2026-07-31, ver el comentario de `ci.yml`—, pero t
 cerrar el job (20 del límite más los 5 de gracia que GitHub da al runner; 20 = 15 + 5 hasta el
 2026-11-23 y 13 = 8 + 5 hasta el 2026-10-13) y lo cierra como
 `cancelled`, que para este gate es un **fallo**. O sea, sin el gate el merge quedaría bloqueado
-igual, solo que veinticinco minutos más tarde y sin log. El gate da el veredicto en segundos mirando los
+igual, solo que treinta minutos más tarde y sin log. El gate da el veredicto en segundos mirando los
 pasos.
 
 Regla de decisión por job, y el orden importa:

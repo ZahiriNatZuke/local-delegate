@@ -44,11 +44,12 @@ Qué hacer: `gh run cancel <run-id>` y luego `gh run rerun <run-id>`. Ojo, **el 
 retraso en las dos direcciones**: la cancelación puede tardar en verse, y `gh run rerun --job`
 responde «cannot be rerun» mientras el job siga `in_progress`.
 
-### `timeout-minutes` sí actúa, y su firma son 25 minutos (20 hasta el 2026-11-23, 13 hasta el 2026-10-13)
+### `timeout-minutes` sí actúa, y su firma son 30 minutos (20 hasta el 2026-11-23, 13 hasta el 2026-10-13)
 
 > **Revisado el 2026-11-23** (SDD ci-root-cause). Los tests `real_io` corren en un paso propio, en
 > serie, después del paralelo; eso suma ~3 min en Windows, que ya iba por 8 de máximo. El job `test`
-> sube a 20 y la firma pasa a **20 + 5 = 25:00**.
+> tiene que superar la suma de los límites de sus pasos (10 + 8 + 6 = 24): sube a 25 y la firma pasa
+> a **25 + 5 = 30:00**.
 
 > **Revisado el 2026-10-13.** La suite ya tardaba ~5 min en Windows y el límite de 5 del paso
 > cortó tres corridas sin ningún test fallido. El paso sube a 10 y el job a 15, así que la firma
@@ -73,13 +74,13 @@ matarlo a la fuerza. De ahí que la conclusión sea `cancelled` y no `timed_out`
 
 | Lo que ves | Qué es |
 |---|---|
-| `cancelled` en `main`, job de ~25:00, resto en `success` | El cuelgue conocido de GitHub. **No hay avería.** No bloquea nada: en un push a `main` no hay merge esperando |
+| `cancelled` en `main`, job de ~30:00, resto en `success` | El cuelgue conocido de GitHub. **No hay avería.** No bloquea nada: en un push a `main` no hay merge esperando |
 | `cancelled` en un PR | Lo mismo, pero ahí sí bloquearía. Lo resuelve `ci-gate`, que da el veredicto por los pasos en segundos |
 | `failure` en el paso `Tests (pytest)` a los ~10 min | Eso **sí** es nuestro: el límite propio del paso, que corta un pytest colgado y deja log |
 
 El límite del paso se añadió por lo segundo que enseñó la medición: en dos de los tres casos quien
 seguía corriendo era **pytest**, no el runner. Ahí un límite de paso corta pronto y con log, en vez
-de arrastrar veinticinco minutos que además acaban sin log (`BlobNotFound`).
+de arrastrar treinta minutos que además acaban sin log (`BlobNotFound`).
 
 Los números están atados en `tests/test_ci_gate.py`: si alguien cambia el límite, el test exige que
 el texto que explica la firma se actualice. Un comentario no falla nunca por su cuenta, y este ya
@@ -121,7 +122,8 @@ Tres detalles que no son cosméticos:
   de macOS salieron `cancelled` sin runner (`runner_id` y `runner_name` vacíos, `steps: []`): 31 de
   los 90 rojos del gate. Ahí no corrió nada del repo; el gate lo da por bueno, lo nombra en el
   informe y deja un `::warning::`. Basta un runner asignado o un paso ejecutado para que un
-  `cancelled` vuelva a fallar, y `timed_out` falla siempre. macOS se sigue exigiendo cuando corre. Solo se perdona a macOS: si Ubuntu o Windows salen así, el PR no se probó y el gate falla.
+  `cancelled` vuelva a fallar, y `timed_out` falla siempre. `scripts/check_main.py`, en cambio, sí
+  lo lista: tras mezclar se mira todo lo que no está en verde en `main`. macOS se sigue exigiendo cuando corre. Solo se perdona a macOS: si Ubuntu o Windows salen así, el PR no se probó y el gate falla.
 
 `needs` + `if: always()`, que es el patrón habitual, **no sirve**: `needs` espera a que el job
 *termine*, que es justo lo que no pasa. El gate corre en paralelo y hace polling.

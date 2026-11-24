@@ -433,9 +433,10 @@ def test_the_gate_is_declared_in_ci_yml():
 #
 # El 2026-10-13 el límite subió a 15 (la suite tardaba ~5 min en Windows y el paso de 5 cortaba
 # corridas sin ningún test fallido): la firma pasa a 20:00. El 2026-11-23 (SDD ci-root-cause) el
-# paso en serie de `real_io` lo sube a 20: la firma pasa a 25:00.
+# paso en serie de `real_io` lo sube a 25 (la suma de los límites de sus pasos es 24): la firma
+# pasa a 30:00.
 
-TIMEOUT_JOB_TEST = 20
+TIMEOUT_JOB_TEST = 25
 GITHUB_GRACE = 5
 
 
@@ -444,7 +445,7 @@ def _job_test() -> dict:
 
 
 def test_the_tests_job_limit_is_the_one_explaining_the_hang_signature():
-    """El `25:00` que se lee en un `cancelled` no es magia: es este número más la gracia.
+    """El `30:00` que se lee en un `cancelled` no es magia: es este número más la gracia.
 
     Se ata porque la conclusión operativa depende de él — «un cancelled de 13:00 en main es el
     cuelgue conocido y no una avería»— y esa frase deja de ser cierta si el límite cambia.
@@ -475,6 +476,19 @@ def test_the_tests_step_has_its_own_limit_lower_than_the_jobs():
     assert limit < TIMEOUT_JOB_TEST, (
         f"el límite del paso ({limit}) tiene que ser menor que el del job "
         f"({TIMEOUT_JOB_TEST}) para llegar a actuar"
+    )
+
+
+def test_the_tests_job_limit_covers_the_limits_of_its_steps():
+    """Sin esto, un paso lento lo corta el job (sin log, con la firma del cuelgue) y no su límite.
+
+    Revisión del PR #730: el job tenía 20 min y sus pasos con límite sumaban 24.
+    """
+    steps = _job_test()["steps"]
+    total = sum(step.get("timeout-minutes", 0) for step in steps)
+    assert total + 1 <= TIMEOUT_JOB_TEST, (
+        f"los pasos suman {total} min y el job tiene {TIMEOUT_JOB_TEST}: "
+        "queda sin margen para checkout, uv y sync"
     )
 
 
