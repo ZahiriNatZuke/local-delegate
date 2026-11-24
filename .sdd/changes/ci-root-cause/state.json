@@ -4,9 +4,9 @@
   "title": "Ruido del CI arreglado de raíz: gate, tests de coste, E/S real, huellas y CodeQL",
   "mode": "standard",
   "traceability": "strict",
-  "status": "verifying",
+  "status": "closed",
   "createdAt": "2026-11-23T23:07:58.081Z",
-  "updatedAt": "2026-11-24T00:11:00.409Z",
+  "updatedAt": "2026-11-24T00:40:22.507Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -33,10 +33,10 @@
       "actor": "user"
     },
     "memory": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-11-24T00:39:53.898Z",
+      "evidence": "memoria ci-pytest-xdist.md actualizada con perf, real_io, ci-gate y check_local/check_main",
+      "actor": "user"
     }
   },
   "history": [
@@ -120,6 +120,35 @@
       "at": "2026-11-24T00:11:00.409Z",
       "evidence": "review.md: nivel deep, 2 jueces + seguridad; F-1..F-5 y F-7 resueltos; F-6 escalado al dueño",
       "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "memory",
+      "status": "approved",
+      "at": "2026-11-24T00:39:53.898Z",
+      "evidence": "memoria ci-pytest-xdist.md actualizada con perf, real_io, ci-gate y check_local/check_main",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "verifying",
+      "to": "result-review",
+      "at": "2026-11-24T00:40:06.346Z",
+      "reason": "verificación completa: 3 de 3 verdes"
+    },
+    {
+      "type": "transition",
+      "from": "result-review",
+      "to": "closing",
+      "at": "2026-11-24T00:40:22.267Z",
+      "reason": "PR #730 mezclado en main 9d113112"
+    },
+    {
+      "type": "transition",
+      "from": "closing",
+      "to": "closed",
+      "at": "2026-11-24T00:40:22.507Z",
+      "reason": "PR #730 mezclado en main 9d113112"
     }
   ]
 }
